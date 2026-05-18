@@ -131,12 +131,20 @@ export interface HardwareRaidLogicalDrive {
 
 // ─── Software RAID MD ────────────────────────────────────────────────────────
 
+export type StoppedMdMemberStatus =
+  | 'md_superblock_detected'
+  | 'member_available'
+  | 'member_missing'
+  | 'orphan_metadata'
+  | 'incomplete'
+
 export interface StoppedMdArrayMember {
   path: string
   role?: string
   slot?: number
   mdExamine?: MdExamineInfo
   present: boolean
+  memberStatus: StoppedMdMemberStatus
 }
 
 export interface StoppedMdArray {
@@ -461,6 +469,7 @@ export interface AssembleMdArrayRequest {
   name: string
   uuid?: string
   members?: string[]
+  targetName?: string
   confirmation: string
 }
 

@@ -5,6 +5,7 @@ import { getActiveSSHManager, withSanContext } from '../../../../utils/ssh-runti
 import { assembleMdArray, expectedMdAssembleConfirmation } from '../../../../utils/raid-md-actions'
 import { invalidateCacheKey } from '../../../../utils/cache'
 import { requireSanIdQuery } from '../../../../utils/san-query'
+import { isValidMdArrayName } from '../../../../utils/stopped-md-arrays'
 import type { AssembleMdArrayRequest } from '../../../../utils/raid-types'
 
 export default defineEventHandler(async (event) => {
@@ -14,7 +15,14 @@ export default defineEventHandler(async (event) => {
   if (!body?.name) {
     throw createError({ statusCode: 400, statusMessage: 'name requis' })
   }
-  const expectedConfirm = expectedMdAssembleConfirmation(body.name)
+  const effectiveName = body.targetName ?? body.name
+  if (!isValidMdArrayName(effectiveName)) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Nom de tableau MD invalide — spécifiez un nom cible valide (ex: md0)',
+    })
+  }
+  const expectedConfirm = expectedMdAssembleConfirmation(effectiveName)
   if (!body.confirmation || body.confirmation !== expectedConfirm) {
     throw createError({ statusCode: 400, statusMessage: `Confirmation invalide (attendu : "${expectedConfirm}")` })
   }

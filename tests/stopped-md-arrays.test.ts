@@ -139,5 +139,17 @@ describe('detectStoppedMdArrays', () => {
       activeMdArrays: [],
     })
     expect(stopped[0]?.stoppedState).toBe('incomplete')
+    expect(stopped[0]?.members.some(m => m.memberStatus === 'incomplete')).toBe(true)
+    expect(stopped[0]?.members.some(m => m.memberStatus === 'member_missing')).toBe(true)
+  })
+
+  it('assigne md_superblock_detected aux membres assemblables', () => {
+    const uuid = 'aaa11111:2222:3333:4444:555566667777'
+    const stopped = detectStoppedMdArrays({
+      mdadmScan: `ARRAY /dev/md0 metadata=1.2 UUID=${uuid} name=esos:0`,
+      blockDevices: [part('/dev/sdb1', uuid), part('/dev/sdc1', uuid)],
+      activeMdArrays: [],
+    })
+    expect(stopped[0]?.members.every(m => m.memberStatus === 'md_superblock_detected')).toBe(true)
   })
 })

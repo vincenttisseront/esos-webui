@@ -1,7 +1,9 @@
 /**
  * Détection des tableaux MD arrêtés / assemblables à partir des superblocks et du scan mdadm.
  */
-import type { MdArray, MdExamineInfo, RaidBlockDevice, StoppedMdArray, StoppedMdArrayMember } from './raid-types'
+import type {
+  MdArray, MdExamineInfo, RaidBlockDevice, StoppedMdArray, StoppedMdArrayMember, StoppedMdMemberStatus,
+} from './raid-types'
 import type { MdadmScanEntry } from './parsers/mdadm-scan.parser'
 import { parseMdadmScanLines } from './parsers/mdadm-scan.parser'
 
@@ -183,10 +185,19 @@ function toStoppedMdArray(group: ArrayGroup, activePaths: Set<string>): StoppedM
     ? Math.max(...examineRaidDeviceCounts)
     : group.members.length
 
-  const members: StoppedMdArrayMember[] = group.members.map(member => ({
+  const detectedOn = group.detectedOn.size === 2
+    ? 'both'
+    : group.detectedOn.has('scan')
+      ? 'scan'
+      : 'examine'
+
+  const isOrphanArray = detectedOn === 'examine' && !scanEntry && !isValidMdArrayName(name)
+
+  let members: StoppedMdArrayMember[] = group.members.map(member => ({
     path: member.path,
     mdExamine: member.mdExamine,
     present: true,
+    memberStatus: 'md_superblock_detected' as StoppedMdMemberStatus,
   }))
 
   const stoppedState = computeStoppedState({
@@ -197,11 +208,26 @@ function toStoppedMdArray(group: ArrayGroup, activePaths: Set<string>): StoppedM
     warnings: group.warnings,
   })
 
-  const detectedOn = group.detectedOn.size === 2
-    ? 'both'
-    : group.detectedOn.has('scan')
-      ? 'scan'
-      : 'examine'
+  members = members.map(member => ({
+    ...member,
+    memberStatus: computeMemberStatus({
+      present: member.present,
+      mdExamine: member.mdExamine,
+      hasMdSuperblock: group.members.find(m => m.path === member.path)?.hasMdSuperblock ?? false,
+      isOrphanArray,
+      stoppedState,
+    }),
+  }))
+
+  const presentCount = members.filter(m => m.present).length
+  const missingCount = Math.max(0, expectedDevices - presentCount)
+  for (let i = 0; i < missingCount; i++) {
+    members.push({
+      path: '—',
+      present: false,
+      memberStatus: 'member_missing',
+    })
+  }
 
   return {
     name,
@@ -252,6 +278,24 @@ function inferMdNameFromContainer(containerName?: string): string | undefined {
   const short = containerName.includes(':') ? containerName.split(':').pop() : containerName
   if (short && /^md\d+$/i.test(short)) return short
   return undefined
+}
+
+export function isValidMdArrayName(name: string): boolean {
+  return /^md[a-z0-9_-]{0,15}$/.test(name)
+}
+
+function computeMemberStatus(input: {
+  present: boolean
+  mdExamine?: MdExamineInfo
+  hasMdSuperblock: boolean
+  isOrphanArray: boolean
+  stoppedState: StoppedMdArray['stoppedState']
+}): StoppedMdMemberStatus {
+  if (!input.present) return 'member_missing'
+  if (input.isOrphanArray) return 'orphan_metadata'
+  if (input.stoppedState === 'incomplete') return 'incomplete'
+  if (input.mdExamine || input.hasMdSuperblock) return 'md_superblock_detected'
+  return 'member_available'
 }
 
 function normalizeRaidLevel(level?: string): MdRaidLevel {

@@ -9,6 +9,7 @@ import type {
 import { expectedMdCreateConfirmation, validateMdCreateRequest } from './raid-md-validation'
 import { PREPARE_MD_PARTITIONS_CONFIRMATION, validatePrepareMdPartitionsRequest } from './raid-md-partition-actions'
 import { buildMdAssembleCommand, expectedMdAssembleConfirmation, expectedMdZeroSuperblocksConfirmation } from './raid-md-actions'
+import { isValidMdArrayName } from './stopped-md-arrays'
 
 const RISK_MAP: Record<RaidPreflightRequest['action'], RaidRiskLevel> = {
   create_hw_ld:    'risky',
@@ -103,22 +104,27 @@ export async function runPreflight(
     }
     case 'assemble_md': {
       const arrName = String(payload.name ?? '')
+      const targetName = payload.targetName ? String(payload.targetName) : undefined
+      const effectiveName = targetName ?? arrName
       const members = (payload.members as string[] | undefined) ?? []
       const stopped = findStoppedMdArray(stoppedMdArrays, arrName, payload.uuid as string | undefined)
-      if (mdArrays.some(a => a.name === arrName)) {
-        blockers.push(`Le tableau ${arrName} est déjà actif`)
+      if (!isValidMdArrayName(effectiveName)) {
+        blockers.push('Nom de tableau MD cible requis (ex: md0)')
+      }
+      if (mdArrays.some(a => a.name === effectiveName)) {
+        blockers.push(`Le tableau ${effectiveName} est déjà actif`)
       }
       if (!stopped) {
         blockers.push(`Tableau MD arrêté ${arrName} introuvable sur ce nœud`)
       } else {
-        impactedDevices.push(...stopped.members.map(m => m.path))
+        impactedDevices.push(...stopped.members.filter(m => m.present).map(m => m.path))
         if (stopped.stoppedState === 'incomplete' && members.length < stopped.raidDevices) {
           warnings.push('Ensemble de membres incomplet — l\'assemblage peut démarrer en mode dégradé')
         }
         if (stopped.stoppedState === 'ambiguous') {
           blockers.push('État du tableau ambigu — vérifiez les métadonnées avant assemblage')
         }
-        for (const memberPath of members.length ? members : stopped.members.map(m => m.path)) {
+        for (const memberPath of members.length ? members : stopped.members.filter(m => m.present).map(m => m.path)) {
           const dev = blockDevices.find(d => d.path === memberPath)
           if (!dev) continue
           if (dev.usedBy.includes('mounted')) blockers.push(`${memberPath} est monté`)
@@ -126,9 +132,12 @@ export async function runPreflight(
           if (dev.usedBy.includes('scst')) blockers.push(`${memberPath} est utilisé par SCST`)
         }
       }
-      const commandPreview = members.length > 0
-        ? buildMdAssembleCommand(arrName, members)
-        : buildMdAssembleCommand(arrName, stopped?.members.map(m => m.path) ?? [])
+      const assembleMembers = members.length > 0
+        ? members
+        : stopped?.members.filter(m => m.present).map(m => m.path) ?? []
+      const commandPreview = isValidMdArrayName(effectiveName)
+        ? buildMdAssembleCommand(effectiveName, assembleMembers)
+        : undefined
       return {
         ok: blockers.length === 0,
         riskLevel,
@@ -221,9 +230,11 @@ function buildConfirmationPhrase(req: RaidPreflightRequest): string {
       return `STOP ${String(payload.name ?? 'md0')}`
     case 'assemble_md':
       try {
-        return expectedMdAssembleConfirmation(String(payload.name ?? 'md0'))
+        const payload = req.payload as Record<string, unknown>
+        const effectiveName = String(payload.targetName ?? payload.name ?? 'md0')
+        return expectedMdAssembleConfirmation(effectiveName)
       } catch {
-        return `ASSEMBLE ${String(payload.name ?? 'md0')}`
+        return `ASSEMBLE ${String((req.payload as Record<string, unknown>).targetName ?? (req.payload as Record<string, unknown>).name ?? 'md0')}`
       }
     case 'zero_md_superblocks':
       try {

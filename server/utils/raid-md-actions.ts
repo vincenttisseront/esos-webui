@@ -253,9 +253,9 @@ export function buildMdAssembleCommand(name: string, members: string[] = []): st
   const arrayPath = `/dev/${sanitizeArrayName(name)}`
   const memberPaths = members.map(sanitizeDevicePath)
   if (memberPaths.length > 0) {
-    return `mdadm --assemble ${arrayPath} --run ${memberPaths.join(' ')}`
+    return `mdadm --assemble ${arrayPath} ${memberPaths.join(' ')}`
   }
-  return `mdadm --assemble ${arrayPath} --run`
+  return `mdadm --assemble ${arrayPath}`
 }
 
 export async function assembleMdArray(
@@ -263,7 +263,7 @@ export async function assembleMdArray(
   req: AssembleMdArrayRequest,
 ): Promise<{ stdout: string; command: string }> {
   assertWriteEnabled()
-  const arrayName = sanitizeArrayName(req.name)
+  const arrayName = sanitizeArrayName(req.targetName ?? req.name)
   const members = (req.members ?? []).map(sanitizeDevicePath)
   const command = buildMdAssembleCommand(arrayName, members)
   const { stdout } = await manager.exec(`${command} 2>&1; echo EXIT_CODE=$?`, 120_000)
