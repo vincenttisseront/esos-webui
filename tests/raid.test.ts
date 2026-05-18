@@ -229,7 +229,9 @@ describe('RAID05b – stopped MD arrays from mdadm --examine', () => {
 
     expect(arrays).toHaveLength(1)
     expect(arrays[0].name).toBe('unknown')
-    expect(arrays[0].members.map(m => m.path)).toEqual(['/dev/sdb1'])
+    expect(arrays[0].members.map(m => m.path)).toEqual(['/dev/sdb1', '—'])
+    expect(arrays[0].members[0]?.memberStatus).toBe('orphan_metadata')
+    expect(arrays[0].members[1]?.memberStatus).toBe('member_missing')
   })
 })
 
@@ -1527,12 +1529,12 @@ describe('RAID20 – préflight stockage cluster', () => {
 // ─── Stopped MD — assemble command & preflight ───────────────────────────────
 describe('Stopped MD — assemble command builders', () => {
   it('buildMdAssembleCommand sans membres explicites', () => {
-    expect(buildMdAssembleCommand('md0')).toBe('mdadm --assemble /dev/md0 --run')
+    expect(buildMdAssembleCommand('md0')).toBe('mdadm --assemble /dev/md0')
   })
 
   it('buildMdAssembleCommand avec membres', () => {
     expect(buildMdAssembleCommand('md1', ['/dev/sdb1', '/dev/sdc1']))
-      .toBe('mdadm --assemble /dev/md1 --run /dev/sdb1 /dev/sdc1')
+      .toBe('mdadm --assemble /dev/md1 /dev/sdb1 /dev/sdc1')
   })
 
   it('phrases de confirmation assemble / zero', () => {
@@ -1549,8 +1551,8 @@ describe('Stopped MD — preflight assemble_md / zero_md_superblocks', () => {
     raidLevel: '1',
     raidDevices: 2,
     members: [
-      { path: '/dev/sdb1', present: true },
-      { path: '/dev/sdc1', present: true },
+      { path: '/dev/sdb1', present: true, memberStatus: 'md_superblock_detected' },
+      { path: '/dev/sdc1', present: true, memberStatus: 'md_superblock_detected' },
     ],
     stoppedState: 'assemblable',
     warnings: [],
@@ -1598,14 +1600,32 @@ describe('Stopped MD — preflight assemble_md / zero_md_superblocks', () => {
   it('assemble_md ok pour tableau arrêté assemblable', async () => {
     const result = await runPreflight(
       {} as any,
-      { backend: 'software_md', action: 'assemble_md', payload: { name: 'md0' } },
+      { backend: 'software_md', action: 'assemble_md', payload: { name: 'md0', targetName: 'md0' } },
       [blockDevice('/dev/sdb1'), blockDevice('/dev/sdc1')],
       [],
       undefined,
       [stoppedMd0],
     )
     expect(result.ok).toBe(true)
-    expect(result.commandPreview).toContain('mdadm --assemble /dev/md0')
+    expect(result.commandPreview).toBe('mdadm --assemble /dev/md0 /dev/sdb1 /dev/sdc1')
+  })
+
+  it('assemble_md exige un nom cible valide pour name unknown', async () => {
+    const orphanStopped: StoppedMdArray = {
+      ...stoppedMd0,
+      name: 'unknown',
+      path: undefined,
+    }
+    const result = await runPreflight(
+      {} as any,
+      { backend: 'software_md', action: 'assemble_md', payload: { name: 'unknown', uuid: orphanStopped.uuid } },
+      [blockDevice('/dev/sdb1'), blockDevice('/dev/sdc1')],
+      [],
+      undefined,
+      [orphanStopped],
+    )
+    expect(result.ok).toBe(false)
+    expect(result.blockers.some(b => b.includes('cible requis'))).toBe(true)
   })
 
   it('zero_md_superblocks bloque si tableau encore actif', async () => {
