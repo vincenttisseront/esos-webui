@@ -8,7 +8,13 @@ import { parseMdadmDetail } from '../server/utils/parsers/mdadm-detail.parser'
 import { buildStorCliCreateLd, buildMegaCliCreateLd, buildArcconfCreateLd } from '../server/utils/raid-hardware'
 import { parseLspci, parseLsscsi, isRaidControllerPciLine } from '../server/utils/raid-pci-detection'
 import { buildMdCreateCommand, normalizeAndAssertMdCreateRequest, validateMdCreateRequest } from '../server/utils/raid-md-validation'
-import { createMdArray, createMdArrayFromPlan } from '../server/utils/raid-md-actions'
+import {
+  createMdArray,
+  createMdArrayFromPlan,
+  isMdadmAwaitingInteractiveConfirmation,
+  MDADM_INTERACTIVE_CONFIRM_MESSAGE,
+  resolveMdCreateExecErrorMessage,
+} from '../server/utils/raid-md-actions'
 import { validatePrepareMdPartitionsRequest } from '../server/utils/raid-md-partition-actions'
 import { buildCreateMdArrayNodeResults, buildPrepareMdPartitionsNodePlans, duplicateManualMappingBlockers, mapDeviceToPeer, runNodePreflight } from '../server/utils/raid-cluster-storage-preflight'
 import { derivePartitionMappingsFromDiskMappings, expectedFirstPartitionPath, filterPartitionMappingsForDevices } from '../utils/raid-cluster-mapping'
@@ -462,7 +468,7 @@ describe('RAID17 – validation création MD stricte', () => {
     ], [])
 
     expect(result.blockers).toEqual([])
-    expect(result.commandPreview).toBe('mdadm --create /dev/md0 --chunk=64 --level=1 --raid-devices=2 /dev/sda1 /dev/sdb1')
+    expect(result.commandPreview).toBe('mdadm --create /dev/md0 --chunk=64 --level=1 --raid-devices=2 --run /dev/sda1 /dev/sdb1')
   })
 
   it('accepte les tailles de chunk MD proposées par le wizard', () => {
@@ -610,7 +616,7 @@ describe('RAID18 – buildMdCreateCommand', () => {
       devices: ['/dev/sdb1', '/dev/sdc1'],
     })
 
-    expect(command).toBe('mdadm --create /dev/md0 --chunk=64 --level=1 --raid-devices=2 /dev/sdb1 /dev/sdc1')
+    expect(command).toBe('mdadm --create /dev/md0 --chunk=64 --level=1 --raid-devices=2 --run /dev/sdb1 /dev/sdc1')
   })
 
   it('génère uniquement la commande mdadm de base documentée', () => {
@@ -621,8 +627,8 @@ describe('RAID18 – buildMdCreateCommand', () => {
       devices: ['/dev/sda1', '/dev/sdb1'],
     })
 
-    expect(command).toBe('mdadm --create /dev/md0 --chunk=64 --level=0 --raid-devices=2 /dev/sda1 /dev/sdb1')
-    expect(command).not.toContain('--run')
+    expect(command).toBe('mdadm --create /dev/md0 --chunk=64 --level=0 --raid-devices=2 --run /dev/sda1 /dev/sdb1')
+    expect(command).toContain('--run')
     expect(command).not.toContain('--force')
     expect(command).not.toContain('--assume-clean')
     expect(command).not.toContain('--metadata')
@@ -660,7 +666,7 @@ describe('RAID18 – buildMdCreateCommand', () => {
   })
 
   it("exécute exactement la commande preview validée lorsqu'elle correspond au plan", async () => {
-    const command = 'mdadm --create /dev/md0 --chunk=64 --level=1 --raid-devices=2 /dev/sdb1 /dev/sdc1'
+    const command = 'mdadm --create /dev/md0 --chunk=64 --level=1 --raid-devices=2 --run /dev/sdb1 /dev/sdc1'
     const manager = {
       exec: vi.fn()
         .mockResolvedValueOnce({ stdout: 'mdadm ok\nEXIT_CODE=0' })
@@ -694,8 +700,8 @@ describe('RAID18 – buildMdCreateCommand', () => {
   })
 
   it("retourne la commande finale validée lorsqu'un exec SSH échoue", async () => {
-    const command = 'mdadm --create /dev/md0 --chunk=64 --level=1 --raid-devices=2 /dev/sdb1 /dev/sdc1'
-    const sshError = Object.assign(new Error(`SSH exec timeout (120000ms): ${command}`), {
+    const command = 'mdadm --create /dev/md0 --chunk=64 --level=1 --raid-devices=2 --run /dev/sdb1 /dev/sdc1'
+    const sshError = Object.assign(new Error(`SSH exec timeout (120000ms): ${command} 2>&1; echo EXIT_CODE=$?`), {
       stdout: 'mdadm partial output',
       stderr: 'timeout warning',
     })
@@ -713,11 +719,62 @@ describe('RAID18 – buildMdCreateCommand', () => {
       }, command)
       throw new Error('createMdArrayFromPlan should have failed')
     } catch (err: any) {
+      expect(err.statusMessage).toBe(`SSH exec timeout (120000ms): ${command}`)
       expect(err.data.command).toBe(command)
       expect(err.data.command).not.toMatch(/--raid-devices=(?:\s|$)/)
       expect(err.data.stdout).toBe('mdadm partial output')
       expect(err.data.stderr).toBe('timeout warning')
     }
+  })
+
+  it('détecte la confirmation interactive mdadm dans stdout', async () => {
+    const command = 'mdadm --create /dev/md0 --chunk=64 --level=1 --raid-devices=2 --run /dev/sdb1 /dev/sdc1'
+    const sshError = Object.assign(new Error('SSH exec timeout (120000ms): mdadm --create /dev/md0 --chunk=64 --level=1 --raid-devices='), {
+      stdout: 'mdadm: Note: this array has metadata at the start\nContinue creating array?',
+      stderr: '',
+    })
+    const manager = {
+      exec: vi.fn().mockRejectedValueOnce(sshError),
+    }
+
+    try {
+      await createMdArrayFromPlan(manager as any, {
+        name: 'md0',
+        level: '1',
+        chunkKb: 64,
+        devices: ['/dev/sdb1', '/dev/sdc1'],
+        confirmation: 'CREATE md0',
+      }, command)
+      throw new Error('createMdArrayFromPlan should have failed')
+    } catch (err: any) {
+      expect(err.statusMessage).toBe(MDADM_INTERACTIVE_CONFIRM_MESSAGE)
+      expect(err.data.command).toBe(command)
+    }
+  })
+})
+
+describe('RAID18c – erreurs exec mdadm', () => {
+  it('détecte le prompt interactif mdadm', () => {
+    expect(isMdadmAwaitingInteractiveConfirmation('Continue creating array?', undefined)).toBe(true)
+    expect(isMdadmAwaitingInteractiveConfirmation(undefined, 'no prompt here')).toBe(false)
+  })
+
+  it('résout le message interactif avant le message de timeout', () => {
+    const command = 'mdadm --create /dev/md0 --chunk=64 --level=1 --raid-devices=2 --run /dev/sdb1 /dev/sdc1'
+    const err = new Error('SSH exec timeout (120000ms): mdadm --create /dev/md0 --chunk=64 --level=1 --raid-devices=')
+    expect(resolveMdCreateExecErrorMessage(
+      err,
+      command,
+      'Continue creating array?',
+      undefined,
+    )).toBe(MDADM_INTERACTIVE_CONFIRM_MESSAGE)
+  })
+
+  it('résout le timeout avec la commande finale complète', () => {
+    const command = 'mdadm --create /dev/md0 --chunk=64 --level=1 --raid-devices=2 --run /dev/sdb1 /dev/sdc1'
+    const err = new Error('SSH exec timeout (120000ms): mdadm --create /dev/md0 --chunk=64 --level=1 --raid-devices=')
+    expect(resolveMdCreateExecErrorMessage(err, command, 'partial output', undefined))
+      .toBe(`SSH exec timeout (120000ms): ${command}`)
   })
 })
 
@@ -1271,9 +1328,9 @@ describe('RAID20 – préflight stockage cluster', () => {
     })
 
     expect(plans.map(plan => plan.sanId)).toEqual(['primary', 'secondary'])
-    expect(plans[0]?.command).toBe('mdadm --create /dev/md0 --chunk=64 --level=1 --raid-devices=2 /dev/sdb1 /dev/sdc1')
+    expect(plans[0]?.command).toBe('mdadm --create /dev/md0 --chunk=64 --level=1 --raid-devices=2 --run /dev/sdb1 /dev/sdc1')
     expect(plans[1]?.devices).toEqual(['/dev/sdd1', '/dev/sde1'])
-    expect(plans[1]?.command).toBe('mdadm --create /dev/md0 --chunk=64 --level=1 --raid-devices=2 /dev/sdd1 /dev/sde1')
+    expect(plans[1]?.command).toBe('mdadm --create /dev/md0 --chunk=64 --level=1 --raid-devices=2 --run /dev/sdd1 /dev/sde1')
   })
 
   it('bloque un plan create_md multi-nœud sans membres avant exécution SSH', () => {
