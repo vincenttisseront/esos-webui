@@ -503,11 +503,14 @@ export interface PartitionMetadataDiagnostics {
   recommendedAction: PartitionMetadataRecommendedAction
 }
 
+export type MdMetadataCleanupMode = 'basic' | 'advanced'
+
 export interface ZeroMdSuperblocksRequest {
   name?: string
   uuid?: string
   members: string[]
   confirmation: string
+  mode?: MdMetadataCleanupMode
 }
 
 export interface PartitionDetectionSources {
@@ -519,6 +522,7 @@ export interface PartitionDetectionSources {
 export interface WipeMdSignaturesRequest {
   members: string[]
   confirmation: string
+  mode: MdMetadataCleanupMode
   remainingSignatureTypes?: Record<string, string[]>
   detectionSourcesByMember?: Record<string, PartitionDetectionSources>
 }

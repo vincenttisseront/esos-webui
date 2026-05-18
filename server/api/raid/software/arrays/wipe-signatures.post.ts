@@ -3,7 +3,7 @@
  */
 import { getActiveSSHManager, withSanContext } from '../../../../utils/ssh-runtime'
 import {
-  expectedMdWipeSignaturesConfirmation,
+  expectedMdAdvancedCleanupConfirmation,
   validateWipeSignatureMembers,
   wipeMdSignatures,
 } from '../../../../utils/raid-md-actions'
@@ -21,7 +21,14 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'members requis' })
   }
 
-  const expectedConfirm = expectedMdWipeSignaturesConfirmation()
+  if (body?.mode !== 'advanced') {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'mode requis : "advanced" pour le nettoyage MD avancé',
+    })
+  }
+
+  const expectedConfirm = expectedMdAdvancedCleanupConfirmation()
   if (!body?.confirmation || body.confirmation !== expectedConfirm) {
     throw createError({ statusCode: 400, statusMessage: `Confirmation invalide (attendu : "${expectedConfirm}")` })
   }
@@ -43,7 +50,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.info('[raid-api:wipe-signatures]', { sanId, members })
+    console.info('[raid-api:wipe-signatures]', { sanId, mode: 'advanced', members })
     const result = await wipeMdSignatures(
       manager,
       members,
@@ -53,11 +60,14 @@ export default defineEventHandler(async (event) => {
     invalidateCacheKey(cacheKey)
     console.info('[raid-api:wipe-signatures]', {
       sanId,
+      mode: 'advanced',
       ok: result.ok,
       partitions: result.results.map(r => ({
         partition: r.partition,
+        command: r.command,
         success: r.success,
         verifiedRemoved: r.verifiedRemoved,
+        recommendedAction: r.diagnostics?.recommendedAction,
       })),
       warnings: result.warnings,
     })

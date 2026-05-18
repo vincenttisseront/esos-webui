@@ -12,6 +12,10 @@ import type {
   ClusterStoragePreflightRequest, ClusterStoragePreflightResult, RaidClusterPreparedMappingHint,
   PartitionMetadataDiagnostics, ZeroMdSuperblockPartitionResult,
 } from '~/types/raid'
+import {
+  loadPendingAdvancedCleanup,
+  savePendingAdvancedCleanup,
+} from '~/utils/stopped-md'
 
 export const useRaidStore = defineStore('raid', {
   state: () => ({
@@ -162,11 +166,22 @@ export const useRaidStore = defineStore('raid', {
     async zeroMdSuperblocks(req: ZeroMdSuperblocksRequest) {
       const result = await $fetch<ZeroMdSuperblocksResponse>('/api/raid/software/arrays/zero-superblocks', {
         method: 'POST',
-        body: req,
+        body: { ...req, mode: req.mode ?? 'basic' },
         params: this.query(),
       })
       await this.fetchOverview(true)
       return result
+    },
+
+    hydratePendingAdvancedCleanup() {
+      if (!this.sanId) return
+      const stored = loadPendingAdvancedCleanup(this.sanId)
+      this.pendingAdvancedCleanup = { ...stored, ...this.pendingAdvancedCleanup }
+    },
+
+    persistPendingAdvancedCleanup() {
+      if (!this.sanId) return
+      savePendingAdvancedCleanup(this.sanId, this.pendingAdvancedCleanup)
     },
 
     setPendingAdvancedCleanup(results: ZeroMdSuperblockPartitionResult[]) {
@@ -175,22 +190,24 @@ export const useRaidStore = defineStore('raid', {
           this.pendingAdvancedCleanup[r.partition] = r.diagnostics
         }
       }
+      this.persistPendingAdvancedCleanup()
     },
 
     clearPendingAdvancedCleanup(partitions?: string[]) {
       if (!partitions?.length) {
         this.pendingAdvancedCleanup = {}
-        return
+      } else {
+        for (const p of partitions) {
+          delete this.pendingAdvancedCleanup[p]
+        }
       }
-      for (const p of partitions) {
-        delete this.pendingAdvancedCleanup[p]
-      }
+      this.persistPendingAdvancedCleanup()
     },
 
     async wipeMdSignatures(req: WipeMdSignaturesRequest) {
       const result = await $fetch<WipeMdSignaturesResponse>('/api/raid/software/arrays/wipe-signatures', {
         method: 'POST',
-        body: req,
+        body: { ...req, mode: 'advanced' as const },
         params: this.query(),
       })
       await this.fetchOverview(true)

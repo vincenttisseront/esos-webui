@@ -11,7 +11,7 @@ import { PREPARE_MD_PARTITIONS_CONFIRMATION, validatePrepareMdPartitionsRequest 
 import {
   buildMdAssembleCommand,
   expectedMdAssembleConfirmation,
-  expectedMdWipeSignaturesConfirmation,
+  expectedMdAdvancedCleanupConfirmation,
   expectedMdZeroMetadataConfirmation,
   validateWipeSignatureMembers,
   validateZeroSuperblockMembers,
@@ -259,7 +259,7 @@ function buildConfirmationPhrase(req: RaidPreflightRequest): string {
     case 'zero_md_superblocks':
       return expectedMdZeroMetadataConfirmation()
     case 'wipe_md_signatures':
-      return expectedMdWipeSignaturesConfirmation()
+      return expectedMdAdvancedCleanupConfirmation()
     case 'delete_hw_ld':
       return `DELETE LD ${String(payload.id ?? '0')}`
     case 'md_remove_device':

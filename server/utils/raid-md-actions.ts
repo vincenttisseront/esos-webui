@@ -8,7 +8,9 @@ import { parseMdadmExamineOutput } from './parsers/mdadm-examine.parser'
 import {
   buildZeroCleanupFailureError,
   collectPartitionMetadataDiagnostics,
+  expectedMdAdvancedCleanupConfirmation,
   expectedMdWipeSignaturesConfirmation,
+  MD_ADVANCED_CLEANUP_CONFIRMATION,
   MD_WIPE_SIGNATURES_CONFIRMATION,
   zeroSuperblockWithDiagnostics,
   wipeSignaturesWithDiagnostics,
@@ -375,7 +377,12 @@ export function validateWipeSignatureMembers(
   return blockers
 }
 
-export { expectedMdWipeSignaturesConfirmation, MD_WIPE_SIGNATURES_CONFIRMATION }
+export {
+  expectedMdAdvancedCleanupConfirmation,
+  expectedMdWipeSignaturesConfirmation,
+  MD_ADVANCED_CLEANUP_CONFIRMATION,
+  MD_WIPE_SIGNATURES_CONFIRMATION,
+}
 
 const ZERO_SUPERBLOCK_EXIT_MARKER = '__MD_ZERO_EXIT__'
 
@@ -462,6 +469,7 @@ export async function wipeMdSignatures(
   detectionSourcesByMember?: import('./raid-types').WipeMdSignaturesRequest['detectionSourcesByMember'],
 ): Promise<import('./raid-types').WipeMdSignaturesResponse> {
   assertWriteEnabled()
+  console.info('[raid-md:cleanup]', { mode: 'advanced', members })
   if (members.length === 0) {
     throw createError({ statusCode: 400, statusMessage: 'Au moins une partition membre est requise' })
   }

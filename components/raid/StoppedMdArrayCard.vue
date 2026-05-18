@@ -57,9 +57,9 @@
             icon="i-heroicons-sparkles"
             :loading="actionLoading"
             :disabled="actionLoading"
-            @click="$emit('wipe-signatures', array)"
+            @click="$emit('advanced-cleanup', array)"
           >
-            {{ t('raid.stopped_md.wipe_signatures') }}
+            {{ t('raid.stopped_md.advanced_cleanup') }}
           </UButton>
         </div>
         <p class="text-[10px] text-gray-500 text-right leading-snug">
@@ -110,7 +110,7 @@ const props = defineProps<{
 defineEmits<{
   assemble: [array: StoppedMdArray]
   'zero-superblocks': [array: StoppedMdArray]
-  'wipe-signatures': [array: StoppedMdArray]
+  'advanced-cleanup': [array: StoppedMdArray]
   inspect: [array: StoppedMdArray]
 }>()
 

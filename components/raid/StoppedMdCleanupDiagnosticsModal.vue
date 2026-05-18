@@ -126,7 +126,7 @@
         icon="i-heroicons-trash"
         @click="$emit('confirm', 'wipe')"
       >
-        {{ t('raid.stopped_md.wipe_signatures') }}
+        {{ t('raid.stopped_md.advanced_cleanup') }}
       </UButton>
     </template>
   </BaseModal>

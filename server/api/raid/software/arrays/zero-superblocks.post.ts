@@ -21,6 +21,14 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'members requis' })
   }
 
+  const mode = body?.mode === 'advanced' ? 'advanced' : 'basic'
+  if (mode === 'advanced') {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Utilisez POST /api/raid/software/arrays/wipe-signatures avec mode: "advanced" pour le nettoyage avancé',
+    })
+  }
+
   const expectedConfirm = expectedMdZeroMetadataConfirmation()
   if (!body?.confirmation || body.confirmation !== expectedConfirm) {
     throw createError({ statusCode: 400, statusMessage: `Confirmation invalide (attendu : "${expectedConfirm}")` })
@@ -43,11 +51,12 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.info('[raid-api:zero-superblocks]', { sanId, members, auditName: body?.name, uuid: body?.uuid })
+    console.info('[raid-api:zero-superblocks]', { sanId, mode: 'basic', members, auditName: body?.name, uuid: body?.uuid })
     const result = await zeroMdSuperblocks(manager, members)
     invalidateCacheKey(cacheKey)
     console.info('[raid-api:zero-superblocks]', {
       sanId,
+      mode: 'basic',
       ok: result.ok,
       partitions: result.results.map(r => ({
         partition: r.partition,

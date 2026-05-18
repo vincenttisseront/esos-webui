@@ -254,7 +254,7 @@
             :advanced-cleanup-members="advancedCleanupMembersForArray(stoppedMemberPaths(arr), raid.pendingAdvancedCleanup)"
             @assemble="handleAssembleStoppedMd"
             @zero-superblocks="handleZeroStoppedMd"
-            @wipe-signatures="handleWipeStoppedMd"
+            @advanced-cleanup="handleAdvancedCleanupStoppedMd"
             @inspect="handleInspectStoppedMd"
           />
         </UCard>
@@ -647,9 +647,10 @@ async function handleZeroStoppedMd(arr: StoppedMdArray) {
           persistent: true,
         },
       })
-      const apiPayload: { members: string[]; confirmation: string; uuid?: string; name?: string } = {
+      const apiPayload: { members: string[]; confirmation: string; mode: 'basic'; uuid?: string; name?: string } = {
         members,
         confirmation: confirmation as string,
+        mode: 'basic',
       }
       if (arr.uuid) apiPayload.uuid = arr.uuid
       if (isValidMdArrayName(arr.name)) apiPayload.name = arr.name
@@ -660,6 +661,7 @@ async function handleZeroStoppedMd(arr: StoppedMdArray) {
 
       if (!isZeroCleanupFullyVerified(result)) {
         raid.setPendingAdvancedCleanup(result.results)
+        toast.warning(t('raid.stopped_md.toast_advanced_cleanup_available'))
         const failed = result.results.find(r => !r.success || r.verifiedRemoved !== true)
         if (failed?.diagnostics) {
           await showZeroCleanupDiagnosticsModal(result.results)
@@ -689,7 +691,7 @@ async function handleZeroStoppedMd(arr: StoppedMdArray) {
       const errorResults = getZeroCleanupErrorResults(err)
       if (errorResults.some(r => r.diagnostics)) {
         raid.setPendingAdvancedCleanup(errorResults)
-        toast.error(t('raid.stopped_md.diagnostics_title'), extractFetchError(err))
+        toast.warning(t('raid.stopped_md.toast_advanced_cleanup_available'), extractFetchError(err))
         await showZeroCleanupDiagnosticsModal(errorResults)
         return
       }
@@ -700,7 +702,7 @@ async function handleZeroStoppedMd(arr: StoppedMdArray) {
   }
 }
 
-async function handleWipeStoppedMd(arr: StoppedMdArray) {
+async function handleAdvancedCleanupStoppedMd(arr: StoppedMdArray) {
   const members = stoppedMemberPaths(arr)
   const diagnosticsResults: ZeroMdSuperblockPartitionResult[] = members
     .filter(p => raid.pendingAdvancedCleanup[p])
@@ -758,7 +760,7 @@ async function handleWipeMdSignatures(diagnosticsResults: ZeroMdSuperblockPartit
     preflight = await raid.preflight({
       backend: 'software_md',
       action: 'wipe_md_signatures',
-      payload: { members, remainingSignatureTypes, detectionSourcesByMember },
+      payload: { mode: 'advanced', members, remainingSignatureTypes, detectionSourcesByMember },
     })
     if (!preflight.ok) {
       toast.warning(t('raid.stopped_md.toast_preflight_blocked'), preflight.blockers[0])
@@ -769,15 +771,15 @@ async function handleWipeMdSignatures(diagnosticsResults: ZeroMdSuperblockPartit
     return
   }
 
-  const confirmPhrase = t('raid.stopped_md.wipe_signatures_confirm_phrase')
+  const confirmPhrase = t('raid.stopped_md.advanced_cleanup_confirm_phrase')
   const { default: Modal } = await import('~/components/raid/RaidDestructiveConfirmModal.vue')
   try {
     const confirmation = await openModal({
       component: Modal,
       props: {
-        title: t('raid.stopped_md.wipe_signatures'),
+        title: t('raid.stopped_md.advanced_cleanup'),
         description: [
-          t('raid.stopped_md.wipe_signatures_help'),
+          t('raid.stopped_md.advanced_cleanup_help'),
           '',
           `${t('raid.stopped_md.zero_partitions_label')} : ${members.join(', ')}`,
         ].join('\n'),
@@ -788,7 +790,9 @@ async function handleWipeMdSignatures(diagnosticsResults: ZeroMdSuperblockPartit
       },
     })
 
+    console.info('[raid-ui:advanced-cleanup]', { sanId, members, mode: 'advanced' })
     const result = await raid.wipeMdSignatures({
+      mode: 'advanced',
       members,
       confirmation: confirmation as string,
       remainingSignatureTypes,
@@ -812,13 +816,13 @@ async function handleWipeMdSignatures(diagnosticsResults: ZeroMdSuperblockPartit
       return
     }
 
-    toast.success(t('raid.stopped_md.toast_wipe_ok', { partitions: members.join(', ') }))
+    toast.success(t('raid.stopped_md.toast_advanced_cleanup_ok', { partitions: members.join(', ') }))
   } catch (err: unknown) {
     if (isModalDismiss(err)) return
     const errorResults = getZeroCleanupErrorResults(err)
     if (errorResults.some(r => r.diagnostics)) {
       raid.setPendingAdvancedCleanup(errorResults)
-      toast.error(t('raid.stopped_md.diagnostics_title'), extractFetchError(err))
+      toast.warning(t('raid.stopped_md.toast_advanced_cleanup_available'), extractFetchError(err))
       await showZeroCleanupDiagnosticsModal(errorResults)
       return
     }
@@ -1004,6 +1008,7 @@ const canCreateHwRaid = computed(() =>
 
 onMounted(() => {
   raid.sanId = sanId
+  raid.hydratePendingAdvancedCleanup()
   raid.startPolling(10_000)
 })
 

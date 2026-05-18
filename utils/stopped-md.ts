@@ -8,7 +8,41 @@ import type {
 const MD_ARRAY_NAME_RE = /^md[a-z0-9_-]{0,15}$/
 
 export const MD_ZERO_METADATA_CONFIRMATION = 'ZERO RAID METADATA'
-export const MD_WIPE_SIGNATURES_CONFIRMATION = 'WIPE REMAINING SIGNATURES'
+export const MD_ADVANCED_CLEANUP_CONFIRMATION = 'FORCE CLEAN MD METADATA'
+/** @deprecated Use MD_ADVANCED_CLEANUP_CONFIRMATION */
+export const MD_WIPE_SIGNATURES_CONFIRMATION = MD_ADVANCED_CLEANUP_CONFIRMATION
+
+export function pendingAdvancedStorageKey(sanId: string): string {
+  return `raid-pending-advanced-${sanId}`
+}
+
+export function loadPendingAdvancedCleanup(
+  sanId: string,
+): Record<string, PartitionMetadataDiagnostics> {
+  if (typeof sessionStorage === 'undefined') return {}
+  try {
+    const raw = sessionStorage.getItem(pendingAdvancedStorageKey(sanId))
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as Record<string, PartitionMetadataDiagnostics>
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+export function savePendingAdvancedCleanup(
+  sanId: string,
+  pending: Record<string, PartitionMetadataDiagnostics>,
+): void {
+  if (typeof sessionStorage === 'undefined') return
+  try {
+    if (Object.keys(pending).length === 0) {
+      sessionStorage.removeItem(pendingAdvancedStorageKey(sanId))
+    } else {
+      sessionStorage.setItem(pendingAdvancedStorageKey(sanId), JSON.stringify(pending))
+    }
+  } catch { /* quota / private mode */ }
+}
 
 export function isValidMdArrayName(name: string): boolean {
   return MD_ARRAY_NAME_RE.test(name)
