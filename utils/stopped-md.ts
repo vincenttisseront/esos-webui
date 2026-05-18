@@ -2,6 +2,8 @@ import type { RaidOverviewResponse, StoppedMdArray } from '~/types/raid'
 
 const MD_ARRAY_NAME_RE = /^md[a-z0-9_-]{0,15}$/
 
+export const MD_ZERO_METADATA_CONFIRMATION = 'ZERO RAID METADATA'
+
 export function isValidMdArrayName(name: string): boolean {
   return MD_ARRAY_NAME_RE.test(name)
 }

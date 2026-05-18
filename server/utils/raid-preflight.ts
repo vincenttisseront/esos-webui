@@ -8,7 +8,7 @@ import type {
 } from './raid-types'
 import { expectedMdCreateConfirmation, validateMdCreateRequest } from './raid-md-validation'
 import { PREPARE_MD_PARTITIONS_CONFIRMATION, validatePrepareMdPartitionsRequest } from './raid-md-partition-actions'
-import { buildMdAssembleCommand, expectedMdAssembleConfirmation, expectedMdZeroSuperblocksConfirmation } from './raid-md-actions'
+import { buildMdAssembleCommand, expectedMdAssembleConfirmation, expectedMdZeroMetadataConfirmation, validateZeroSuperblockMembers } from './raid-md-actions'
 import { isValidMdArrayName } from './stopped-md-arrays'
 
 const RISK_MAP: Record<RaidPreflightRequest['action'], RaidRiskLevel> = {
@@ -150,27 +150,11 @@ export async function runPreflight(
       }
     }
     case 'zero_md_superblocks': {
-      const arrName = String(payload.name ?? 'md0')
       const members = (payload.members as string[] | undefined) ?? []
-      if (members.length === 0) {
-        blockers.push('Au moins une partition membre est requise')
-      }
-      if (mdArrays.some(a => a.name === arrName)) {
-        blockers.push(`Le tableau ${arrName} est encore actif — arrêtez-le avant de nettoyer les métadonnées`)
-      }
+      blockers.push(...validateZeroSuperblockMembers(members, blockDevices, mdArrays))
       impactedDevices.push(...members)
-      for (const memberPath of members) {
-        const dev = blockDevices.find(d => d.path === memberPath)
-        if (!dev) {
-          blockers.push(`Partition introuvable : ${memberPath}`)
-          continue
-        }
-        if (dev.usedBy.includes('mounted')) blockers.push(`${memberPath} est monté`)
-        if (!dev.hasMdSuperblock && !dev.mdExamine) {
-          warnings.push(`${memberPath} : aucun superblock MD détecté`)
-        }
-      }
       warnings.push('Cette action supprime les métadonnées RAID sur les partitions sélectionnées (destructif)')
+      warnings.push('Le ré-assemblage du tableau ne sera plus possible après cette opération')
       const commandPreview = members.map(m => `mdadm --zero-superblock ${m}`).join('\n')
       return {
         ok: blockers.length === 0,
@@ -237,11 +221,7 @@ function buildConfirmationPhrase(req: RaidPreflightRequest): string {
         return `ASSEMBLE ${String((req.payload as Record<string, unknown>).targetName ?? (req.payload as Record<string, unknown>).name ?? 'md0')}`
       }
     case 'zero_md_superblocks':
-      try {
-        return expectedMdZeroSuperblocksConfirmation(String(payload.name ?? 'md0'))
-      } catch {
-        return `ZERO_SUPERBLOCK ${String(payload.name ?? 'md0')}`
-      }
+      return expectedMdZeroMetadataConfirmation()
     case 'delete_hw_ld':
       return `DELETE LD ${String(payload.id ?? '0')}`
     case 'md_remove_device':

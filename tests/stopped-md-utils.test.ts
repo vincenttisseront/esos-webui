@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   isValidMdArrayName,
+  MD_ZERO_METADATA_CONFIRMATION,
   stoppedMemberPaths,
   suggestDefaultMdName,
 } from '../utils/stopped-md'
@@ -41,5 +42,9 @@ describe('stopped-md utils', () => {
       alerts: [],
     })
     expect(name).toBe('md2')
+  })
+
+  it('exports fixed zero metadata confirmation phrase', () => {
+    expect(MD_ZERO_METADATA_CONFIRMATION).toBe('ZERO RAID METADATA')
   })
 })
