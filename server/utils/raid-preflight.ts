@@ -4,10 +4,11 @@
 import type { SSHSessionManager } from './ssh-session-manager'
 import type {
   RaidPreflightResult, RaidPreflightRequest, RaidRiskLevel,
-  RaidBlockDevice, MdArray, RaidToolsInfo,
+  RaidBlockDevice, MdArray, RaidToolsInfo, StoppedMdArray,
 } from './raid-types'
 import { expectedMdCreateConfirmation, validateMdCreateRequest } from './raid-md-validation'
 import { PREPARE_MD_PARTITIONS_CONFIRMATION, validatePrepareMdPartitionsRequest } from './raid-md-partition-actions'
+import { buildMdAssembleCommand, expectedMdAssembleConfirmation, expectedMdZeroSuperblocksConfirmation } from './raid-md-actions'
 
 const RISK_MAP: Record<RaidPreflightRequest['action'], RaidRiskLevel> = {
   create_hw_ld:    'risky',
@@ -17,6 +18,8 @@ const RISK_MAP: Record<RaidPreflightRequest['action'], RaidRiskLevel> = {
   create_md:       'risky',
   prepare_md_partitions: 'destructive',
   stop_md:         'destructive',
+  assemble_md:     'risky',
+  zero_md_superblocks: 'destructive',
   md_add_device:   'safe',
   md_set_faulty:   'risky',
   md_remove_device:'destructive',
@@ -31,6 +34,7 @@ export async function runPreflight(
   blockDevices: RaidBlockDevice[],
   mdArrays: MdArray[],
   tools?: RaidToolsInfo,
+  stoppedMdArrays: StoppedMdArray[] = [],
 ): Promise<RaidPreflightResult> {
   const riskLevel = RISK_MAP[req.action]
   const blockers: string[] = []
@@ -97,6 +101,79 @@ export async function runPreflight(
       }
       break
     }
+    case 'assemble_md': {
+      const arrName = String(payload.name ?? '')
+      const members = (payload.members as string[] | undefined) ?? []
+      const stopped = findStoppedMdArray(stoppedMdArrays, arrName, payload.uuid as string | undefined)
+      if (mdArrays.some(a => a.name === arrName)) {
+        blockers.push(`Le tableau ${arrName} est déjà actif`)
+      }
+      if (!stopped) {
+        blockers.push(`Tableau MD arrêté ${arrName} introuvable sur ce nœud`)
+      } else {
+        impactedDevices.push(...stopped.members.map(m => m.path))
+        if (stopped.stoppedState === 'incomplete' && members.length < stopped.raidDevices) {
+          warnings.push('Ensemble de membres incomplet — l\'assemblage peut démarrer en mode dégradé')
+        }
+        if (stopped.stoppedState === 'ambiguous') {
+          blockers.push('État du tableau ambigu — vérifiez les métadonnées avant assemblage')
+        }
+        for (const memberPath of members.length ? members : stopped.members.map(m => m.path)) {
+          const dev = blockDevices.find(d => d.path === memberPath)
+          if (!dev) continue
+          if (dev.usedBy.includes('mounted')) blockers.push(`${memberPath} est monté`)
+          if (dev.usedBy.includes('lvm')) blockers.push(`${memberPath} est utilisé par LVM`)
+          if (dev.usedBy.includes('scst')) blockers.push(`${memberPath} est utilisé par SCST`)
+        }
+      }
+      const commandPreview = members.length > 0
+        ? buildMdAssembleCommand(arrName, members)
+        : buildMdAssembleCommand(arrName, stopped?.members.map(m => m.path) ?? [])
+      return {
+        ok: blockers.length === 0,
+        riskLevel,
+        blockers,
+        warnings,
+        requiredConfirmation: buildConfirmationPhrase(req),
+        impactedDevices,
+        detectedUsage,
+        commandPreview,
+      }
+    }
+    case 'zero_md_superblocks': {
+      const arrName = String(payload.name ?? 'md0')
+      const members = (payload.members as string[] | undefined) ?? []
+      if (members.length === 0) {
+        blockers.push('Au moins une partition membre est requise')
+      }
+      if (mdArrays.some(a => a.name === arrName)) {
+        blockers.push(`Le tableau ${arrName} est encore actif — arrêtez-le avant de nettoyer les métadonnées`)
+      }
+      impactedDevices.push(...members)
+      for (const memberPath of members) {
+        const dev = blockDevices.find(d => d.path === memberPath)
+        if (!dev) {
+          blockers.push(`Partition introuvable : ${memberPath}`)
+          continue
+        }
+        if (dev.usedBy.includes('mounted')) blockers.push(`${memberPath} est monté`)
+        if (!dev.hasMdSuperblock && !dev.mdExamine) {
+          warnings.push(`${memberPath} : aucun superblock MD détecté`)
+        }
+      }
+      warnings.push('Cette action supprime les métadonnées RAID sur les partitions sélectionnées (destructif)')
+      const commandPreview = members.map(m => `mdadm --zero-superblock ${m}`).join('\n')
+      return {
+        ok: blockers.length === 0,
+        riskLevel,
+        blockers,
+        warnings,
+        requiredConfirmation: buildConfirmationPhrase(req),
+        impactedDevices,
+        detectedUsage,
+        commandPreview,
+      }
+    }
     case 'md_remove_device': {
       const member = String(payload.device ?? '')
       impactedDevices.push(member)
@@ -142,6 +219,18 @@ function buildConfirmationPhrase(req: RaidPreflightRequest): string {
       return PREPARE_MD_PARTITIONS_CONFIRMATION
     case 'stop_md':
       return `STOP ${String(payload.name ?? 'md0')}`
+    case 'assemble_md':
+      try {
+        return expectedMdAssembleConfirmation(String(payload.name ?? 'md0'))
+      } catch {
+        return `ASSEMBLE ${String(payload.name ?? 'md0')}`
+      }
+    case 'zero_md_superblocks':
+      try {
+        return expectedMdZeroSuperblocksConfirmation(String(payload.name ?? 'md0'))
+      } catch {
+        return `ZERO_SUPERBLOCK ${String(payload.name ?? 'md0')}`
+      }
     case 'delete_hw_ld':
       return `DELETE LD ${String(payload.id ?? '0')}`
     case 'md_remove_device':
@@ -151,6 +240,18 @@ function buildConfirmationPhrase(req: RaidPreflightRequest): string {
     default:
       return 'CONFIRM'
   }
+}
+
+function findStoppedMdArray(
+  stoppedMdArrays: StoppedMdArray[],
+  name: string,
+  uuid?: string,
+): StoppedMdArray | undefined {
+  return stoppedMdArrays.find(arr =>
+    arr.name === name
+    || arr.path === `/dev/${name}`
+    || (uuid && arr.uuid === uuid),
+  )
 }
 
 function emptyTools(): RaidToolsInfo {

@@ -131,6 +131,28 @@ export interface HardwareRaidLogicalDrive {
 
 // ─── Software RAID MD ────────────────────────────────────────────────────────
 
+export interface StoppedMdArrayMember {
+  path: string
+  role?: string
+  slot?: number
+  mdExamine?: MdExamineInfo
+  present: boolean
+}
+
+export interface StoppedMdArray {
+  name: string
+  path?: string
+  uuid?: string
+  raidLevel: MdArray['raidLevel']
+  raidDevices: number
+  metadataVersion?: string
+  members: StoppedMdArrayMember[]
+  stoppedState: 'stopped' | 'assemblable' | 'incomplete' | 'ambiguous'
+  scanLine?: string
+  warnings: string[]
+  detectedOn: 'examine' | 'scan' | 'both'
+}
+
 export interface MdArray {
   name: string
   path: string
@@ -285,6 +307,7 @@ export interface ClusterStorageNodeInventory {
   tools?: RaidToolsInfo
   blockDevices: RaidBlockDevice[]
   mdArrays: MdArray[]
+  stoppedMdArrays?: StoppedMdArray[]
 }
 
 export interface ClusterStoragePreflightRequest {
@@ -411,6 +434,7 @@ export interface RaidOverviewResponse {
   tools: RaidToolsInfo
   hardwareControllers: HardwareRaidController[]
   mdArrays: MdArray[]
+  stoppedMdArrays: StoppedMdArray[]
   blockDevices: RaidBlockDevice[]
   alerts: Array<{ severity: 'info' | 'warning' | 'critical'; message: string }>
 }
@@ -425,10 +449,36 @@ export interface RaidPreflightRequest {
     | 'create_md'
     | 'prepare_md_partitions'
     | 'stop_md'
+    | 'assemble_md'
+    | 'zero_md_superblocks'
     | 'md_add_device'
     | 'md_set_faulty'
     | 'md_remove_device'
   payload: unknown
+}
+
+export interface AssembleMdArrayRequest {
+  name: string
+  uuid?: string
+  members?: string[]
+  confirmation: string
+}
+
+export interface AssembleMdArrayResponse {
+  stdout: string
+  command: string
+}
+
+export interface ZeroMdSuperblocksRequest {
+  name?: string
+  uuid?: string
+  members: string[]
+  confirmation: string
+}
+
+export interface ZeroMdSuperblocksResponse {
+  stdout: string
+  commands: string[]
 }
 
 export interface CreateHardwareLogicalDriveRequest {

@@ -6,6 +6,7 @@ import type {
   RaidOverviewResponse, RaidPreflightResult, RaidPreflightRequest,
   RaidOperation, RaidHealth, CreateMdArrayRequest, CreateMdArrayExecutionPlan, CreateMdArrayResponse, CreateHardwareLogicalDriveRequest,
   PrepareMdPartitionsRequest, PrepareMdPartitionsResponse,
+  AssembleMdArrayRequest, AssembleMdArrayResponse, ZeroMdSuperblocksRequest, ZeroMdSuperblocksResponse,
   ClusterStoragePreflightRequest, ClusterStoragePreflightResult, RaidClusterPreparedMappingHint,
 } from '~/types/raid'
 
@@ -24,6 +25,7 @@ export const useRaidStore = defineStore('raid', {
   getters: {
     controllers: (s) => s.overview?.hardwareControllers ?? [],
     mdArrays: (s) => s.overview?.mdArrays ?? [],
+    stoppedMdArrays: (s) => s.overview?.stoppedMdArrays ?? [],
     blockDevices: (s) => s.overview?.blockDevices ?? [],
     tools: (s) => s.overview?.tools,
     criticalAlerts: (s) => (s.overview?.alerts ?? []).filter(a => a.severity === 'critical'),
@@ -137,6 +139,26 @@ export const useRaidStore = defineStore('raid', {
       const result = await $fetch(`/api/raid/software/arrays/${encodeURIComponent(name)}`, {
         method: 'DELETE',
         body: { confirmation },
+        params: this.query(),
+      })
+      await this.fetchOverview(true)
+      return result
+    },
+
+    async assembleMdArray(req: AssembleMdArrayRequest) {
+      const result = await $fetch<AssembleMdArrayResponse>('/api/raid/software/arrays/assemble', {
+        method: 'POST',
+        body: req,
+        params: this.query(),
+      })
+      await this.fetchOverview(true)
+      return result
+    },
+
+    async zeroMdSuperblocks(req: ZeroMdSuperblocksRequest) {
+      const result = await $fetch<ZeroMdSuperblocksResponse>('/api/raid/software/arrays/zero-superblocks', {
+        method: 'POST',
+        body: req,
         params: this.query(),
       })
       await this.fetchOverview(true)

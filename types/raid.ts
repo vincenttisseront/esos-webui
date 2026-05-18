@@ -123,6 +123,28 @@ export interface HardwareRaidLogicalDrive {
   warnings?: string[]
 }
 
+export interface StoppedMdArrayMember {
+  path: string
+  role?: string
+  slot?: number
+  mdExamine?: MdExamineInfo
+  present: boolean
+}
+
+export interface StoppedMdArray {
+  name: string
+  path?: string
+  uuid?: string
+  raidLevel: MdArray['raidLevel']
+  raidDevices: number
+  metadataVersion?: string
+  members: StoppedMdArrayMember[]
+  stoppedState: 'stopped' | 'assemblable' | 'incomplete' | 'ambiguous'
+  scanLine?: string
+  warnings: string[]
+  detectedOn: 'examine' | 'scan' | 'both'
+}
+
 export interface MdArray {
   name: string
   path: string
@@ -410,6 +432,30 @@ export interface RaidToolsDetailed {
   arcconf: RaidToolDetection
 }
 
+export interface AssembleMdArrayRequest {
+  name: string
+  uuid?: string
+  members?: string[]
+  confirmation: string
+}
+
+export interface AssembleMdArrayResponse {
+  stdout: string
+  command: string
+}
+
+export interface ZeroMdSuperblocksRequest {
+  name?: string
+  uuid?: string
+  members: string[]
+  confirmation: string
+}
+
+export interface ZeroMdSuperblocksResponse {
+  stdout: string
+  commands: string[]
+}
+
 export interface RaidOverviewResponse {
   scannedAt: number
   tools: {
@@ -429,6 +475,7 @@ export interface RaidOverviewResponse {
   }
   hardwareControllers: HardwareRaidController[]
   mdArrays: MdArray[]
+  stoppedMdArrays: StoppedMdArray[]
   blockDevices: RaidBlockDevice[]
   alerts: Array<{ severity: 'info' | 'warning' | 'critical'; message: string }>
 }

@@ -17,7 +17,10 @@ export default defineEventHandler(async (event) => {
     }
     const cacheKey = `raid-overview-${cacheSanKey}`
     const overview = await withCache(cacheKey, 60_000, () => collectRaidOverview(manager))
-    return overview.mdArrays
+    return {
+      mdArrays: overview.mdArrays,
+      stoppedMdArrays: overview.stoppedMdArrays ?? [],
+    }
   }
 
   try {
