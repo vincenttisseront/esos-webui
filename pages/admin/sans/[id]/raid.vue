@@ -234,7 +234,7 @@
         </UCard>
       </div>
 
-      <div v-if="raid.stoppedMdArrays.length" class="space-y-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+      <div v-if="raid.stoppedMdArrays.length" class="space-y-4 pt-2 border-t border-gray-200 dark:border-gray-700">
         <div>
           <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('raid.stopped_md.section_title') }}</h3>
           <p class="text-xs text-gray-500 mt-1">{{ t('raid.stopped_md.section_description') }}</p>
@@ -246,15 +246,38 @@
           icon="i-heroicons-exclamation-triangle"
           variant="soft"
         />
-        <UCard v-for="arr in raid.stoppedMdArrays" :key="stoppedArrayKey(arr)">
-          <StoppedMdArrayCard
-            :array="arr"
-            :read-only="isReadOnly"
-            @assemble="handleAssembleStoppedMd"
-            @zero-superblocks="handleZeroStoppedMd"
-            @inspect="handleInspectStoppedMd"
-          />
-        </UCard>
+        <div v-if="stoppedMdGroups.assemblable.length" class="space-y-3">
+          <h4 class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+            {{ t('raid.stopped_md.subsection_assemblable') }} ({{ stoppedMdGroups.assemblable.length }})
+          </h4>
+          <UCard v-for="arr in stoppedMdGroups.assemblable" :key="arr.id">
+            <StoppedMdArrayCard
+              :array="arr"
+              :read-only="isReadOnly"
+              @assemble="handleAssembleStoppedMd"
+              @zero-superblocks="handleZeroStoppedMd"
+              @inspect="handleInspectStoppedMd"
+            />
+          </UCard>
+        </div>
+
+        <div v-if="stoppedMdGroups.incompleteOrphan.length" class="space-y-3">
+          <div>
+            <h4 class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+              {{ t('raid.stopped_md.subsection_incomplete') }} ({{ stoppedMdGroups.incompleteOrphan.length }})
+            </h4>
+            <p class="text-xs text-gray-500 mt-0.5">{{ t('raid.stopped_md.subsection_incomplete_hint') }}</p>
+          </div>
+          <UCard v-for="arr in stoppedMdGroups.incompleteOrphan" :key="arr.id">
+            <StoppedMdArrayCard
+              :array="arr"
+              :read-only="isReadOnly"
+              @assemble="handleAssembleStoppedMd"
+              @zero-superblocks="handleZeroStoppedMd"
+              @inspect="handleInspectStoppedMd"
+            />
+          </UCard>
+        </div>
       </div>
     </div>
 
@@ -401,6 +424,7 @@
 <script setup lang="ts">
 import type { CreateMdArrayWizardConfirmPayload, MdArray, MdMemberDevice, HardwareRaidController, HardwareRaidLogicalDrive, RaidPreflightResult, StoppedMdArray } from '~/types/raid'
 import type { SanSummary } from '~/server/db/repositories/san.repository'
+import { groupStoppedMdArrays, resolveAssembleMdName, resolveInspectLabel, resolveZeroConfirmationName } from '~/utils/stopped-md-groups'
 
 definePageMeta({ layout: 'default', ssr: false })
 
@@ -414,6 +438,8 @@ const isClusteredSan = computed(() => Boolean(san.value?.clusterId))
 
 const raid = useRaidStore()
 const { t } = useEsosI18n()
+
+const stoppedMdGroups = computed(() => groupStoppedMdArrays(raid.stoppedMdArrays))
 
 const tabs = [
   { key: 'overview', label: 'Aperçu',           icon: 'i-heroicons-chart-bar' },
@@ -561,16 +587,12 @@ const stoppedInspectOpen = ref(false)
 const stoppedInspectText = ref('')
 const stoppedInspectLabel = ref('')
 
-function stoppedArrayKey(arr: StoppedMdArray): string {
-  return arr.uuid ?? arr.name
-}
-
 function stoppedMemberPaths(arr: StoppedMdArray): string[] {
   return arr.members.filter(m => m.present).map(m => m.path)
 }
 
 function handleInspectStoppedMd(arr: StoppedMdArray) {
-  stoppedInspectLabel.value = arr.path ?? `/dev/${arr.name}`
+  stoppedInspectLabel.value = resolveInspectLabel(arr, t)
   const chunks = arr.members
     .map(m => m.mdExamine?.raw?.trim())
     .filter((raw): raw is string => Boolean(raw))
@@ -587,8 +609,30 @@ async function copyStoppedInspect() {
   } catch { /* ignore */ }
 }
 
+async function resolveAssembleTargetName(arr: StoppedMdArray): Promise<string | null> {
+  let mdName = resolveAssembleMdName(arr)
+  if (mdName && /^md[a-z0-9_-]{0,15}$/i.test(mdName)) return mdName
+  const { default: PickModal } = await import('~/components/raid/PickMdArrayNameModal.vue')
+  try {
+    return await openModal({ component: PickModal, props: { persistent: true } }) as string
+  } catch {
+    return null
+  }
+}
+
+function buildAssembleDescription(path: string, preflight: RaidPreflightResult | null): string {
+  const lines = [t('raid.stopped_md.assemble_description', { path })]
+  if (preflight?.commandPreview) {
+    lines.push('', `${t('raid.stopped_md.command_preview_title')} :`, preflight.commandPreview)
+  }
+  return lines.join('\n')
+}
+
 async function handleAssembleStoppedMd(arr: StoppedMdArray) {
-  const path = arr.path ?? `/dev/${arr.name}`
+  const mdName = await resolveAssembleTargetName(arr)
+  if (!mdName) return
+
+  const path = arr.arrayTargetPath ?? `/dev/${mdName}`
   const members = stoppedMemberPaths(arr)
   let preflight: RaidPreflightResult | null = null
   let phrase = ''
@@ -596,17 +640,18 @@ async function handleAssembleStoppedMd(arr: StoppedMdArray) {
     preflight = await raid.preflight({
       backend: 'software_md',
       action: 'assemble_md',
-      payload: { name: arr.name, uuid: arr.uuid, members },
+      payload: { name: mdName, uuid: arr.uuid, members, stoppedId: arr.id },
     })
     phrase = preflight.requiredConfirmation
   } catch { /* non bloquant */ }
+
   const { default: Modal } = await import('~/components/raid/RaidDestructiveConfirmModal.vue')
   try {
     const confirmation = await openModal({
       component: Modal,
       props: {
         title: t('raid.stopped_md.assemble_title'),
-        description: t('raid.stopped_md.assemble_description', { path }),
+        description: buildAssembleDescription(path, preflight),
         riskLevel: 'risky',
         confirmationPhrase: phrase || undefined,
         preflight,
@@ -614,8 +659,9 @@ async function handleAssembleStoppedMd(arr: StoppedMdArray) {
       },
     })
     await raid.assembleMdArray({
-      name: arr.name,
+      name: mdName,
       uuid: arr.uuid,
+      stoppedId: arr.id,
       members: members.length ? members : undefined,
       confirmation: confirmation as string,
     })
@@ -626,29 +672,39 @@ async function handleAssembleStoppedMd(arr: StoppedMdArray) {
 }
 
 async function handleZeroStoppedMd(arr: StoppedMdArray) {
-  const path = arr.path ?? `/dev/${arr.name}`
   const members = stoppedMemberPaths(arr)
   if (!members.length) {
     alert('Aucune partition membre présente à nettoyer.')
     return
   }
+  const zeroName = resolveZeroConfirmationName(arr)
   let preflight: RaidPreflightResult | null = null
   let phrase = ''
   try {
     preflight = await raid.preflight({
       backend: 'software_md',
       action: 'zero_md_superblocks',
-      payload: { name: arr.name, uuid: arr.uuid, members },
+      payload: { name: zeroName, uuid: arr.uuid, members },
     })
     phrase = preflight.requiredConfirmation
   } catch { /* non bloquant */ }
+
+  const zeroDescriptionLines = [
+    t('raid.stopped_md.zero_description'),
+    '',
+    `Partitions : ${members.join(', ')}`,
+  ]
+  if (arr.category !== 'assemblable') {
+    zeroDescriptionLines.push('', t('raid.stopped_md.zero_orphan_warning'))
+  }
+
   const { default: Modal } = await import('~/components/raid/RaidDestructiveConfirmModal.vue')
   try {
     const confirmation = await openModal({
       component: Modal,
       props: {
         title: t('raid.stopped_md.zero_title'),
-        description: `${t('raid.stopped_md.zero_description')}\n\nPartitions : ${members.join(', ')}`,
+        description: zeroDescriptionLines.join('\n'),
         riskLevel: 'destructive',
         confirmationPhrase: phrase || undefined,
         preflight,
@@ -656,7 +712,7 @@ async function handleZeroStoppedMd(arr: StoppedMdArray) {
       },
     })
     await raid.zeroMdSuperblocks({
-      name: arr.name,
+      name: zeroName,
       uuid: arr.uuid,
       members,
       confirmation: confirmation as string,

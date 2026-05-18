@@ -119,6 +119,12 @@ describe('detectStoppedMdArrays', () => {
     expect(stopped[0]?.name).toBe('md0')
     expect(stopped[0]?.members).toHaveLength(2)
     expect(stopped[0]?.stoppedState).toBe('assemblable')
+    expect(stopped[0]?.category).toBe('assemblable')
+    expect(stopped[0]?.canAssemble).toBe(true)
+    expect(stopped[0]?.raidLevelKnown).toBe(true)
+    expect(stopped[0]?.displayKind).toBe('known_array')
+    expect(stopped[0]?.recommendedAction).toBe('assemble')
+    expect(stopped[0]?.arrayTargetPath).toBe('/dev/md0')
   })
 
   it('exclut les tableaux actifs', () => {
@@ -139,5 +145,24 @@ describe('detectStoppedMdArrays', () => {
       activeMdArrays: [],
     })
     expect(stopped[0]?.stoppedState).toBe('incomplete')
+    expect(stopped[0]?.category).toBe('incomplete')
+    expect(stopped[0]?.canAssemble).toBe(false)
+    expect(stopped[0]?.recommendedAction).toBe('inspect')
+    expect(stopped[0]?.missingSummary.some(s => s.includes('manquant'))).toBe(true)
+  })
+
+  it('marque orphan pour partition seule sans scan ARRAY', () => {
+    const uuid = 'ddd33333:4444:5555:6666:777788889999'
+    const stopped = detectStoppedMdArrays({
+      mdadmScan: '',
+      blockDevices: [part('/dev/sde1', uuid)],
+      activeMdArrays: [],
+    })
+    expect(stopped).toHaveLength(1)
+    expect(stopped[0]?.name).toBe('')
+    expect(stopped[0]?.category).toBe('orphan')
+    expect(stopped[0]?.displayKind).toBe('orphan_metadata')
+    expect(stopped[0]?.canAssemble).toBe(false)
+    expect(stopped[0]?.missingSummary).toContain('Nom du tableau MD inconnu')
   })
 })

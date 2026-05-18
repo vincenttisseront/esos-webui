@@ -572,7 +572,7 @@ function buildAlerts(
   const alerts: RaidOverviewResponse['alerts'] = []
 
   if (stoppedMdArrays.length > 0) {
-    const assemblable = stoppedMdArrays.filter(a => a.stoppedState === 'assemblable').length
+    const assemblable = stoppedMdArrays.filter(a => a.category === 'assemblable').length
     alerts.push({
       severity: 'info',
       message: assemblable > 0

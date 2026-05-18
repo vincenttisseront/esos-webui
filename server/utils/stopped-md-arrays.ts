@@ -1,7 +1,17 @@
 /**
  * Détection des tableaux MD arrêtés / assemblables à partir des superblocks et du scan mdadm.
  */
-import type { MdArray, MdExamineInfo, RaidBlockDevice, StoppedMdArray, StoppedMdArrayMember } from './raid-types'
+import type {
+  MdArray,
+  MdExamineInfo,
+  RaidBlockDevice,
+  StoppedMdArray,
+  StoppedMdArrayMember,
+  StoppedMdCategory,
+  StoppedMdConfidence,
+  StoppedMdDisplayKind,
+  StoppedMdRecommendedAction,
+} from './raid-types'
 import type { MdadmScanEntry } from './parsers/mdadm-scan.parser'
 import { parseMdadmScanLines } from './parsers/mdadm-scan.parser'
 
@@ -23,6 +33,8 @@ interface ArrayGroup {
   warnings: string[]
 }
 
+const MD_NAME_RE = /^md\d+$/i
+
 export function detectStoppedMdArrays(input: {
   mdadmScan: string
   blockDevices: RaidBlockDevice[]
@@ -43,7 +55,7 @@ export function detectStoppedMdArrays(input: {
   return groups
     .map(group => toStoppedMdArray(group, activePaths))
     .filter((arr): arr is StoppedMdArray => arr !== null)
-    .sort((a, b) => a.name.localeCompare(b.name))
+    .sort((a, b) => a.id.localeCompare(b.id))
 }
 
 function collectMemberCandidates(
@@ -163,17 +175,18 @@ function toStoppedMdArray(group: ArrayGroup, activePaths: Set<string>): StoppedM
   if (group.members.length === 0 && !group.scanEntry) return null
 
   const scanEntry = group.scanEntry
-  const path = scanEntry?.path
-  const name = scanEntry?.name
-    ?? inferMdNameFromContainer(group.containerName)
-    ?? path?.replace(/^\/dev\//, '')
-    ?? 'unknown'
+  const scanPath = scanEntry?.path
+  const mdNameFromScan = scanEntry?.name
+  const mdNameInferred = inferMdNameFromContainer(group.containerName)
+  const mdNameCandidate = mdNameFromScan ?? mdNameInferred ?? (scanPath ? scanPath.replace(/^\/dev\//, '') : undefined)
+  const mdNameKnown = mdNameCandidate ? MD_NAME_RE.test(mdNameCandidate) : false
+  const mdName = mdNameKnown ? mdNameCandidate! : ''
 
-  if (activePaths.has(path ?? '') || name === 'unknown') {
-    if (!group.members.length) return null
+  if (activePaths.has(scanPath ?? '') && group.members.length === 0) {
+    return null
   }
 
-  const raidLevel = normalizeRaidLevel(
+  const raidLevelResult = parseRaidLevel(
     group.members.find(m => m.mdExamine?.raidLevel)?.mdExamine?.raidLevel,
   )
   const examineRaidDeviceCounts = group.members
@@ -192,7 +205,7 @@ function toStoppedMdArray(group: ArrayGroup, activePaths: Set<string>): StoppedM
   const stoppedState = computeStoppedState({
     members,
     expectedDevices,
-    path,
+    path: scanPath,
     activePaths,
     warnings: group.warnings,
   })
@@ -203,11 +216,15 @@ function toStoppedMdArray(group: ArrayGroup, activePaths: Set<string>): StoppedM
       ? 'scan'
       : 'examine'
 
-  return {
-    name,
-    path,
-    uuid: group.uuid ?? scanEntry?.uuid,
-    raidLevel,
+  const uuid = group.uuid ?? scanEntry?.uuid
+  const id = buildStoppedArrayId(group, uuid, members)
+
+  const base: Omit<StoppedMdArray, 'displayKind' | 'displaySubtitle' | 'category' | 'recommendedAction' | 'confidence' | 'missingSummary' | 'raidLevelKnown' | 'arrayTargetPath' | 'canAssemble' | 'canZeroSuperblocks'> = {
+    id,
+    name: mdName,
+    path: scanPath,
+    uuid,
+    raidLevel: raidLevelResult.level,
     raidDevices: Math.max(expectedDevices, members.length, 1),
     metadataVersion: scanEntry?.metadataVersion,
     members,
@@ -216,6 +233,150 @@ function toStoppedMdArray(group: ArrayGroup, activePaths: Set<string>): StoppedM
     warnings: [...new Set(group.warnings)],
     detectedOn,
   }
+
+  const ux = deriveStoppedMdUxFields({
+    ...base,
+    mdNameKnown,
+    scanPath,
+    containerName: group.containerName,
+    expectedDevices,
+  })
+
+  return { ...base, ...ux }
+}
+
+export function deriveStoppedMdUxFields(input: {
+  id: string
+  name: string
+  path?: string
+  uuid?: string
+  raidLevel: MdRaidLevel
+  raidDevices: number
+  members: StoppedMdArrayMember[]
+  stoppedState: StoppedMdArray['stoppedState']
+  warnings: string[]
+  detectedOn: StoppedMdArray['detectedOn']
+  mdNameKnown: boolean
+  scanPath?: string
+  containerName?: string
+  expectedDevices: number
+}): Pick<
+  StoppedMdArray,
+  | 'displayKind'
+  | 'displaySubtitle'
+  | 'category'
+  | 'recommendedAction'
+  | 'confidence'
+  | 'missingSummary'
+  | 'raidLevelKnown'
+  | 'arrayTargetPath'
+  | 'canAssemble'
+  | 'canZeroSuperblocks'
+> {
+  const presentCount = input.members.filter(m => m.present).length
+  const raidLevelKnown = input.raidLevel !== 'unknown'
+  const arrayTargetPath = input.scanPath ?? (input.mdNameKnown ? `/dev/${input.name}` : undefined)
+
+  const isOrphan = !input.mdNameKnown
+    || (input.members.length === 1 && !input.scanPath && input.detectedOn === 'examine')
+    || (input.members.length === 0 && !!input.scanPath)
+    || (input.stoppedState === 'ambiguous' && !input.mdNameKnown)
+
+  const isAssemblable = input.stoppedState === 'assemblable'
+    && input.mdNameKnown
+    && !!arrayTargetPath
+    && presentCount >= input.expectedDevices
+    && input.expectedDevices > 0
+
+  let category: StoppedMdCategory
+  if (isOrphan && !isAssemblable) {
+    category = 'orphan'
+  } else if (isAssemblable) {
+    category = 'assemblable'
+  } else {
+    category = 'incomplete'
+  }
+
+  const missingSummary: string[] = []
+  if (!input.mdNameKnown) {
+    missingSummary.push('Nom du tableau MD inconnu')
+  }
+  if (input.expectedDevices > 0 && presentCount < input.expectedDevices) {
+    missingSummary.push(`${input.expectedDevices - presentCount} membre(s) manquant(s) sur ${input.expectedDevices}`)
+  }
+  if (!raidLevelKnown) {
+    missingSummary.push('Niveau RAID non déterminé')
+  }
+  if (input.stoppedState === 'ambiguous') {
+    missingSummary.push('Métadonnées potentiellement conflictuelles')
+  }
+  if (input.members.length === 0 && input.scanPath) {
+    missingSummary.push('Aucune partition membre détectée sur ce nœud')
+  }
+
+  let displayKind: StoppedMdDisplayKind
+  if (category === 'orphan') {
+    displayKind = 'orphan_metadata'
+  } else if (!input.mdNameKnown) {
+    displayKind = 'unknown_md_name'
+  } else {
+    displayKind = 'known_array'
+  }
+
+  let displaySubtitle: string | undefined
+  if (arrayTargetPath) {
+    displaySubtitle = arrayTargetPath
+  } else if (input.uuid) {
+    displaySubtitle = `UUID ${truncateUuid(input.uuid)}`
+  } else if (input.members[0]?.path) {
+    displaySubtitle = input.members[0].path
+  } else if (input.containerName) {
+    displaySubtitle = input.containerName
+  }
+
+  let confidence: StoppedMdConfidence = 'low'
+  if (input.detectedOn === 'both' && input.uuid && input.mdNameKnown && raidLevelKnown) {
+    confidence = 'high'
+  } else if (input.uuid || input.scanPath || input.mdNameKnown) {
+    confidence = 'medium'
+  }
+
+  const canAssemble = isAssemblable && category === 'assemblable'
+  const canZeroSuperblocks = input.members.some(m => m.present)
+
+  let recommendedAction: StoppedMdRecommendedAction
+  if (canAssemble) {
+    recommendedAction = 'assemble'
+  } else if (category === 'orphan' || category === 'incomplete' || input.stoppedState === 'ambiguous') {
+    recommendedAction = 'inspect'
+  } else {
+    recommendedAction = 'none'
+  }
+
+  return {
+    displayKind,
+    displaySubtitle,
+    category,
+    recommendedAction,
+    confidence,
+    missingSummary,
+    raidLevelKnown,
+    arrayTargetPath,
+    canAssemble,
+    canZeroSuperblocks,
+  }
+}
+
+function buildStoppedArrayId(group: ArrayGroup, uuid?: string, members: StoppedMdArrayMember[] = []): string {
+  if (uuid) return `uuid:${uuid}`
+  if (group.scanEntry?.path) return `scan:${group.scanEntry.path}`
+  if (members[0]?.path) return `orphan:${members[0].path}`
+  return group.key
+}
+
+function truncateUuid(uuid: string): string {
+  if (uuid.length <= 20) return uuid
+  return `${uuid.slice(0, 18)}…`
 }
 
 function computeStoppedState(input: {
@@ -250,16 +411,16 @@ function normalizeContainerName(name?: string): string {
 function inferMdNameFromContainer(containerName?: string): string | undefined {
   if (!containerName) return undefined
   const short = containerName.includes(':') ? containerName.split(':').pop() : containerName
-  if (short && /^md\d+$/i.test(short)) return short
+  if (short && MD_NAME_RE.test(short)) return short
   return undefined
 }
 
-function normalizeRaidLevel(level?: string): MdRaidLevel {
+function parseRaidLevel(level?: string): { level: MdRaidLevel; known: boolean } {
   const normalized = level?.replace(/^raid/i, '').trim()
   if (normalized === '0' || normalized === '1' || normalized === '4'
     || normalized === '5' || normalized === '6' || normalized === '10') {
-    return normalized
+    return { level: normalized, known: true }
   }
-  if (normalized === 'linear') return 'linear'
-  return 'unknown'
+  if (normalized === 'linear') return { level: 'linear', known: true }
+  return { level: 'unknown', known: false }
 }

@@ -131,7 +131,13 @@ export interface StoppedMdArrayMember {
   present: boolean
 }
 
+export type StoppedMdCategory = 'assemblable' | 'incomplete' | 'orphan'
+export type StoppedMdDisplayKind = 'known_array' | 'orphan_metadata' | 'unknown_md_name'
+export type StoppedMdRecommendedAction = 'assemble' | 'inspect' | 'none'
+export type StoppedMdConfidence = 'high' | 'medium' | 'low'
+
 export interface StoppedMdArray {
+  id: string
   name: string
   path?: string
   uuid?: string
@@ -143,6 +149,16 @@ export interface StoppedMdArray {
   scanLine?: string
   warnings: string[]
   detectedOn: 'examine' | 'scan' | 'both'
+  displayKind: StoppedMdDisplayKind
+  displaySubtitle?: string
+  category: StoppedMdCategory
+  recommendedAction: StoppedMdRecommendedAction
+  confidence: StoppedMdConfidence
+  missingSummary: string[]
+  raidLevelKnown: boolean
+  arrayTargetPath?: string
+  canAssemble: boolean
+  canZeroSuperblocks: boolean
 }
 
 export interface MdArray {
@@ -435,6 +451,7 @@ export interface RaidToolsDetailed {
 export interface AssembleMdArrayRequest {
   name: string
   uuid?: string
+  stoppedId?: string
   members?: string[]
   confirmation: string
 }

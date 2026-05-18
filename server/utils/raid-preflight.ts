@@ -102,16 +102,33 @@ export async function runPreflight(
       break
     }
     case 'assemble_md': {
+      const stoppedId = payload.stoppedId as string | undefined
       const arrName = String(payload.name ?? '')
       const members = (payload.members as string[] | undefined) ?? []
-      const stopped = findStoppedMdArray(stoppedMdArrays, arrName, payload.uuid as string | undefined)
-      if (mdArrays.some(a => a.name === arrName)) {
+      const stopped = findStoppedMdArray(stoppedMdArrays, arrName, payload.uuid as string | undefined, stoppedId)
+      const assembleMembers = members.length > 0
+        ? members
+        : stopped?.members.map(m => m.path) ?? []
+
+      if (!/^md[a-z0-9_-]{0,15}$/i.test(arrName) || arrName.toLowerCase() === 'unknown') {
+        blockers.push('Nom de tableau MD invalide ou inconnu — indiquez un périphérique /dev/mdX (ex. md0)')
+      }
+      if (mdArrays.some(a => a.name === arrName || a.path === `/dev/${arrName}`)) {
         blockers.push(`Le tableau ${arrName} est déjà actif`)
       }
       if (!stopped) {
-        blockers.push(`Tableau MD arrêté ${arrName} introuvable sur ce nœud`)
+        blockers.push(`Tableau MD arrêté introuvable sur ce nœud`)
       } else {
         impactedDevices.push(...stopped.members.map(m => m.path))
+        if (!stopped.canAssemble) {
+          const hasValidManualName = /^md[a-z0-9_-]{0,15}$/i.test(arrName)
+            && arrName.toLowerCase() !== 'unknown'
+          if (hasValidManualName && assembleMembers.length > 0) {
+            warnings.push('Assemblage avec nom MD fourni manuellement — vérifiez qu\'il correspond aux métadonnées')
+          } else {
+            blockers.push('Ce groupe ne peut pas être assemblé automatiquement — inspectez les métadonnées ou indiquez un nom /dev/mdX valide')
+          }
+        }
         if (stopped.stoppedState === 'incomplete' && members.length < stopped.raidDevices) {
           warnings.push('Ensemble de membres incomplet — l\'assemblage peut démarrer en mode dégradé')
         }
@@ -126,9 +143,12 @@ export async function runPreflight(
           if (dev.usedBy.includes('scst')) blockers.push(`${memberPath} est utilisé par SCST`)
         }
       }
-      const commandPreview = members.length > 0
-        ? buildMdAssembleCommand(arrName, members)
-        : buildMdAssembleCommand(arrName, stopped?.members.map(m => m.path) ?? [])
+      let commandPreview = ''
+      try {
+        commandPreview = buildMdAssembleCommand(arrName, assembleMembers)
+      } catch {
+        commandPreview = '(commande invalide — corrigez le nom MD)'
+      }
       return {
         ok: blockers.length === 0,
         riskLevel,
@@ -246,10 +266,15 @@ function findStoppedMdArray(
   stoppedMdArrays: StoppedMdArray[],
   name: string,
   uuid?: string,
+  id?: string,
 ): StoppedMdArray | undefined {
+  if (id) {
+    const byId = stoppedMdArrays.find(arr => arr.id === id)
+    if (byId) return byId
+  }
   return stoppedMdArrays.find(arr =>
-    arr.name === name
-    || arr.path === `/dev/${name}`
+    (name && arr.name === name)
+    || (name && arr.path === `/dev/${name}`)
     || (uuid && arr.uuid === uuid),
   )
 }

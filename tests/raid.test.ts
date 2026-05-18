@@ -1458,6 +1458,7 @@ describe('Stopped MD — assemble command builders', () => {
 
 describe('Stopped MD — preflight assemble_md / zero_md_superblocks', () => {
   const stoppedMd0: StoppedMdArray = {
+    id: 'uuid:aaa:bbb',
     name: 'md0',
     path: '/dev/md0',
     uuid: 'aaa:bbb',
@@ -1470,6 +1471,16 @@ describe('Stopped MD — preflight assemble_md / zero_md_superblocks', () => {
     stoppedState: 'assemblable',
     warnings: [],
     detectedOn: 'both',
+    displayKind: 'known_array',
+    displaySubtitle: '/dev/md0',
+    category: 'assemblable',
+    recommendedAction: 'assemble',
+    confidence: 'high',
+    missingSummary: [],
+    raidLevelKnown: true,
+    arrayTargetPath: '/dev/md0',
+    canAssemble: true,
+    canZeroSuperblocks: true,
   }
 
   const activeMd0 = {
@@ -1549,5 +1560,26 @@ describe('Stopped MD — preflight assemble_md / zero_md_superblocks', () => {
     )
     expect(result.ok).toBe(false)
     expect(result.blockers.some(b => b.includes('Au moins une partition'))).toBe(true)
+  })
+
+  it('assemble_md bloque un nom MD inconnu', async () => {
+    const result = await runPreflight(
+      {} as any,
+      { backend: 'software_md', action: 'assemble_md', payload: { name: 'unknown', stoppedId: 'orphan:/dev/sdb1' } },
+      [],
+      [],
+      undefined,
+      [{
+        ...stoppedMd0,
+        id: 'orphan:/dev/sdb1',
+        name: '',
+        category: 'orphan',
+        canAssemble: false,
+        recommendedAction: 'inspect',
+        displayKind: 'orphan_metadata',
+      }],
+    )
+    expect(result.ok).toBe(false)
+    expect(result.blockers.some(b => b.includes('invalide') || b.includes('inconnu'))).toBe(true)
   })
 })
