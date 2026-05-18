@@ -8,7 +8,7 @@ import type {
 const MD_ARRAY_NAME_RE = /^md[a-z0-9_-]{0,15}$/
 
 export const MD_ZERO_METADATA_CONFIRMATION = 'ZERO RAID METADATA'
-export const MD_WIPE_SIGNATURES_CONFIRMATION = 'WIPE SIGNATURES'
+export const MD_WIPE_SIGNATURES_CONFIRMATION = 'WIPE REMAINING SIGNATURES'
 
 export function isValidMdArrayName(name: string): boolean {
   return MD_ARRAY_NAME_RE.test(name)
@@ -68,6 +68,13 @@ export function formatDiagnosticsSummary(diagnostics: PartitionMetadataDiagnosti
     lines.push(`Signatures restantes : ${diagnostics.remainingSignatureTypes.join(', ')}`)
   }
   return lines.join('\n')
+}
+
+export function advancedCleanupMembersForArray(
+  memberPaths: string[],
+  pendingAdvancedCleanup: Record<string, unknown>,
+): string[] {
+  return memberPaths.filter(p => p in pendingAdvancedCleanup)
 }
 
 export function hasAdvancedWipeAvailable(err: unknown): boolean {

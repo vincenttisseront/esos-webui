@@ -10,6 +10,7 @@ import type {
   ZeroMdSuperblocksRequest, ZeroMdSuperblocksResponse,
   WipeMdSignaturesRequest, WipeMdSignaturesResponse,
   ClusterStoragePreflightRequest, ClusterStoragePreflightResult, RaidClusterPreparedMappingHint,
+  PartitionMetadataDiagnostics, ZeroMdSuperblockPartitionResult,
 } from '~/types/raid'
 
 export const useRaidStore = defineStore('raid', {
@@ -22,6 +23,7 @@ export const useRaidStore = defineStore('raid', {
     pollTimer: null as ReturnType<typeof setInterval> | null,
     sanId: null as string | null,
     preparedClusterMappingHints: {} as Record<string, RaidClusterPreparedMappingHint>,
+    pendingAdvancedCleanup: {} as Record<string, PartitionMetadataDiagnostics>,
   }),
 
   getters: {
@@ -167,6 +169,24 @@ export const useRaidStore = defineStore('raid', {
       return result
     },
 
+    setPendingAdvancedCleanup(results: ZeroMdSuperblockPartitionResult[]) {
+      for (const r of results) {
+        if (r.diagnostics?.recommendedAction === 'advanced_wipe_signatures' && r.diagnostics) {
+          this.pendingAdvancedCleanup[r.partition] = r.diagnostics
+        }
+      }
+    },
+
+    clearPendingAdvancedCleanup(partitions?: string[]) {
+      if (!partitions?.length) {
+        this.pendingAdvancedCleanup = {}
+        return
+      }
+      for (const p of partitions) {
+        delete this.pendingAdvancedCleanup[p]
+      }
+    },
+
     async wipeMdSignatures(req: WipeMdSignaturesRequest) {
       const result = await $fetch<WipeMdSignaturesResponse>('/api/raid/software/arrays/wipe-signatures', {
         method: 'POST',
@@ -174,6 +194,7 @@ export const useRaidStore = defineStore('raid', {
         params: this.query(),
       })
       await this.fetchOverview(true)
+      this.clearPendingAdvancedCleanup(req.members)
       return result
     },
 

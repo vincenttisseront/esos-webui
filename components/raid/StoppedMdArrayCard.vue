@@ -49,10 +49,25 @@
           >
             {{ t('raid.stopped_md.zero_superblocks') }}
           </UButton>
+          <UButton
+            v-if="showAdvancedWipe"
+            size="xs"
+            color="amber"
+            variant="soft"
+            icon="i-heroicons-sparkles"
+            :loading="actionLoading"
+            :disabled="actionLoading"
+            @click="$emit('wipe-signatures', array)"
+          >
+            {{ t('raid.stopped_md.wipe_signatures') }}
+          </UButton>
         </div>
         <p class="text-[10px] text-gray-500 text-right leading-snug">
           {{ t('raid.stopped_md.assemble_help') }}
           <span class="block mt-0.5">{{ t('raid.stopped_md.zero_superblocks_help') }}</span>
+          <span v-if="showAdvancedWipe" class="block mt-0.5 text-amber-600 dark:text-amber-400">
+            {{ t('raid.stopped_md.advanced_wipe_card_hint') }}
+          </span>
         </p>
       </div>
     </div>
@@ -89,13 +104,17 @@ const props = defineProps<{
   array: StoppedMdArray
   readOnly?: boolean
   actionLoading?: boolean
+  advancedCleanupMembers?: string[]
 }>()
 
 defineEmits<{
   assemble: [array: StoppedMdArray]
   'zero-superblocks': [array: StoppedMdArray]
+  'wipe-signatures': [array: StoppedMdArray]
   inspect: [array: StoppedMdArray]
 }>()
+
+const showAdvancedWipe = computed(() => (props.advancedCleanupMembers?.length ?? 0) > 0)
 
 const { t } = useEsosI18n()
 

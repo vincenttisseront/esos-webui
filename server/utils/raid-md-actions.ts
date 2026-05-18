@@ -459,6 +459,7 @@ export async function wipeMdSignatures(
   manager: SSHSessionManager,
   members: string[],
   signatureTypesByMember?: Record<string, string[]>,
+  detectionSourcesByMember?: import('./raid-types').WipeMdSignaturesRequest['detectionSourcesByMember'],
 ): Promise<import('./raid-types').WipeMdSignaturesResponse> {
   assertWriteEnabled()
   if (members.length === 0) {
@@ -483,7 +484,9 @@ export async function wipeMdSignatures(
       warnings.push(`${devPath} : aucune signature à effacer`)
       continue
     }
-    results.push(await wipeSignaturesWithDiagnostics(manager, devPath, remainingTypes))
+    const detectionSources = detectionSourcesByMember?.[devPath]
+      ?? detectionSourcesByMember?.[member]
+    results.push(await wipeSignaturesWithDiagnostics(manager, devPath, remainingTypes, detectionSources))
   }
 
   if (results.length === 0) {

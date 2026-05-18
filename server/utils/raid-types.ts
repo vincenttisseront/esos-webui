@@ -510,10 +510,17 @@ export interface ZeroMdSuperblocksRequest {
   confirmation: string
 }
 
+export interface PartitionDetectionSources {
+  mdadmExamine: boolean
+  wipefs: boolean
+  blkid: boolean
+}
+
 export interface WipeMdSignaturesRequest {
   members: string[]
   confirmation: string
   remainingSignatureTypes?: Record<string, string[]>
+  detectionSourcesByMember?: Record<string, PartitionDetectionSources>
 }
 
 export interface ZeroMdSuperblockPartitionResult {

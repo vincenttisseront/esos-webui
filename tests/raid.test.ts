@@ -1709,4 +1709,26 @@ describe('Stopped MD — preflight assemble_md / zero_md_superblocks', () => {
     )
     expect(blockers).toEqual([])
   })
+
+  it('wipe_md_signatures preflight preview includes --force when only mdadm_examine', async () => {
+    const result = await runPreflight(
+      {} as any,
+      {
+        backend: 'software_md',
+        action: 'wipe_md_signatures',
+        payload: {
+          members: ['/dev/sda1'],
+          remainingSignatureTypes: { '/dev/sda1': ['mdadm_examine'] },
+          detectionSourcesByMember: {
+            '/dev/sda1': { mdadmExamine: true, wipefs: false, blkid: false },
+          },
+        },
+      },
+      [blockDevice('/dev/sda1')],
+      [],
+    )
+    expect(result.ok).toBe(true)
+    expect(result.commandPreview).toContain('mdadm --zero-superblock --force /dev/sda1')
+    expect(result.commandPreview).not.toContain('wipefs -a')
+  })
 })

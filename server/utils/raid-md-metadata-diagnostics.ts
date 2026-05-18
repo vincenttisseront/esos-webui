@@ -12,7 +12,13 @@ import type {
 import { parseMdadmExamineOutput } from './parsers/mdadm-examine.parser'
 import { parseBlkidTypes, parseWipefsProbeOutput } from './parsers/wipefs-output.parser'
 
-export const MD_WIPE_SIGNATURES_CONFIRMATION = 'WIPE SIGNATURES'
+export const MD_WIPE_SIGNATURES_CONFIRMATION = 'WIPE REMAINING SIGNATURES'
+
+export interface PartitionDetectionSources {
+  mdadmExamine: boolean
+  wipefs: boolean
+  blkid: boolean
+}
 
 const PROBE_EXIT_MARKER = '__PROBE_EXIT__'
 const ZERO_EXIT_MARKER = '__MD_ZERO_EXIT__'
@@ -219,23 +225,51 @@ export async function collectPartitionMetadataDiagnostics(
   }
 }
 
+/** Ordered advanced cleanup commands (wipefs targeted first, then mdadm --force if examine still detects). */
+export function buildAdvancedCleanupCommands(
+  partition: string,
+  remainingSignatureTypes: string[],
+  detectionSources?: PartitionDetectionSources,
+): string[] {
+  const devPath = sanitizeMdDevicePath(partition)
+  const commands: string[] = []
+  const raidWipefsTypes = remainingSignatureTypes.filter(
+    t => t !== 'mdadm_examine' && isRaidRelatedSignature(t),
+  )
+  const unique = [...new Set(raidWipefsTypes)]
+
+  if (unique.some(t => t.toLowerCase() === 'linux_raid_member')) {
+    commands.push(`wipefs --types=linux_raid_member -a ${devPath}`)
+  } else if (unique.length > 0) {
+    commands.push(`wipefs --types=${unique.join(',')} -a ${devPath}`)
+  }
+
+  const needsForceZero = remainingSignatureTypes.includes('mdadm_examine')
+    || detectionSources?.mdadmExamine === true
+
+  if (needsForceZero) {
+    commands.push(`mdadm --zero-superblock --force ${devPath}`)
+  }
+
+  if (commands.length === 0) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Aucune action de nettoyage avancée applicable',
+    })
+  }
+  return commands
+}
+
+/** @deprecated Use buildAdvancedCleanupCommands — returns wipefs-only step for backward-compatible previews */
 export function buildAdvancedWipeSignaturesCommand(
   partition: string,
   remainingSignatureTypes: string[],
 ): string {
-  const devPath = sanitizeMdDevicePath(partition)
-  const raidTypes = remainingSignatureTypes.filter(t => t !== 'mdadm_examine' && isRaidRelatedSignature(t))
-  const unique = [...new Set(raidTypes)]
-
-  if (unique.includes('linux_raid_member') || unique.some(t => t.toLowerCase() === 'linux_raid_member')) {
-    return `wipefs --types=linux_raid_member -a ${devPath}`
-  }
-  if (unique.length > 0) {
-    return `wipefs --types=${unique.join(',')} -a ${devPath}`
-  }
-  if (remainingSignatureTypes.length > 0) {
-    return `wipefs -a ${devPath}`
-  }
+  const cmds = buildAdvancedCleanupCommands(partition, remainingSignatureTypes)
+  const wipefsCmd = cmds.find(c => c.startsWith('wipefs '))
+  if (wipefsCmd) return wipefsCmd
+  const forceCmd = cmds.find(c => c.includes('mdadm --zero-superblock'))
+  if (forceCmd) return forceCmd
   throw createError({
     statusCode: 400,
     statusMessage: 'Aucune signature à effacer',
@@ -245,9 +279,11 @@ export function buildAdvancedWipeSignaturesCommand(
 export async function runZeroSuperblockCommand(
   manager: SSHSessionManager,
   partition: string,
+  options?: { force?: boolean },
 ): Promise<CommandProbeResult & { success: boolean }> {
   const devPath = sanitizeMdDevicePath(partition)
-  const command = `mdadm --zero-superblock ${devPath}`
+  const forceFlag = options?.force ? ' --force' : ''
+  const command = `mdadm --zero-superblock${forceFlag} ${devPath}`
   const sshCommand = `${command} 2>&1; echo ${ZERO_EXIT_MARKER}=$?`
   let stdout = ''
   let stderr = ''
@@ -325,26 +361,44 @@ export async function zeroSuperblockWithDiagnostics(
   return result
 }
 
-export async function wipeSignaturesWithDiagnostics(
+export async function advancedCleanupWithDiagnostics(
   manager: SSHSessionManager,
   partition: string,
   remainingSignatureTypes: string[],
+  detectionSources?: PartitionDetectionSources,
 ): Promise<ZeroMdSuperblockPartitionResult> {
   const devPath = sanitizeMdDevicePath(partition)
-  const wipeCommand = buildAdvancedWipeSignaturesCommand(devPath, remainingSignatureTypes)
-  console.info('[raid-md:wipe-signatures]', { partition: devPath, wipeCommand })
+  const commands = buildAdvancedCleanupCommands(devPath, remainingSignatureTypes, detectionSources)
+  console.info('[raid-md:wipe-signatures]', { partition: devPath, commands })
 
-  const wipeResult = await runWipeSignaturesCommand(manager, devPath, wipeCommand)
+  const stepResults: Array<CommandProbeResult & { success: boolean }> = []
+  for (const cmd of commands) {
+    if (cmd.includes('mdadm --zero-superblock')) {
+      stepResults.push(await runZeroSuperblockCommand(manager, devPath, { force: cmd.includes('--force') }))
+    } else {
+      stepResults.push(await runWipeSignaturesCommand(manager, devPath, cmd))
+    }
+  }
+
+  const overallSuccess = stepResults.every(s => s.success)
+  const combinedStep: CommandProbeResult & { success: boolean } = {
+    command: commands.join('\n'),
+    exitCode: overallSuccess ? 0 : (stepResults[stepResults.length - 1]?.exitCode ?? 1),
+    stdout: stepResults.map(s => s.stdout).filter(Boolean).join('\n---\n').slice(0, 1500),
+    stderr: stepResults.map(s => s.stderr).filter(Boolean).join('\n').slice(0, 500),
+    success: overallSuccess,
+  }
+
   await runPostCleanupSync(manager, devPath)
-  const diagnostics = await collectPartitionMetadataDiagnostics(manager, devPath, wipeResult)
+  const diagnostics = await collectPartitionMetadataDiagnostics(manager, devPath, combinedStep)
 
   const result: ZeroMdSuperblockPartitionResult = {
     partition: devPath,
-    command: wipeCommand,
-    success: wipeResult.success,
-    stdout: wipeResult.stdout,
-    stderr: wipeResult.stderr,
-    exitCode: wipeResult.exitCode,
+    command: combinedStep.command,
+    success: combinedStep.success,
+    stdout: combinedStep.stdout,
+    stderr: combinedStep.stderr,
+    exitCode: combinedStep.exitCode,
     verifiedRemoved: diagnostics.verifiedRemoved ? true : false,
     verificationStdout: diagnostics.mdadmExamine.stdout.slice(0, 1000),
     diagnostics,
@@ -358,6 +412,15 @@ export async function wipeSignaturesWithDiagnostics(
   })
 
   return result
+}
+
+export async function wipeSignaturesWithDiagnostics(
+  manager: SSHSessionManager,
+  partition: string,
+  remainingSignatureTypes: string[],
+  detectionSources?: PartitionDetectionSources,
+): Promise<ZeroMdSuperblockPartitionResult> {
+  return advancedCleanupWithDiagnostics(manager, partition, remainingSignatureTypes, detectionSources)
 }
 
 export function expectedMdWipeSignaturesConfirmation(): string {

@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  advancedCleanupWithDiagnostics,
+  buildAdvancedCleanupCommands,
   buildAdvancedWipeSignaturesCommand,
   buildRemainingSignatureTypes,
   buildZeroCleanupFailureError,
@@ -45,6 +47,29 @@ describe('raid-md-metadata-diagnostics', () => {
         verifiedRemoved: false,
         remainingSignatureTypes: ['linux_raid_member'],
       })).toBe('manual_investigation')
+    })
+  })
+
+  describe('buildAdvancedCleanupCommands', () => {
+    it('uses force zero only when only mdadm_examine remains', () => {
+      const cmds = buildAdvancedCleanupCommands(
+        '/dev/sda1',
+        ['mdadm_examine'],
+        { mdadmExamine: true, wipefs: false, blkid: false },
+      )
+      expect(cmds).toEqual(['mdadm --zero-superblock --force /dev/sda1'])
+      expect(cmds.some(c => c.includes('wipefs -a'))).toBe(false)
+    })
+
+    it('runs wipefs before force zero when both signatures present', () => {
+      const cmds = buildAdvancedCleanupCommands(
+        '/dev/sda1',
+        ['linux_raid_member', 'mdadm_examine'],
+        { mdadmExamine: true, wipefs: true, blkid: false },
+      )
+      expect(cmds).toHaveLength(2)
+      expect(cmds[0]).toBe('wipefs --types=linux_raid_member -a /dev/sda1')
+      expect(cmds[1]).toBe('mdadm --zero-superblock --force /dev/sda1')
     })
   })
 
@@ -97,6 +122,7 @@ describe('raid-md-metadata-diagnostics', () => {
       expect(result.verifiedRemoved).toBe(false)
       expect(result.diagnostics?.detectionSources.mdadmExamine).toBe(true)
       expect(result.diagnostics?.remainingSignatureTypes).toContain('mdadm_examine')
+      expect(result.diagnostics?.recommendedAction).toBe('advanced_wipe_signatures')
     })
 
     it('recommendedAction advanced_wipe when wipefs shows linux_raid_member', async () => {
@@ -124,6 +150,43 @@ describe('raid-md-metadata-diagnostics', () => {
       const result = await zeroSuperblockWithDiagnostics(manager as any, '/dev/sda1')
       expect(result.diagnostics?.recommendedAction).toBe('advanced_wipe_signatures')
       expect(result.diagnostics?.detectionSources.wipefs).toBe(true)
+    })
+  })
+
+  describe('advancedCleanupWithDiagnostics', () => {
+    it('verifiedRemoved true after force zero when examine-only remnant cleared', async () => {
+      let forceZeroRan = false
+      const manager = {
+        exec: vi.fn(async (cmd: string) => {
+          if (cmd.includes('mdadm --zero-superblock --force')) {
+            forceZeroRan = true
+            return { stdout: 'forced\n__MD_ZERO_EXIT__=0\n', stderr: '' }
+          }
+          if (cmd.includes('mdadm --zero-superblock') && !cmd.includes('--force')) {
+            return { stdout: '__MD_ZERO_EXIT__=0\n', stderr: '' }
+          }
+          if (cmd.includes('--examine')) {
+            return { stdout: forceZeroRan ? 'No md superblock detected.\n__PROBE_EXIT__=0\n' : '          Magic : abc\n__PROBE_EXIT__=0\n', stderr: '' }
+          }
+          if (cmd.includes('wipefs -n')) {
+            return { stdout: '__PROBE_EXIT__=0\n', stderr: '' }
+          }
+          if (cmd.includes('blkid')) {
+            return { stdout: '', stderr: '' }
+          }
+          return { stdout: '', stderr: '' }
+        }),
+      }
+
+      const result = await advancedCleanupWithDiagnostics(
+        manager as any,
+        '/dev/sda1',
+        ['mdadm_examine'],
+        { mdadmExamine: true, wipefs: false, blkid: false },
+      )
+      expect(forceZeroRan).toBe(true)
+      expect(result.command).toContain('--force')
+      expect(result.verifiedRemoved).toBe(true)
     })
   })
 
@@ -177,7 +240,7 @@ describe('raid-md-metadata-diagnostics', () => {
             verifiedRemoved: false,
             remainingSignatureTypes: ['mdadm_examine'],
             detectionSources: { mdadmExamine: true, wipefs: false, blkid: false },
-            recommendedAction: 'manual_investigation',
+            recommendedAction: 'advanced_wipe_signatures',
           },
         }],
         [],

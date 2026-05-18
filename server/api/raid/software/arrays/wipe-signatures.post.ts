@@ -44,7 +44,12 @@ export default defineEventHandler(async (event) => {
     }
 
     console.info('[raid-api:wipe-signatures]', { sanId, members })
-    const result = await wipeMdSignatures(manager, members, body.remainingSignatureTypes)
+    const result = await wipeMdSignatures(
+      manager,
+      members,
+      body.remainingSignatureTypes,
+      body.detectionSourcesByMember,
+    )
     invalidateCacheKey(cacheKey)
     console.info('[raid-api:wipe-signatures]', {
       sanId,

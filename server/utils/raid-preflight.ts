@@ -16,7 +16,7 @@ import {
   validateWipeSignatureMembers,
   validateZeroSuperblockMembers,
 } from './raid-md-actions'
-import { buildAdvancedWipeSignaturesCommand } from './raid-md-metadata-diagnostics'
+import { buildAdvancedCleanupCommands } from './raid-md-metadata-diagnostics'
 import { isValidMdArrayName } from './stopped-md-arrays'
 
 const RISK_MAP: Record<RaidPreflightRequest['action'], RaidRiskLevel> = {
@@ -180,16 +180,18 @@ export async function runPreflight(
       const members = (payload.members as string[] | undefined) ?? []
       blockers.push(...validateWipeSignatureMembers(members, blockDevices, mdArrays))
       impactedDevices.push(...members)
-      warnings.push('Cette action efface les signatures détectées par wipefs (destructif)')
+      warnings.push('Nettoyage avancé : wipefs ciblé puis mdadm --zero-superblock --force si examine détecte encore des métadonnées (destructif)')
       const typesByMember = payload.remainingSignatureTypes as Record<string, string[]> | undefined
+      const sourcesByMember = payload.detectionSourcesByMember as Record<string, { mdadmExamine: boolean; wipefs: boolean; blkid: boolean }> | undefined
       const commandPreview = members.map((m) => {
-        const types = typesByMember?.[m] ?? ['linux_raid_member']
+        const types = typesByMember?.[m] ?? ['mdadm_examine']
+        const sources = sourcesByMember?.[m]
         try {
-          return buildAdvancedWipeSignaturesCommand(m, types)
+          return buildAdvancedCleanupCommands(m, types, sources).join('\n')
         } catch {
-          return `wipefs --types=linux_raid_member -a ${m}`
+          return `mdadm --zero-superblock --force ${m}`
         }
-      }).join('\n')
+      }).join('\n\n')
       return {
         ok: blockers.length === 0,
         riskLevel,
