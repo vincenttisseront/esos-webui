@@ -318,6 +318,13 @@
               <UBadge :color="nodeStatusColor(node.status)" :label="nodeStatusLabel(node.status)" variant="soft" size="xs" />
             </div>
             <pre v-if="executionCommandForNode(node)" class="text-xs bg-white border border-gray-200 rounded p-3 max-h-40 overflow-auto font-mono text-gray-700">{{ executionCommandForNode(node) }}</pre>
+            <UAlert
+              v-if="nodeShowsMdadmInteractivePrompt(node)"
+              :title="mdadmInteractiveConfirmMessage"
+              color="amber"
+              icon="i-heroicons-exclamation-triangle"
+              class="text-xs"
+            />
             <pre v-if="node.stdout" class="text-xs bg-gray-900 text-gray-100 rounded p-3 max-h-32 overflow-auto whitespace-pre-wrap">{{ node.stdout }}</pre>
             <pre v-if="node.stderr" class="text-xs bg-gray-900 text-red-200 rounded p-3 max-h-24 overflow-auto whitespace-pre-wrap">{{ node.stderr }}</pre>
             <p v-if="node.error" class="text-xs text-red-600">{{ node.error }}</p>
@@ -486,6 +493,8 @@ const canRerunClusterPreflightWithMappings = computed(() =>
   manualMappingComplete.value && duplicateMappingKeys.value.size === 0 && !clusterPreflightLoading.value,
 )
 const mdEmptyMembersMessage = 'Commande MD invalide : aucune partition membre transmise.'
+const mdadmInteractiveConfirmPrompt = 'Continue creating array?'
+const mdadmInteractiveConfirmMessage = 'mdadm is waiting for interactive confirmation; non-interactive mode is required.'
 const executionPlanRows = computed(() => executionPlan.value?.nodeResults ?? [])
 const executionPlanValid = computed(() =>
   executionPlanRows.value.length > 0
@@ -696,8 +705,11 @@ async function submit() {
     emit('confirm')
   } catch (err: any) {
     if (attemptId !== executionAttemptId.value || attemptToken !== executionAttemptToken.value || attemptPlanSignature !== executionPlanSignature(executionPlan.value)) return
-    submitError.value = err?.data?.statusMessage ?? err.message ?? 'Erreur lors de la création'
     const errorData = err?.data?.data ?? err?.data ?? {}
+    const nodeErrorMessage = typeof errorData.statusMessage === 'string'
+      ? errorData.statusMessage
+      : (err?.data?.statusMessage ?? err.message ?? 'Erreur lors de la création')
+    submitError.value = nodeErrorMessage
     const failedExecution = err?.data?.data?.clusterExecution ?? err?.data?.clusterExecution
     if (failedExecution?.nodeResults && nodeResultsSignature(failedExecution.nodeResults) === attemptPlanSignature) {
       executionNodeResults.value = failedExecution.nodeResults
@@ -711,7 +723,7 @@ async function submit() {
             command: typeof errorData.command === 'string' ? errorData.command : executionCommandForNode(node),
             stdout: typeof errorData.stdout === 'string' ? errorData.stdout : node.stdout,
             stderr: typeof errorData.stderr === 'string' ? errorData.stderr : node.stderr,
-            error: submitError.value ?? undefined,
+            error: nodeErrorMessage,
           }
         : node)
     }
@@ -749,6 +761,11 @@ function nodeResultsSignature(nodes: CreateMdArrayNodeResult[]): string {
 function executionCommandForNode(node: CreateMdArrayNodeResult): string | undefined {
   if (node.command) return node.command
   return executionPlanRows.value.find(planNode => planNode.sanId === node.sanId)?.command
+}
+
+function nodeShowsMdadmInteractivePrompt(node: CreateMdArrayNodeResult): boolean {
+  const combined = [node.stdout, node.stderr].filter(Boolean).join('\n')
+  return combined.includes(mdadmInteractiveConfirmPrompt)
 }
 
 function buildPendingExecutionNodeResults(): CreateMdArrayNodeResult[] {

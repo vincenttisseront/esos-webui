@@ -9,6 +9,31 @@ import { buildMdCreateCommand, MD_CREATE_EMPTY_MEMBERS_MESSAGE, normalizeMdCreat
 const WRITE_ENABLED = process.env.RAID_SOFTWARE_WRITE_ENABLED !== 'false'
   && process.env.RAID_WRITE_ACTIONS_ENABLED !== 'false'
 
+export const MDADM_INTERACTIVE_CONFIRM_PROMPT = 'Continue creating array?'
+export const MDADM_INTERACTIVE_CONFIRM_MESSAGE = 'mdadm is waiting for interactive confirmation; non-interactive mode is required.'
+
+export function isMdadmAwaitingInteractiveConfirmation(stdout?: string, stderr?: string): boolean {
+  const combined = [stdout, stderr].filter(Boolean).join('\n')
+  return combined.includes(MDADM_INTERACTIVE_CONFIRM_PROMPT)
+}
+
+export function resolveMdCreateExecErrorMessage(
+  err: any,
+  finalCommand: string,
+  stdout?: string,
+  stderr?: string,
+): string {
+  if (isMdadmAwaitingInteractiveConfirmation(stdout, stderr)) {
+    return MDADM_INTERACTIVE_CONFIRM_MESSAGE
+  }
+  const raw = err?.statusMessage ?? err?.message ?? 'Erreur SSH création MD array'
+  const timeoutMatch = raw.match(/SSH exec timeout \((\d+)ms\)/)
+  if (timeoutMatch) {
+    return `SSH exec timeout (${timeoutMatch[1]}ms): ${finalCommand}`
+  }
+  return raw
+}
+
 export interface MdCreateExecutionTraceContext {
   endpoint?: string
   sanId?: string
@@ -78,9 +103,9 @@ export async function createMdArrayFromPlan(
     const execResult = await manager.exec(sshCommand, 120_000)
     stdout = execResult.stdout
   } catch (err: any) {
-    const errorMessage = err?.statusMessage ?? err?.message ?? 'Erreur SSH création MD array'
     const errorStdout = extractErrorText(err, 'stdout')
     const errorStderr = extractErrorText(err, 'stderr')
+    const errorMessage = resolveMdCreateExecErrorMessage(err, finalCommand, errorStdout, errorStderr)
     traceMdCreateError('ssh-exec-error', traceContext, normalizedReq, finalCommand, planCommand, errorMessage, errorStdout, errorStderr)
     throw createError({
       statusCode: err?.statusCode ?? 500,
@@ -89,6 +114,19 @@ export async function createMdArrayFromPlan(
         command: finalCommand,
         stdout: errorStdout,
         stderr: errorStderr,
+      },
+    })
+  }
+
+  if (isMdadmAwaitingInteractiveConfirmation(stdout)) {
+    const errorMessage = MDADM_INTERACTIVE_CONFIRM_MESSAGE
+    traceMdCreateError('mdadm-interactive-prompt', traceContext, normalizedReq, finalCommand, planCommand, errorMessage, stdout, undefined)
+    throw createError({
+      statusCode: 500,
+      statusMessage: errorMessage,
+      data: {
+        command: finalCommand,
+        stdout,
       },
     })
   }

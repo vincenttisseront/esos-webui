@@ -203,7 +203,7 @@ export function buildMdCreateCommand(req: Pick<CreateMdArrayRequest, 'name' | 'l
   const devices = sanitizeMdMemberDevices(req.devices)
   const chunkKb = sanitizeChunkKb(req.chunkKb)
   assertMdMemberCount(level, devices.length)
-  const command = `mdadm --create /dev/${name} --chunk=${chunkKb} --level=${level} --raid-devices=${devices.length} ${devices.join(' ')}`
+  const command = `mdadm --create /dev/${name} --chunk=${chunkKb} --level=${level} --raid-devices=${devices.length} --run ${devices.join(' ')}`
   assertRenderedMdCreateCommand(command, devices.length)
   return command
 }
