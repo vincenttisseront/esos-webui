@@ -56,10 +56,10 @@ function collectMemberCandidates(
   for (const dev of blockDevices) {
     if (dev.type !== 'part') continue
     if (activePaths.has(dev.path)) continue
-    const hasMdSuperblock = !!dev.hasMdSuperblock
-      || dev.blkidType === 'linux_raid_member'
-      || (dev.wipefsSignatures ?? []).includes('linux_raid_member')
-    if (!hasMdSuperblock && !dev.mdExamine) continue
+    // Stopped/orphan arrays are driven by mdadm --examine, not blkid alone (blkid may
+    // still report linux_raid_member after zero-superblock until partition type changes).
+    if (!dev.mdExamine) continue
+    const hasMdSuperblock = true
     result.push({
       path: dev.path,
       mdExamine: dev.mdExamine,

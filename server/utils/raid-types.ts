@@ -485,7 +485,21 @@ export interface ZeroMdSuperblocksRequest {
   confirmation: string
 }
 
+export interface ZeroMdSuperblockPartitionResult {
+  partition: string
+  command: string
+  success: boolean
+  stdout: string
+  stderr: string
+  exitCode: number
+  verifiedRemoved: boolean | null
+  verificationStdout?: string
+}
+
 export interface ZeroMdSuperblocksResponse {
+  ok: boolean
+  results: ZeroMdSuperblockPartitionResult[]
+  warnings: string[]
   stdout: string
   commands: string[]
 }

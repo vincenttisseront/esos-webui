@@ -37,3 +37,25 @@ export function extractFetchError(err: unknown): string {
   const e = err as { data?: { statusMessage?: string }; message?: string }
   return e?.data?.statusMessage ?? e?.message ?? 'Erreur inconnue'
 }
+
+export function membersStillInStoppedArrays(
+  memberPaths: string[],
+  stoppedArrays: StoppedMdArray[],
+): string[] {
+  const still: string[] = []
+  for (const path of memberPaths) {
+    const found = stoppedArrays.some(arr =>
+      arr.members.some(m => m.present && m.path === path),
+    )
+    if (found) still.push(path)
+  }
+  return still
+}
+
+export function isZeroCleanupFullyVerified(
+  result: { ok: boolean; results: Array<{ success: boolean; verifiedRemoved: boolean | null }>; warnings: string[] },
+): boolean {
+  if (!result.ok) return false
+  if (result.warnings.length > 0) return false
+  return result.results.every(r => r.success && r.verifiedRemoved === true)
+}

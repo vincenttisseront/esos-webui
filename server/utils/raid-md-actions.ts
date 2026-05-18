@@ -3,7 +3,8 @@
  */
 import { createError } from 'h3'
 import type { SSHSessionManager } from './ssh-session-manager'
-import type { AssembleMdArrayRequest, CreateMdArrayRequest } from './raid-types'
+import type { AssembleMdArrayRequest, CreateMdArrayRequest, ZeroMdSuperblockPartitionResult } from './raid-types'
+import { parseMdadmExamineOutput } from './parsers/mdadm-examine.parser'
 import { buildMdCreateCommand, MD_CREATE_EMPTY_MEMBERS_MESSAGE, normalizeMdCreatePayload, sanitizeMdArrayName } from './raid-md-validation'
 
 const WRITE_ENABLED = process.env.RAID_SOFTWARE_WRITE_ENABLED !== 'false'
@@ -333,25 +334,130 @@ export function validateZeroSuperblockMembers(
   return blockers
 }
 
+const ZERO_SUPERBLOCK_EXIT_MARKER = '__MD_ZERO_EXIT__'
+
+function parseSshExitCode(stdout: string, marker = ZERO_SUPERBLOCK_EXIT_MARKER): number {
+  const match = stdout.match(new RegExp(`${marker}=(\\d+)`))
+  return match ? Number(match[1]) : 1
+}
+
+function stripExitMarker(stdout: string, marker = ZERO_SUPERBLOCK_EXIT_MARKER): string {
+  return stdout.replace(new RegExp(`\\n?${marker}=\\d+\\s*$`), '').trim()
+}
+
+export async function verifyMdSuperblockRemoved(
+  manager: SSHSessionManager,
+  partition: string,
+): Promise<{ verifiedRemoved: boolean | null; verificationStdout: string }> {
+  const devPath = sanitizeDevicePath(partition)
+  try {
+    const { stdout } = await manager.exec(`mdadm --examine ${devPath} 2>&1`, 30_000)
+    const trimmed = stdout.trim()
+    if (/No md superblock detected/i.test(trimmed)) {
+      return { verifiedRemoved: true, verificationStdout: trimmed.slice(0, 1000) }
+    }
+    const parsed = parseMdadmExamineOutput(trimmed)
+    return { verifiedRemoved: !parsed, verificationStdout: trimmed.slice(0, 1000) }
+  } catch (err: any) {
+    const msg = err?.statusMessage ?? err?.message ?? String(err)
+    return { verifiedRemoved: null, verificationStdout: msg.slice(0, 500) }
+  }
+}
+
+export async function zeroMdSuperblockOnPartition(
+  manager: SSHSessionManager,
+  partition: string,
+): Promise<ZeroMdSuperblockPartitionResult> {
+  const devPath = sanitizeDevicePath(partition)
+  const command = `mdadm --zero-superblock ${devPath}`
+  const marker = ZERO_SUPERBLOCK_EXIT_MARKER
+  const sshCommand = `${command} 2>&1; echo ${marker}=$?`
+
+  let stdout = ''
+  let stderr = ''
+  let exitCode = 1
+
+  console.info('[raid-md:zero-superblock]', { partition: devPath, command })
+
+  try {
+    const execResult = await manager.exec(sshCommand, 60_000)
+    stdout = execResult.stdout ?? ''
+    stderr = execResult.stderr ?? ''
+    exitCode = parseSshExitCode(stdout, marker)
+    stdout = stripExitMarker(stdout, marker)
+  } catch (err: any) {
+    stdout = extractErrorText(err, 'stdout') ?? ''
+    stderr = extractErrorText(err, 'stderr') ?? err?.statusMessage ?? err?.message ?? ''
+    exitCode = parseSshExitCode(stdout, marker) || 1
+    stdout = stripExitMarker(stdout, marker)
+  }
+
+  const { verifiedRemoved, verificationStdout } = await verifyMdSuperblockRemoved(manager, devPath)
+
+  const result: ZeroMdSuperblockPartitionResult = {
+    partition: devPath,
+    command,
+    success: exitCode === 0,
+    stdout: stdout.slice(0, 1500),
+    stderr: stderr.slice(0, 500),
+    exitCode,
+    verifiedRemoved,
+    verificationStdout,
+  }
+
+  console.info('[raid-md:zero-superblock]', {
+    partition: devPath,
+    success: result.success,
+    exitCode: result.exitCode,
+    verifiedRemoved: result.verifiedRemoved,
+  })
+
+  return result
+}
+
 export async function zeroMdSuperblocks(
   manager: SSHSessionManager,
   members: string[],
-): Promise<{ stdout: string; commands: string[] }> {
+): Promise<import('./raid-types').ZeroMdSuperblocksResponse> {
   assertWriteEnabled()
   if (members.length === 0) {
     throw createError({ statusCode: 400, statusMessage: 'Au moins une partition membre est requise' })
   }
-  const commands = members.map(dev => `mdadm --zero-superblock ${sanitizeDevicePath(dev)}`)
-  const sshCommand = `${commands.join('; ')} 2>&1; echo EXIT_CODE=$?`
-  const { stdout } = await manager.exec(sshCommand, 120_000)
-  if (stdout.match(/EXIT_CODE=[1-9]/)) {
+
+  const results: ZeroMdSuperblockPartitionResult[] = []
+  const warnings: string[] = []
+
+  for (const member of members) {
+    results.push(await zeroMdSuperblockOnPartition(manager, member))
+  }
+
+  for (const r of results) {
+    if (!r.success) {
+      warnings.push(`${r.partition} : mdadm --zero-superblock a échoué (code ${r.exitCode})`)
+    } else if (r.verifiedRemoved === false) {
+      warnings.push(`${r.partition} : superblock MD encore détecté après nettoyage`)
+    } else if (r.verifiedRemoved === null) {
+      warnings.push(`${r.partition} : vérification mdadm --examine non concluante`)
+    }
+  }
+
+  const commands = results.map(r => r.command)
+  const stdout = results.map(r => r.stdout).filter(Boolean).join('\n---\n').slice(0, 4000)
+  const failed = results.some(r => !r.success || r.verifiedRemoved === false)
+  const ok = !failed
+
+  if (failed) {
+    const first = results.find(r => !r.success || r.verifiedRemoved === false)
     throw createError({
       statusCode: 500,
-      statusMessage: `Échec mdadm --zero-superblock : ${stdout.slice(-500)}`,
-      data: { commands, stdout },
+      statusMessage: first?.verifiedRemoved === false
+        ? `Métadonnées MD encore présentes sur ${first.partition}`
+        : `Échec mdadm --zero-superblock sur ${first?.partition ?? 'partition'}`,
+      data: { ok: false, results, warnings, stdout, commands },
     })
   }
-  return { stdout: stdout.slice(0, 2000), commands }
+
+  return { ok, results, warnings, stdout, commands }
 }
 
 // ─── Stop array ───────────────────────────────────────────────────────────────

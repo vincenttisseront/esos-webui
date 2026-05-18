@@ -14,40 +14,46 @@
           <span>{{ t('raid.stopped_md.members_count', { count: presentMemberCount, expected: array.raidDevices }) }}</span>
         </div>
       </div>
-      <div v-if="!readOnly" class="flex flex-wrap gap-2 shrink-0 justify-end">
-        <UButton
-          size="xs"
-          color="gray"
-          variant="ghost"
-          icon="i-heroicons-magnifying-glass"
-          :loading="actionLoading"
-          :disabled="actionLoading"
-          @click="$emit('inspect', array)"
-        >
-          {{ t('raid.stopped_md.inspect') }}
-        </UButton>
-        <UButton
-          size="xs"
-          color="blue"
-          variant="soft"
-          icon="i-heroicons-play"
-          :loading="actionLoading"
-          :disabled="actionLoading"
-          @click="$emit('assemble', array)"
-        >
-          {{ t('raid.stopped_md.assemble') }}
-        </UButton>
-        <UButton
-          size="xs"
-          color="red"
-          variant="ghost"
-          icon="i-heroicons-trash"
-          :loading="actionLoading"
-          :disabled="actionLoading"
-          @click="$emit('zero-superblocks', array)"
-        >
-          {{ t('raid.stopped_md.zero_superblocks') }}
-        </UButton>
+      <div v-if="!readOnly" class="flex flex-col items-end gap-1 shrink-0 max-w-md">
+        <div class="flex flex-wrap gap-2 justify-end">
+          <UButton
+            size="xs"
+            color="gray"
+            variant="ghost"
+            icon="i-heroicons-magnifying-glass"
+            :loading="actionLoading"
+            :disabled="actionLoading"
+            @click="$emit('inspect', array)"
+          >
+            {{ t('raid.stopped_md.inspect') }}
+          </UButton>
+          <UButton
+            size="xs"
+            color="blue"
+            variant="soft"
+            icon="i-heroicons-play"
+            :loading="actionLoading"
+            :disabled="actionLoading"
+            @click="$emit('assemble', array)"
+          >
+            {{ t('raid.stopped_md.assemble') }}
+          </UButton>
+          <UButton
+            size="xs"
+            color="red"
+            variant="ghost"
+            icon="i-heroicons-trash"
+            :loading="actionLoading"
+            :disabled="actionLoading"
+            @click="$emit('zero-superblocks', array)"
+          >
+            {{ t('raid.stopped_md.zero_superblocks') }}
+          </UButton>
+        </div>
+        <p class="text-[10px] text-gray-500 text-right leading-snug">
+          {{ t('raid.stopped_md.assemble_help') }}
+          <span class="block mt-0.5">{{ t('raid.stopped_md.zero_superblocks_help') }}</span>
+        </p>
       </div>
     </div>
 
