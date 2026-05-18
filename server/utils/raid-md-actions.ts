@@ -286,8 +286,51 @@ export async function assembleMdArray(
 
 // ─── Zero superblocks ─────────────────────────────────────────────────────────
 
-export function expectedMdZeroSuperblocksConfirmation(name: string): string {
-  return `ZERO_SUPERBLOCK ${sanitizeArrayName(name)}`
+export const MD_ZERO_METADATA_CONFIRMATION = 'ZERO RAID METADATA'
+
+export function expectedMdZeroMetadataConfirmation(): string {
+  return MD_ZERO_METADATA_CONFIRMATION
+}
+
+/** @deprecated Use expectedMdZeroMetadataConfirmation() — name is no longer required */
+export function expectedMdZeroSuperblocksConfirmation(_name: string): string {
+  return expectedMdZeroMetadataConfirmation()
+}
+
+export function validateZeroSuperblockMembers(
+  members: string[],
+  blockDevices: Array<{ path: string; hasMdSuperblock?: boolean; mdExamine?: unknown; usedBy: string[] }>,
+  mdArrays: Array<{ path: string; name: string; members: Array<{ path?: string }> }>,
+): string[] {
+  const blockers: string[] = []
+  if (members.length === 0) {
+    blockers.push('Au moins une partition membre est requise')
+    return blockers
+  }
+
+  const activeMemberPaths = new Set(
+    mdArrays.flatMap(arr => arr.members.map(m => m.path).filter(Boolean) as string[]),
+  )
+
+  for (const memberPath of members) {
+    const dev = blockDevices.find(d => d.path === memberPath)
+    if (!dev) {
+      blockers.push(`Partition introuvable : ${memberPath}`)
+      continue
+    }
+    if (!dev.hasMdSuperblock && !dev.mdExamine) {
+      blockers.push(`${memberPath} : aucun superblock MD détecté`)
+    }
+    if (dev.usedBy.includes('mounted')) blockers.push(`${memberPath} est monté`)
+    if (dev.usedBy.includes('lvm')) blockers.push(`${memberPath} est utilisé par LVM`)
+    if (dev.usedBy.includes('scst')) blockers.push(`${memberPath} est utilisé par SCST`)
+    if (activeMemberPaths.has(memberPath)) {
+      const owner = mdArrays.find(arr => arr.members.some(m => m.path === memberPath))
+      blockers.push(`${memberPath} est membre actif de ${owner?.path ?? 'un tableau MD actif'}`)
+    }
+  }
+
+  return blockers
 }
 
 export async function zeroMdSuperblocks(

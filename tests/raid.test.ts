@@ -13,7 +13,9 @@ import {
   createMdArray,
   createMdArrayFromPlan,
   expectedMdAssembleConfirmation,
+  expectedMdZeroMetadataConfirmation,
   expectedMdZeroSuperblocksConfirmation,
+  validateZeroSuperblockMembers,
   isMdadmAwaitingInteractiveConfirmation,
   isMdadmCreateCommandFailure,
   MDADM_INTERACTIVE_CONFIRM_MESSAGE,
@@ -1539,7 +1541,8 @@ describe('Stopped MD — assemble command builders', () => {
 
   it('phrases de confirmation assemble / zero', () => {
     expect(expectedMdAssembleConfirmation('md0')).toBe('ASSEMBLE md0')
-    expect(expectedMdZeroSuperblocksConfirmation('md2')).toBe('ZERO_SUPERBLOCK md2')
+    expect(expectedMdZeroMetadataConfirmation()).toBe('ZERO RAID METADATA')
+    expect(expectedMdZeroSuperblocksConfirmation('md2')).toBe('ZERO RAID METADATA')
   })
 })
 
@@ -1628,31 +1631,82 @@ describe('Stopped MD — preflight assemble_md / zero_md_superblocks', () => {
     expect(result.blockers.some(b => b.includes('cible requis'))).toBe(true)
   })
 
-  it('zero_md_superblocks bloque si tableau encore actif', async () => {
+  const activeMd0WithMember = {
+    ...activeMd0,
+    members: [{ path: '/dev/sdb1', state: ['active' as const] }],
+  }
+
+  it('zero_md_superblocks ok for orphan partition while unrelated md0 is active', async () => {
     const result = await runPreflight(
       {} as any,
       {
         backend: 'software_md',
         action: 'zero_md_superblocks',
-        payload: { name: 'md0', members: ['/dev/sdb1'] },
+        payload: { members: ['/dev/sda1'] },
       },
-      [blockDevice('/dev/sdb1')],
+      [blockDevice('/dev/sda1')],
       [activeMd0],
       undefined,
       [],
     )
+    expect(result.ok).toBe(true)
+    expect(result.requiredConfirmation).toBe('ZERO RAID METADATA')
+    expect(result.commandPreview).toBe('mdadm --zero-superblock /dev/sda1')
+  })
+
+  it('zero_md_superblocks bloque si membre actif de tableau MD', async () => {
+    const result = await runPreflight(
+      {} as any,
+      {
+        backend: 'software_md',
+        action: 'zero_md_superblocks',
+        payload: { members: ['/dev/sdb1'] },
+      },
+      [blockDevice('/dev/sdb1')],
+      [activeMd0WithMember],
+      undefined,
+      [],
+    )
     expect(result.ok).toBe(false)
-    expect(result.blockers.some(b => b.includes('encore actif'))).toBe(true)
+    expect(result.blockers.some(b => b.includes('membre actif'))).toBe(true)
+  })
+
+  it('zero_md_superblocks bloque sans superblock MD', async () => {
+    const result = await runPreflight(
+      {} as any,
+      {
+        backend: 'software_md',
+        action: 'zero_md_superblocks',
+        payload: { members: ['/dev/sda1'] },
+      },
+      [{
+        ...blockDevice('/dev/sda1'),
+        hasMdSuperblock: false,
+        mdExamine: undefined,
+      }],
+      [],
+    )
+    expect(result.ok).toBe(false)
+    expect(result.blockers.some(b => b.includes('aucun superblock MD'))).toBe(true)
   })
 
   it('zero_md_superblocks exige au moins une partition', async () => {
     const result = await runPreflight(
       {} as any,
-      { backend: 'software_md', action: 'zero_md_superblocks', payload: { name: 'md0', members: [] } },
+      { backend: 'software_md', action: 'zero_md_superblocks', payload: { members: [] } },
       [],
       [],
     )
     expect(result.ok).toBe(false)
     expect(result.blockers.some(b => b.includes('Au moins une partition'))).toBe(true)
+  })
+
+  it('validateZeroSuperblockMembers is member-centric', () => {
+    const blockers = validateZeroSuperblockMembers(
+      ['/dev/sda1'],
+      [blockDevice('/dev/sda1')],
+      [activeMd0],
+    )
+    expect(blockers).toEqual([])
   })
 })

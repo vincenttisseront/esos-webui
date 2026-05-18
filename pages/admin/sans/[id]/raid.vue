@@ -585,8 +585,77 @@ async function resolveAssembleTargetName(arr: StoppedMdArray): Promise<string | 
   return trimmed
 }
 
-function effectiveZeroArrayName(arr: StoppedMdArray): string {
-  return isValidMdArrayName(arr.name) ? arr.name : 'md0'
+function buildZeroSuperblockDescription(arr: StoppedMdArray, members: string[]): string {
+  const isOrphan = arr.name === 'unknown' || arr.members.some(m => m.memberStatus === 'orphan_metadata')
+  const lines = [
+    isOrphan ? t('raid.stopped_md.zero_orphan_description') : t('raid.stopped_md.zero_description'),
+    '',
+    `${t('raid.stopped_md.zero_partitions_label')} : ${members.join(', ')}`,
+    t('raid.stopped_md.zero_reassembly_warning'),
+  ]
+  return lines.join('\n')
+}
+
+function zeroSuperblockPreflightPayload(arr: StoppedMdArray, members: string[]) {
+  const payload: { members: string[]; uuid?: string; name?: string } = { members, uuid: arr.uuid }
+  if (isValidMdArrayName(arr.name)) payload.name = arr.name
+  return payload
+}
+
+async function handleZeroStoppedMd(arr: StoppedMdArray) {
+  const key = stoppedArrayKey(arr)
+  stoppedMdActionKey.value = key
+  try {
+    const members = stoppedMemberPaths(arr)
+    if (!members.length) {
+      toast.warning(t('raid.stopped_md.zero_no_members'))
+      return
+    }
+    const confirmPhrase = t('raid.stopped_md.zero_confirm_phrase')
+    let preflight: RaidPreflightResult | null = null
+    try {
+      preflight = await raid.preflight({
+        backend: 'software_md',
+        action: 'zero_md_superblocks',
+        payload: zeroSuperblockPreflightPayload(arr, members),
+      })
+      if (!preflight.ok) {
+        toast.warning(t('raid.stopped_md.toast_preflight_blocked'), preflight.blockers[0])
+      }
+    } catch (err: unknown) {
+      toast.error(t('raid.stopped_md.toast_action_failed'), extractFetchError(err))
+      return
+    }
+
+    const isOrphan = arr.name === 'unknown' || arr.members.some(m => m.memberStatus === 'orphan_metadata')
+    const { default: Modal } = await import('~/components/raid/RaidDestructiveConfirmModal.vue')
+    try {
+      const confirmation = await openModal({
+        component: Modal,
+        props: {
+          title: isOrphan ? t('raid.stopped_md.zero_orphan_title') : t('raid.stopped_md.zero_title'),
+          description: buildZeroSuperblockDescription(arr, members),
+          riskLevel: 'destructive',
+          confirmationPhrase: preflight?.requiredConfirmation ?? confirmPhrase,
+          preflight,
+          persistent: true,
+        },
+      })
+      const apiPayload: { members: string[]; confirmation: string; uuid?: string; name?: string } = {
+        members,
+        confirmation: confirmation as string,
+      }
+      if (arr.uuid) apiPayload.uuid = arr.uuid
+      if (isValidMdArrayName(arr.name)) apiPayload.name = arr.name
+      await raid.zeroMdSuperblocks(apiPayload)
+      toast.success(t('raid.stopped_md.toast_zero_ok'))
+    } catch (err: unknown) {
+      if (isModalDismiss(err)) return
+      toast.error(t('raid.stopped_md.toast_action_failed'), extractFetchError(err))
+    }
+  } finally {
+    stoppedMdActionKey.value = null
+  }
 }
 
 function handleInspectStoppedMd(arr: StoppedMdArray) {
@@ -657,62 +726,6 @@ async function handleAssembleStoppedMd(arr: StoppedMdArray) {
       activeTab.value = 'software'
       highlightedArrayPath.value = path
       await scrollToHighlightedArray(path)
-    } catch (err: unknown) {
-      if (isModalDismiss(err)) return
-      toast.error(t('raid.stopped_md.toast_action_failed'), extractFetchError(err))
-    }
-  } finally {
-    stoppedMdActionKey.value = null
-  }
-}
-
-async function handleZeroStoppedMd(arr: StoppedMdArray) {
-  const key = stoppedArrayKey(arr)
-  stoppedMdActionKey.value = key
-  try {
-    const arrayName = effectiveZeroArrayName(arr)
-    const members = stoppedMemberPaths(arr)
-    if (!members.length) {
-      toast.warning(t('raid.stopped_md.zero_no_members'))
-      return
-    }
-    let preflight: RaidPreflightResult | null = null
-    let phrase = ''
-    try {
-      preflight = await raid.preflight({
-        backend: 'software_md',
-        action: 'zero_md_superblocks',
-        payload: { name: arrayName, uuid: arr.uuid, members },
-      })
-      phrase = preflight.requiredConfirmation
-      if (!preflight.ok) {
-        toast.warning(t('raid.stopped_md.toast_preflight_blocked'), preflight.blockers[0])
-      }
-    } catch (err: unknown) {
-      toast.error(t('raid.stopped_md.toast_action_failed'), extractFetchError(err))
-      return
-    }
-
-    const { default: Modal } = await import('~/components/raid/RaidDestructiveConfirmModal.vue')
-    try {
-      const confirmation = await openModal({
-        component: Modal,
-        props: {
-          title: t('raid.stopped_md.zero_title'),
-          description: `${t('raid.stopped_md.zero_description')}\n\nPartitions : ${members.join(', ')}`,
-          riskLevel: 'destructive',
-          confirmationPhrase: phrase || undefined,
-          preflight,
-          persistent: true,
-        },
-      })
-      await raid.zeroMdSuperblocks({
-        name: arrayName,
-        uuid: arr.uuid,
-        members,
-        confirmation: confirmation as string,
-      })
-      toast.success(t('raid.stopped_md.toast_zero_ok'))
     } catch (err: unknown) {
       if (isModalDismiss(err)) return
       toast.error(t('raid.stopped_md.toast_action_failed'), extractFetchError(err))
