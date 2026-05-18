@@ -406,6 +406,8 @@ import {
   extractFetchError,
   isModalDismiss,
   isValidMdArrayName,
+  isZeroCleanupFullyVerified,
+  membersStillInStoppedArrays,
   stoppedArrayKey,
   stoppedMemberPaths,
   suggestDefaultMdName,
@@ -647,8 +649,33 @@ async function handleZeroStoppedMd(arr: StoppedMdArray) {
       }
       if (arr.uuid) apiPayload.uuid = arr.uuid
       if (isValidMdArrayName(arr.name)) apiPayload.name = arr.name
-      await raid.zeroMdSuperblocks(apiPayload)
-      toast.success(t('raid.stopped_md.toast_zero_ok'))
+
+      console.info('[raid-ui:zero-superblock]', { sanId, members, arrayKey: key, payload: apiPayload })
+      const result = await raid.zeroMdSuperblocks(apiPayload)
+      console.info('[raid-ui:zero-superblock]', { result })
+
+      if (!isZeroCleanupFullyVerified(result)) {
+        const failed = result.results.find(r => !r.success || r.verifiedRemoved !== true)
+        if (failed?.verifiedRemoved === false) {
+          toast.error(
+            t('raid.stopped_md.toast_zero_not_verified', { partition: failed.partition }),
+            failed.stdout?.slice(-200),
+          )
+        } else if (result.warnings.length) {
+          toast.warning(t('raid.stopped_md.toast_zero_partial'), result.warnings.join(' · '))
+        } else {
+          toast.warning(t('raid.stopped_md.toast_action_failed'), extractFetchError({ message: 'Vérification incomplète' }))
+        }
+        return
+      }
+
+      const stillVisible = membersStillInStoppedArrays(members, raid.stoppedMdArrays)
+      if (stillVisible.length) {
+        toast.warning(t('raid.stopped_md.toast_zero_still_visible', { partitions: stillVisible.join(', ') }))
+        return
+      }
+
+      toast.success(t('raid.stopped_md.toast_zero_ok', { partitions: members.join(', ') }))
     } catch (err: unknown) {
       if (isModalDismiss(err)) return
       toast.error(t('raid.stopped_md.toast_action_failed'), extractFetchError(err))

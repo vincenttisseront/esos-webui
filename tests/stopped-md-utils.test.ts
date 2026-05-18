@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   isValidMdArrayName,
+  isZeroCleanupFullyVerified,
   MD_ZERO_METADATA_CONFIRMATION,
+  membersStillInStoppedArrays,
   stoppedMemberPaths,
   suggestDefaultMdName,
 } from '../utils/stopped-md'
@@ -46,5 +48,14 @@ describe('stopped-md utils', () => {
 
   it('exports fixed zero metadata confirmation phrase', () => {
     expect(MD_ZERO_METADATA_CONFIRMATION).toBe('ZERO RAID METADATA')
+  })
+
+  it('isZeroCleanupFullyVerified rejects warnings or unverified partitions', () => {
+    expect(isZeroCleanupFullyVerified({
+      ok: true,
+      warnings: [],
+      results: [{ success: true, verifiedRemoved: true }],
+    })).toBe(true)
+    expect(membersStillInStoppedArrays(['/dev/sda1'], [])).toEqual([])
   })
 })

@@ -43,8 +43,19 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    console.info('[raid-api:zero-superblocks]', { sanId, members, auditName: body?.name, uuid: body?.uuid })
     const result = await zeroMdSuperblocks(manager, members)
     invalidateCacheKey(cacheKey)
+    console.info('[raid-api:zero-superblocks]', {
+      sanId,
+      ok: result.ok,
+      partitions: result.results.map(r => ({
+        partition: r.partition,
+        success: r.success,
+        verifiedRemoved: r.verifiedRemoved,
+      })),
+      warnings: result.warnings,
+    })
     return result
   }
 
