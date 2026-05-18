@@ -459,6 +459,7 @@ export interface RaidPreflightRequest {
     | 'stop_md'
     | 'assemble_md'
     | 'zero_md_superblocks'
+    | 'wipe_md_signatures'
     | 'md_add_device'
     | 'md_set_faulty'
     | 'md_remove_device'
@@ -478,11 +479,41 @@ export interface AssembleMdArrayResponse {
   command: string
 }
 
+export interface CommandProbeResult {
+  command: string
+  exitCode: number
+  stdout: string
+  stderr: string
+}
+
+export type PartitionMetadataRecommendedAction =
+  | 'none'
+  | 'advanced_wipe_signatures'
+  | 'manual_investigation'
+
+export interface PartitionMetadataDiagnostics {
+  partition: string
+  zeroSuperblock: CommandProbeResult & { success: boolean }
+  mdadmExamine: CommandProbeResult & { detected: boolean }
+  wipefsProbe: CommandProbeResult & { signatures: string[] }
+  blkidProbe: CommandProbeResult & { types: string[]; available: boolean }
+  verifiedRemoved: boolean
+  remainingSignatureTypes: string[]
+  detectionSources: { mdadmExamine: boolean; wipefs: boolean; blkid: boolean }
+  recommendedAction: PartitionMetadataRecommendedAction
+}
+
 export interface ZeroMdSuperblocksRequest {
   name?: string
   uuid?: string
   members: string[]
   confirmation: string
+}
+
+export interface WipeMdSignaturesRequest {
+  members: string[]
+  confirmation: string
+  remainingSignatureTypes?: Record<string, string[]>
 }
 
 export interface ZeroMdSuperblockPartitionResult {
@@ -494,6 +525,7 @@ export interface ZeroMdSuperblockPartitionResult {
   exitCode: number
   verifiedRemoved: boolean | null
   verificationStdout?: string
+  diagnostics?: PartitionMetadataDiagnostics
 }
 
 export interface ZeroMdSuperblocksResponse {
@@ -502,7 +534,10 @@ export interface ZeroMdSuperblocksResponse {
   warnings: string[]
   stdout: string
   commands: string[]
+  advancedCleanupAvailable?: boolean
 }
+
+export type WipeMdSignaturesResponse = ZeroMdSuperblocksResponse
 
 export interface CreateHardwareLogicalDriveRequest {
   controllerId: string

@@ -10,7 +10,7 @@ import type { RaidPreflightRequest } from '../../utils/raid-types'
 
 const VALID_ACTIONS = [
   'create_hw_ld', 'delete_hw_ld', 'add_hotspare', 'remove_hotspare',
-  'create_md', 'prepare_md_partitions', 'stop_md', 'assemble_md', 'zero_md_superblocks',
+  'create_md', 'prepare_md_partitions', 'stop_md', 'assemble_md', 'zero_md_superblocks', 'wipe_md_signatures',
   'md_add_device', 'md_set_faulty', 'md_remove_device',
 ]
 

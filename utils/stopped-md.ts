@@ -1,8 +1,14 @@
-import type { RaidOverviewResponse, StoppedMdArray } from '~/types/raid'
+import type {
+  PartitionMetadataDiagnostics,
+  RaidOverviewResponse,
+  StoppedMdArray,
+  ZeroMdSuperblockPartitionResult,
+} from '~/types/raid'
 
 const MD_ARRAY_NAME_RE = /^md[a-z0-9_-]{0,15}$/
 
 export const MD_ZERO_METADATA_CONFIRMATION = 'ZERO RAID METADATA'
+export const MD_WIPE_SIGNATURES_CONFIRMATION = 'WIPE SIGNATURES'
 
 export function isValidMdArrayName(name: string): boolean {
   return MD_ARRAY_NAME_RE.test(name)
@@ -34,8 +40,42 @@ export function isModalDismiss(err: unknown): boolean {
 }
 
 export function extractFetchError(err: unknown): string {
-  const e = err as { data?: { statusMessage?: string }; message?: string }
-  return e?.data?.statusMessage ?? e?.message ?? 'Erreur inconnue'
+  const e = err as {
+    data?: { message?: string; statusMessage?: string }
+    message?: string
+    statusMessage?: string
+  }
+  return e?.data?.message ?? e?.message ?? e?.data?.statusMessage ?? e?.statusMessage ?? 'Erreur inconnue'
+}
+
+export function getZeroCleanupErrorResults(err: unknown): ZeroMdSuperblockPartitionResult[] {
+  const e = err as { data?: { results?: ZeroMdSuperblockPartitionResult[] } }
+  return Array.isArray(e?.data?.results) ? e.data.results : []
+}
+
+export function formatDiagnosticsSummary(diagnostics: PartitionMetadataDiagnostics): string {
+  const lines = [`${diagnostics.partition} : métadonnées encore détectées.`]
+  if (diagnostics.detectionSources.mdadmExamine) {
+    lines.push('- mdadm --examine : superblock détecté')
+  }
+  if (diagnostics.detectionSources.wipefs && diagnostics.wipefsProbe.signatures.length) {
+    lines.push(`- wipefs -n : ${diagnostics.wipefsProbe.signatures.join(', ')}`)
+  }
+  if (diagnostics.detectionSources.blkid && diagnostics.blkidProbe.types.length) {
+    lines.push(`- blkid : ${diagnostics.blkidProbe.types.join(', ')}`)
+  }
+  if (diagnostics.remainingSignatureTypes.length) {
+    lines.push(`Signatures restantes : ${diagnostics.remainingSignatureTypes.join(', ')}`)
+  }
+  return lines.join('\n')
+}
+
+export function hasAdvancedWipeAvailable(err: unknown): boolean {
+  const e = err as { data?: { advancedCleanupAvailable?: boolean; results?: ZeroMdSuperblockPartitionResult[] } }
+  if (e?.data?.advancedCleanupAvailable) return true
+  return getZeroCleanupErrorResults(err).some(
+    r => r.diagnostics?.recommendedAction === 'advanced_wipe_signatures',
+  )
 }
 
 export function membersStillInStoppedArrays(

@@ -8,7 +8,15 @@ import type {
 } from './raid-types'
 import { expectedMdCreateConfirmation, validateMdCreateRequest } from './raid-md-validation'
 import { PREPARE_MD_PARTITIONS_CONFIRMATION, validatePrepareMdPartitionsRequest } from './raid-md-partition-actions'
-import { buildMdAssembleCommand, expectedMdAssembleConfirmation, expectedMdZeroMetadataConfirmation, validateZeroSuperblockMembers } from './raid-md-actions'
+import {
+  buildMdAssembleCommand,
+  expectedMdAssembleConfirmation,
+  expectedMdWipeSignaturesConfirmation,
+  expectedMdZeroMetadataConfirmation,
+  validateWipeSignatureMembers,
+  validateZeroSuperblockMembers,
+} from './raid-md-actions'
+import { buildAdvancedWipeSignaturesCommand } from './raid-md-metadata-diagnostics'
 import { isValidMdArrayName } from './stopped-md-arrays'
 
 const RISK_MAP: Record<RaidPreflightRequest['action'], RaidRiskLevel> = {
@@ -21,6 +29,7 @@ const RISK_MAP: Record<RaidPreflightRequest['action'], RaidRiskLevel> = {
   stop_md:         'destructive',
   assemble_md:     'risky',
   zero_md_superblocks: 'destructive',
+  wipe_md_signatures: 'destructive',
   md_add_device:   'safe',
   md_set_faulty:   'risky',
   md_remove_device:'destructive',
@@ -167,6 +176,31 @@ export async function runPreflight(
         commandPreview,
       }
     }
+    case 'wipe_md_signatures': {
+      const members = (payload.members as string[] | undefined) ?? []
+      blockers.push(...validateWipeSignatureMembers(members, blockDevices, mdArrays))
+      impactedDevices.push(...members)
+      warnings.push('Cette action efface les signatures détectées par wipefs (destructif)')
+      const typesByMember = payload.remainingSignatureTypes as Record<string, string[]> | undefined
+      const commandPreview = members.map((m) => {
+        const types = typesByMember?.[m] ?? ['linux_raid_member']
+        try {
+          return buildAdvancedWipeSignaturesCommand(m, types)
+        } catch {
+          return `wipefs --types=linux_raid_member -a ${m}`
+        }
+      }).join('\n')
+      return {
+        ok: blockers.length === 0,
+        riskLevel,
+        blockers,
+        warnings,
+        requiredConfirmation: buildConfirmationPhrase(req),
+        impactedDevices,
+        detectedUsage,
+        commandPreview,
+      }
+    }
     case 'md_remove_device': {
       const member = String(payload.device ?? '')
       impactedDevices.push(member)
@@ -222,6 +256,8 @@ function buildConfirmationPhrase(req: RaidPreflightRequest): string {
       }
     case 'zero_md_superblocks':
       return expectedMdZeroMetadataConfirmation()
+    case 'wipe_md_signatures':
+      return expectedMdWipeSignaturesConfirmation()
     case 'delete_hw_ld':
       return `DELETE LD ${String(payload.id ?? '0')}`
     case 'md_remove_device':

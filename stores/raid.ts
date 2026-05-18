@@ -6,7 +6,9 @@ import type {
   RaidOverviewResponse, RaidPreflightResult, RaidPreflightRequest,
   RaidOperation, RaidHealth, CreateMdArrayRequest, CreateMdArrayExecutionPlan, CreateMdArrayResponse, CreateHardwareLogicalDriveRequest,
   PrepareMdPartitionsRequest, PrepareMdPartitionsResponse,
-  AssembleMdArrayRequest, AssembleMdArrayResponse, ZeroMdSuperblocksRequest, ZeroMdSuperblocksResponse,
+  AssembleMdArrayRequest, AssembleMdArrayResponse,
+  ZeroMdSuperblocksRequest, ZeroMdSuperblocksResponse,
+  WipeMdSignaturesRequest, WipeMdSignaturesResponse,
   ClusterStoragePreflightRequest, ClusterStoragePreflightResult, RaidClusterPreparedMappingHint,
 } from '~/types/raid'
 
@@ -157,6 +159,16 @@ export const useRaidStore = defineStore('raid', {
 
     async zeroMdSuperblocks(req: ZeroMdSuperblocksRequest) {
       const result = await $fetch<ZeroMdSuperblocksResponse>('/api/raid/software/arrays/zero-superblocks', {
+        method: 'POST',
+        body: req,
+        params: this.query(),
+      })
+      await this.fetchOverview(true)
+      return result
+    },
+
+    async wipeMdSignatures(req: WipeMdSignaturesRequest) {
+      const result = await $fetch<WipeMdSignaturesResponse>('/api/raid/software/arrays/wipe-signatures', {
         method: 'POST',
         body: req,
         params: this.query(),

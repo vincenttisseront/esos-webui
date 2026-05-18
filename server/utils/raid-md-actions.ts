@@ -5,6 +5,14 @@ import { createError } from 'h3'
 import type { SSHSessionManager } from './ssh-session-manager'
 import type { AssembleMdArrayRequest, CreateMdArrayRequest, ZeroMdSuperblockPartitionResult } from './raid-types'
 import { parseMdadmExamineOutput } from './parsers/mdadm-examine.parser'
+import {
+  buildZeroCleanupFailureError,
+  collectPartitionMetadataDiagnostics,
+  expectedMdWipeSignaturesConfirmation,
+  MD_WIPE_SIGNATURES_CONFIRMATION,
+  zeroSuperblockWithDiagnostics,
+  wipeSignaturesWithDiagnostics,
+} from './raid-md-metadata-diagnostics'
 import { buildMdCreateCommand, MD_CREATE_EMPTY_MEMBERS_MESSAGE, normalizeMdCreatePayload, sanitizeMdArrayName } from './raid-md-validation'
 
 const WRITE_ENABLED = process.env.RAID_SOFTWARE_WRITE_ENABLED !== 'false'
@@ -334,6 +342,41 @@ export function validateZeroSuperblockMembers(
   return blockers
 }
 
+export function validateWipeSignatureMembers(
+  members: string[],
+  blockDevices: Array<{ path: string; usedBy: string[] }>,
+  mdArrays: Array<{ path: string; name: string; members: Array<{ path?: string }> }>,
+): string[] {
+  const blockers: string[] = []
+  if (members.length === 0) {
+    blockers.push('Au moins une partition membre est requise')
+    return blockers
+  }
+
+  const activeMemberPaths = new Set(
+    mdArrays.flatMap(arr => arr.members.map(m => m.path).filter(Boolean) as string[]),
+  )
+
+  for (const memberPath of members) {
+    const dev = blockDevices.find(d => d.path === memberPath)
+    if (!dev) {
+      blockers.push(`Partition introuvable : ${memberPath}`)
+      continue
+    }
+    if (dev.usedBy.includes('mounted')) blockers.push(`${memberPath} est monté`)
+    if (dev.usedBy.includes('lvm')) blockers.push(`${memberPath} est utilisé par LVM`)
+    if (dev.usedBy.includes('scst')) blockers.push(`${memberPath} est utilisé par SCST`)
+    if (activeMemberPaths.has(memberPath)) {
+      const owner = mdArrays.find(arr => arr.members.some(m => m.path === memberPath))
+      blockers.push(`${memberPath} est membre actif de ${owner?.path ?? 'un tableau MD actif'}`)
+    }
+  }
+
+  return blockers
+}
+
+export { expectedMdWipeSignaturesConfirmation, MD_WIPE_SIGNATURES_CONFIRMATION }
+
 const ZERO_SUPERBLOCK_EXIT_MARKER = '__MD_ZERO_EXIT__'
 
 function parseSshExitCode(stdout: string, marker = ZERO_SUPERBLOCK_EXIT_MARKER): number {
@@ -368,51 +411,7 @@ export async function zeroMdSuperblockOnPartition(
   manager: SSHSessionManager,
   partition: string,
 ): Promise<ZeroMdSuperblockPartitionResult> {
-  const devPath = sanitizeDevicePath(partition)
-  const command = `mdadm --zero-superblock ${devPath}`
-  const marker = ZERO_SUPERBLOCK_EXIT_MARKER
-  const sshCommand = `${command} 2>&1; echo ${marker}=$?`
-
-  let stdout = ''
-  let stderr = ''
-  let exitCode = 1
-
-  console.info('[raid-md:zero-superblock]', { partition: devPath, command })
-
-  try {
-    const execResult = await manager.exec(sshCommand, 60_000)
-    stdout = execResult.stdout ?? ''
-    stderr = execResult.stderr ?? ''
-    exitCode = parseSshExitCode(stdout, marker)
-    stdout = stripExitMarker(stdout, marker)
-  } catch (err: any) {
-    stdout = extractErrorText(err, 'stdout') ?? ''
-    stderr = extractErrorText(err, 'stderr') ?? err?.statusMessage ?? err?.message ?? ''
-    exitCode = parseSshExitCode(stdout, marker) || 1
-    stdout = stripExitMarker(stdout, marker)
-  }
-
-  const { verifiedRemoved, verificationStdout } = await verifyMdSuperblockRemoved(manager, devPath)
-
-  const result: ZeroMdSuperblockPartitionResult = {
-    partition: devPath,
-    command,
-    success: exitCode === 0,
-    stdout: stdout.slice(0, 1500),
-    stderr: stderr.slice(0, 500),
-    exitCode,
-    verifiedRemoved,
-    verificationStdout,
-  }
-
-  console.info('[raid-md:zero-superblock]', {
-    partition: devPath,
-    success: result.success,
-    exitCode: result.exitCode,
-    verifiedRemoved: result.verifiedRemoved,
-  })
-
-  return result
+  return zeroSuperblockWithDiagnostics(manager, partition)
 }
 
 export async function zeroMdSuperblocks(
@@ -445,19 +444,72 @@ export async function zeroMdSuperblocks(
   const stdout = results.map(r => r.stdout).filter(Boolean).join('\n---\n').slice(0, 4000)
   const failed = results.some(r => !r.success || r.verifiedRemoved === false)
   const ok = !failed
+  const advancedCleanupAvailable = results.some(
+    r => r.diagnostics?.recommendedAction === 'advanced_wipe_signatures',
+  )
 
   if (failed) {
-    const first = results.find(r => !r.success || r.verifiedRemoved === false)
+    throw buildZeroCleanupFailureError(results, warnings)
+  }
+
+  return { ok, results, warnings, stdout, commands, advancedCleanupAvailable }
+}
+
+export async function wipeMdSignatures(
+  manager: SSHSessionManager,
+  members: string[],
+  signatureTypesByMember?: Record<string, string[]>,
+): Promise<import('./raid-types').WipeMdSignaturesResponse> {
+  assertWriteEnabled()
+  if (members.length === 0) {
+    throw createError({ statusCode: 400, statusMessage: 'Au moins une partition membre est requise' })
+  }
+
+  const results: ZeroMdSuperblockPartitionResult[] = []
+  const warnings: string[] = []
+
+  for (const member of members) {
+    const devPath = sanitizeDevicePath(member)
+    const presetTypes = signatureTypesByMember?.[devPath] ?? signatureTypesByMember?.[member]
+    let remainingTypes = presetTypes
+    if (!remainingTypes?.length) {
+      const baseline = await collectPartitionMetadataDiagnostics(manager, devPath)
+      remainingTypes = baseline.remainingSignatureTypes
+      if (baseline.verifiedRemoved) {
+        warnings.push(`${devPath} : aucune signature RAID détectée avant nettoyage`)
+      }
+    }
+    if (!remainingTypes.length) {
+      warnings.push(`${devPath} : aucune signature à effacer`)
+      continue
+    }
+    results.push(await wipeSignaturesWithDiagnostics(manager, devPath, remainingTypes))
+  }
+
+  if (results.length === 0) {
     throw createError({
-      statusCode: 500,
-      statusMessage: first?.verifiedRemoved === false
-        ? `Métadonnées MD encore présentes sur ${first.partition}`
-        : `Échec mdadm --zero-superblock sur ${first?.partition ?? 'partition'}`,
-      data: { ok: false, results, warnings, stdout, commands },
+      statusCode: 400,
+      statusMessage: 'Aucune signature RAID à effacer sur les partitions sélectionnées',
     })
   }
 
-  return { ok, results, warnings, stdout, commands }
+  for (const r of results) {
+    if (!r.success) {
+      warnings.push(`${r.partition} : wipefs a échoué (code ${r.exitCode})`)
+    } else if (r.verifiedRemoved === false) {
+      warnings.push(`${r.partition} : métadonnées RAID encore détectées après nettoyage des signatures`)
+    }
+  }
+
+  const commands = results.map(r => r.command)
+  const stdout = results.map(r => r.stdout).filter(Boolean).join('\n---\n').slice(0, 4000)
+  const failed = results.some(r => !r.success || r.verifiedRemoved === false)
+
+  if (failed) {
+    throw buildZeroCleanupFailureError(results, warnings)
+  }
+
+  return { ok: true, results, warnings, stdout, commands }
 }
 
 // ─── Stop array ───────────────────────────────────────────────────────────────

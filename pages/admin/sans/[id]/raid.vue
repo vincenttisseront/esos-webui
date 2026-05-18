@@ -400,10 +400,11 @@
 </template>
 
 <script setup lang="ts">
-import type { CreateMdArrayWizardConfirmPayload, MdArray, MdMemberDevice, HardwareRaidController, HardwareRaidLogicalDrive, RaidPreflightResult, StoppedMdArray } from '~/types/raid'
+import type { CreateMdArrayWizardConfirmPayload, MdArray, MdMemberDevice, HardwareRaidController, HardwareRaidLogicalDrive, RaidPreflightResult, StoppedMdArray, ZeroMdSuperblockPartitionResult } from '~/types/raid'
 import type { SanSummary } from '~/server/db/repositories/san.repository'
 import {
   extractFetchError,
+  getZeroCleanupErrorResults,
   isModalDismiss,
   isValidMdArrayName,
   isZeroCleanupFullyVerified,
@@ -656,7 +657,9 @@ async function handleZeroStoppedMd(arr: StoppedMdArray) {
 
       if (!isZeroCleanupFullyVerified(result)) {
         const failed = result.results.find(r => !r.success || r.verifiedRemoved !== true)
-        if (failed?.verifiedRemoved === false) {
+        if (failed?.diagnostics) {
+          await showZeroCleanupDiagnosticsModal(result.results)
+        } else if (failed?.verifiedRemoved === false) {
           toast.error(
             t('raid.stopped_md.toast_zero_not_verified', { partition: failed.partition }),
             failed.stdout?.slice(-200),
@@ -678,10 +681,107 @@ async function handleZeroStoppedMd(arr: StoppedMdArray) {
       toast.success(t('raid.stopped_md.toast_zero_ok', { partitions: members.join(', ') }))
     } catch (err: unknown) {
       if (isModalDismiss(err)) return
+      const errorResults = getZeroCleanupErrorResults(err)
+      if (errorResults.some(r => r.diagnostics)) {
+        toast.error(t('raid.stopped_md.diagnostics_title'), extractFetchError(err))
+        await showZeroCleanupDiagnosticsModal(errorResults)
+        return
+      }
       toast.error(t('raid.stopped_md.toast_action_failed'), extractFetchError(err))
     }
   } finally {
     stoppedMdActionKey.value = null
+  }
+}
+
+async function showZeroCleanupDiagnosticsModal(results: ZeroMdSuperblockPartitionResult[]) {
+  const { default: DiagnosticsModal } = await import('~/components/raid/StoppedMdCleanupDiagnosticsModal.vue')
+  try {
+    const action = await openModal({
+      component: DiagnosticsModal,
+      props: { results, persistent: true },
+    })
+    if (action === 'wipe') {
+      await handleWipeMdSignatures(results)
+    }
+  } catch { /* annulé */ }
+}
+
+async function handleWipeMdSignatures(diagnosticsResults: ZeroMdSuperblockPartitionResult[]) {
+  const members = diagnosticsResults.map(r => r.partition)
+  const remainingSignatureTypes = Object.fromEntries(
+    diagnosticsResults
+      .filter(r => (r.diagnostics?.remainingSignatureTypes?.length ?? 0) > 0)
+      .map(r => [r.partition, r.diagnostics!.remainingSignatureTypes]),
+  )
+
+  let preflight: RaidPreflightResult | null = null
+  try {
+    preflight = await raid.preflight({
+      backend: 'software_md',
+      action: 'wipe_md_signatures',
+      payload: { members, remainingSignatureTypes },
+    })
+    if (!preflight.ok) {
+      toast.warning(t('raid.stopped_md.toast_preflight_blocked'), preflight.blockers[0])
+      return
+    }
+  } catch (err: unknown) {
+    toast.error(t('raid.stopped_md.toast_action_failed'), extractFetchError(err))
+    return
+  }
+
+  const confirmPhrase = t('raid.stopped_md.wipe_signatures_confirm_phrase')
+  const { default: Modal } = await import('~/components/raid/RaidDestructiveConfirmModal.vue')
+  try {
+    const confirmation = await openModal({
+      component: Modal,
+      props: {
+        title: t('raid.stopped_md.wipe_signatures'),
+        description: [
+          t('raid.stopped_md.wipe_signatures_help'),
+          '',
+          `${t('raid.stopped_md.zero_partitions_label')} : ${members.join(', ')}`,
+        ].join('\n'),
+        riskLevel: 'destructive',
+        confirmationPhrase: preflight?.requiredConfirmation ?? confirmPhrase,
+        preflight,
+        persistent: true,
+      },
+    })
+
+    const result = await raid.wipeMdSignatures({
+      members,
+      confirmation: confirmation as string,
+      remainingSignatureTypes,
+    })
+
+    if (!isZeroCleanupFullyVerified(result)) {
+      const failed = result.results.find(r => !r.success || r.verifiedRemoved !== true)
+      if (failed?.diagnostics) {
+        await showZeroCleanupDiagnosticsModal(result.results)
+      } else {
+        toast.warning(t('raid.stopped_md.toast_zero_partial'), result.warnings.join(' · '))
+      }
+      return
+    }
+
+    const stillVisible = membersStillInStoppedArrays(members, raid.stoppedMdArrays)
+    if (stillVisible.length) {
+      toast.warning(t('raid.stopped_md.toast_zero_still_visible', { partitions: stillVisible.join(', ') }))
+      return
+    }
+
+    toast.success(t('raid.stopped_md.toast_wipe_ok', { partitions: members.join(', ') }))
+  } catch (err: unknown) {
+    if (isModalDismiss(err)) return
+    const errorResults = getZeroCleanupErrorResults(err)
+    if (errorResults.some(r => r.diagnostics)) {
+      toast.error(t('raid.stopped_md.diagnostics_title'), extractFetchError(err))
+      await showZeroCleanupDiagnosticsModal(errorResults)
+      return
+    }
+    toast.error(t('raid.stopped_md.toast_action_failed'), extractFetchError(err))
   }
 }
 

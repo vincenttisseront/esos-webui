@@ -14,7 +14,7 @@ describe('mdadm examine after zero', () => {
 })
 
 describe('zero superblock SSH flow', () => {
-  it('runs mdadm --zero-superblock and verifies with examine', async () => {
+  it('runs mdadm --zero-superblock and verifies with multi-probe diagnostics', async () => {
     const calls: string[] = []
     const manager = {
       exec: vi.fn(async (cmd: string) => {
@@ -23,7 +23,13 @@ describe('zero superblock SSH flow', () => {
           return { stdout: 'zero ok\n__MD_ZERO_EXIT__=0\n', stderr: '' }
         }
         if (cmd.includes('--examine')) {
-          return { stdout: 'No md superblock detected on /dev/sda1.\n', stderr: '' }
+          return { stdout: 'No md superblock detected on /dev/sda1.\n__PROBE_EXIT__=0\n', stderr: '' }
+        }
+        if (cmd.includes('wipefs -n')) {
+          return { stdout: '__PROBE_EXIT__=0\n', stderr: '' }
+        }
+        if (cmd.includes('blkid')) {
+          return { stdout: '__PROBE_EXIT__=0\n', stderr: '' }
         }
         return { stdout: '', stderr: '' }
       }),
@@ -32,8 +38,10 @@ describe('zero superblock SSH flow', () => {
     const result = await zeroMdSuperblockOnPartition(manager as any, '/dev/sda1')
     expect(result.success).toBe(true)
     expect(result.verifiedRemoved).toBe(true)
+    expect(result.diagnostics?.verifiedRemoved).toBe(true)
     expect(calls.some(c => c.includes('mdadm --zero-superblock /dev/sda1'))).toBe(true)
-    expect(calls.some(c => c.includes('mdadm --examine /dev/sda1'))).toBe(true)
+    expect(calls.some(c => c.includes('mdadm --examine'))).toBe(true)
+    expect(calls.some(c => c.includes('wipefs -n'))).toBe(true)
   })
 
   it('verifyMdSuperblockRemoved returns false when superblock remains', async () => {
