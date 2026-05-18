@@ -17,6 +17,14 @@ export function isMdadmAwaitingInteractiveConfirmation(stdout?: string, stderr?:
   return combined.includes(MDADM_INTERACTIVE_CONFIRM_PROMPT)
 }
 
+export function isMdadmCreateCommandFailure(stdout: string): boolean {
+  const exitMatch = stdout.match(/EXIT_CODE=(\d+)/)
+  if (exitMatch && Number(exitMatch[1]) !== 0) return true
+  if (/^mdadm:\s+error\b/im.test(stdout)) return true
+  if (/^mdadm:\s+failed\b/im.test(stdout)) return true
+  return false
+}
+
 export function resolveMdCreateExecErrorMessage(
   err: any,
   finalCommand: string,
@@ -131,7 +139,7 @@ export async function createMdArrayFromPlan(
     })
   }
 
-  if (stdout.includes('EXIT_CODE=1') || stdout.includes('failed') || stdout.includes('error')) {
+  if (isMdadmCreateCommandFailure(stdout)) {
     const errorMessage = `Échec mdadm --create : ${stdout.slice(-500)}`
     traceMdCreateError('mdadm-create-failed', traceContext, normalizedReq, finalCommand, planCommand, errorMessage, stdout, undefined)
     throw createError({

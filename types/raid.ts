@@ -463,6 +463,12 @@ export interface CreateMdArrayRequest {
   clusterExecution?: CreateMdArrayClusterExecutionRequest
 }
 
+export interface CreateMdArrayWizardConfirmPayload {
+  action: 'view-array' | 'close'
+  arrayPath: string
+  overviewRefreshed?: boolean
+}
+
 export interface CreateMdArrayResponse {
   stdout: string
   command: string
