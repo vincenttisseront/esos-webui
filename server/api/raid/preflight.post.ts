@@ -10,7 +10,8 @@ import type { RaidPreflightRequest } from '../../utils/raid-types'
 
 const VALID_ACTIONS = [
   'create_hw_ld', 'delete_hw_ld', 'add_hotspare', 'remove_hotspare',
-  'create_md', 'prepare_md_partitions', 'stop_md', 'md_add_device', 'md_set_faulty', 'md_remove_device',
+  'create_md', 'prepare_md_partitions', 'stop_md', 'assemble_md', 'zero_md_superblocks',
+  'md_add_device', 'md_set_faulty', 'md_remove_device',
 ]
 
 export default defineEventHandler(async (event) => {
@@ -31,7 +32,7 @@ export default defineEventHandler(async (event) => {
     }
     const cacheKey = `raid-overview-${sanId}`
     const overview = await withCache(cacheKey, 60_000, () => collectRaidOverview(manager))
-    return runPreflight(manager, body, overview.blockDevices, overview.mdArrays, overview.tools)
+    return runPreflight(manager, body, overview.blockDevices, overview.mdArrays, overview.tools, overview.stoppedMdArrays ?? [])
   }
 
   try {

@@ -208,25 +208,54 @@
           {{ t('raid.create_md.action') }}
         </UButton>
       </div>
-      <div v-if="!raid.mdArrays.length" class="text-center py-8 text-gray-500">
+      <div
+        v-if="!raid.mdArrays.length && !raid.stoppedMdArrays.length"
+        class="text-center py-8 text-gray-500"
+      >
         <UIcon name="i-heroicons-server-stack" class="w-10 h-10 mx-auto mb-2 opacity-30" />
         <p>Aucun tableau MD détecté</p>
         <p class="text-xs mt-1">Utilisez le bouton "Créer tableau MD" pour en créer un</p>
       </div>
-      <UCard
-        v-for="arr in raid.mdArrays"
-        :key="arr.path"
-        :id="mdArrayDomId(arr)"
-        :class="{ 'ring-2 ring-blue-500 ring-offset-1': arr.path === highlightedArrayPath }"
-      >
-        <MdArrayCard
-          :array="arr"
-          @stop="handleStopMd"
-          @add-device="handleAddMdDevice"
-          @set-faulty="(arr, m) => handleSetFaulty(arr, m)"
-          @remove-device="(arr, m) => handleRemoveMdDevice(arr, m)"
+      <div v-if="raid.mdArrays.length" class="space-y-3">
+        <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Tableaux MD actifs</h3>
+        <UCard
+          v-for="arr in raid.mdArrays"
+          :key="arr.path"
+          :id="mdArrayDomId(arr)"
+          :class="{ 'ring-2 ring-blue-500 ring-offset-1': arr.path === highlightedArrayPath }"
+        >
+          <MdArrayCard
+            :array="arr"
+            @stop="handleStopMd"
+            @add-device="handleAddMdDevice"
+            @set-faulty="(arr, m) => handleSetFaulty(arr, m)"
+            @remove-device="(arr, m) => handleRemoveMdDevice(arr, m)"
+          />
+        </UCard>
+      </div>
+
+      <div v-if="raid.stoppedMdArrays.length" class="space-y-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+        <div>
+          <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('raid.stopped_md.section_title') }}</h3>
+          <p class="text-xs text-gray-500 mt-1">{{ t('raid.stopped_md.section_description') }}</p>
+        </div>
+        <UAlert
+          v-if="isClusteredSan"
+          :title="t('raid.stopped_md.cluster_notice')"
+          color="amber"
+          icon="i-heroicons-exclamation-triangle"
+          variant="soft"
         />
-      </UCard>
+        <UCard v-for="arr in raid.stoppedMdArrays" :key="stoppedArrayKey(arr)">
+          <StoppedMdArrayCard
+            :array="arr"
+            :read-only="isReadOnly"
+            @assemble="handleAssembleStoppedMd"
+            @zero-superblocks="handleZeroStoppedMd"
+            @inspect="handleInspectStoppedMd"
+          />
+        </UCard>
+      </div>
     </div>
 
     <!-- Onglet Block Devices -->
@@ -280,6 +309,32 @@
           <p v-if="op.error" class="text-xs text-red-400">{{ op.error }}</p>
         </div>
       </UCard>
+    </div>
+
+    <!-- Inspect métadonnées MD arrêté -->
+    <div
+      v-if="stoppedInspectOpen"
+      class="fixed inset-0 z-50 flex items-start justify-center bg-black/50 overflow-y-auto p-4"
+      @click.self="stoppedInspectOpen = false"
+    >
+      <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-3xl mt-8 mb-8 outline-none">
+        <div class="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-200 dark:border-gray-700">
+          <h2 class="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <UIcon name="i-heroicons-magnifying-glass" class="w-5 h-5 text-gray-400" />
+            {{ t('raid.stopped_md.inspect_title') }}
+          </h2>
+          <UButton icon="i-heroicons-x-mark" color="gray" variant="ghost" size="sm" @click="stoppedInspectOpen = false" />
+        </div>
+        <div class="px-5 py-4 space-y-3">
+          <p v-if="stoppedInspectLabel" class="text-sm text-gray-600 dark:text-gray-400 font-mono">{{ stoppedInspectLabel }}</p>
+          <pre class="text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-3 overflow-x-auto whitespace-pre-wrap text-gray-700 dark:text-gray-300">{{ stoppedInspectText || '(aucune sortie mdadm --examine)' }}</pre>
+          <div class="flex justify-end">
+            <UButton size="sm" color="gray" variant="soft" icon="i-heroicons-clipboard-document" @click="copyStoppedInspect">
+              Copier
+            </UButton>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Modal diagnostic matériel -->
@@ -344,7 +399,7 @@
 </template>
 
 <script setup lang="ts">
-import type { CreateMdArrayWizardConfirmPayload, MdArray, MdMemberDevice, HardwareRaidController, HardwareRaidLogicalDrive, RaidPreflightResult } from '~/types/raid'
+import type { CreateMdArrayWizardConfirmPayload, MdArray, MdMemberDevice, HardwareRaidController, HardwareRaidLogicalDrive, RaidPreflightResult, StoppedMdArray } from '~/types/raid'
 import type { SanSummary } from '~/server/db/repositories/san.repository'
 
 definePageMeta({ layout: 'default', ssr: false })
@@ -500,6 +555,114 @@ const ctrlConfidenceLabel = computed(() => {
   if (!c) return null
   return { high: 'confiance haute', medium: 'confiance moyenne', low: 'confiance faible' }[c] ?? c
 })
+
+// Stopped MD inspect / assemble / zero
+const stoppedInspectOpen = ref(false)
+const stoppedInspectText = ref('')
+const stoppedInspectLabel = ref('')
+
+function stoppedArrayKey(arr: StoppedMdArray): string {
+  return arr.uuid ?? arr.name
+}
+
+function stoppedMemberPaths(arr: StoppedMdArray): string[] {
+  return arr.members.filter(m => m.present).map(m => m.path)
+}
+
+function handleInspectStoppedMd(arr: StoppedMdArray) {
+  stoppedInspectLabel.value = arr.path ?? `/dev/${arr.name}`
+  const chunks = arr.members
+    .map(m => m.mdExamine?.raw?.trim())
+    .filter((raw): raw is string => Boolean(raw))
+  stoppedInspectText.value = chunks.length
+    ? chunks.join('\n\n---\n\n')
+    : arr.members.map(m => `${m.path}:\n(aucune métadonnée examine en cache)`).join('\n\n')
+  stoppedInspectOpen.value = true
+}
+
+async function copyStoppedInspect() {
+  if (!stoppedInspectText.value) return
+  try {
+    await navigator.clipboard.writeText(stoppedInspectText.value)
+  } catch { /* ignore */ }
+}
+
+async function handleAssembleStoppedMd(arr: StoppedMdArray) {
+  const path = arr.path ?? `/dev/${arr.name}`
+  const members = stoppedMemberPaths(arr)
+  let preflight: RaidPreflightResult | null = null
+  let phrase = ''
+  try {
+    preflight = await raid.preflight({
+      backend: 'software_md',
+      action: 'assemble_md',
+      payload: { name: arr.name, uuid: arr.uuid, members },
+    })
+    phrase = preflight.requiredConfirmation
+  } catch { /* non bloquant */ }
+  const { default: Modal } = await import('~/components/raid/RaidDestructiveConfirmModal.vue')
+  try {
+    const confirmation = await openModal({
+      component: Modal,
+      props: {
+        title: t('raid.stopped_md.assemble_title'),
+        description: t('raid.stopped_md.assemble_description', { path }),
+        riskLevel: 'risky',
+        confirmationPhrase: phrase || undefined,
+        preflight,
+        persistent: true,
+      },
+    })
+    await raid.assembleMdArray({
+      name: arr.name,
+      uuid: arr.uuid,
+      members: members.length ? members : undefined,
+      confirmation: confirmation as string,
+    })
+    activeTab.value = 'software'
+    highlightedArrayPath.value = path
+    await scrollToHighlightedArray(path)
+  } catch { /* annulé */ }
+}
+
+async function handleZeroStoppedMd(arr: StoppedMdArray) {
+  const path = arr.path ?? `/dev/${arr.name}`
+  const members = stoppedMemberPaths(arr)
+  if (!members.length) {
+    alert('Aucune partition membre présente à nettoyer.')
+    return
+  }
+  let preflight: RaidPreflightResult | null = null
+  let phrase = ''
+  try {
+    preflight = await raid.preflight({
+      backend: 'software_md',
+      action: 'zero_md_superblocks',
+      payload: { name: arr.name, uuid: arr.uuid, members },
+    })
+    phrase = preflight.requiredConfirmation
+  } catch { /* non bloquant */ }
+  const { default: Modal } = await import('~/components/raid/RaidDestructiveConfirmModal.vue')
+  try {
+    const confirmation = await openModal({
+      component: Modal,
+      props: {
+        title: t('raid.stopped_md.zero_title'),
+        description: `${t('raid.stopped_md.zero_description')}\n\nPartitions : ${members.join(', ')}`,
+        riskLevel: 'destructive',
+        confirmationPhrase: phrase || undefined,
+        preflight,
+        persistent: true,
+      },
+    })
+    await raid.zeroMdSuperblocks({
+      name: arr.name,
+      uuid: arr.uuid,
+      members,
+      confirmation: confirmation as string,
+    })
+  } catch { /* annulé */ }
+}
 
 // Stop MD
 async function handleStopMd(arr: MdArray) {

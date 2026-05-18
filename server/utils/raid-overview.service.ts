@@ -9,8 +9,10 @@ import type {
 } from './raid-types'
 import { parseMdstat } from './parsers/mdstat.parser'
 import { parseMdadmDetail } from './parsers/mdadm-detail.parser'
+import { parseMdadmExamineBulk } from './parsers/mdadm-examine.parser'
 import { discoverHardwareControllers } from './raid-hardware'
 import { collectKernelRaidInfo } from './raid-pci-detection'
+import { detectStoppedMdArrays } from './stopped-md-arrays'
 
 // ─── Commande bulk ───────────────────────────────────────────────────────────
 
@@ -76,19 +78,22 @@ export async function collectRaidOverview(manager: SSHSessionManager): Promise<R
     sections.DISK_BY_ID ?? '',
     sections.UDEVADM ?? '',
   )
-  const mdArrays = await parseMdArrays(manager, sections.MDSTAT ?? '', sections.MDADM_SCAN ?? '', blockDevices)
+  const mdadmScan = sections.MDADM_SCAN ?? ''
+  const mdArrays = await parseMdArrays(manager, sections.MDSTAT ?? '', mdadmScan, blockDevices)
+  const stoppedMdArrays = detectStoppedMdArrays({ mdadmScan, blockDevices, activeMdArrays: mdArrays })
   const hardwareControllers = await discoverHardwareControllers(manager, tools, resolvedCli, kernelInfo)
 
   // Marquer les block devices utilisés par MD
   markMdUsage(blockDevices, mdArrays)
 
-  const alerts = buildAlerts(mdArrays, hardwareControllers, tools, blockDevices)
+  const alerts = buildAlerts(mdArrays, hardwareControllers, tools, blockDevices, stoppedMdArrays)
 
   return {
     scannedAt: Date.now(),
     tools,
     hardwareControllers,
     mdArrays,
+    stoppedMdArrays,
     blockDevices,
     alerts,
   }
@@ -183,7 +188,7 @@ function parseLsblkJson(
   )
   const signatureMap = parseBlkid(blkidOutput)
   const wipefsMap = parseWipefs(wipefsOutput)
-  const examineMap = parseMdadmExamine(mdadmExamineOutput)
+  const examineMap = parseMdadmExamineBulk(mdadmExamineOutput)
   const byIdMap = parseDiskById(diskByIdOutput)
   const udevMap = parseUdevadmInfo(udevadmOutput)
 
@@ -431,47 +436,6 @@ function parseUdevadmInfo(output: string): Map<string, Record<string, string>> {
   return map
 }
 
-function parseMdadmExamine(output: string): Map<string, MdExamineInfo> {
-  const map = new Map<string, MdExamineInfo>()
-  let current: string | undefined
-  let buffer: string[] = []
-
-  const flush = () => {
-    if (!current) return
-    const raw = buffer.join('\n').trim()
-    if (!raw || /No md superblock detected/i.test(raw)) return
-    const info: MdExamineInfo = {
-      uuid: parseExamineValue(raw, 'Array UUID') ?? parseExamineValue(raw, 'UUID'),
-      name: parseExamineValue(raw, 'Name'),
-      raidLevel: parseExamineValue(raw, 'Raid Level')?.replace(/^raid/i, ''),
-      raidDevices: parseInt(parseExamineValue(raw, 'Raid Devices') ?? '', 10) || undefined,
-      events: parseInt(parseExamineValue(raw, 'Events') ?? '', 10) || undefined,
-      state: parseExamineValue(raw, 'State')?.toLowerCase(),
-      raw: raw.slice(0, 2000),
-    }
-    if (info.uuid || info.name || /Magic|superblock/i.test(raw)) map.set(current, info)
-  }
-
-  for (const line of output.split('\n')) {
-    const marker = line.match(/^---DEVICE\s+(.+)---$/)
-    if (marker) {
-      flush()
-      current = marker[1].trim()
-      buffer = []
-      continue
-    }
-    buffer.push(line)
-  }
-  flush()
-
-  return map
-}
-
-function parseExamineValue(output: string, key: string): string | undefined {
-  const m = output.match(new RegExp(`^\\s*${key}\\s*:\\s*(.+)$`, 'mi'))
-  return m?.[1].trim()
-}
-
 function getMdEligibilityReasons(input: {
   type: RaidBlockDevice['type']
   usedBy: RaidBlockDevice['usedBy']
@@ -603,8 +567,19 @@ function buildAlerts(
   controllers: HardwareRaidController[],
   tools: RaidToolsInfo,
   blockDevices: RaidBlockDevice[] = [],
+  stoppedMdArrays: import('./raid-types').StoppedMdArray[] = [],
 ): RaidOverviewResponse['alerts'] {
   const alerts: RaidOverviewResponse['alerts'] = []
+
+  if (stoppedMdArrays.length > 0) {
+    const assemblable = stoppedMdArrays.filter(a => a.stoppedState === 'assemblable').length
+    alerts.push({
+      severity: 'info',
+      message: assemblable > 0
+        ? `${stoppedMdArrays.length} tableau(x) MD arrêté(s) détecté(s) (${assemblable} assemblable(s))`
+        : `${stoppedMdArrays.length} tableau(x) MD arrêté(s) détecté(s) sur ce nœud`,
+    })
+  }
 
   // ─── Labels ESOS dupliqués ─────────────────────────────────────────────────
   // Groupe les partitions ESOS par label, puis vérifie si plusieurs disques parents portent le même label

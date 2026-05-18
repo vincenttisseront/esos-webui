@@ -310,6 +310,31 @@
       "persisted_notice": "mdadm configuration saved on the node.",
       "persisted_partial": "mdadm configuration saved on some nodes only."
     },
+    "stopped_md": {
+      "section_title": "Stopped / assemblable MD arrays",
+      "section_description": "These arrays are no longer active in the kernel but still have MD superblocks on member partitions. Assemble restarts the array; clearing metadata is destructive.",
+      "cluster_notice": "Detection and actions apply to this node only. Multi-node cluster assemble is not automated yet.",
+      "inspect": "Inspect",
+      "assemble": "Assemble / restart",
+      "zero_superblocks": "Clear metadata",
+      "member_path": "Partition",
+      "member_state": "State",
+      "member_present": "present",
+      "member_missing": "missing",
+      "members_count": "{count} / {expected} members",
+      "stop_hint": "Stop removes the array from the kernel; superblocks remain on the partitions.",
+      "assemble_title": "Assemble MD array",
+      "assemble_description": "Restart {path} from existing metadata on this node.",
+      "zero_title": "Clear RAID metadata",
+      "zero_description": "Removes MD superblocks on the selected partitions. Irreversible.",
+      "inspect_title": "mdadm --examine metadata",
+      "state": {
+        "stopped": "stopped",
+        "assemblable": "assemblable",
+        "incomplete": "incomplete",
+        "ambiguous": "ambiguous"
+      }
+    },
     "prepare_partitions": {
       "title": "Prepare RAID member partitions",
       "action": "Prepare RAID member partitions",

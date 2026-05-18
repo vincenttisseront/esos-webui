@@ -1,20 +1,21 @@
 /**
- * DELETE /api/raid/software/arrays/[name] — Arrêter un tableau MD actif (mdadm --stop, SDD v3.12 §8.4).
+ * POST /api/raid/software/arrays/assemble — Assembler un tableau MD arrêté.
  */
 import { getActiveSSHManager, withSanContext } from '../../../../utils/ssh-runtime'
-import { stopMdArray } from '../../../../utils/raid-md-actions'
+import { assembleMdArray, expectedMdAssembleConfirmation } from '../../../../utils/raid-md-actions'
 import { invalidateCacheKey } from '../../../../utils/cache'
 import { requireSanIdQuery } from '../../../../utils/san-query'
+import type { AssembleMdArrayRequest } from '../../../../utils/raid-types'
 
 export default defineEventHandler(async (event) => {
   const sanId = requireSanIdQuery(event)
-  const name = getRouterParam(event, 'name')
-  const body = await readBody<{ confirmation: string }>(event)
+  const body = await readBody<AssembleMdArrayRequest>(event)
 
-  if (!name) throw createError({ statusCode: 400, statusMessage: 'name requis' })
-
-  const expectedConfirm = `STOP ${name}`
-  if (!body?.confirmation || body.confirmation !== expectedConfirm) {
+  if (!body?.name) {
+    throw createError({ statusCode: 400, statusMessage: 'name requis' })
+  }
+  const expectedConfirm = expectedMdAssembleConfirmation(body.name)
+  if (!body.confirmation || body.confirmation !== expectedConfirm) {
     throw createError({ statusCode: 400, statusMessage: `Confirmation invalide (attendu : "${expectedConfirm}")` })
   }
 
@@ -23,7 +24,7 @@ export default defineEventHandler(async (event) => {
     if (!manager?.isReady()) {
       throw createError({ statusCode: 503, statusMessage: 'SSH non connecté' })
     }
-    const result = await stopMdArray(manager, name)
+    const result = await assembleMdArray(manager, body)
     invalidateCacheKey(`raid-overview-${sanId}`)
     return result
   }
@@ -33,7 +34,8 @@ export default defineEventHandler(async (event) => {
   } catch (err: any) {
     throw createError({
       statusCode: err.statusCode ?? 500,
-      statusMessage: err.statusMessage ?? err.message ?? 'Erreur stop MD array',
+      statusMessage: err.statusMessage ?? err.message ?? 'Erreur assemblage MD array',
+      data: err.data,
     })
   }
 })

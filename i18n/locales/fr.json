@@ -310,6 +310,31 @@
       "persisted_notice": "Configuration mdadm enregistrée sur le nœud.",
       "persisted_partial": "Configuration mdadm enregistrée sur certains nœuds seulement."
     },
+    "stopped_md": {
+      "section_title": "Tableaux MD arrêtés / assemblables",
+      "section_description": "Ces tableaux ne sont plus actifs dans le noyau mais conservent des superblocks MD sur les partitions membres. L'assemblage relance le tableau ; le nettoyage des métadonnées est destructif.",
+      "cluster_notice": "Détection et actions sur ce nœud uniquement. L'assemblage multi-nœuds cluster n'est pas encore automatisé.",
+      "inspect": "Inspecter",
+      "assemble": "Assembler / relancer",
+      "zero_superblocks": "Nettoyer métadonnées",
+      "member_path": "Partition",
+      "member_state": "État",
+      "member_present": "présente",
+      "member_missing": "manquante",
+      "members_count": "{count} / {expected} membres",
+      "stop_hint": "Arrêter retire le tableau du noyau ; les superblocks restent sur les partitions.",
+      "assemble_title": "Assembler le tableau MD",
+      "assemble_description": "Relance {path} à partir des métadonnées existantes sur ce nœud.",
+      "zero_title": "Nettoyer les métadonnées RAID",
+      "zero_description": "Supprime les superblocks MD sur les partitions sélectionnées. Irréversible.",
+      "inspect_title": "Métadonnées mdadm --examine",
+      "state": {
+        "stopped": "arrêté",
+        "assemblable": "assemblable",
+        "incomplete": "incomplet",
+        "ambiguous": "ambigu"
+      }
+    },
     "prepare_partitions": {
       "title": "Préparer des partitions membres RAID",
       "action": "Préparer partitions membres RAID",

@@ -24,9 +24,11 @@
         <UButton size="xs" color="amber" variant="ghost" icon="i-heroicons-plus" @click="$emit('add-device', array)">
           Ajouter
         </UButton>
-        <UButton size="xs" color="red" variant="ghost" icon="i-heroicons-stop-circle" @click="$emit('stop', array)">
-          Arrêter
-        </UButton>
+        <UTooltip :text="t('raid.stopped_md.stop_hint')">
+          <UButton size="xs" color="red" variant="ghost" icon="i-heroicons-stop-circle" @click="$emit('stop', array)">
+            Arrêter
+          </UButton>
+        </UTooltip>
       </div>
     </div>
 
@@ -66,6 +68,7 @@
 import type { MdArray, MdMemberDevice } from '~/types/raid'
 
 const props = defineProps<{ array: MdArray }>()
+const { t } = useEsosI18n()
 defineEmits<{
   stop: [arr: MdArray]
   'add-device': [arr: MdArray]

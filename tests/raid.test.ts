@@ -9,13 +9,18 @@ import { buildStorCliCreateLd, buildMegaCliCreateLd, buildArcconfCreateLd } from
 import { parseLspci, parseLsscsi, isRaidControllerPciLine } from '../server/utils/raid-pci-detection'
 import { buildMdCreateCommand, normalizeAndAssertMdCreateRequest, validateMdCreateRequest } from '../server/utils/raid-md-validation'
 import {
+  buildMdAssembleCommand,
   createMdArray,
   createMdArrayFromPlan,
+  expectedMdAssembleConfirmation,
+  expectedMdZeroSuperblocksConfirmation,
   isMdadmAwaitingInteractiveConfirmation,
   isMdadmCreateCommandFailure,
   MDADM_INTERACTIVE_CONFIRM_MESSAGE,
   resolveMdCreateExecErrorMessage,
 } from '../server/utils/raid-md-actions'
+import { runPreflight } from '../server/utils/raid-preflight'
+import type { StoppedMdArray } from '../server/utils/raid-types'
 import { validatePrepareMdPartitionsRequest } from '../server/utils/raid-md-partition-actions'
 import { buildCreateMdArrayNodeResults, buildPrepareMdPartitionsNodePlans, duplicateManualMappingBlockers, mapDeviceToPeer, runNodePreflight } from '../server/utils/raid-cluster-storage-preflight'
 import { derivePartitionMappingsFromDiskMappings, expectedFirstPartitionPath, filterPartitionMappingsForDevices } from '../utils/raid-cluster-mapping'
@@ -1431,5 +1436,118 @@ describe('RAID20 – préflight stockage cluster', () => {
 
     expect(mapping.confidence).toBe('none')
     expect(mapping.blockers).toContain('expected partition not found on peer node: /dev/sde1')
+  })
+})
+
+// ─── Stopped MD — assemble command & preflight ───────────────────────────────
+describe('Stopped MD — assemble command builders', () => {
+  it('buildMdAssembleCommand sans membres explicites', () => {
+    expect(buildMdAssembleCommand('md0')).toBe('mdadm --assemble /dev/md0 --run')
+  })
+
+  it('buildMdAssembleCommand avec membres', () => {
+    expect(buildMdAssembleCommand('md1', ['/dev/sdb1', '/dev/sdc1']))
+      .toBe('mdadm --assemble /dev/md1 --run /dev/sdb1 /dev/sdc1')
+  })
+
+  it('phrases de confirmation assemble / zero', () => {
+    expect(expectedMdAssembleConfirmation('md0')).toBe('ASSEMBLE md0')
+    expect(expectedMdZeroSuperblocksConfirmation('md2')).toBe('ZERO_SUPERBLOCK md2')
+  })
+})
+
+describe('Stopped MD — preflight assemble_md / zero_md_superblocks', () => {
+  const stoppedMd0: StoppedMdArray = {
+    name: 'md0',
+    path: '/dev/md0',
+    uuid: 'aaa:bbb',
+    raidLevel: '1',
+    raidDevices: 2,
+    members: [
+      { path: '/dev/sdb1', present: true },
+      { path: '/dev/sdc1', present: true },
+    ],
+    stoppedState: 'assemblable',
+    warnings: [],
+    detectedOn: 'both',
+  }
+
+  const activeMd0 = {
+    name: 'md0',
+    path: '/dev/md0',
+    raidLevel: '1' as const,
+    raidDevices: 2,
+    activeDevices: 2,
+    failedDevices: 0,
+    spareDevices: 0,
+    state: 'active' as const,
+    members: [],
+    usedBy: [],
+  }
+
+  const blockDevice = (path: string) => ({
+    path,
+    name: path.split('/').pop()!,
+    type: 'part' as const,
+    sizeBytes: 1,
+    usedBy: [] as string[],
+    eligibleForMd: true,
+    eligibleForHardwareRaid: false,
+    hasMdSuperblock: true,
+    mdEligibilityReasons: [],
+  })
+
+  it('assemble_md bloque si le tableau est déjà actif', async () => {
+    const result = await runPreflight(
+      {} as any,
+      { backend: 'software_md', action: 'assemble_md', payload: { name: 'md0' } },
+      [],
+      [activeMd0],
+      undefined,
+      [stoppedMd0],
+    )
+    expect(result.ok).toBe(false)
+    expect(result.blockers.some(b => b.includes('déjà actif'))).toBe(true)
+  })
+
+  it('assemble_md ok pour tableau arrêté assemblable', async () => {
+    const result = await runPreflight(
+      {} as any,
+      { backend: 'software_md', action: 'assemble_md', payload: { name: 'md0' } },
+      [blockDevice('/dev/sdb1'), blockDevice('/dev/sdc1')],
+      [],
+      undefined,
+      [stoppedMd0],
+    )
+    expect(result.ok).toBe(true)
+    expect(result.commandPreview).toContain('mdadm --assemble /dev/md0')
+  })
+
+  it('zero_md_superblocks bloque si tableau encore actif', async () => {
+    const result = await runPreflight(
+      {} as any,
+      {
+        backend: 'software_md',
+        action: 'zero_md_superblocks',
+        payload: { name: 'md0', members: ['/dev/sdb1'] },
+      },
+      [blockDevice('/dev/sdb1')],
+      [activeMd0],
+      undefined,
+      [],
+    )
+    expect(result.ok).toBe(false)
+    expect(result.blockers.some(b => b.includes('encore actif'))).toBe(true)
+  })
+
+  it('zero_md_superblocks exige au moins une partition', async () => {
+    const result = await runPreflight(
+      {} as any,
+      { backend: 'software_md', action: 'zero_md_superblocks', payload: { name: 'md0', members: [] } },
+      [],
+      [],
+    )
+    expect(result.ok).toBe(false)
+    expect(result.blockers.some(b => b.includes('Au moins une partition'))).toBe(true)
   })
 })

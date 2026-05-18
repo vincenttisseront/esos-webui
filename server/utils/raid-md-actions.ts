@@ -3,7 +3,7 @@
  */
 import { createError } from 'h3'
 import type { SSHSessionManager } from './ssh-session-manager'
-import type { CreateMdArrayRequest } from './raid-types'
+import type { AssembleMdArrayRequest, CreateMdArrayRequest } from './raid-types'
 import { buildMdCreateCommand, MD_CREATE_EMPTY_MEMBERS_MESSAGE, normalizeMdCreatePayload, sanitizeMdArrayName } from './raid-md-validation'
 
 const WRITE_ENABLED = process.env.RAID_SOFTWARE_WRITE_ENABLED !== 'false'
@@ -241,6 +241,74 @@ function traceMdCreateError(
 function extractErrorText(err: any, key: 'stdout' | 'stderr'): string | undefined {
   const value = err?.data?.[key] ?? err?.[key]
   return typeof value === 'string' ? value : undefined
+}
+
+// ─── Assemble stopped array ───────────────────────────────────────────────────
+
+export function expectedMdAssembleConfirmation(name: string): string {
+  return `ASSEMBLE ${sanitizeArrayName(name)}`
+}
+
+export function buildMdAssembleCommand(name: string, members: string[] = []): string {
+  const arrayPath = `/dev/${sanitizeArrayName(name)}`
+  const memberPaths = members.map(sanitizeDevicePath)
+  if (memberPaths.length > 0) {
+    return `mdadm --assemble ${arrayPath} --run ${memberPaths.join(' ')}`
+  }
+  return `mdadm --assemble ${arrayPath} --run`
+}
+
+export async function assembleMdArray(
+  manager: SSHSessionManager,
+  req: AssembleMdArrayRequest,
+): Promise<{ stdout: string; command: string }> {
+  assertWriteEnabled()
+  const arrayName = sanitizeArrayName(req.name)
+  const members = (req.members ?? []).map(sanitizeDevicePath)
+  const command = buildMdAssembleCommand(arrayName, members)
+  const { stdout } = await manager.exec(`${command} 2>&1; echo EXIT_CODE=$?`, 120_000)
+  if (isMdadmAwaitingInteractiveConfirmation(stdout)) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: MDADM_INTERACTIVE_CONFIRM_MESSAGE,
+      data: { command, stdout },
+    })
+  }
+  if (isMdadmCreateCommandFailure(stdout)) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: `Échec mdadm --assemble : ${stdout.slice(-500)}`,
+      data: { command, stdout },
+    })
+  }
+  return { stdout: stdout.slice(0, 2000), command }
+}
+
+// ─── Zero superblocks ─────────────────────────────────────────────────────────
+
+export function expectedMdZeroSuperblocksConfirmation(name: string): string {
+  return `ZERO_SUPERBLOCK ${sanitizeArrayName(name)}`
+}
+
+export async function zeroMdSuperblocks(
+  manager: SSHSessionManager,
+  members: string[],
+): Promise<{ stdout: string; commands: string[] }> {
+  assertWriteEnabled()
+  if (members.length === 0) {
+    throw createError({ statusCode: 400, statusMessage: 'Au moins une partition membre est requise' })
+  }
+  const commands = members.map(dev => `mdadm --zero-superblock ${sanitizeDevicePath(dev)}`)
+  const sshCommand = `${commands.join('; ')} 2>&1; echo EXIT_CODE=$?`
+  const { stdout } = await manager.exec(sshCommand, 120_000)
+  if (stdout.match(/EXIT_CODE=[1-9]/)) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: `Échec mdadm --zero-superblock : ${stdout.slice(-500)}`,
+      data: { commands, stdout },
+    })
+  }
+  return { stdout: stdout.slice(0, 2000), commands }
 }
 
 // ─── Stop array ───────────────────────────────────────────────────────────────

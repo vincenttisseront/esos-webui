@@ -389,6 +389,7 @@ async function collectNodeInventory(node: ClusterSanRow): Promise<ClusterStorage
       error: 'SSH non connecté',
       blockDevices: [],
       mdArrays: [],
+      stoppedMdArrays: [],
     }
   }
 
@@ -403,6 +404,7 @@ async function collectNodeInventory(node: ClusterSanRow): Promise<ClusterStorage
       tools: overview.tools,
       blockDevices: overview.blockDevices,
       mdArrays: overview.mdArrays,
+      stoppedMdArrays: overview.stoppedMdArrays ?? [],
     }
   } catch (err: any) {
     return {
@@ -414,6 +416,7 @@ async function collectNodeInventory(node: ClusterSanRow): Promise<ClusterStorage
       error: err?.statusMessage ?? err?.message ?? 'Inventaire RAID indisponible',
       blockDevices: [],
       mdArrays: [],
+      stoppedMdArrays: [],
     }
   }
 }
@@ -429,6 +432,7 @@ export async function runNodePreflight(
     node.blockDevices,
     node.mdArrays,
     node.tools,
+    node.stoppedMdArrays ?? [],
   )
 }
 
