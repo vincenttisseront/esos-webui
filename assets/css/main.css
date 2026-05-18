@@ -1,0 +1,31 @@
+/* assets/css/main.css */
+
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+@import './tokens.css';
+@import './utilities.css';
+@import './topology.css';   /* SDD v2.5 */
+
+/* ── Base globale ───────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  font-family:       var(--font-sans);
+  font-size:         var(--text-base);
+  color:             var(--color-text);
+  background-color:  var(--color-surface-alt);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Scrollbar ──────────────────────────────────────────────── */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border-strong); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-text-faint); }
+
+/* ── Focus visible ──────────────────────────────────────────── */
+:focus-visible {
+  outline:        2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}

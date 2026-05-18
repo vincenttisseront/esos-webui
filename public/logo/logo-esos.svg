@@ -1,0 +1,27 @@
+<svg width="720" height="240" viewBox="0 0 720 240" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">ESOS Storage WebUI Logo</title>
+  <desc id="desc">Logo for ESOS WebUI, showing a storage and network icon with ESOS text.</desc>
+
+  <rect x="40" y="40" width="160" height="160" rx="34" fill="#2563EB"/>
+  <path d="M74 58H166C174.837 58 182 65.1634 182 74V82H58V74C58 65.1634 65.1634 58 74 58Z" fill="#3B82F6" opacity="0.75"/>
+
+  <rect x="74" y="82" width="92" height="28" rx="10" fill="white" opacity="0.96"/>
+  <rect x="74" y="112" width="92" height="28" rx="10" fill="white" opacity="0.86"/>
+  <rect x="74" y="142" width="92" height="28" rx="10" fill="white" opacity="0.76"/>
+
+  <circle cx="94" cy="96" r="4" fill="#10B981"/>
+  <circle cx="94" cy="126" r="4" fill="#10B981"/>
+  <circle cx="94" cy="156" r="4" fill="#F59E0B"/>
+
+  <path d="M120 96V62" stroke="white" stroke-width="6" stroke-linecap="round" opacity="0.9"/>
+  <path d="M120 62H150" stroke="white" stroke-width="6" stroke-linecap="round" opacity="0.9"/>
+  <path d="M120 62H90" stroke="white" stroke-width="6" stroke-linecap="round" opacity="0.9"/>
+
+  <circle cx="90" cy="62" r="8" fill="#DBEAFE"/>
+  <circle cx="150" cy="62" r="8" fill="#DBEAFE"/>
+  <circle cx="120" cy="62" r="8" fill="#DBEAFE"/>
+
+  <text x="236" y="115" font-family="Inter, system-ui, sans-serif" font-size="64" font-weight="800" letter-spacing="3" fill="#111827">ESOS</text>
+  <text x="240" y="154" font-family="Inter, system-ui, sans-serif" font-size="24" font-weight="500" letter-spacing="0.5" fill="#6B7280">Storage WebUI</text>
+  <text x="242" y="184" font-family="JetBrains Mono, Menlo, Consolas, monospace" font-size="15" font-weight="500" letter-spacing="0.6" fill="#2563EB">SAN · iSCSI · SCST</text>
+</svg>

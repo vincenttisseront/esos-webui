@@ -1,0 +1,178 @@
+/**
+ * RBAC unit tests — importe uniquement `server/utils/api-rbac` + `h3` (via ce module).
+ * Pour valider ce fichier seul (sans `npm run test`, qui échoue tant que d'autres
+ * suites ont des erreurs, ex. parse esbuild sur tests/raid.test.ts) :
+ *   npm run test:rbac
+ */
+import { describe, it, expect } from 'vitest'
+import { enforceMutationAccess, enforceReadAccess } from '../server/utils/api-rbac'
+import {
+  CLUSTER_NODE_SELECTION_DTO_KEYS,
+  SAN_SELECTION_DTO_KEYS,
+} from '../server/utils/selection-context'
+
+function expectForbidden(fn: () => void) {
+  expect(fn).toThrow()
+}
+
+describe('api-rbac (mutations default deny)', () => {
+  it('RB01 — viewer cannot POST /api/targets', () => {
+    expectForbidden(() => enforceMutationAccess('/api/targets', 'POST', 'viewer'))
+  })
+
+  it('RB02 — viewer cannot POST /api/cluster/sync', () => {
+    expectForbidden(() => enforceMutationAccess('/api/cluster/sync', 'POST', 'viewer'))
+  })
+
+  it('RB03 — viewer can POST /api/auth/change-password', () => {
+    expect(() => enforceMutationAccess('/api/auth/change-password', 'POST', 'viewer')).not.toThrow()
+  })
+
+  it('RB04 — viewer can POST /api/auth/logout', () => {
+    expect(() => enforceMutationAccess('/api/auth/logout', 'POST', 'viewer')).not.toThrow()
+  })
+
+  it('RB05 — operator cannot POST /api/admin/ssh/test', () => {
+    expectForbidden(() => enforceMutationAccess('/api/admin/ssh/test', 'POST', 'operator'))
+  })
+
+  it('RB06 — admin can POST /api/admin/ssh/test', () => {
+    expect(() => enforceMutationAccess('/api/admin/ssh/test', 'POST', 'admin')).not.toThrow()
+  })
+
+  it('RB07 — operator can POST /api/cluster/sync', () => {
+    expect(() => enforceMutationAccess('/api/cluster/sync', 'POST', 'operator')).not.toThrow()
+  })
+
+  it('RB08 — unknown mutation path is denied for admin', () => {
+    expectForbidden(() => enforceMutationAccess('/api/unknown-mutation', 'POST', 'admin'))
+  })
+})
+
+describe('api-rbac (auth-providers admin)', () => {
+  it('RB40 — operator cannot PATCH /api/admin/auth-providers', () => {
+    expectForbidden(() => enforceMutationAccess('/api/admin/auth-providers', 'PATCH', 'operator'))
+  })
+
+  it('RB41 — admin can PATCH /api/admin/auth-providers', () => {
+    expect(() => enforceMutationAccess('/api/admin/auth-providers', 'PATCH', 'admin')).not.toThrow()
+  })
+
+  it('RB42 — operator cannot POST /api/admin/auth-providers/ldap/test', () => {
+    expectForbidden(() =>
+      enforceMutationAccess('/api/admin/auth-providers/ldap/test', 'POST', 'operator'),
+    )
+  })
+
+  it('RB43 — admin can POST /api/admin/auth-providers/oidc/test', () => {
+    expect(() =>
+      enforceMutationAccess('/api/admin/auth-providers/oidc/test', 'POST', 'admin'),
+    ).not.toThrow()
+  })
+
+  it('RB44 — viewer cannot GET /api/admin/auth-providers', () => {
+    expectForbidden(() => enforceReadAccess('/api/admin/auth-providers', 'GET', 'viewer'))
+  })
+
+  it('RB45 — admin can GET /api/admin/auth-providers', () => {
+    expect(() => enforceReadAccess('/api/admin/auth-providers', 'GET', 'admin')).not.toThrow()
+  })
+})
+
+describe('api-rbac (reads)', () => {
+  it('RB10 — viewer cannot GET /api/admin/users', () => {
+    expectForbidden(() => enforceReadAccess('/api/admin/users', 'GET', 'viewer'))
+  })
+
+  it('RB11 — viewer can GET /api/raid/overview', () => {
+    expect(() => enforceReadAccess('/api/raid/overview', 'GET', 'viewer')).not.toThrow()
+  })
+
+  it('RB20 — viewer cannot GET /api/admin/settings', () => {
+    expectForbidden(() => enforceReadAccess('/api/admin/settings', 'GET', 'viewer'))
+  })
+
+  it('RB21 — viewer cannot GET /api/admin/system-info', () => {
+    expectForbidden(() => enforceReadAccess('/api/admin/system-info', 'GET', 'viewer'))
+  })
+
+  it('RB22 — viewer cannot GET /api/admin/sans', () => {
+    expectForbidden(() => enforceReadAccess('/api/admin/sans', 'GET', 'viewer'))
+  })
+
+  it('RB23 — viewer cannot GET /api/admin/dependencies', () => {
+    expectForbidden(() => enforceReadAccess('/api/admin/dependencies', 'GET', 'viewer'))
+  })
+
+  it('RB24 — operator cannot GET /api/admin/settings', () => {
+    expectForbidden(() => enforceReadAccess('/api/admin/settings', 'GET', 'operator'))
+  })
+
+  it('RB25 — operator can GET /api/admin/sans', () => {
+    expect(() => enforceReadAccess('/api/admin/sans', 'GET', 'operator')).not.toThrow()
+  })
+
+  it('RB26 — operator can GET /api/admin/dependencies', () => {
+    expect(() => enforceReadAccess('/api/admin/dependencies', 'GET', 'operator')).not.toThrow()
+  })
+
+  it('RB27 — admin can GET /api/admin/settings', () => {
+    expect(() => enforceReadAccess('/api/admin/settings', 'GET', 'admin')).not.toThrow()
+  })
+
+  it('RB28 — operator cannot GET /api/admin/cluster/probe (admin-only catch-all)', () => {
+    expectForbidden(() => enforceReadAccess('/api/admin/cluster/probe', 'GET', 'operator'))
+  })
+
+  it('RB30 — viewer can GET /api/context/selection', () => {
+    expect(() => enforceReadAccess('/api/context/selection', 'GET', 'viewer')).not.toThrow()
+  })
+
+  it('RB31 — operator can GET /api/context/selection', () => {
+    expect(() => enforceReadAccess('/api/context/selection', 'GET', 'operator')).not.toThrow()
+  })
+
+  it('RB32 — admin can HEAD /api/context/selection', () => {
+    expect(() => enforceReadAccess('/api/context/selection', 'HEAD', 'admin')).not.toThrow()
+  })
+
+  it('RB33 — viewer cannot GET /api/admin/health (Batch 2D)', () => {
+    expectForbidden(() => enforceReadAccess('/api/admin/health', 'GET', 'viewer'))
+  })
+
+  it('RB34 — operator can GET /api/admin/health (Batch 2D)', () => {
+    expect(() => enforceReadAccess('/api/admin/health', 'GET', 'operator')).not.toThrow()
+  })
+})
+
+describe('selection DTO allowlists (Batch 2A.1a)', () => {
+  const forbiddenSanKeys = [
+    'host',
+    'port',
+    'username',
+    'authType',
+    'keyFingerprint',
+    'settings',
+    'description',
+    'driver',
+    'createdAt',
+    'updatedAt',
+    'privateKey',
+    'password',
+    'encryptedKey',
+    'encryptedPassword',
+  ]
+
+  it('SAN_SELECTION_DTO_KEYS excludes sensitive / credential-related names', () => {
+    const allowed = new Set<string>(SAN_SELECTION_DTO_KEYS as readonly string[])
+    for (const k of forbiddenSanKeys) {
+      expect(allowed.has(k)).toBe(false)
+    }
+  })
+
+  it('CLUSTER_NODE_SELECTION_DTO_KEYS excludes host and other admin-only node fields', () => {
+    const allowed = new Set<string>(CLUSTER_NODE_SELECTION_DTO_KEYS as readonly string[])
+    expect(allowed.has('host')).toBe(false)
+    expect(allowed.has('username')).toBe(false)
+  })
+})

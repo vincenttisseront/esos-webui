@@ -1,0 +1,107 @@
+@reference "tailwindcss";
+
+/* ─── Conteneur général ──────────────────────────────────────────────────── */
+.topology-wrapper {
+  @apply relative w-full h-full bg-gray-50 dark:bg-gray-950;
+}
+
+/* ─── Base nœud ───────────────────────────────────────────────────────────── */
+.topology-node {
+  @apply flex items-center gap-3 px-3 py-2 rounded-lg border bg-white dark:bg-gray-800 shadow-sm text-sm cursor-default;
+  min-width: 130px;
+}
+
+.node-icon {
+  @apply text-xl leading-none shrink-0;
+}
+
+.node-content {
+  @apply flex flex-col gap-0.5 min-w-0;
+}
+
+.node-label {
+  @apply text-xs font-semibold text-gray-500 uppercase tracking-wide;
+}
+
+.node-wwn {
+  @apply text-xs font-mono text-gray-700 dark:text-gray-300 truncate;
+}
+
+/* ─── Variantes par type ─────────────────────────────────────────────────── */
+.node-hba {
+  @apply border-gray-200;
+}
+
+.node-hba.online {
+  @apply border-green-400;
+}
+
+.node-target {
+  @apply border-blue-200;
+}
+
+.node-initiator {
+  @apply border-gray-200;
+}
+
+.node-initiator--active {
+  @apply border-orange-300 bg-orange-50 dark:bg-orange-950;
+}
+
+.node-initiator--inactive {
+  @apply border-gray-200 opacity-60;
+}
+
+.node-group {
+  @apply border-purple-200;
+}
+
+.node-device {
+  @apply border-teal-200;
+}
+
+/* ─── Badges ─────────────────────────────────────────────────────────────── */
+.node-badge {
+  @apply inline-block text-xs px-1.5 py-0.5 rounded font-medium leading-none;
+}
+
+.badge-green {
+  @apply bg-green-100 text-green-700;
+}
+
+.badge-red {
+  @apply bg-red-100 text-red-700;
+}
+
+.badge-blue {
+  @apply bg-blue-100 text-blue-700;
+}
+
+.badge-gray {
+  @apply bg-gray-100 text-gray-600;
+}
+
+/* ─── Identifier font ────────────────────────────────────────────────────── */
+.font-identifier {
+  @apply font-mono;
+}
+
+/* ─── Toolbar overlay ────────────────────────────────────────────────────── */
+.topology-toolbar {
+  @apply absolute top-3 left-3 z-10 flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 shadow-md;
+}
+/* ─── Légende ────────────────────────────────────────────────────────────── */
+.topology-legend {
+  @apply absolute bottom-3 left-3 z-10 flex items-center gap-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2 shadow-sm text-xs text-gray-600 dark:text-gray-300;
+}
+
+.legend-item {
+  @apply flex items-center gap-1.5;
+}
+
+.legend-dot {
+  @apply w-2.5 h-2.5 rounded-full shrink-0;
+}
+.topology-status {
+  @apply absolute top-3 right-3 z-10 flex items-center gap-2 text-xs text-gray-500 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 shadow-md;
+}

@@ -1,0 +1,57 @@
+/* assets/css/tokens.css */
+/* Variables CSS globales — source unique de vérité pour les valeurs de design */
+
+:root {
+  /* ── Couleurs de marque ─────────────────────────────────── */
+  --color-brand-50:   #eff6ff;
+  --color-brand-100:  #dbeafe;
+  --color-brand-500:  #3b82f6;
+  --color-brand-600:  #2563eb;
+  --color-brand-700:  #1d4ed8;
+
+  /* ── Couleurs sémantiques ───────────────────────────────── */
+  --color-success:    #10b981;   /* sessions actives, port Online */
+  --color-warning:    #f59e0b;   /* alertes warning */
+  --color-danger:     #ef4444;   /* erreurs, port Offline */
+  --color-info:       #3b82f6;   /* informations, read I/O */
+  --color-io-read:    #3b82f6;   /* trafic lecture */
+  --color-io-write:   #f97316;   /* trafic écriture */
+
+  /* ── Neutres ────────────────────────────────────────────── */
+  --color-surface:     #ffffff;
+  --color-surface-alt: #f9fafb;
+  --color-border:      #e5e7eb;
+  --color-border-strong: #d1d5db;
+  --color-text:        #111827;
+  --color-text-muted:  #6b7280;
+  --color-text-faint:  #9ca3af;
+
+  /* ── Typographie ────────────────────────────────────────── */
+  --font-sans:  'Inter', system-ui, sans-serif;
+  --font-mono:  'JetBrains Mono', 'Menlo', 'Consolas', monospace;
+
+  --text-xs:    0.75rem;    /* 12px */
+  --text-sm:    0.8125rem;  /* 13px */
+  --text-base:  0.875rem;   /* 14px — taille de base UI */
+  --text-lg:    1rem;       /* 16px */
+  --text-xl:    1.125rem;   /* 18px */
+
+  /* ── Espacement ─────────────────────────────────────────── */
+  --radius-sm:  4px;
+  --radius-md:  8px;
+  --radius-lg:  12px;
+  --radius-xl:  16px;
+
+  /* ── Ombres ─────────────────────────────────────────────── */
+  --shadow-sm:  0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md:  0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg:  0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl:  0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+  /* ── Modales ────────────────────────────────────────────── */
+  --modal-backdrop: rgb(0 0 0 / 0.5);
+  --modal-max-sm:   400px;
+  --modal-max-md:   560px;
+  --modal-max-lg:   720px;
+  --modal-max-xl:   900px;
+}

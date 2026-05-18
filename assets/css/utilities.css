@@ -1,0 +1,88 @@
+/* assets/css/utilities.css */
+
+/* ── Identifiants (WWN, IQN, paths, fingerprints) ───────────── */
+.font-identifier {
+  font-family: var(--font-mono);
+  font-size:   var(--text-sm);
+  letter-spacing: 0.01em;
+}
+
+/* ── Badges statut ──────────────────────────────────────────── */
+.status-dot {
+  width:         8px;
+  height:        8px;
+  border-radius: 50%;
+  display:       inline-block;
+  flex-shrink:   0;
+}
+.status-dot--online     { background-color: var(--color-success); }
+.status-dot--offline    { background-color: var(--color-danger); animation: pulse 2s infinite; }
+.status-dot--unknown    { background-color: var(--color-text-faint); }
+.status-dot--connecting { background-color: var(--color-warning); animation: pulse 1s infinite; }
+
+/* ── Tables de données ──────────────────────────────────────── */
+.data-table {
+  width:           100%;
+  border-collapse: collapse;
+  font-size:       var(--text-sm);
+}
+.data-table thead tr {
+  background-color: var(--color-surface-alt);
+  border-bottom:    1px solid var(--color-border);
+}
+.data-table thead th {
+  padding:    8px 12px;
+  text-align: left;
+  font-weight: 500;
+  color:       var(--color-text-muted);
+  font-size:   var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing:  0.05em;
+}
+.data-table tbody tr {
+  border-bottom: 1px solid var(--color-border);
+  transition:    background-color 120ms;
+}
+.data-table tbody tr:last-child { border-bottom: none; }
+.data-table tbody tr:hover      { background-color: var(--color-surface-alt); }
+.data-table tbody td {
+  padding:     8px 12px;
+  color:       var(--color-text);
+  white-space: nowrap;
+}
+
+/* ── Section admin ──────────────────────────────────────────── */
+.admin-section-title {
+  font-size:      var(--text-xs);
+  font-weight:    600;
+  color:          var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom:  12px;
+}
+
+/* ── Card de base ───────────────────────────────────────────── */
+.esos-card {
+  background-color: var(--color-surface);
+  border:           1px solid var(--color-border);
+  border-radius:    var(--radius-lg);
+  box-shadow:       var(--shadow-sm);
+  overflow:         hidden;
+}
+
+/* ── Empty states ───────────────────────────────────────────── */
+.empty-state {
+  display:         flex;
+  flex-direction:  column;
+  align-items:     center;
+  justify-content: center;
+  padding:         48px 24px;
+  color:           var(--color-text-faint);
+  font-size:       var(--text-sm);
+  gap:             8px;
+  text-align:      center;
+}
+.empty-state-icon {
+  font-size: 2rem;
+  opacity:   0.4;
+}

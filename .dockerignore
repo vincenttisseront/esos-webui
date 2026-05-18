@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build output (regenerated inside the builder stage)
+.output/
+.nuxt/
+
+# Sensitive
+.env
+.env.*
+!.env.example
+keys/
+nginx/certs/
+
+# Useless for the build
+.git/
+.gitignore
+*.md
+.DS_Store
+Dockerfile
+docker-compose*.yml
+
+# Tests
+tests/
+*.test.ts
+*.spec.ts
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log

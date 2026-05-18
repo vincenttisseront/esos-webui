@@ -1,0 +1,13 @@
+<svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ESOS">
+  <rect width="44" height="44" rx="10" fill="#2563EB"/>
+  <rect x="12" y="17" width="20" height="7" rx="3" fill="white" opacity="0.96"/>
+  <rect x="12" y="25" width="20" height="7" rx="3" fill="white" opacity="0.82"/>
+  <circle cx="16" cy="20.5" r="1.5" fill="#10B981"/>
+  <circle cx="16" cy="28.5" r="1.5" fill="#F59E0B"/>
+  <path d="M22 17V9" stroke="white" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M22 9H15" stroke="white" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M22 9H29" stroke="white" stroke-width="2.4" stroke-linecap="round"/>
+  <circle cx="15" cy="9" r="2.4" fill="#DBEAFE"/>
+  <circle cx="22" cy="9" r="2.4" fill="#DBEAFE"/>
+  <circle cx="29" cy="9" r="2.4" fill="#DBEAFE"/>
+</svg>

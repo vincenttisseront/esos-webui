@@ -1,0 +1,295 @@
+/**
+ * Actions Software RAID MD via SSH (SDD v3.12 §8.4, §9.3, §10).
+ */
+import { createError } from 'h3'
+import type { SSHSessionManager } from './ssh-session-manager'
+import type { CreateMdArrayRequest } from './raid-types'
+import { buildMdCreateCommand, MD_CREATE_EMPTY_MEMBERS_MESSAGE, normalizeMdCreatePayload, sanitizeMdArrayName } from './raid-md-validation'
+
+const WRITE_ENABLED = process.env.RAID_SOFTWARE_WRITE_ENABLED !== 'false'
+  && process.env.RAID_WRITE_ACTIONS_ENABLED !== 'false'
+
+export interface MdCreateExecutionTraceContext {
+  endpoint?: string
+  sanId?: string
+  nodeLabel?: string
+}
+
+function assertWriteEnabled(): void {
+  if (!WRITE_ENABLED) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: 'Les actions d\'écriture RAID sont désactivées (RAID_SOFTWARE_WRITE_ENABLED=false)',
+    })
+  }
+}
+
+// ─── Création array MD ────────────────────────────────────────────────────────
+
+export async function createMdArray(
+  manager: SSHSessionManager,
+  req: CreateMdArrayRequest,
+): Promise<{ stdout: string; command: string; persisted: boolean }> {
+  return createMdArrayFromPlan(manager, req)
+}
+
+export async function createMdArrayFromPlan(
+  manager: SSHSessionManager,
+  req: CreateMdArrayRequest,
+  planCommand?: string,
+  traceContext: MdCreateExecutionTraceContext = {},
+): Promise<{ stdout: string; command: string; persisted: boolean }> {
+  assertWriteEnabled()
+
+  const normalizedReq = normalizeMdCreatePayload(req)
+  const arrayName = sanitizeMdArrayName(normalizedReq.name)
+  const command = buildMdCreateCommand(normalizedReq)
+  assertExecutableMdCreateCommand(command, normalizedReq.devices)
+  traceMdCreate('rebuilt-command', traceContext, normalizedReq, command, planCommand)
+  if (planCommand !== undefined && planCommand.trim() !== command) {
+    traceMdCreate('plan-command-mismatch', traceContext, normalizedReq, command, planCommand)
+    throw createError({
+      statusCode: 400,
+      statusMessage: `Commande MD planifiée différente de la commande d'exécution : ${planCommand.trim()} != ${command}`,
+    })
+  }
+  if (planCommand !== undefined) {
+    assertExecutableMdCreateCommand(planCommand.trim(), normalizedReq.devices)
+  }
+
+  if (/--raid-devices=(?:\s|$)/.test(command) || !/--raid-devices=\d+/.test(command)) {
+    throw createError({ statusCode: 400, statusMessage: MD_CREATE_EMPTY_MEMBERS_MESSAGE })
+  }
+
+  const finalCommand = command
+  const sshCommand = `${finalCommand} 2>&1; echo EXIT_CODE=$?`
+  if (planCommand !== undefined && finalCommand !== planCommand.trim()) {
+    traceMdCreate('final-command-plan-mismatch', traceContext, normalizedReq, finalCommand, planCommand)
+    throw createError({
+      statusCode: 400,
+      statusMessage: `Commande MD planifiée différente de la commande finale : ${planCommand.trim()} != ${finalCommand}`,
+    })
+  }
+
+  traceMdCreate('ssh-exec', traceContext, normalizedReq, finalCommand, planCommand)
+
+  let stdout = ''
+  try {
+    const execResult = await manager.exec(sshCommand, 120_000)
+    stdout = execResult.stdout
+  } catch (err: any) {
+    const errorMessage = err?.statusMessage ?? err?.message ?? 'Erreur SSH création MD array'
+    const errorStdout = extractErrorText(err, 'stdout')
+    const errorStderr = extractErrorText(err, 'stderr')
+    traceMdCreateError('ssh-exec-error', traceContext, normalizedReq, finalCommand, planCommand, errorMessage, errorStdout, errorStderr)
+    throw createError({
+      statusCode: err?.statusCode ?? 500,
+      statusMessage: errorMessage,
+      data: {
+        command: finalCommand,
+        stdout: errorStdout,
+        stderr: errorStderr,
+      },
+    })
+  }
+
+  if (stdout.includes('EXIT_CODE=1') || stdout.includes('failed') || stdout.includes('error')) {
+    const errorMessage = `Échec mdadm --create : ${stdout.slice(-500)}`
+    traceMdCreateError('mdadm-create-failed', traceContext, normalizedReq, finalCommand, planCommand, errorMessage, stdout, undefined)
+    throw createError({
+      statusCode: 500,
+      statusMessage: errorMessage,
+      data: {
+        command: finalCommand,
+        stdout,
+      },
+    })
+  }
+
+  // Persistance mdadm.conf
+  let persisted = false
+  try {
+    const { stdout: persistOut } = await manager.exec(
+      [
+        // Supprimer les lignes existantes pour ce même array (même UUID ou même nom)
+        `grep -v "${arrayName}" /etc/mdadm.conf 2>/dev/null > /tmp/mdadm.conf.tmp || touch /tmp/mdadm.conf.tmp`,
+        `mdadm --detail --scan >> /tmp/mdadm.conf.tmp`,
+        `sort -u -k2,2 /tmp/mdadm.conf.tmp > /etc/mdadm.conf`,
+        'conf_sync.sh 2>/dev/null || true',
+        'echo PERSIST_OK',
+      ].join('; '),
+      30_000,
+    )
+    persisted = persistOut.includes('PERSIST_OK')
+  } catch { /* non bloquant */ }
+
+  return { stdout: stdout.slice(0, 2000), command: finalCommand, persisted }
+}
+
+function assertExecutableMdCreateCommand(command: string, members: string[]): void {
+  if (members.length === 0) {
+    throw createError({ statusCode: 400, statusMessage: MD_CREATE_EMPTY_MEMBERS_MESSAGE })
+  }
+  const raidDevices = command.match(/--raid-devices=(\d+)/)?.[1]
+  if (!raidDevices || Number(raidDevices) !== members.length) {
+    throw createError({ statusCode: 400, statusMessage: 'Commande MD invalide : nombre de membres incohérent.' })
+  }
+  for (const member of members) {
+    if (!command.split(/\s+/).includes(member)) {
+      throw createError({ statusCode: 400, statusMessage: `Commande MD invalide : membre manquant ${member}` })
+    }
+  }
+}
+
+function traceMdCreate(
+  event: string,
+  context: MdCreateExecutionTraceContext,
+  req: CreateMdArrayRequest,
+  command: string,
+  planCommand?: string,
+): void {
+  console.info('[raid-md:create]', {
+    event,
+    endpoint: context.endpoint ?? 'unknown',
+    sanId: context.sanId,
+    nodeLabel: context.nodeLabel,
+    arrayName: req.name,
+    level: req.level,
+    chunkKb: req.chunkKb,
+    membersLength: req.devices.length,
+    members: req.devices,
+    plannedCommand: planCommand,
+    rebuiltCommand: command,
+    finalCommand: command,
+  })
+}
+
+function traceMdCreateError(
+  event: string,
+  context: MdCreateExecutionTraceContext,
+  req: CreateMdArrayRequest,
+  command: string,
+  planCommand: string | undefined,
+  errorMessage: string,
+  stdout?: string,
+  stderr?: string,
+): void {
+  console.info('[raid-md:create]', {
+    event,
+    endpoint: context.endpoint ?? 'unknown',
+    sanId: context.sanId,
+    nodeLabel: context.nodeLabel,
+    arrayName: req.name,
+    level: req.level,
+    chunkKb: req.chunkKb,
+    membersLength: req.devices.length,
+    members: req.devices,
+    plannedCommand: planCommand,
+    finalCommand: command,
+    errorMessage,
+    stdout,
+    stderr,
+  })
+}
+
+function extractErrorText(err: any, key: 'stdout' | 'stderr'): string | undefined {
+  const value = err?.data?.[key] ?? err?.[key]
+  return typeof value === 'string' ? value : undefined
+}
+
+// ─── Stop array ───────────────────────────────────────────────────────────────
+
+export async function stopMdArray(
+  manager: SSHSessionManager,
+  arrayName: string,
+): Promise<{ stdout: string }> {
+  assertWriteEnabled()
+  const path = `/dev/${sanitizeArrayName(arrayName)}`
+  const { stdout } = await manager.exec(
+    `mdadm --stop ${path} 2>&1; echo EXIT_CODE=$?`,
+    60_000,
+  )
+  if (stdout.match(/EXIT_CODE=[1-9]/)) {
+    throw createError({ statusCode: 500, statusMessage: `Échec mdadm --stop : ${stdout.slice(-300)}` })
+  }
+  return { stdout: stdout.slice(0, 1000) }
+}
+
+// ─── Add device ───────────────────────────────────────────────────────────────
+
+export async function addMdDevice(
+  manager: SSHSessionManager,
+  arrayName: string,
+  device: string,
+): Promise<{ stdout: string }> {
+  assertWriteEnabled()
+  const path = `/dev/${sanitizeArrayName(arrayName)}`
+  const devPath = sanitizeDevicePath(device)
+  const { stdout } = await manager.exec(
+    `mdadm ${path} --add ${devPath} 2>&1; echo EXIT_CODE=$?`,
+    30_000,
+  )
+  if (stdout.match(/EXIT_CODE=[1-9]/)) {
+    throw createError({ statusCode: 500, statusMessage: `Échec mdadm --add : ${stdout.slice(-300)}` })
+  }
+  return { stdout: stdout.slice(0, 1000) }
+}
+
+// ─── Set faulty ───────────────────────────────────────────────────────────────
+
+export async function setMdDeviceFaulty(
+  manager: SSHSessionManager,
+  arrayName: string,
+  device: string,
+): Promise<{ stdout: string }> {
+  assertWriteEnabled()
+  const path = `/dev/${sanitizeArrayName(arrayName)}`
+  const devPath = sanitizeDevicePath(device)
+  const { stdout } = await manager.exec(
+    `mdadm ${path} --fail ${devPath} 2>&1; echo EXIT_CODE=$?`,
+    30_000,
+  )
+  if (stdout.match(/EXIT_CODE=[1-9]/)) {
+    throw createError({ statusCode: 500, statusMessage: `Échec mdadm --fail : ${stdout.slice(-300)}` })
+  }
+  return { stdout: stdout.slice(0, 1000) }
+}
+
+// ─── Remove device ────────────────────────────────────────────────────────────
+
+export async function removeMdDevice(
+  manager: SSHSessionManager,
+  arrayName: string,
+  device: string,
+): Promise<{ stdout: string }> {
+  assertWriteEnabled()
+  const path = `/dev/${sanitizeArrayName(arrayName)}`
+  const devPath = sanitizeDevicePath(device)
+  const { stdout } = await manager.exec(
+    `mdadm ${path} --remove ${devPath} 2>&1; echo EXIT_CODE=$?`,
+    30_000,
+  )
+  if (stdout.match(/EXIT_CODE=[1-9]/)) {
+    throw createError({ statusCode: 500, statusMessage: `Échec mdadm --remove : ${stdout.slice(-300)}` })
+  }
+  return { stdout: stdout.slice(0, 1000) }
+}
+
+// ─── Validation / sanitisation ────────────────────────────────────────────────
+
+function sanitizeArrayName(name: string): string {
+  // Accepte md0, md_root, md127, etc.
+  if (!/^md[a-z0-9_-]{0,15}$/.test(name)) {
+    throw createError({ statusCode: 400, statusMessage: `Nom d'array invalide : ${name}` })
+  }
+  return name
+}
+
+function sanitizeDevicePath(dev: string): string {
+  // Doit être un chemin /dev/... ou un device court sdX, nvmeX, etc.
+  const path = dev.startsWith('/dev/') ? dev : `/dev/${dev}`
+  if (!/^\/dev\/[a-z0-9_./-]{1,64}$/.test(path)) {
+    throw createError({ statusCode: 400, statusMessage: `Chemin device invalide : ${dev}` })
+  }
+  return path
+}

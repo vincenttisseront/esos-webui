@@ -1,0 +1,482 @@
+<template>
+  <div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <UButton
+          to="/admin/sans"
+          icon="i-heroicons-arrow-left"
+          variant="ghost"
+          size="sm"
+          color="gray"
+        />
+        <SectionTitle
+          :title="`Config système — ${san?.label ?? sanId}`"
+          icon="i-heroicons-wrench-screwdriver"
+          :description="san ? `${san.host}:${san.port} · ${san.username}` : ''"
+        />
+      </div>
+
+      <div class="flex items-center gap-3">
+        <SSHStatusBadge v-if="config" :status="config.sshStatus" />
+        <UButton
+          icon="i-heroicons-arrow-path"
+          size="sm"
+          color="gray"
+          variant="outline"
+          label="Actualiser"
+          :loading="loading"
+          @click="reload"
+        />
+      </div>
+    </div>
+
+    <!-- SAN introuvable -->
+    <UAlert
+      v-if="sanError"
+      color="red"
+      variant="subtle"
+      icon="i-heroicons-x-circle"
+      title="SAN introuvable"
+      :description="sanError"
+    />
+
+    <template v-else>
+      <!-- Bannière lecture seule -->
+      <UAlert
+        v-if="isReadOnly"
+        color="red"
+        variant="subtle"
+        icon="i-heroicons-lock-closed"
+        title="SAN en lecture seule"
+        description="Ce SAN est protégé contre les modifications depuis l'interface web. Pour activer l'édition, allez dans Administration → SANs et désactivez la protection."
+      />
+
+      <!-- Spinner premier chargement -->
+      <div v-if="loading && !config" class="flex justify-center py-16">
+        <UIcon name="i-heroicons-arrow-path" class="size-8 text-gray-400 animate-spin" />
+      </div>
+
+      <template v-else>
+        <!-- Spinner SSH en cours de reconnexion -->
+        <div
+          v-if="isSshConnecting"
+          class="rounded-xl bg-blue-50 border border-blue-200 px-5 py-5 flex items-center gap-4"
+        >
+          <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-blue-500 shrink-0 animate-spin" />
+          <div>
+            <p class="text-sm font-semibold text-blue-800">Connexion SSH en cours…</p>
+            <p class="text-xs text-blue-600 mt-0.5">Attente de la reconnexion au SAN. La page se mettra à jour automatiquement.</p>
+          </div>
+        </div>
+
+        <!-- Bannière SSH down globale -->
+        <div
+          v-if="isSshDown"
+          class="rounded-xl bg-red-50 border border-red-200 px-5 py-4 flex items-start gap-3"
+        >
+          <UIcon name="i-heroicons-server" class="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-red-800">Connexion SSH indisponible</p>
+            <p class="text-xs text-red-600 mt-1">
+              Impossible de lire la configuration. Vérifiez la connexion SSH dans les paramètres admin.
+              Les formulaires restent accessibles pour préparer les modifications.
+            </p>
+            <div class="flex gap-2 mt-3">
+              <UButton
+                size="xs" color="red" variant="outline"
+                icon="i-heroicons-key"
+                label="Paramètres SSH"
+                to="/admin/sans"
+              />
+              <UButton
+                size="xs" color="gray" variant="outline"
+                icon="i-heroicons-arrow-path"
+                label="Réessayer la connexion"
+                :loading="retrying"
+                @click="retrySSH"
+              />
+              <UButton
+                size="xs" color="orange" variant="outline"
+                icon="i-heroicons-pencil"
+                :label="editingHost ? 'Annuler' : 'Changer l\'adresse IP'"
+                @click="editingHost = !editingHost"
+              />
+            </div>
+
+            <!-- Formulaire inline changement d'adresse -->
+            <div v-if="editingHost" class="mt-4 p-3 bg-white border border-red-200 rounded-lg">
+              <p class="text-xs font-semibold text-gray-600 mb-3">
+                Mettre à jour l'adresse IP du SAN dans l'application
+              </p>
+              <div class="flex items-center gap-2">
+                <div class="flex rounded-md shadow-sm ring-1 ring-gray-300 overflow-hidden flex-1">
+                  <input
+                    v-model="editHostForm.host"
+                    type="text"
+                    placeholder="192.168.1.10"
+                    class="flex-1 min-w-0 px-3 py-1.5 text-sm bg-white outline-none text-gray-900 placeholder-gray-400"
+                  />
+                  <span class="flex items-center px-2 text-xs text-gray-400 bg-gray-50 border-l border-gray-200 font-mono select-none">:</span>
+                  <input
+                    v-model.number="editHostForm.port"
+                    type="number"
+                    placeholder="22"
+                    class="w-16 px-2 py-1.5 text-sm bg-gray-50 outline-none text-gray-700 font-mono text-center"
+                  />
+                </div>
+                <UButton
+                  size="sm"
+                  icon="i-heroicons-check"
+                  label="Enregistrer et reconnecter"
+                  :loading="savingHost"
+                  :disabled="!editHostForm.host"
+                  @click="updateHost"
+                />
+              </div>
+              <p v-if="hostSaveError" class="text-xs text-red-600 mt-2">{{ hostSaveError }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab bar -->
+        <div class="flex gap-1 border-b border-gray-200 dark:border-gray-700">
+          <button
+            v-for="tab in visibleTabs"
+            :key="tab.key"
+            type="button"
+            class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px"
+            :class="activeTabKey === tab.key
+              ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
+            @click="activeTabKey = tab.key"
+          >
+            <UIcon :name="tab.icon" class="size-4 shrink-0" />
+            {{ tab.label }}
+            <!-- Indicateur d'erreur sur l'onglet -->
+            <span
+              v-if="tab.sectionStatus && tab.sectionStatus !== 'ok'"
+              class="w-1.5 h-1.5 rounded-full"
+              :class="tab.sectionStatus === 'unavailable' ? 'bg-amber-400' : 'bg-red-500'"
+            />
+          </button>
+        </div>
+
+        <!-- Tab panels -->
+        <div>
+          <!-- Réseau -->
+          <div v-if="activeTabKey === 'network'">
+            <SectionErrorState
+              v-if="config?.network.status !== 'ok'"
+              class="mb-4"
+              :status="config?.network.status ?? 'unavailable'"
+              :error="config?.network.error ?? null"
+              :on-retry="reload"
+              :on-force-show="() => forceShow.network = true"
+            />
+            <NetworkForm
+              v-if="config?.network.status === 'ok' || forceShow.network"
+              :san-id="sanId"
+              :san-label="san?.label"
+              :config="config?.network.data ?? emptyNetwork"
+              @saved="reload"
+            />
+          </div>
+
+          <!-- Date & Heure -->
+          <div v-else-if="activeTabKey === 'datetime'">
+            <SectionErrorState
+              v-if="config?.dateTime.status !== 'ok'"
+              class="mb-4"
+              :status="config?.dateTime.status ?? 'unavailable'"
+              :error="config?.dateTime.error ?? null"
+              :on-retry="reload"
+            />
+            <DateTimeForm
+              v-if="config?.dateTime.status === 'ok'"
+              :san-id="sanId"
+              :config="config.dateTime.data!"
+              @saved="reload"
+            />
+          </div>
+
+          <!-- Mail SMTP -->
+          <div v-else-if="activeTabKey === 'smtp'">
+            <SectionErrorState
+              v-if="config?.smtp.status !== 'ok'"
+              class="mb-4"
+              :status="config?.smtp.status ?? 'unavailable'"
+              :error="config?.smtp.error ?? null"
+              :on-retry="reload"
+              :on-force-show="() => forceShow.smtp = true"
+            />
+            <SMTPForm
+              v-if="config?.smtp.status === 'ok' || forceShow.smtp"
+              :san-id="sanId"
+              :config="config?.smtp.data ?? emptySMTP"
+              @saved="reload"
+            />
+          </div>
+
+          <!-- Utilisateurs -->
+          <div v-else-if="activeTabKey === 'users'">
+            <UsersPanel
+              :san-id="sanId"
+              :disabled="isReadOnly"
+            />
+          </div>
+
+          <!-- Terminal (admin / opérateur — masqué pour viewer, Batch 2B.6) -->
+          <div v-else-if="activeTabKey === 'terminal'">
+            <ClientOnly>
+              <TerminalPane :san-id="sanId" />
+            </ClientOnly>
+          </div>
+
+          <!-- Système -->
+          <div v-else-if="activeTabKey === 'system'" class="space-y-4">
+            <SectionErrorState
+              v-if="config?.hostname.status !== 'ok'"
+              class="mb-4"
+              :status="config?.hostname.status ?? 'unavailable'"
+              :error="config?.hostname.error ?? null"
+              :on-retry="reload"
+              :on-force-show="() => forceShow.hostname = true"
+            />
+            <HostnameForm
+              v-if="config?.hostname.status === 'ok' || forceShow.hostname"
+              :san-id="sanId"
+              :config="config?.hostname.data ?? emptyHostname"
+              @saved="(v) => { if (config) config.hostname = { data: v, status: 'ok' } }"
+            />
+            <UDivider />
+            <!-- Power toujours disponible -->
+            <SystemPanel
+              :san-id="sanId"
+              :fqdn="config?.hostname.data?.fqdn ?? ''"
+            />
+          </div>
+        </div>
+
+        <!-- Bottom bar -->
+        <div class="flex items-center justify-end gap-3 text-sm text-gray-500 pt-2">
+          <span>Dernière lecture {{ lastReadLabel }}</span>
+          <UButton
+            label="Actualiser"
+            icon="i-heroicons-arrow-path"
+            variant="ghost"
+            size="sm"
+            :loading="loading"
+            @click="reload"
+          />
+        </div>
+      </template>
+    </template>
+  </div>
+</template>
+
+<script setup lang="ts">
+import type { SystemConfigResponse } from '~/server/utils/types'
+import type { SanSummary }           from '~/server/db/repositories/san.repository'
+
+definePageMeta({ layout: 'default' })
+
+const route = useRoute()
+const sanId = route.params.id as string
+
+const authStore = useAuthStore()
+const isViewer = computed(() => authStore.user?.role === 'viewer')
+
+const { markPending, isPending } = useNetworkPendingRestart()
+
+// ── SAN meta ─────────────────────────────────────────────────────────────────
+const {
+  data: san,
+  error: sanFetchError,
+} = await useFetch<SanSummary>(`/api/admin/sans/${sanId}`)
+
+const sanError   = computed(() => sanFetchError.value?.message ?? null)
+const isReadOnly = computed(() => san.value?.readOnly ?? false)
+
+// ── Config système ────────────────────────────────────────────────────────────
+const loading  = ref(false)
+const retrying = ref(false)
+const config   = ref<SystemConfigResponse | null>(null)
+const loadedAt = ref<number | null>(null)
+
+const forceShow = reactive({ network: false, smtp: false, hostname: false })
+
+// SSH state helpers
+const isSshConnecting = computed(() =>
+  config.value?.sshStatus === 'connecting' || config.value?.sshStatus === 'reconnecting',
+)
+const isSshDown = computed(() =>
+  config.value !== null && !isSshConnecting.value && config.value.sshStatus !== 'connected',
+)
+
+// Auto-poll quand SSH est en cours de (re)connexion — toutes les 3s, abandon après 30s
+const reconnectingAt = ref<number | null>(null)
+let reconnectPoll: ReturnType<typeof setInterval> | null = null
+
+watch(isSshConnecting, (val) => {
+  if (val) {
+    reconnectingAt.value = reconnectingAt.value ?? Date.now()
+    if (!reconnectPoll) {
+      reconnectPoll = setInterval(async () => {
+        if (!isSshConnecting.value) {
+          clearInterval(reconnectPoll!)
+          reconnectPoll = null
+          reconnectingAt.value = null
+          return
+        }
+        const elapsed = Date.now() - (reconnectingAt.value ?? Date.now())
+        if (elapsed > 30_000) {
+          // Délai dépassé : recharger une dernière fois pour afficher l'erreur
+          clearInterval(reconnectPoll!)
+          reconnectPoll = null
+          reconnectingAt.value = null
+          await reload()
+          return
+        }
+        await reload()
+      }, 3_000)
+    }
+  } else {
+    reconnectingAt.value = null
+    if (reconnectPoll) {
+      clearInterval(reconnectPoll)
+      reconnectPoll = null
+    }
+  }
+})
+
+onBeforeUnmount(() => {
+  if (reconnectPoll) { clearInterval(reconnectPoll); reconnectPoll = null }
+})
+
+async function reload() {
+  loading.value = true
+  try {
+    const data = await $fetch<SystemConfigResponse>(`/api/san/${sanId}/system-config`)
+    config.value  = data
+    loadedAt.value = Date.now()
+    // Réinitialiser forceShow si les données sont maintenant ok
+    if (data.hostname.status === 'ok') forceShow.hostname = false
+    if (data.network.status  === 'ok') forceShow.network  = false
+    if (data.smtp.status     === 'ok') forceShow.smtp     = false
+    // Détecter désynchronisation IP
+    if (data.network.data && !isPending(sanId).value) {
+      const hasMismatch = data.network.data.interfaces.some(
+        i => !i.useDHCP && i.currentIp && i.ipAddress && i.currentIp !== i.ipAddress,
+      )
+      if (hasMismatch) markPending(sanId, san.value?.label ?? sanId)
+    }
+  } catch (err: any) {
+    // Cas exceptionnel (l'API est censée toujours retourner 200)
+    const msg = err?.data?.message ?? err?.message ?? 'Erreur inattendue'
+    const errObj = { code: 'UNKNOWN', message: msg }
+    config.value = {
+      sanId,
+      scannedAt: Date.now(),
+      sshStatus: 'error',
+      hostname:  { data: null, status: 'error', error: errObj },
+      dateTime:  { data: null, status: 'error', error: errObj },
+      network:   { data: null, status: 'error', error: errObj },
+      smtp:      { data: null, status: 'error', error: errObj },
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+async function retrySSH() {
+  retrying.value = true
+  try {
+    await $fetch(`/api/admin/sans/${sanId}/reconnect`, { method: 'POST' })
+    // Attendre 2s que le manager reconnecte
+    await new Promise(r => setTimeout(r, 2_000))
+    await reload()
+  } catch {
+    await reload()
+  } finally {
+    retrying.value = false
+  }
+}
+
+// ── Changement d'adresse IP ───────────────────────────────────────────────────
+const editingHost  = ref(false)
+const savingHost   = ref(false)
+const hostSaveError = ref<string | null>(null)
+const editHostForm  = reactive({
+  host: san.value?.host ?? '',
+  port: san.value?.port ?? 22,
+})
+
+async function updateHost() {
+  if (!editHostForm.host) return
+  savingHost.value   = true
+  hostSaveError.value = null
+  try {
+    await $fetch(`/api/admin/sans/${sanId}`, {
+      method: 'PUT',
+      body: { host: editHostForm.host, port: editHostForm.port },
+    })
+    // Rafraîchir les meta du SAN
+    await refreshNuxtData(`/api/admin/sans/${sanId}`)
+    editingHost.value = false
+    // Le PUT force déjà une reconnexion côté serveur, attendre 2s puis recharger
+    await new Promise(r => setTimeout(r, 2_000))
+    await reload()
+  } catch (err: any) {
+    hostSaveError.value = err?.data?.statusMessage ?? err?.message ?? 'Erreur'
+  } finally {
+    savingHost.value = false
+  }
+}
+
+onMounted(reload)
+
+const tabs = computed(() => [
+  { key: 'network',  label: 'Réseau',       icon: 'i-heroicons-globe-alt',       sectionStatus: config.value?.network.status },
+  { key: 'datetime', label: 'Date & Heure', icon: 'i-heroicons-clock',            sectionStatus: config.value?.dateTime.status },
+  { key: 'smtp',     label: 'Mail SMTP',    icon: 'i-heroicons-envelope',         sectionStatus: config.value?.smtp.status },
+  { key: 'users',    label: 'Utilisateurs', icon: 'i-heroicons-users',             sectionStatus: undefined },
+  { key: 'system',   label: 'Système',      icon: 'i-heroicons-computer-desktop', sectionStatus: config.value?.hostname.status },
+  { key: 'terminal', label: 'Terminal',     icon: 'i-heroicons-command-line',     sectionStatus: undefined },
+])
+
+const visibleTabs = computed(() => {
+  if (isViewer.value) return tabs.value.filter(t => t.key !== 'terminal')
+  return tabs.value
+})
+
+const activeTabKey = ref<string>(
+  route.query.tab === 'terminal' && !isViewer.value ? 'terminal' : 'network',
+)
+
+watch(visibleTabs, (list) => {
+  if (!list.some(t => t.key === activeTabKey.value)) {
+    activeTabKey.value = list[0]?.key ?? 'network'
+  }
+}, { immediate: true })
+
+watch(isViewer, (v) => {
+  if (v && activeTabKey.value === 'terminal') activeTabKey.value = 'network'
+}, { immediate: true })
+
+watch(() => route.query.tab, (tab) => {
+  if (tab === 'terminal' && !isViewer.value) activeTabKey.value = 'terminal'
+  if (tab === 'terminal' && isViewer.value) activeTabKey.value = 'network'
+})
+
+const lastReadLabel = computed(() => {
+  if (!loadedAt.value) return '—'
+  const s = Math.round((Date.now() - loadedAt.value) / 1000)
+  return s < 5 ? "à l'instant" : `il y a ${s}s`
+})
+
+// ── Valeurs par défaut pour formulaires vides ─────────────────────────────────
+const emptyNetwork  = { gateway: '', nameservers: ['', '', ''], searchDomain: '', interfaces: [] }
+const emptySMTP     = { alertEmail: '', mailHub: '', authUser: '', useTLS: false, useSTARTTLS: false, authMethod: '' as const, fromOverride: true }
+const emptyHostname = { hostname: '', domain: '', fqdn: '' }
+</script>

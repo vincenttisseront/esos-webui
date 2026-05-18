@@ -1,0 +1,288 @@
+/**
+ * Pure helpers for the admin Auth Providers page (warnings, previews, JSON check).
+ * Safe to import from Vitest without Nitro.
+ *
+ * User-visible copy is resolved in Vue via i18n keys under `admin.authProviders.*`
+ * using stable ids returned by these helpers.
+ */
+
+export const LDAP_USER_SEARCH_SIZE_LIMIT = 5
+
+/** Example mapping rules for admin UI copy (OIDC claim + LDAP group). */
+export const MAPPING_RULES_JSON_EXAMPLE = `[
+  { "match": { "type": "oidc_claim", "claim": "groups", "contains": "ESOS-Admins" }, "role": "admin" },
+  { "match": { "type": "ldap_group_dn", "contains": "CN=ESOS-Operators,OU=Groups,DC=example,DC=com" }, "role": "operator" }
+]`
+
+export function oidcCallbackPreview(origin: string, redirectPath: string): string {
+  const path = redirectPath.startsWith('/') ? redirectPath : `/${redirectPath}`
+  const base = origin.replace(/\/+$/, '')
+  if (!base) return path
+  return `${base}${path}`
+}
+
+export function ldapHostnameFromUrl(urlStr: string): string | null {
+  const trimmed = urlStr.trim()
+  if (!trimmed) return null
+  const normalized = trimmed.includes('://') ? trimmed : `ldap://${trimmed}`
+  try {
+    return new URL(normalized).hostname.toLowerCase()
+  } catch {
+    return null
+  }
+}
+
+export type MappingRulesJsonErrorCode = 'empty' | 'not_array' | 'invalid_syntax'
+
+export function parseMappingRulesJsonForUi(
+  raw: string,
+): { ok: true; length: number } | { ok: false; code: MappingRulesJsonErrorCode } {
+  const trimmed = raw.trim()
+  if (!trimmed) return { ok: false, code: 'empty' }
+  try {
+    const v = JSON.parse(trimmed) as unknown
+    if (!Array.isArray(v)) return { ok: false, code: 'not_array' }
+    return { ok: true, length: v.length }
+  } catch {
+    return { ok: false, code: 'invalid_syntax' }
+  }
+}
+
+/** Stable id for a security alert row (maps to `admin.authProviders.alerts.<id>.title|description`). */
+export type AuthProviderSecurityAlertId =
+  | 'ldap_tls_verify_disabled'
+  | 'ldap_plain_no_starttls_remote'
+  | 'ldap_localhost_plain'
+  | 'oidc_issuer_no_https'
+  | 'mfa_idp_required'
+  | 'mfa_idp_preferred'
+  | 'mapping_no_rules'
+  | 'jit_default_admin'
+
+export type AuthProviderAlert = {
+  id: AuthProviderSecurityAlertId
+  color: 'orange' | 'red' | 'blue' | 'gray'
+  icon: string
+}
+
+function isLocalLdapHost(hostname: string | null): boolean {
+  return hostname === 'localhost' || hostname === '127.0.0.1'
+}
+
+/**
+ * UI-only security callouts derived from current form draft (not authoritative vs server validation).
+ */
+export function authProviderSecurityAlerts(params: {
+  ldapUrl: string
+  ldapStartTls: boolean
+  ldapTlsVerify: boolean
+  ldapEnabled: boolean
+  oidcIssuer: string
+  oidcEnabled: boolean
+  mfaMode: string
+  jitDefaultRole: string
+  mappingRulesJson: string
+}): AuthProviderAlert[] {
+  const alerts: AuthProviderAlert[] = []
+  const host = ldapHostnameFromUrl(params.ldapUrl)
+
+  if (params.ldapEnabled && params.ldapUrl.trim() && !params.ldapTlsVerify) {
+    alerts.push({
+      id:     'ldap_tls_verify_disabled',
+      color:  'orange',
+      icon:   'i-heroicons-shield-exclamation',
+    })
+  }
+
+  if (params.ldapEnabled && params.ldapUrl.trim().toLowerCase().startsWith('ldap://')) {
+    if (host && !isLocalLdapHost(host) && !params.ldapStartTls) {
+      alerts.push({
+        id:     'ldap_plain_no_starttls_remote',
+        color:  'orange',
+        icon:   'i-heroicons-exclamation-triangle',
+      })
+    }
+    if (host && isLocalLdapHost(host)) {
+      alerts.push({
+        id:     'ldap_localhost_plain',
+        color:  'blue',
+        icon:   'i-heroicons-information-circle',
+      })
+    }
+  }
+
+  if (params.oidcEnabled && params.oidcIssuer.trim() && !params.oidcIssuer.trim().toLowerCase().startsWith('https://')) {
+    alerts.push({
+      id:     'oidc_issuer_no_https',
+      color:  'orange',
+      icon:   'i-heroicons-lock-open',
+    })
+  }
+
+  if (params.mfaMode === 'idp_required') {
+    alerts.push({
+      id:     'mfa_idp_required',
+      color:  'blue',
+      icon:   'i-heroicons-finger-print',
+    })
+  }
+
+  if (params.mfaMode === 'idp_preferred') {
+    alerts.push({
+      id:     'mfa_idp_preferred',
+      color:  'gray',
+      icon:   'i-heroicons-information-circle',
+    })
+  }
+
+  const parsed = parseMappingRulesJsonForUi(params.mappingRulesJson)
+  if (parsed.ok && parsed.length === 0) {
+    alerts.push({
+      id:     'mapping_no_rules',
+      color:  'orange',
+      icon:   'i-heroicons-user-group',
+    })
+  }
+
+  if (params.jitDefaultRole === 'admin') {
+    alerts.push({
+      id:     'jit_default_admin',
+      color:  'orange',
+      icon:   'i-heroicons-key',
+    })
+  }
+
+  return alerts
+}
+
+/** Kind for LDAP URL summary (maps to `admin.authProviders.ldapMode.<kind>`). */
+export type LdapConnectionModeKind =
+  | 'ldaps'
+  | 'ldap_start_tls'
+  | 'ldap_localhost_plain'
+  | 'ldap_plain_remote'
+  | 'empty'
+  | 'unknown_url'
+
+export function ldapConnectionModeKind(urlStr: string, startTls: boolean): LdapConnectionModeKind {
+  const u = urlStr.trim().toLowerCase()
+  if (u.startsWith('ldaps://')) return 'ldaps'
+  if (u.startsWith('ldap://')) {
+    const h = ldapHostnameFromUrl(urlStr)
+    if (h && isLocalLdapHost(h)) return 'ldap_localhost_plain'
+    if (startTls) return 'ldap_start_tls'
+    return 'ldap_plain_remote'
+  }
+  if (!u) return 'empty'
+  return 'unknown_url'
+}
+
+/** @deprecated Use ldapConnectionModeKind + i18n; kept for gradual migration if needed */
+export function ldapConnectionModeLabel(urlStr: string, startTls: boolean): string {
+  const kind = ldapConnectionModeKind(urlStr, startTls)
+  const legacy: Record<LdapConnectionModeKind, string> = {
+    ldaps:                 'LDAPS (TLS sur le port LDAPS)',
+    ldap_start_tls:        'LDAP + StartTLS',
+    ldap_localhost_plain:  'LDAP en clair (localhost — développement)',
+    ldap_plain_remote:     'LDAP en clair (déconseillé hors localhost)',
+    empty:                 '—',
+    unknown_url:           'URL non reconnue (attendu ldap:// ou ldaps://)',
+  }
+  return legacy[kind]
+}
+
+export type AuthProviderBadgeId =
+  | 'oidc_mfa_required'
+  | 'oidc_mfa_preferred'
+  | 'oidc_mfa_off'
+  | 'oidc_disabled'
+  | 'ldap_tls_verified'
+  | 'ldap_tls_unverified'
+  | 'ldap_disabled'
+  | 'mapping_invalid'
+  | 'mapping_empty'
+  | 'mapping_rules'
+  | 'secrets_ok'
+  | 'secrets_incomplete'
+
+export type AuthProviderSummaryBadge = {
+  id: AuthProviderBadgeId
+  color: 'green' | 'gray' | 'orange' | 'red' | 'blue'
+  /** When id === mapping_rules, number of rules for pluralized label */
+  ruleCount?: number
+}
+
+export function authProviderSummaryBadges(p: {
+  mfaMode: string
+  ldapEnabled: boolean
+  ldapTlsVerify: boolean
+  oidcClientSecretSet: boolean
+  ldapBindPasswordSet: boolean
+  mappingRulesJson: string
+  oidcEnabled: boolean
+}): AuthProviderSummaryBadge[] {
+  const out: AuthProviderSummaryBadge[] = []
+  if (p.oidcEnabled) {
+    if (p.mfaMode === 'idp_required') out.push({ id: 'oidc_mfa_required', color: 'green' })
+    else if (p.mfaMode === 'idp_preferred') out.push({ id: 'oidc_mfa_preferred', color: 'blue' })
+    else out.push({ id: 'oidc_mfa_off', color: 'gray' })
+  } else {
+    out.push({ id: 'oidc_disabled', color: 'gray' })
+  }
+  if (p.ldapEnabled) {
+    out.push(
+      p.ldapTlsVerify
+        ? { id: 'ldap_tls_verified', color: 'green' }
+        : { id: 'ldap_tls_unverified', color: 'orange' },
+    )
+  } else {
+    out.push({ id: 'ldap_disabled', color: 'gray' })
+  }
+  const map = parseMappingRulesJsonForUi(p.mappingRulesJson)
+  if (!map.ok) out.push({ id: 'mapping_invalid', color: 'red' })
+  else if (map.length === 0) out.push({ id: 'mapping_empty', color: 'orange' })
+  else out.push({ id: 'mapping_rules', color: 'green', ruleCount: map.length })
+
+  const needOidcSecret = p.oidcEnabled
+  const needLdapPw     = p.ldapEnabled
+  if (needOidcSecret || needLdapPw) {
+    const ok
+      = (!needOidcSecret || p.oidcClientSecretSet) && (!needLdapPw || p.ldapBindPasswordSet)
+    out.push(ok ? { id: 'secrets_ok', color: 'green' } : { id: 'secrets_incomplete', color: 'orange' })
+  }
+  return out
+}
+
+/** Top banner on LDAP card (subset of security rules). */
+export type LdapCardTopWarning = {
+  id: AuthProviderSecurityAlertId
+  color: 'orange'
+  icon: string
+}
+
+export function ldapCardTopWarningFromForm(params: {
+  ldapEnabled: boolean
+  ldapUrl: string
+  ldapStartTls: boolean
+  ldapTlsVerify: boolean
+}): LdapCardTopWarning | null {
+  if (!params.ldapEnabled || !params.ldapUrl.trim()) return null
+  const host = ldapHostnameFromUrl(params.ldapUrl)?.toLowerCase() ?? ''
+  const local  = host === 'localhost' || host === '127.0.0.1'
+  const u      = params.ldapUrl.trim().toLowerCase()
+  if (u.startsWith('ldap://') && host && !local && !params.ldapStartTls) {
+    return {
+      id:    'ldap_plain_no_starttls_remote',
+      color: 'orange',
+      icon:  'i-heroicons-exclamation-triangle',
+    }
+  }
+  if (!params.ldapTlsVerify) {
+    return {
+      id:    'ldap_tls_verify_disabled',
+      color: 'orange',
+      icon:  'i-heroicons-exclamation-triangle',
+    }
+  }
+  return null
+}

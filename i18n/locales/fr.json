@@ -1,0 +1,1164 @@
+{
+  "common": {
+    "language": "Langue",
+    "all": "Tous",
+    "loading": "Chargement…",
+    "error": "Erreur",
+    "actions": {
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "confirm": "Confirmer",
+      "close": "Fermer",
+      "retry": "Réessayer"
+    },
+    "dismiss": "Ignorer",
+    "emptyState": {
+      "clearFilterHint": "Essayez d'effacer le filtre de recherche."
+    }
+  },
+  "toast": {
+    "ssh": {
+      "reconnected": {
+        "title": "SSH reconnecté",
+        "description": "La connexion au serveur ESOS est rétablie."
+      },
+      "lost": {
+        "title": "Connexion SSH perdue",
+        "description": "Reconnexion en cours..."
+      }
+    }
+  },
+  "banner": {
+    "ssh": {
+      "unconfigured_body": "Aucune connexion SSH configurée — les données ESOS ne sont pas disponibles.",
+      "unconfigured_cta": "Configurer maintenant →",
+      "reconnecting": "Reconnexion au serveur ESOS en cours...",
+      "connection_lost": "Connexion SSH perdue. Vérifiez la disponibilité du serveur ESOS.",
+      "connecting": "Connexion au serveur ESOS...",
+      "pending_review_one": "Un problème nécessite votre attention.",
+      "pending_review_other": "{count} problèmes nécessitent votre attention."
+    },
+    "network": {
+      "body_prefix": "Configuration réseau enregistrée mais non appliquée sur ",
+      "body_suffix": " — cliquez sur « Redémarrer réseau » dans la config, puis testez la connexion pour confirmer.",
+      "test_connection": "Tester la connexion",
+      "test_in_progress": "Test en cours…",
+      "toast_verify_ok_title": "Connexion vérifiée",
+      "toast_verify_ok_desc": "Le SAN répond correctement sur la nouvelle configuration réseau.",
+      "toast_verify_fail_title": "Connexion échouée",
+      "toast_verify_fail_desc_default": "Le SAN ne répond pas à la nouvelle adresse.",
+      "toast_ssh_test_fail_title": "Test SSH échoué"
+    }
+  },
+  "languages": {
+    "fr": "Français",
+    "en": "English"
+  },
+  "app": {
+    "name": "ESOS WebUI",
+    "tagline": "Storage WebUI"
+  },
+  "nav": {
+    "sections": {
+      "overview": "Vue d'ensemble",
+      "storage": "Stockage",
+      "monitoring": "Monitoring",
+      "system": "Système"
+    },
+    "items": {
+      "dashboard": "Dashboard",
+      "targets": "Targets",
+      "devices": "Devices",
+      "sessions": "Sessions",
+      "stats": "Stats",
+      "history": "Historique",
+      "hardware": "Hardware",
+      "topology": "Topologie",
+      "cluster_ha": "Cluster HA",
+      "inventory": "Inventaire",
+      "administration": "Administration",
+      "sans": "SANs",
+      "users": "Utilisateurs",
+      "esos_version": "Version ESOS",
+      "dependencies": "Dépendances",
+      "webui_version": "Version WebUI"
+    },
+    "page_titles": {
+      "dashboard": "Dashboard",
+      "targets": "Targets",
+      "devices": "Devices",
+      "sessions": "Sessions actives",
+      "terminal": "Terminal ESOS",
+      "target_detail": "Détail target"
+    }
+  },
+  "user_menu": {
+    "account": "Compte",
+    "role": "Rôle",
+    "auth_source": "Source d'authentification",
+    "open": "Ouvrir le menu utilisateur",
+    "profile": "Mon profil",
+    "logout": "Se déconnecter",
+    "language": "Langue"
+  },
+  "profile": {
+    "title": "Mon profil",
+    "subtitle": "Informations de compte, préférences et sécurité",
+    "account": {
+      "title": "Compte",
+      "username": "Utilisateur",
+      "role": "Rôle",
+      "user_id": "Identifiant",
+      "last_login": "Dernière connexion",
+      "active": "État du compte",
+      "active_yes": "Actif",
+      "active_no": "Désactivé",
+      "auth_source": "Source d'authentification",
+      "auth_sources": {
+        "local": "Compte local",
+        "ldap": "LDAP / Active Directory",
+        "oidc": "OIDC / SSO"
+      }
+    },
+    "preferences": {
+      "title": "Préférences",
+      "language_title": "Langue",
+      "language_help": "La langue choisie est enregistrée sur votre compte et synchronisée dans le cookie esos_locale.",
+      "current_locale": "Langue active",
+      "saved_locale": "Préférence enregistrée",
+      "not_saved": "Non enregistrée",
+      "save_failed": "La langue a changé localement, mais la préférence n'a pas pu être enregistrée."
+    },
+    "security": {
+      "title": "Sécurité",
+      "local_title": "Changer le mot de passe",
+      "local_help": "Ce compte est local : vous pouvez changer son mot de passe depuis ESOS WebUI.",
+      "new_password": "Nouveau mot de passe",
+      "new_password_help": "Utilisez au moins 12 caractères avec minuscules, majuscules, chiffres et caractères spéciaux.",
+      "confirm_password": "Confirmer le nouveau mot de passe",
+      "mismatch": "Les mots de passe ne correspondent pas",
+      "policy_error": "Le mot de passe ne respecte pas la complexité requise",
+      "success": "Mot de passe mis à jour",
+      "submit": "Enregistrer le mot de passe",
+      "external_title": "Mot de passe géré par un fournisseur externe",
+      "external_ldap": "Ce compte est authentifié par LDAP / Active Directory. Changez le mot de passe dans l'annuaire ou via la procédure de votre organisation.",
+      "external_oidc": "Ce compte est authentifié par OIDC / SSO. Changez le mot de passe auprès du fournisseur d'identité.",
+      "external_unknown": "Ce compte n'est pas local. Le mot de passe doit être géré par le fournisseur d'authentification.",
+      "policy_checks": {
+        "length": "Au moins 12 caractères",
+        "lowercase": "Au moins une lettre minuscule",
+        "uppercase": "Au moins une lettre majuscule",
+        "digit": "Au moins un chiffre",
+        "special": "Au moins un caractère spécial"
+      }
+    },
+    "session": {
+      "title": "Déconnexion",
+      "subtitle": "Terminer votre session et revenir à la page de connexion",
+      "logout": "Se déconnecter"
+    }
+  },
+  "ssh": {
+    "status": {
+      "connecting": "Connexion...",
+      "connected": "Connecté",
+      "reconnecting": "Reconnexion...",
+      "error": "Erreur SSH",
+      "unconfigured": "Non configuré"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Accès à la console d'administration",
+      "subtitle": "Choisissez la méthode d'authentification configurée pour cet environnement ESOS.",
+      "sso_button": "Se connecter avec SSO (OIDC)",
+      "ldap_section": "Annuaire LDAP / Active Directory",
+      "ldap_submit": "Connexion LDAP",
+      "local_section": "Compte local",
+      "username": "Utilisateur",
+      "username_placeholder": "root",
+      "username_label_ldap": "Identifiant",
+      "password": "Mot de passe",
+      "password_placeholder": "••••••••",
+      "submit": "Se connecter (local)",
+      "footer_tagline": "ESOS WebUI — Interface de gestion SAN",
+      "esos_full_name": "Enterprise Storage OS",
+      "enterprise_baseline": "Accès sécurisé à la supervision de l'infrastructure stockage, des targets SCST, des devices et de la topologie SAN.",
+      "features": {
+        "monitoring": "Monitoring temps réel des targets SCST",
+        "devices": "Gestion des devices et LUNs",
+        "stats": "Statistiques I/O et historique",
+        "topology": "Topologie réseau du SAN"
+      },
+      "generic_error": "Erreur de connexion",
+      "card_label": "Formulaire d'authentification",
+      "mode_selector_label": "Méthode d'authentification",
+      "tab_local": "Local",
+      "tab_ldap": "LDAP / AD",
+      "tab_sso": "SSO",
+      "local_title": "Compte local",
+      "local_help": "Authentification avec un compte local ESOS.",
+      "local_identifier_label": "Identifiant ou e-mail",
+      "local_identifier_placeholder": "root",
+      "local_submit": "Se connecter",
+      "ldap_title": "Annuaire LDAP / Active Directory",
+      "ldap_help": "Utilisez vos identifiants d'annuaire d'entreprise.",
+      "ldap_unavailable": "L'authentification annuaire n'est pas activée pour cette instance ESOS.",
+      "sso_title": "Single Sign-On",
+      "sso_help": "Redirection vers le fournisseur d'identité configuré.",
+      "sso_provider_generic": "Fournisseur d'identité configuré par l'administrateur.",
+      "sso_unavailable": "Le Single Sign-On n'est pas activé pour cette instance ESOS.",
+      "sso_submit": "Continuer avec SSO",
+      "forgot_password": "Mot de passe oublié ?",
+      "forgot_password_toast_title": "Réinitialiser le mot de passe",
+      "forgot_password_toast_desc": "La réinitialisation en libre-service n'est pas activée. Contactez votre administrateur."
+    }
+  },
+  "errors": {
+    "auth": {
+      "invalid_credentials": "Identifiants incorrects",
+      "missing_credentials": "Identifiants manquants",
+      "inactive": "Compte désactivé. Contactez un administrateur.",
+      "generic": "Erreur de connexion"
+    },
+    "oidc": {
+      "denied": "Connexion SSO refusée ou annulée.",
+      "missing": "Réponse SSO incomplète.",
+      "disabled": "SSO temporairement indisponible.",
+      "state": "Session SSO expirée ou invalide. Réessayez.",
+      "corrupt": "Erreur interne SSO.",
+      "discovery": "Impossible de joindre le serveur d'identité.",
+      "token": "Échange de jeton SSO échoué.",
+      "claims": "Jeton SSO invalide.",
+      "mfa_required": "L'authentification multifacteur est requise par la politique.",
+      "user": "Aucun compte autorisé pour cet identifiant.",
+      "inactive": "Compte désactivé.",
+      "external_generic": "Erreur de connexion externe."
+    }
+  },
+  "raid": {
+    "workflow": {
+      "title": "Flux RAID logiciel",
+      "step_prepare": "Préparer des partitions membres RAID sur les disques physiques.",
+      "step_create": "Créer un tableau MD à partir de ces partitions membres.",
+      "step_use": "Utiliser ensuite le tableau MD comme volume de stockage."
+    },
+    "create_md": {
+      "title": "Créer un tableau MD (logiciel)",
+      "action": "Créer tableau MD",
+      "submit": "Créer le tableau MD",
+      "member_selection_help": "Sélectionnez des partitions membres RAID existantes, par exemple /dev/sdb1. Ne sélectionnez pas de disques physiques bruts comme /dev/sdb.",
+      "no_eligible_members": "Aucune partition membre RAID éligible détectée. Préparez d'abord des partitions Linux RAID Autodetect sur ESOS.",
+      "cluster_execution": {
+        "title": "Création MD cluster multi-nœud",
+        "description": "Ce SAN appartient à un cluster. Le tableau MD sera créé directement sur chaque nœud avec les mappings validés ; Sync config n'est pas utilisé pour créer les superblocks MD sur les pairs.",
+        "status_title": "Exécution par nœud",
+        "status": {
+          "pending": "en attente",
+          "running": "en cours",
+          "success": "réussi",
+          "failed": "échoué"
+        }
+      },
+      "execution_plan": {
+        "title": "Plan d'exécution MD validé",
+        "invalid_title": "Commande MD invalide"
+      },
+      "mapping": {
+        "reused_title": "Mapping cluster réutilisé",
+        "reused_description": "{count} mapping(s) de partitions ont été dérivés depuis la préparation RAID précédente.",
+        "title": "Résoudre le mapping des partitions",
+        "description": "Les noms /dev/sdX ne sont pas fiables entre nœuds. Choisissez explicitement quelle partition du nœud pair correspond à chaque partition source avant de continuer.",
+        "source_partition": "Partition source",
+        "peer_partition": "Partition paire",
+        "select_placeholder": "Sélectionner une partition paire",
+        "duplicate_target": "Cette partition paire est déjà sélectionnée pour une autre partition source.",
+        "incomplete": "Sélectionnez une partition paire pour chaque mapping ambigu.",
+        "ready": "Mappings complets. Relancez le préflight cluster.",
+        "rerun": "Relancer le préflight cluster"
+      },
+      "form": {
+        "step_title": "Paramètres du tableau MD",
+        "step_description": "Définissez le nom /dev/mdX, le niveau RAID et la taille de chunk avant la pré-vérification. Le tableau MD pourra ensuite être utilisé comme volume de stockage.",
+        "array_name_label": "Nom du tableau MD",
+        "array_name_help": "Exemple md0, md1. Le nom md0 crée le tableau MD /dev/md0.",
+        "array_name_invalid": "Le nom doit commencer par md et se terminer par un nombre, par exemple md0.",
+        "raid_level_label": "Niveau RAID",
+        "raid_level_help": "Choisissez le niveau selon la redondance et le nombre de partitions disponibles.",
+        "level_0": "RAID 0 — Striping, minimum 2 partitions",
+        "level_1": "RAID 1 — Miroir, minimum 2 partitions",
+        "level_5": "RAID 5 — Parité, minimum 3 partitions",
+        "level_6": "RAID 6 — Double parité, minimum 4 partitions",
+        "level_10": "RAID 10 — Stripe de miroirs, minimum 4 partitions",
+        "chunk_label": "Taille de chunk",
+        "chunk_help": "64 KiB correspond aux exemples ESOS et convient comme valeur par défaut.",
+        "chunk_64_recommended": "64 KiB, recommandé",
+        "final_path": "Chemin final : /dev/{name}",
+        "selected_count": "Partitions sélectionnées : {count}",
+        "min_devices_error": "RAID {level} requiert au minimum {min} partitions. Sélectionnées : {count}.",
+        "raid10_even_error": "RAID 10 requiert un nombre pair de partitions."
+      }
+    },
+    "prepare_partitions": {
+      "title": "Préparer des partitions membres RAID",
+      "action": "Préparer partitions membres RAID",
+      "submit": "Préparer les partitions membres RAID",
+      "continue_to_md": "Continuer vers création MD",
+      "destructive_title": "Opération destructive sur disques physiques",
+      "destructive_description": "Cette préparation remplace la table de partitions des disques physiques sélectionnés. Elle crée une partition membre RAID par disque et ne lance pas mdadm --create.",
+      "physical_disk_selection_help": "Sélectionnez des disques physiques entiers, par exemple /dev/sdb. Une partition membre RAID, par exemple /dev/sdb1, sera créée sur chaque disque sélectionné.",
+      "no_eligible_physical_disks": "Aucun disque physique entier éligible détecté.",
+      "allow_overwrite_label": "Autoriser l'écrasement des signatures et tables de partitions existantes sur les disques physiques sélectionnés.",
+      "done_title": "Partitions membres RAID préparées",
+      "done_description": "Les block devices ont été rafraîchis. Vous pouvez maintenant créer un tableau MD à partir de ces partitions membres RAID.",
+      "expected_member_partitions": "Partitions membres RAID attendues",
+      "cluster_execution": {
+        "title": "Écriture RAID cluster multi-nœud",
+        "description": "Ce SAN appartient à un cluster. Les partitions seront préparées directement sur chaque nœud avec le mapping validé ; Sync config n'est pas utilisé pour cette opération destructive.",
+        "per_node_commands": "Commandes prévues par nœud",
+        "status_title": "Exécution par nœud",
+        "result_title": "Résultat par nœud",
+        "partitions_visible": "Les partitions membres RAID devraient maintenant être visibles sur chaque nœud du cluster.",
+        "status": {
+          "pending": "en attente",
+          "running": "en cours",
+          "success": "réussi",
+          "failed": "échoué"
+        }
+      },
+      "mapping": {
+        "title": "Résoudre le mapping des disques",
+        "description": "Les noms /dev/sdX ne sont pas fiables entre nœuds. Choisissez explicitement quel disque du nœud pair correspond à chaque disque source avant toute opération destructive.",
+        "source_disk": "Disque source",
+        "peer_disk": "Disque pair",
+        "select_placeholder": "Sélectionner un disque pair",
+        "duplicate_target": "Ce disque pair est déjà sélectionné pour un autre disque source.",
+        "incomplete": "Sélectionnez un disque pair pour chaque mapping ambigu.",
+        "ready": "Mappings complets. Relancez le préflight cluster.",
+        "rerun": "Relancer le préflight cluster"
+      },
+      "partition_table": {
+        "label": "Schéma de partitionnement des disques physiques",
+        "gpt_label": "GPT recommandé",
+        "gpt_description": "Recommandé pour les systèmes modernes. Crée une table GPT et active le flag RAID.",
+        "dos_label": "MBR/DOS legacy",
+        "dos_description": "Compatible avec la documentation ESOS historique : partition Linux RAID type fd.",
+        "auto_label": "Automatique",
+        "auto_description": "Choisit GPT si parted est disponible, sinon MBR/DOS avec sfdisk.",
+        "selected": "Schéma sélectionné",
+        "resolved": "Schéma appliqué par le préflight"
+      }
+    },
+    "preflight": {
+      "impacted_devices": "Périphériques impactés",
+      "md_member_candidates": "Partitions membres RAID candidates",
+      "physical_disks_to_prepare": "Disques physiques à préparer",
+      "eligible": "éligible",
+      "blocked": "bloqué",
+      "partition_table_replaced": "La table de partitions sera remplacée.",
+      "expected_member_partition": "Partition membre RAID attendue"
+    }
+  },
+  "admin": {
+    "sans": {
+      "cluster_card": {
+        "description": "Configuration HA globale du cluster. Le stockage reste rattaché au nœud primaire.",
+        "configure_ha": "Configurer HA",
+        "monitor": "Monitoring",
+        "storage": "Stockage",
+        "configure_storage": "Configurer le stockage",
+        "storage_raid": "Gestion RAID",
+        "storage_system": "Configuration système",
+        "storage_performance": "Agent de performance",
+        "no_primary_storage": "Aucun nœud primaire détecté pour ce cluster",
+        "no_primary": "Primaire manquant",
+        "health_unknown": "Santé inconnue",
+        "healthy": "Sain",
+        "degraded": "Dégradé",
+        "test_all": "Tester tous",
+        "reconnect_all": "Reconnecter tous",
+        "sync_config": "Sync config",
+        "probe": "Probe",
+        "primary": "Primaire",
+        "secondary": "Secondaire",
+        "secondaries": "Secondaires",
+        "node_count": "{count} nœud(s)",
+        "connections": "Connexions",
+        "all_connected": "Tous connectés",
+        "check_connections": "À vérifier",
+        "db_summary": "DB : {value}",
+        "web_editing": "Édition web",
+        "per_node_setting": "Paramètre par nœud",
+        "node": "Nœud",
+        "role": "Rôle",
+        "connection": "Connexion",
+        "node_diagnostics": "Diagnostic nœud"
+      }
+    },
+    "authProviders": {
+      "jsonErrors": {
+        "empty": "JSON vide.",
+        "not_array": "Le JSON doit être un tableau [...].",
+        "invalid_syntax": "JSON invalide (syntaxe)."
+      },
+      "ldapMode": {
+        "ldaps": "LDAPS (TLS sur le port LDAPS)",
+        "ldap_start_tls": "LDAP + StartTLS",
+        "ldap_localhost_plain": "LDAP en clair (localhost — développement)",
+        "ldap_plain_remote": "LDAP en clair (déconseillé hors localhost)",
+        "empty": "—",
+        "unknown_url": "URL non reconnue (attendu ldap:// ou ldaps://)"
+      },
+      "alerts": {
+        "ldap_tls_verify_disabled": {
+          "title": "Vérification TLS désactivée",
+          "description": "Sans vérification du certificat, une attaque de l'homme-du-milieu peut intercepter le trafic LDAP/LDAPS. À utiliser uniquement en laboratoire."
+        },
+        "ldap_plain_no_starttls_remote": {
+          "title": "LDAP en clair sans StartTLS",
+          "description": "En production, le serveur refuse une URL ldap:// distante sans StartTLS. Utilisez ldaps:// ou ldap:// avec StartTLS."
+        },
+        "ldap_localhost_plain": {
+          "title": "LDAP vers localhost",
+          "description": "Connexion non chiffrée tolérée pour le développement local uniquement. En production, privilégiez LDAPS ou StartTLS."
+        },
+        "oidc_issuer_no_https": {
+          "title": "Issuer sans HTTPS",
+          "description": "Les émetteurs OIDC utilisent en pratique HTTPS. Les redirections SSO en production exigent HTTPS côté application (cookies sécurisés)."
+        },
+        "mfa_idp_required": {
+          "title": "MFA exigé côté IdP",
+          "description": "Le jeton d’identité doit contenir des indicateurs MFA reconnus (revendications amr ou acr selon la logique serveur). Vérifiez la configuration de votre fournisseur."
+        },
+        "mfa_idp_preferred": {
+          "title": "MFA « préféré »",
+          "description": "Ce mode n'empêche pas la connexion si le jeton ne contient pas d'indicateur MFA : il est informatif côté politique (équivalent à « désactivé » pour le refus)."
+        },
+        "mapping_no_rules": {
+          "title": "Aucune règle de cartographie",
+          "description": "Sans règle, le rôle attribué aux nouveaux comptes JIT reste le rôle par défaut ci-dessous. Les comptes existants ne sont pas refusés pour autant."
+        },
+        "jit_default_admin": {
+          "title": "Rôle administrateur par défaut (JIT)",
+          "description": "Attribuer « admin » par défaut à tout nouveau compte externe est dangereux en production. Préférez « viewer » ou « operator » avec des règles explicites."
+        }
+      },
+      "badges": {
+        "oidc_mfa_required": "MFA OIDC : exigé",
+        "oidc_mfa_preferred": "MFA OIDC : préféré",
+        "oidc_mfa_off": "MFA OIDC : désactivé",
+        "oidc_disabled": "OIDC : désactivé",
+        "ldap_tls_verified": "LDAP : certificat vérifié",
+        "ldap_tls_unverified": "LDAP : TLS non vérifié",
+        "ldap_disabled": "LDAP : désactivé",
+        "mapping_invalid": "Cartographie : JSON invalide",
+        "mapping_empty": "Cartographie : aucune règle",
+        "mapping_rules": "{count} règle(s) de cartographie",
+        "secrets_ok": "Secrets : configurés",
+        "secrets_incomplete": "Secrets : incomplets"
+      },
+      "page": {
+        "title": "Fournisseurs d’authentification",
+        "subtitle": "Configurez l’accès SSO (OIDC) et annuaire (LDAP). Les changements s’appliquent après enregistrement. Les secrets ne sont jamais renvoyés en clair par l’API.",
+        "back": "Retour",
+        "loading": "Chargement…",
+        "securityHeading": "Avertissements de sécurité"
+      },
+      "mfa": {
+        "off": "Désactivé",
+        "idp_preferred": "Préféré (non bloquant)",
+        "idp_required": "Exigé (bloquant)"
+      },
+      "maxRole": {
+        "none": "Pas de plafond"
+      },
+      "roles": {
+        "viewer": "viewer",
+        "operator": "operator",
+        "admin": "admin"
+      },
+      "toasts": {
+        "mappingRulesTitle": "Règles JSON",
+        "saveTitle": "Enregistré",
+        "saveBody": "Fournisseurs d’authentification mis à jour.",
+        "errorTitle": "Erreur",
+        "ldapTitle": "LDAP",
+        "ldapBindOk": "Bind OK — échantillon recherche — {count} entrée(s).",
+        "oidcTitle": "OIDC",
+        "oidcDiscoveryOk": "Discovery OK.",
+        "failure": "Échec"
+      },
+      "oidc": {
+        "cardTitle": "OpenID Connect",
+        "cardSubtitle": "Connexion SSO, validation des jetons et politique MFA sur l’ID token.",
+        "enableLabel": "Activer OpenID Connect",
+        "enableHelp": "Affiche le bouton de connexion SSO sur la page de connexion.",
+        "sectionConnection": "Paramètres de connexion",
+        "issuerLabel": "URL de l’émetteur (issuer)",
+        "issuerDesc": "URL HTTPS du fournisseur, sans secret. Sert à la découverte OpenID (/.well-known/openid-configuration).",
+        "issuerPlaceholder": "https://login.microsoftonline.com/{tenant}/v2.0",
+        "clientIdLabel": "Identifiant client (client_id)",
+        "clientIdDesc": "Identifiant public de l’application enregistrée auprès de l’IdP.",
+        "clientIdPlaceholder": "Application (client) ID",
+        "clientSecretLabel": "Secret client",
+        "clientSecretDesc": "Saisir uniquement pour définir ou remplacer le secret. Jamais affiché après enregistrement ; laisser vide pour conserver la valeur actuelle côté serveur.",
+        "clientSecretPlaceholder": "Nouveau secret (optionnel)",
+        "secretStateTitle": "État du secret côté serveur",
+        "secretStateDesc": "Indique si un secret a déjà été enregistré. Aucune valeur n’est renvoyée par l’API.",
+        "secretConfigured": "Secret OIDC configuré",
+        "secretMissing": "Aucun secret OIDC enregistré",
+        "scopesLabel": "Scopes OIDC",
+        "scopesDesc": "Séparés par des espaces. Le scope « openid » est requis pour obtenir un ID token.",
+        "scopesPlaceholder": "openid profile email",
+        "redirectPathLabel": "Chemin de callback (sur ce serveur)",
+        "redirectPathDesc": "Chemin HTTP interne ; l’URL complète doit être déclarée chez l’IdP. L’URL réelle peut différer si un reverse-proxy réécrit l’hôte (voir aperçu).",
+        "redirectPathPlaceholder": "/api/auth/oidc/callback",
+        "callbackPreviewLabel": "URL de callback complète (aperçu navigateur)",
+        "callbackPreviewDesc": "Construite à partir de l’origine actuelle du navigateur + le chemin ci-dessus. En production, les cookies sécurisés exigent HTTPS.",
+        "clockSkewLabel": "Tolérance d’horloge (secondes)",
+        "clockSkewDesc": "Marge acceptée pour la validation des jetons OIDC si les horloges client/serveur/IdP diffèrent légèrement.",
+        "sectionSecurity": "Sécurité, MFA et transport",
+        "mfaPolicyLabel": "Politique MFA sur l’ID token",
+        "mfaPolicyDesc": "Exigé = connexion OIDC refusée si le jeton ne contient pas d’indicateurs MFA reconnus par le serveur. Désactivé / préféré = pas de refus sur cette base (préféré n’impose pas la MFA).",
+        "httpsProdTitle": "HTTPS en production",
+        "httpsProdDesc": "Les redirections OIDC et les cookies de session sécurisés exigent HTTPS lorsque NODE_ENV=production et que les cookies « secure » sont actifs.",
+        "mfaRecommendTitle": "MFA fortement recommandé",
+        "mfaRecommendDesc": "En production, exiger la MFA côté IdP (mode « Exigé ») est recommandé pour limiter les prises de contrôle de session ; les autres modes ne bloquent pas la connexion sans indicateurs MFA.",
+        "protectionsTitle": "Protections OIDC (toujours actives)",
+        "pkceTitle": "PKCE, state et nonce",
+        "pkceBody": "PKCE (S256), paramètres state et nonce pour limiter les détournements et le rejeu.",
+        "correlationTitle": "Corrélation du compte OIDC",
+        "correlationBody": "preferred_username, sinon partie locale de l’email, sinon sub (non configurable ici).",
+        "mappingRolesTitle": "Cartographie des rôles",
+        "mappingRolesBody": "La cartographie fine des groupes / claims vers les rôles ESOS se fait via les règles JSON (section dédiée).",
+        "testSection": "Test de connectivité",
+        "testDesc": "Vérifie que l’issuer et le client_id permettent de récupérer les métadonnées OpenID (sans afficher de secrets).",
+        "testButton": "Tester la découverte OIDC"
+      },
+      "ldap": {
+        "cardTitle": "LDAP / Active Directory",
+        "cardSubtitle": "Annuaire, TLS et compte de service pour la recherche utilisateur.",
+        "enableLabel": "Activer LDAP",
+        "enableHelp": "Affiche le formulaire de connexion annuaire sur la page de connexion.",
+        "sectionTransport": "Transport et serveur",
+        "modeSummaryLabel": "Mode de connexion (résumé)",
+        "modeSummaryDesc": "Dérivé de l’URL et de StartTLS. En production, ldap:// distant exige StartTLS ou utilisez ldaps://.",
+        "urlLabel": "URL du serveur LDAP",
+        "urlDesc": "Préférez ldaps:// en production. ldap:// sans StartTLS n’est acceptable que vers localhost en développement.",
+        "urlPlaceholder": "ldaps://dc.example.com:636",
+        "startTlsLabel": "StartTLS",
+        "startTlsDesc": "À activer avec ldap:// pour négocier TLS sur le port LDAP (389). Inutile si vous utilisez déjà ldaps://.",
+        "startTlsCheckbox": "Utiliser StartTLS (ldap:// uniquement)",
+        "tlsVerifyLabel": "Vérifier le certificat TLS",
+        "tlsVerifyDesc": "Désactiver uniquement en laboratoire : équivalent à faire confiance à n’importe quel certificat (risque MITM).",
+        "tlsVerifyCheckbox": "Vérifier le certificat du serveur (recommandé)",
+        "sectionBind": "Compte de service (bind)",
+        "bindDnLabel": "DN du compte de liaison (bind)",
+        "bindDnDesc": "Compte de service avec droits de lecture sur l’annuaire pour rechercher l’utilisateur.",
+        "bindDnPlaceholder": "CN=svc-esos,OU=Services,DC=example,DC=com",
+        "bindPasswordLabel": "Mot de passe de liaison",
+        "bindPasswordDesc": "Valeur write-only ; laisser vide pour ne pas modifier le mot de passe déjà stocké côté serveur.",
+        "bindPasswordPlaceholder": "Nouveau mot de passe (optionnel)",
+        "bindPwStateTitle": "État du mot de passe côté serveur",
+        "bindPwStateDesc": "Indique si un mot de passe a déjà été enregistré. Aucune valeur n’est renvoyée par l’API.",
+        "bindPwConfigured": "Mot de passe configuré",
+        "bindPwMissing": "Aucun mot de passe enregistré",
+        "sectionSearch": "Recherche utilisateur",
+        "baseDnLabel": "DN de base de recherche",
+        "baseDnDesc": "Racine sous laquelle les utilisateurs sont recherchés (scope sous-arbre).",
+        "baseDnPlaceholder": "DC=example,DC=com",
+        "userFilterLabel": "Filtre de recherche utilisateur",
+        "userFilterDesc": "Utilisez le marqueur {usernameMark} pour l’identifiant saisi à la connexion. Si le filtre ne contient pas {usernameMark}, l’attribut « identifiant de connexion » ci-dessous complète le filtre.",
+        "userFilterPlaceholder": "(&(objectClass=user)(sAMAccountName=USER_PLACEHOLDER))",
+        "usernameAttrLabel": "Attribut d’identifiant de connexion",
+        "usernameAttrDesc": "Nom d’attribut LDAP (ex. sAMAccountName) utilisé quand le filtre ne contient pas {usernameMark}.",
+        "usernameAttrPlaceholder": "sAMAccountName",
+        "displayNameAttrLabel": "Attribut du nom affiché",
+        "displayNameAttrDesc": "Valeur copiée vers le nom affiché ESOS lors du provisionnement.",
+        "displayNameAttrPlaceholder": "displayName",
+        "groupAttrLabel": "Attribut des groupes",
+        "groupAttrDesc": "Souvent memberOf sous Active Directory ; sert à la cartographie des rôles LDAP.",
+        "groupAttrPlaceholder": "memberOf",
+        "timeoutLabel": "Délai max. (secondes)",
+        "timeoutDesc": "Timeout connexion et opérations côté client LDAP.",
+        "searchLimitTitle": "Limite de résultats de recherche",
+        "searchLimitDesc": "La recherche utilisateur est limitée à {limit} entrées côté serveur (non configurable).",
+        "customCaTitle": "Certificat d’autorité personnalisé",
+        "customCaDesc": "Non pris en charge dans cette version : la confiance TLS suit le magasin du système d’exploitation / Node.",
+        "testSection": "Test de connectivité",
+        "testDesc": "Teste le bind du compte de service et une recherche exemple (sans mot de passe utilisateur final). Vous pouvez saisir un mot de passe de liaison ci-dessus pour ce test sans enregistrer la configuration.",
+        "testButton": "Tester la connexion et la recherche LDAP"
+      },
+      "mapping": {
+        "cardTitle": "Cartographie des rôles et provisionnement",
+        "cardSubtitle": "JIT, rôle par défaut et règles JSON. Sans règle correspondante, le rôle attribué aux nouveaux comptes JIT est le rôle par défaut ci-dessous ; cela ne désactive pas la connexion des comptes déjà existants.",
+        "jitEnableLabel": "Créer un compte au premier login externe (JIT)",
+        "jitEnableHelp": "Si désactivé, seuls les comptes déjà présents ou liés peuvent se connecter via LDAP/OIDC.",
+        "jitDefaultRoleLabel": "Rôle par défaut pour les nouveaux comptes JIT",
+        "jitDefaultRoleDesc": "Appliqué lorsqu’aucune règle de cartographie ne donne un rôle plus élevé pour un nouveau compte. Les comptes existants ne sont pas bloqués par l’absence de règle.",
+        "jitActiveLabel": "Compte JIT actif dès la création",
+        "jitActiveDesc": "Si activé, les comptes créés automatiquement lors du premier login OIDC/LDAP sont immédiatement utilisables (selon les règles serveur).",
+        "jitActiveCheckbox": "Activer automatiquement les comptes créés par JIT",
+        "oidcMaxRoleLabel": "Plafond de rôle OIDC",
+        "oidcMaxRoleDesc": "Limite supérieure du rôle issu des règles OIDC (après cartographie).",
+        "ldapMaxRoleLabel": "Plafond de rôle LDAP",
+        "ldapMaxRoleDesc": "Limite supérieure du rôle issu des groupes LDAP (après cartographie).",
+        "rulesJsonLabel": "Règles de cartographie (JSON)",
+        "rulesJsonDesc": "Tableau d'objets avec les champs match et role. Les règles OIDC utilisent type « oidc_claim » ; LDAP utilise « ldap_group_dn ».",
+        "exampleLabel": "Exemple de structure (copier / adapter)"
+      },
+      "save": {
+        "cardTitle": "Enregistrement et diagnostics",
+        "cardSubtitle": "Applique les paramètres côté serveur (validation JSON côté client avant envoi). Les tests OIDC/LDAP n’enregistrent pas la configuration.",
+        "actionsSection": "Actions principales",
+        "actionsIntro": "L’enregistrement envoie la configuration au serveur. Les tests ci-dessous ne modifient pas les paramètres enregistrés.",
+        "saveButton": "Enregistrer la configuration",
+        "cancelButton": "Annuler",
+        "quickTestsSection": "Tests rapides (même action que dans les cartes)",
+        "quickTestsIntro": "Relancez les tests depuis ici après avoir modifié issuer, client_id, URL LDAP ou identifiants de liaison.",
+        "testOidcButton": "Tester la découverte OIDC",
+        "testLdapButton": "Tester LDAP (bind + recherche)",
+        "resultsTitle": "Derniers résultats des tests",
+        "oidcResultHeading": "OpenID Connect — découverte",
+        "ldapResultHeading": "LDAP — liaison et recherche",
+        "success": "Succès",
+        "present": "présent",
+        "absent": "absent",
+        "oidcFailTitle": "Échec OIDC",
+        "ldapFailTitle": "Échec LDAP",
+        "noOidcTest": "Aucun test OIDC lancé depuis le chargement de la page.",
+        "noLdapTest": "Aucun test LDAP lancé depuis le chargement de la page.",
+        "ldapSuccessSample": "Succès — {count} entrée(s) dans l''échantillon de recherche."
+      }
+    },
+    "users": {
+      "page": {
+        "title": "Gestion des utilisateurs",
+        "subtitle": "Comptes locaux avec accès à l'interface ESOS"
+      },
+      "actions": {
+        "newUser": "Nouvel utilisateur"
+      },
+      "matrix": {
+        "toggle": "Rôles & Permissions",
+        "permission": "Permission",
+        "roles": {
+          "admin": "Admin",
+          "operator": "Opérateur",
+          "viewer": "Lecteur"
+        }
+      },
+      "permissions": {
+        "dashboard_monitoring": "Dashboard & monitoring",
+        "targets_devices_sessions": "Targets / Devices / Sessions",
+        "stats_history": "Stats & Historique",
+        "hardware_topology": "Hardware / Topologie",
+        "inventory": "Inventaire",
+        "cluster_ha": "Cluster HA",
+        "san_list": "Liste des SANs",
+        "san_config_edit": "Modifier la config des SANs",
+        "san_add_remove": "Ajouter / Supprimer un SAN",
+        "ssh_terminal": "Terminal SSH",
+        "software_dependencies": "Dépendances logicielles",
+        "user_management": "Gestion des utilisateurs"
+      },
+      "table": {
+        "loading": "Chargement…",
+        "headers": {
+          "user": "Utilisateur",
+          "role": "Rôle",
+          "status": "Statut",
+          "lastLogin": "Dernière connexion",
+          "created": "Créé le"
+        },
+        "empty": "Aucun utilisateur",
+        "you": "(vous)",
+        "status": {
+          "active": "Actif",
+          "inactive": "Désactivé"
+        },
+        "forcePwTooltip": "Doit changer son mot de passe à la prochaine connexion"
+      },
+      "tooltips": {
+        "edit": "Modifier (nom / rôle)",
+        "deactivate": "Désactiver",
+        "activate": "Activer",
+        "resetPassword": "Réinitialiser le mot de passe",
+        "delete": "Supprimer"
+      },
+      "modals": {
+        "deleteTitle": "Supprimer l'utilisateur",
+        "deleteMessage": "Supprimer définitivement le compte « {username} » ? Cette action est irréversible.",
+        "deleteConfirm": "Supprimer",
+        "resetTitle": "Réinitialiser le mot de passe",
+        "resetMessage": "Générer un nouveau mot de passe aléatoire pour « {username} » ? L'utilisateur devra se reconnecter.",
+        "resetConfirm": "Réinitialiser",
+        "revealHint": "Conservez ce mot de passe en lieu sûr — il ne sera plus affiché.",
+        "revealCopied": "J'ai copié le mot de passe"
+      },
+      "reveal": {
+        "generatedPasswordTitle": "Mot de passe généré",
+        "resetPasswordTitle": "Nouveau mot de passe — {username}"
+      },
+      "toasts": {
+        "createdWithPassword": "Utilisateur créé",
+        "createdWithPasswordDesc": "Le compte a été créé avec le mot de passe fourni.",
+        "updatedTitle": "Mis à jour",
+        "updatedDesc": "Le compte a été modifié.",
+        "activatedTitle": "Compte activé",
+        "deactivatedTitle": "Compte désactivé",
+        "deletedTitle": "Supprimé",
+        "deletedDesc": "Le compte « {username} » a été supprimé.",
+        "errorTitle": "Erreur",
+        "toggleFailed": "Impossible de modifier ce compte.",
+        "deleteFailed": "Impossible de supprimer ce compte.",
+        "resetFailed": "Impossible de réinitialiser."
+      },
+      "create": {
+        "title": "Créer un utilisateur",
+        "usernameLabel": "Nom d'utilisateur *",
+        "usernamePlaceholder": "ex : jdupont",
+        "displayNameLabel": "Nom affiché",
+        "displayNamePlaceholder": "ex : Jean Dupont",
+        "roleLabel": "Rôle *",
+        "passwordLabel": "Mot de passe",
+        "passwordHint": "Laisser vide pour générer automatiquement",
+        "passwordPlaceholder": "Laisser vide pour générer",
+        "forcePwTitle": "Forcer le changement de mot de passe",
+        "forcePwDesc": "L'utilisateur devra changer son mot de passe à la première connexion",
+        "cancel": "Annuler",
+        "submit": "Créer",
+        "roles": {
+          "admin": {
+            "label": "Admin",
+            "desc": "Accès complet"
+          },
+          "operator": {
+            "label": "Opérateur",
+            "desc": "Lecture + écriture"
+          },
+          "viewer": {
+            "label": "Lecteur",
+            "desc": "Lecture seule"
+          }
+        }
+      },
+      "edit": {
+        "title": "Modifier l'utilisateur",
+        "displayNameLabel": "Nom affiché",
+        "displayNamePlaceholder": "ex : Jean Dupont",
+        "roleLabel": "Rôle",
+        "roleHint": "Admin : accès complet. Opérateur : lecture + modifications, sans gestion des comptes. Lecteur : visualisation uniquement.",
+        "cancel": "Annuler",
+        "save": "Enregistrer",
+        "roles": {
+          "admin": "Admin",
+          "operator": "Opérateur",
+          "viewer": "Lecteur"
+        }
+      },
+      "validation": {
+        "usernameRequired": "Le nom d'utilisateur est obligatoire.",
+        "usernameChars": "Caractères autorisés : lettres, chiffres, _ . -"
+      }
+    },
+    "appVersion": {
+      "page": {
+        "title": "Version WebUI",
+        "subtitle": "Informations de build et historique des versions de l'interface ESOS WebUI"
+      },
+      "actions": {
+        "refresh": "Actualiser"
+      },
+      "build": {
+        "title": "Build actuel",
+        "loading": "Chargement…",
+        "fields": {
+          "version": "Version",
+          "buildId": "Build ID",
+          "commit": "Commit",
+          "branch": "Branche",
+          "buildDate": "Date de build",
+          "environment": "Environnement"
+        }
+      },
+      "db": {
+        "title": "Base de données",
+        "loading": "Chargement…",
+        "fields": {
+          "schema": "Schéma DB",
+          "updatedAt": "Mis à jour",
+          "migrationsApplied": "Migrations appliquées"
+        },
+        "transientTitle": "Version non persistée",
+        "transientDesc": "La base de données est indisponible. Les informations affichées sont transientes."
+      },
+      "history": {
+        "title": "Historique des versions",
+        "entryCount": "{count} entrée(s)",
+        "empty": "Aucun historique disponible.",
+        "cols": {
+          "version": "Version",
+          "previous": "Précédente",
+          "commit": "Commit",
+          "source": "Source",
+          "date": "Date"
+        }
+      },
+      "migrations": {
+        "title": "Migrations SQL appliquées",
+        "entryCount": "{count} entrée(s)",
+        "loadError": "Impossible de charger les migrations",
+        "loading": "Chargement…",
+        "empty": "Aucune migration trouvée",
+        "cols": {
+          "num": "#",
+          "name": "Migration",
+          "hash": "Hash",
+          "appliedAt": "Appliquée le"
+        }
+      }
+    },
+    "dependencies": {
+      "page": {
+        "title": "Dépendances",
+        "subtitle": "Comparaison avec le registre npm",
+        "subtitleScan": "· scanné {ago}"
+      },
+      "export": {
+        "scope": {
+          "all": "Tous les packages",
+          "outdated": "Seulement à mettre à jour"
+        }
+      },
+      "actions": {
+        "exportCsv": "Export CSV",
+        "exportJson": "Export JSON",
+        "refresh": "Actualiser"
+      },
+      "loading": {
+        "title": "Interrogation du registre npm…",
+        "hint": "Peut prendre quelques secondes"
+      },
+      "status": {
+        "allUpToDate": "Tous les packages sont à jour."
+      },
+      "stats": {
+        "packages": "packages",
+        "major": "major",
+        "minor": "minor",
+        "patch": "patch"
+      },
+      "table": {
+        "filterPlaceholder": "Filtrer par nom…",
+        "count": "{filtered} / {total} packages",
+        "headers": {
+          "package": "Package",
+          "installed": "Installé",
+          "latest": "Latest npm",
+          "bump": "MAJ",
+          "published": "Publié",
+          "type": "Type",
+          "links": "Liens"
+        },
+        "typeDep": "prod",
+        "typeDev": "dev",
+        "linkNpm": "Voir sur npm",
+        "linkGithub": "Voir sur GitHub",
+        "linkChangelog": "Changelog / Releases",
+        "empty": "Aucun package ne correspond aux filtres"
+      },
+      "filters": {
+        "diff": {
+          "all": "Tous",
+          "major": "Major",
+          "minor": "Minor",
+          "patch": "Patch",
+          "upToDate": "À jour"
+        },
+        "type": {
+          "all": "Tous",
+          "production": "Production",
+          "dev": "Dev"
+        }
+      },
+      "diff": {
+        "major": "major",
+        "minor": "minor",
+        "patch": "patch",
+        "upToDate": "à jour",
+        "unknown": "inconnu"
+      }
+    }
+  },
+  "dashboard": {
+    "index": {
+      "loadErrorTitle": "Échec du chargement",
+      "sections": {
+        "sessions": "Sessions actives",
+        "devices": "Devices"
+      },
+      "targets": {
+        "fc": "Targets Fibre Channel",
+        "iscsi": "Targets iSCSI",
+        "driverFallback": "Targets {driver}"
+      }
+    },
+    "statsRow": {
+      "targets": "Targets",
+      "devices": "Devices",
+      "sessions": "Sessions",
+      "groups": "Groupes",
+      "luns": "LUNs"
+    },
+    "clusterBanner": {
+      "modes": {
+        "unconfigured": "Sans ressources",
+        "active-passive": "Actif/Passif",
+        "active-active": "Actif/Actif",
+        "degraded": "Dégradé",
+        "resyncing": "Resync DRBD",
+        "split-brain": "Split-Brain"
+      },
+      "modeDefaultHa": "HA",
+      "nodesLine": "{count} nœud(s)",
+      "primaryStats": "Stats du nœud primaire",
+      "sshUnknown": "inconnu",
+      "monitoringCta": "Monitoring"
+    }
+  },
+  "storage": {
+    "targets": {
+      "list": {
+        "countLine": "{count} target(s)",
+        "searchPlaceholder": "Filtrer par IQN / WWN…"
+      },
+      "detail": {
+        "breadcrumbBack": "← Targets",
+        "loading": "Chargement…",
+        "sections": {
+          "activeSessions": "Sessions actives",
+          "accessGroups": "Groupes d'accès"
+        },
+        "empty": {
+          "noSessionsOnTarget": "Aucune session active sur cette target.",
+          "noGroups": "Aucun groupe d'accès",
+          "notFound": "Target introuvable"
+        },
+        "readOnlyBadge": "Lecture seule"
+      },
+      "actions": {
+        "enable": "Activer",
+        "disable": "Désactiver",
+        "delete": "Supprimer"
+      },
+      "toasts": {
+        "enabledTitle": "Target activée",
+        "disabledTitle": "Target désactivée",
+        "deletedTitle": "Target supprimée",
+        "errorTitle": "Erreur",
+        "errorGeneric": "Erreur inconnue",
+        "deleteErrorTitle": "Erreur lors de la suppression"
+      },
+      "deleteModal": {
+        "title": "Supprimer « {name} » ?",
+        "messageWithSessions": "Cette target a {count} session(s) active(s). La supprimer forcera leur déconnexion.",
+        "messageNoSessions": "Cette action supprimera la target de /etc/scst.conf et rechargera SCST.",
+        "confirmLabel": "Supprimer définitivement"
+      },
+      "table": {
+        "headers": {
+          "iqn": "IQN",
+          "driver": "Driver",
+          "state": "État",
+          "groups": "Groupes",
+          "sessions": "Sessions"
+        },
+        "detail": "Détail →",
+        "empty": "Aucune target",
+        "loading": "Chargement…"
+      },
+      "badge": {
+        "on": "Activé",
+        "off": "Désactivé"
+      },
+      "groupPanel": {
+        "initiatorsBadge": "{count} initiateur(s)",
+        "lunsBadge": "{count} LUN(s)",
+        "initiatorsHeading": "Initiateurs autorisés",
+        "noInitiators": "Aucun initiateur déclaré.",
+        "lunsHeading": "LUNs",
+        "lunTableHeaders": {
+          "id": "ID",
+          "device": "Device",
+          "handler": "Handler",
+          "path": "Path",
+          "ro": "R/O"
+        },
+        "noLuns": "Aucun LUN exposé dans ce groupe.",
+        "readOnlyBadge": "R/O"
+      }
+    },
+    "devices": {
+      "list": {
+        "countLine": "{count} device(s)",
+        "handlerFilterPlaceholder": "Tous les handlers",
+        "searchPlaceholder": "Filtrer par nom…"
+      },
+      "usage": {
+        "count": "{count} LUN(s)",
+        "withRoSuffix": " dont {ro} R/O"
+      },
+      "table": {
+        "headers": {
+          "name": "Nom",
+          "handler": "Handler",
+          "path": "Path",
+          "usedBy": "Utilisé par"
+        },
+        "empty": "Aucun device",
+        "loading": "Chargement…"
+      }
+    },
+    "sessions": {
+      "list": {
+        "statusActive": "{count} session(s) active(s)",
+        "statusNone": "Aucune session"
+      },
+      "table": {
+        "headers": {
+          "initiator": "Initiateur",
+          "ip": "IP",
+          "target": "Target",
+          "sid": "SID"
+        },
+        "fcBadge": "Fibre Channel",
+        "emptyTitle": "Aucune session iSCSI active",
+        "emptySub": "Les connexions apparaîtront ici dès qu'un initiateur se connecte."
+      }
+    },
+    "common": {
+      "refreshBadge": {
+        "prefix": "Mis à jour",
+        "justNow": "à l'instant",
+        "secondsAgo": "il y a {secs}s",
+        "minutesAgo": "il y a {mins}min"
+      },
+      "sectionTitle": {
+        "live": "Live"
+      },
+      "destructiveModal": {
+        "frameTitle": "Confirmer l'action",
+        "typeToConfirmBefore": "Pour confirmer, saisir",
+        "typeToConfirmAfter": "ci-dessous :",
+        "cancelDefault": "Annuler",
+        "confirmDefault": "Supprimer définitivement"
+      }
+    }
+  },
+  "monitoring": {
+    "throughput": {
+      "title": "Débit I/O",
+      "readLabel": "READ",
+      "writeLabel": "WRITE",
+      "capacityAggregated": "{count} SAN(s) — débit agrégé",
+      "capacityMaxLine": "{parts} — {maxFormatted} max",
+      "capacitySpeedUnknown": "{count} port(s) FC — vitesse non détectée",
+      "noPortTrafficUndetected": "FC actif — ports non détectés via sysfs",
+      "noPortNoneOnline": "Aucun port FC online"
+    }
+  },
+  "alerts": {
+    "panel": {
+      "title": "Alertes"
+    },
+    "level": {
+      "error": "Erreur",
+      "warning": "Avertissement"
+    }
+  },
+  "hardware": {
+    "page": {
+      "sshUnavailableTitle": "SSH non disponible",
+      "sshUnavailableDesc": "Les données hardware ne peuvent pas être récupérées. Vérifiez la connexion SSH dans Administration.",
+      "updated": "Mis à jour : {time}",
+      "storageTitle": "Stockage"
+    },
+    "fcPortCard": {
+      "title": "Ports Fibre Channel",
+      "onlineBadge": "{online} / {total} en ligne",
+      "empty": "Aucun port FC détecté"
+    },
+    "systemGauges": {
+      "cardTitle": "Système",
+      "cpu": "CPU",
+      "memory": "Mémoire",
+      "cores": "{n} cores",
+      "loadPrefix": "charge",
+      "host": "Hôte",
+      "uptimeLabel": "Uptime",
+      "ramLine": "{used} utilisé / {total} total ({available} disponible)",
+      "uptimeFormat": {
+        "dhm": "{d}j {h}h {m}m",
+        "hm": "{h}h {m}m",
+        "m": "{m}m"
+      }
+    },
+    "diskTree": {
+      "badgeRo": "RO"
+    }
+  },
+  "volumes": {
+    "card": {
+      "title": "Volumes",
+      "empty": "Aucun volume surveillé",
+      "free": "libre"
+    }
+  },
+  "topology": {
+    "toolbar": {
+      "back": "← Retour",
+      "title": "🗺️ Topologie SCST",
+      "allSans": "Tous",
+      "refresh": "Actualiser",
+      "loading": "Chargement…"
+    },
+    "legend": {
+      "hba": "Port HBA",
+      "fcTarget": "Target FC",
+      "accessGroup": "Groupe d'accès",
+      "initiator": "Initiateur actif",
+      "volume": "Volume"
+    },
+    "status": {
+      "noNodes": "Aucun nœud",
+      "summary": "{nodes} nœud(s) · {edges} lien(s)"
+    },
+    "empty": {
+      "title": "Aucune topologie à afficher",
+      "hint": "Vérifiez la connexion SSH et la configuration SCST."
+    },
+    "loading": "Chargement de la topologie…",
+    "nodes": {
+      "hbaPort": {
+        "label": "Port HBA"
+      },
+      "fcTarget": {
+        "label": "Target FC",
+        "enabled": "Activé",
+        "disabled": "Désactivé",
+        "sessions": "{count} session(s)"
+      },
+      "fcInitiator": {
+        "label": "Initiateur"
+      },
+      "scstGroup": {
+        "label": "Groupe d'accès",
+        "summary": "{initiators} initiateur(s) · {luns} LUN(s)"
+      },
+      "scstDevice": {
+        "label": "Volume"
+      }
+    }
+  }
+}

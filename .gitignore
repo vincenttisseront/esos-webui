@@ -1,0 +1,21 @@
+node_modules
+.nuxt
+.output
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# SSH keys
+keys/
+
+# TLS certificates
+nginx/certs/
+
+*.log
+.DS_Store
+dist
+
+# Local IDE (Cursor); do not commit
+cursor/

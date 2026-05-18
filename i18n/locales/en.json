@@ -1,0 +1,1164 @@
+{
+  "common": {
+    "language": "Language",
+    "all": "All",
+    "loading": "Loading…",
+    "error": "Error",
+    "actions": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "confirm": "Confirm",
+      "close": "Close",
+      "retry": "Retry"
+    },
+    "dismiss": "Dismiss",
+    "emptyState": {
+      "clearFilterHint": "Try clearing the search filter."
+    }
+  },
+  "toast": {
+    "ssh": {
+      "reconnected": {
+        "title": "SSH reconnected",
+        "description": "Connection to the ESOS server has been restored."
+      },
+      "lost": {
+        "title": "SSH connection lost",
+        "description": "Reconnecting…"
+      }
+    }
+  },
+  "banner": {
+    "ssh": {
+      "unconfigured_body": "No SSH connection is configured — ESOS data is unavailable.",
+      "unconfigured_cta": "Configure now →",
+      "reconnecting": "Reconnecting to the ESOS server…",
+      "connection_lost": "SSH connection lost. Check that the ESOS server is reachable.",
+      "connecting": "Connecting to the ESOS server…",
+      "pending_review_one": "One issue needs your attention.",
+      "pending_review_other": "{count} issues need your attention."
+    },
+    "network": {
+      "body_prefix": "Network settings saved but not applied on ",
+      "body_suffix": " — use “Restart network” in the configuration, then test the connection to confirm.",
+      "test_connection": "Test connection",
+      "test_in_progress": "Testing…",
+      "toast_verify_ok_title": "Connection verified",
+      "toast_verify_ok_desc": "The SAN responds correctly on the new network configuration.",
+      "toast_verify_fail_title": "Connection failed",
+      "toast_verify_fail_desc_default": "The SAN does not respond at the new address.",
+      "toast_ssh_test_fail_title": "SSH test failed"
+    }
+  },
+  "languages": {
+    "fr": "Français",
+    "en": "English"
+  },
+  "app": {
+    "name": "ESOS WebUI",
+    "tagline": "Storage WebUI"
+  },
+  "nav": {
+    "sections": {
+      "overview": "Overview",
+      "storage": "Storage",
+      "monitoring": "Monitoring",
+      "system": "System"
+    },
+    "items": {
+      "dashboard": "Dashboard",
+      "targets": "Targets",
+      "devices": "Devices",
+      "sessions": "Sessions",
+      "stats": "Stats",
+      "history": "History",
+      "hardware": "Hardware",
+      "topology": "Topology",
+      "cluster_ha": "HA Cluster",
+      "inventory": "Inventory",
+      "administration": "Administration",
+      "sans": "SANs",
+      "users": "Users",
+      "esos_version": "ESOS Version",
+      "dependencies": "Dependencies",
+      "webui_version": "WebUI Version"
+    },
+    "page_titles": {
+      "dashboard": "Dashboard",
+      "targets": "Targets",
+      "devices": "Devices",
+      "sessions": "Active sessions",
+      "terminal": "ESOS Terminal",
+      "target_detail": "Target details"
+    }
+  },
+  "user_menu": {
+    "account": "Account",
+    "role": "Role",
+    "auth_source": "Authentication source",
+    "open": "Open user menu",
+    "profile": "My profile",
+    "logout": "Sign out",
+    "language": "Language"
+  },
+  "profile": {
+    "title": "My profile",
+    "subtitle": "Account information, preferences, and security",
+    "account": {
+      "title": "Account",
+      "username": "User",
+      "role": "Role",
+      "user_id": "Identifier",
+      "last_login": "Last sign-in",
+      "active": "Account state",
+      "active_yes": "Active",
+      "active_no": "Disabled",
+      "auth_source": "Authentication source",
+      "auth_sources": {
+        "local": "Local account",
+        "ldap": "LDAP / Active Directory",
+        "oidc": "OIDC / SSO"
+      }
+    },
+    "preferences": {
+      "title": "Preferences",
+      "language_title": "Language",
+      "language_help": "Your language is saved on your account and mirrored in the esos_locale cookie.",
+      "current_locale": "Active language",
+      "saved_locale": "Saved preference",
+      "not_saved": "Not saved",
+      "save_failed": "The language changed locally, but the preference could not be saved."
+    },
+    "security": {
+      "title": "Security",
+      "local_title": "Change password",
+      "local_help": "This is a local account: you can change its password from ESOS WebUI.",
+      "new_password": "New password",
+      "new_password_help": "Use at least 12 characters with lowercase, uppercase, digits, and special characters.",
+      "confirm_password": "Confirm new password",
+      "mismatch": "Passwords do not match",
+      "policy_error": "The password does not meet the required complexity",
+      "success": "Password updated",
+      "submit": "Save password",
+      "external_title": "Password managed by an external provider",
+      "external_ldap": "This account is authenticated by LDAP / Active Directory. Change the password in the directory or through your organization's process.",
+      "external_oidc": "This account is authenticated by OIDC / SSO. Change the password with the identity provider.",
+      "external_unknown": "This account is not local. The password must be managed by the authentication provider.",
+      "policy_checks": {
+        "length": "At least 12 characters",
+        "lowercase": "At least one lowercase letter",
+        "uppercase": "At least one uppercase letter",
+        "digit": "At least one digit",
+        "special": "At least one special character"
+      }
+    },
+    "session": {
+      "title": "Sign out",
+      "subtitle": "End your session and return to the sign-in page",
+      "logout": "Sign out"
+    }
+  },
+  "ssh": {
+    "status": {
+      "connecting": "Connecting…",
+      "connected": "Connected",
+      "reconnecting": "Reconnecting…",
+      "error": "SSH error",
+      "unconfigured": "Not configured"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Access the administration console",
+      "subtitle": "Choose the authentication method configured for this ESOS environment.",
+      "sso_button": "Sign in with SSO (OIDC)",
+      "ldap_section": "LDAP / Active Directory",
+      "ldap_submit": "LDAP sign in",
+      "local_section": "Local account",
+      "username": "User",
+      "username_placeholder": "root",
+      "username_label_ldap": "Username",
+      "password": "Password",
+      "password_placeholder": "••••••••",
+      "submit": "Sign in (local)",
+      "footer_tagline": "ESOS WebUI — SAN management interface",
+      "esos_full_name": "Enterprise Storage OS",
+      "enterprise_baseline": "Secure access to storage infrastructure monitoring, SCST targets, devices, and SAN topology.",
+      "features": {
+        "monitoring": "Real-time monitoring of SCST targets",
+        "devices": "Manage devices and LUNs",
+        "stats": "I/O statistics and history",
+        "topology": "SAN network topology"
+      },
+      "generic_error": "Sign-in error",
+      "card_label": "Authentication form",
+      "mode_selector_label": "Authentication method",
+      "tab_local": "Local",
+      "tab_ldap": "LDAP / AD",
+      "tab_sso": "SSO",
+      "local_title": "Local account",
+      "local_help": "Authenticate with a local ESOS account.",
+      "local_identifier_label": "Identifier or email",
+      "local_identifier_placeholder": "root",
+      "local_submit": "Sign in",
+      "ldap_title": "LDAP / Active Directory",
+      "ldap_help": "Use your enterprise directory credentials.",
+      "ldap_unavailable": "Directory authentication is not enabled for this ESOS instance.",
+      "sso_title": "Single Sign-On",
+      "sso_help": "Redirect to the configured identity provider.",
+      "sso_provider_generic": "Identity provider configured by the administrator.",
+      "sso_unavailable": "Single Sign-On is not enabled for this ESOS instance.",
+      "sso_submit": "Continue with SSO",
+      "forgot_password": "Forgot password?",
+      "forgot_password_toast_title": "Reset password",
+      "forgot_password_toast_desc": "Self-service password reset is not enabled. Contact your administrator."
+    }
+  },
+  "errors": {
+    "auth": {
+      "invalid_credentials": "Invalid credentials",
+      "missing_credentials": "Missing credentials",
+      "inactive": "Account disabled. Contact an administrator.",
+      "generic": "Sign-in error"
+    },
+    "oidc": {
+      "denied": "SSO sign-in denied or cancelled.",
+      "missing": "Incomplete SSO response.",
+      "disabled": "SSO temporarily unavailable.",
+      "state": "SSO session expired or invalid. Please retry.",
+      "corrupt": "Internal SSO error.",
+      "discovery": "Cannot reach the identity provider.",
+      "token": "SSO token exchange failed.",
+      "claims": "Invalid SSO token.",
+      "mfa_required": "Multi-factor authentication is required by policy.",
+      "user": "No authorized account for this identifier.",
+      "inactive": "Account disabled.",
+      "external_generic": "External sign-in error."
+    }
+  },
+  "raid": {
+    "workflow": {
+      "title": "Software RAID workflow",
+      "step_prepare": "Prepare RAID member partitions on physical disks.",
+      "step_create": "Create an MD array from those member partitions.",
+      "step_use": "Use the MD array as a storage volume later."
+    },
+    "create_md": {
+      "title": "Create MD array (software)",
+      "action": "Create MD array",
+      "submit": "Create MD array",
+      "member_selection_help": "Select existing RAID member partitions, for example /dev/sdb1. Do not select raw physical disks such as /dev/sdb.",
+      "no_eligible_members": "No eligible RAID member partitions detected. Prepare Linux RAID Autodetect partitions on ESOS first.",
+      "cluster_execution": {
+        "title": "Multi-node cluster MD creation",
+        "description": "This SAN belongs to a cluster. The MD array will be created directly on each node with the validated mappings; Sync config is not used to create MD superblocks on peers.",
+        "status_title": "Per-node execution",
+        "status": {
+          "pending": "pending",
+          "running": "running",
+          "success": "success",
+          "failed": "failed"
+        }
+      },
+      "execution_plan": {
+        "title": "Validated MD execution plan",
+        "invalid_title": "Invalid MD command"
+      },
+      "mapping": {
+        "reused_title": "Cluster mapping reused",
+        "reused_description": "{count} partition mapping(s) were derived from the previous RAID preparation.",
+        "title": "Resolve partition mapping",
+        "description": "/dev/sdX names are not reliable across nodes. Explicitly choose which peer-node partition corresponds to each source partition before continuing.",
+        "source_partition": "Source partition",
+        "peer_partition": "Peer partition",
+        "select_placeholder": "Select a peer partition",
+        "duplicate_target": "This peer partition is already selected for another source partition.",
+        "incomplete": "Select a peer partition for every ambiguous mapping.",
+        "ready": "Mappings are complete. Re-run cluster preflight.",
+        "rerun": "Re-run cluster preflight"
+      },
+      "form": {
+        "step_title": "MD array settings",
+        "step_description": "Set the /dev/mdX name, RAID level, and chunk size before preflight. The MD array can later be used as a storage volume.",
+        "array_name_label": "MD array name",
+        "array_name_help": "Example md0, md1. The name md0 creates the MD array /dev/md0.",
+        "array_name_invalid": "The name must start with md and end with a number, for example md0.",
+        "raid_level_label": "RAID level",
+        "raid_level_help": "Choose the level based on redundancy and the number of available partitions.",
+        "level_0": "RAID 0 — Striping, minimum 2 partitions",
+        "level_1": "RAID 1 — Mirror, minimum 2 partitions",
+        "level_5": "RAID 5 — Parity, minimum 3 partitions",
+        "level_6": "RAID 6 — Dual parity, minimum 4 partitions",
+        "level_10": "RAID 10 — Stripe of mirrors, minimum 4 partitions",
+        "chunk_label": "Chunk size",
+        "chunk_help": "64 KiB matches the ESOS examples and is a good default.",
+        "chunk_64_recommended": "64 KiB, recommended",
+        "final_path": "Final path: /dev/{name}",
+        "selected_count": "Selected partitions: {count}",
+        "min_devices_error": "RAID {level} requires at least {min} partitions. Selected: {count}.",
+        "raid10_even_error": "RAID 10 requires an even number of partitions."
+      }
+    },
+    "prepare_partitions": {
+      "title": "Prepare RAID member partitions",
+      "action": "Prepare RAID member partitions",
+      "submit": "Prepare RAID member partitions",
+      "continue_to_md": "Continue to MD creation",
+      "destructive_title": "Destructive operation on physical disks",
+      "destructive_description": "This preparation replaces the partition table on the selected physical disks. It creates one RAID member partition per disk and does not run mdadm --create.",
+      "physical_disk_selection_help": "Select whole physical disks, for example /dev/sdb. One RAID member partition, for example /dev/sdb1, will be created on each selected disk.",
+      "no_eligible_physical_disks": "No eligible whole physical disks detected.",
+      "allow_overwrite_label": "Allow overwriting existing signatures and partition tables on the selected physical disks.",
+      "done_title": "RAID member partitions prepared",
+      "done_description": "Block devices have been refreshed. You can now create an MD array from these RAID member partitions.",
+      "expected_member_partitions": "Expected RAID member partitions",
+      "cluster_execution": {
+        "title": "Multi-node cluster RAID write",
+        "description": "This SAN belongs to a cluster. Partitions will be prepared directly on each node with the validated mapping; Sync config is not used for this destructive operation.",
+        "per_node_commands": "Planned commands per node",
+        "status_title": "Per-node execution",
+        "result_title": "Per-node result",
+        "partitions_visible": "RAID member partitions should now be visible on each cluster node.",
+        "status": {
+          "pending": "pending",
+          "running": "running",
+          "success": "success",
+          "failed": "failed"
+        }
+      },
+      "mapping": {
+        "title": "Resolve disk mapping",
+        "description": "/dev/sdX names are not reliable across nodes. Explicitly choose which peer-node disk corresponds to each source disk before any destructive operation.",
+        "source_disk": "Source disk",
+        "peer_disk": "Peer disk",
+        "select_placeholder": "Select a peer disk",
+        "duplicate_target": "This peer disk is already selected for another source disk.",
+        "incomplete": "Select a peer disk for every ambiguous mapping.",
+        "ready": "Mappings are complete. Re-run cluster preflight.",
+        "rerun": "Re-run cluster preflight"
+      },
+      "partition_table": {
+        "label": "Physical disk partition scheme",
+        "gpt_label": "GPT recommended",
+        "gpt_description": "Recommended for modern systems. Creates a GPT table and enables the RAID flag.",
+        "dos_label": "MBR/DOS legacy",
+        "dos_description": "Matches legacy ESOS documentation: Linux RAID type fd partition.",
+        "auto_label": "Automatic",
+        "auto_description": "Chooses GPT when parted is available, otherwise MBR/DOS with sfdisk.",
+        "selected": "Selected scheme",
+        "resolved": "Scheme applied by preflight"
+      }
+    },
+    "preflight": {
+      "impacted_devices": "Impacted devices",
+      "md_member_candidates": "Candidate RAID member partitions",
+      "physical_disks_to_prepare": "Physical disks to prepare",
+      "eligible": "eligible",
+      "blocked": "blocked",
+      "partition_table_replaced": "The partition table will be replaced.",
+      "expected_member_partition": "Expected RAID member partition"
+    }
+  },
+  "admin": {
+    "sans": {
+      "cluster_card": {
+        "description": "Global HA configuration for the cluster. Storage remains attached to the primary node.",
+        "configure_ha": "Configure HA",
+        "monitor": "Monitoring",
+        "storage": "Storage",
+        "configure_storage": "Configure storage",
+        "storage_raid": "RAID management",
+        "storage_system": "System configuration",
+        "storage_performance": "Performance agent",
+        "no_primary_storage": "No primary node detected for this cluster",
+        "no_primary": "Missing primary",
+        "health_unknown": "Health unknown",
+        "healthy": "Healthy",
+        "degraded": "Degraded",
+        "test_all": "Test all",
+        "reconnect_all": "Reconnect all",
+        "sync_config": "Sync config",
+        "probe": "Probe",
+        "primary": "Primary",
+        "secondary": "Secondary",
+        "secondaries": "Secondaries",
+        "node_count": "{count} node(s)",
+        "connections": "Connections",
+        "all_connected": "All connected",
+        "check_connections": "Check required",
+        "db_summary": "DB: {value}",
+        "web_editing": "Web editing",
+        "per_node_setting": "Per-node setting",
+        "node": "Node",
+        "role": "Role",
+        "connection": "Connection",
+        "node_diagnostics": "Node diagnostics"
+      }
+    },
+    "authProviders": {
+      "jsonErrors": {
+        "empty": "Empty JSON.",
+        "not_array": "JSON must be an array [...].",
+        "invalid_syntax": "Invalid JSON syntax."
+      },
+      "ldapMode": {
+        "ldaps": "LDAPS (TLS on LDAPS port)",
+        "ldap_start_tls": "LDAP + StartTLS",
+        "ldap_localhost_plain": "Plain LDAP (localhost — development)",
+        "ldap_plain_remote": "Plain LDAP (discouraged off localhost)",
+        "empty": "—",
+        "unknown_url": "Unrecognized URL (expected ldap:// or ldaps://)"
+      },
+      "alerts": {
+        "ldap_tls_verify_disabled": {
+          "title": "TLS verification disabled",
+          "description": "Without certificate verification, a man-in-the-middle attack can intercept LDAP/LDAPS traffic. Laboratory use only."
+        },
+        "ldap_plain_no_starttls_remote": {
+          "title": "Plain LDAP without StartTLS",
+          "description": "In production, the server rejects remote ldap:// without StartTLS. Use ldaps:// or ldap:// with StartTLS."
+        },
+        "ldap_localhost_plain": {
+          "title": "LDAP to localhost",
+          "description": "Unencrypted connection allowed for local development only. In production prefer LDAPS or StartTLS."
+        },
+        "oidc_issuer_no_https": {
+          "title": "Issuer without HTTPS",
+          "description": "OIDC issuers use HTTPS in practice. Production SSO redirects require HTTPS on the application side (secure cookies)."
+        },
+        "mfa_idp_required": {
+          "title": "MFA required at IdP",
+          "description": "The ID token must contain recognized MFA indicators (amr or acr claims per server logic). Check your provider configuration."
+        },
+        "mfa_idp_preferred": {
+          "title": "MFA “preferred”",
+          "description": "This mode does not block sign-in if the token lacks MFA indicators; it is informational (similar to off for rejection)."
+        },
+        "mapping_no_rules": {
+          "title": "No mapping rules",
+          "description": "Without rules, new JIT accounts keep the default role below. Existing accounts are not blocked."
+        },
+        "jit_default_admin": {
+          "title": "Default administrator role (JIT)",
+          "description": "Granting admin by default to every new external account is dangerous in production. Prefer viewer or operator with explicit rules."
+        }
+      },
+      "badges": {
+        "oidc_mfa_required": "MFA OIDC: required",
+        "oidc_mfa_preferred": "MFA OIDC: preferred",
+        "oidc_mfa_off": "MFA OIDC: off",
+        "oidc_disabled": "OIDC: disabled",
+        "ldap_tls_verified": "LDAP: certificate verified",
+        "ldap_tls_unverified": "LDAP: TLS not verified",
+        "ldap_disabled": "LDAP: disabled",
+        "mapping_invalid": "Mapping: invalid JSON",
+        "mapping_empty": "Mapping: no rules",
+        "mapping_rules": "{count} mapping rule(s)",
+        "secrets_ok": "Secrets: complete",
+        "secrets_incomplete": "Secrets: incomplete"
+      },
+      "page": {
+        "title": "Authentication providers",
+        "subtitle": "Configure SSO (OIDC) and directory (LDAP). Changes apply after save. Secrets are never returned in clear text by the API.",
+        "back": "Back",
+        "loading": "Loading…",
+        "securityHeading": "Security notices"
+      },
+      "mfa": {
+        "off": "Off",
+        "idp_preferred": "Preferred (non-blocking)",
+        "idp_required": "Required (blocking)"
+      },
+      "maxRole": {
+        "none": "No cap"
+      },
+      "roles": {
+        "viewer": "viewer",
+        "operator": "operator",
+        "admin": "admin"
+      },
+      "toasts": {
+        "mappingRulesTitle": "Mapping JSON",
+        "saveTitle": "Saved",
+        "saveBody": "Authentication providers updated.",
+        "errorTitle": "Error",
+        "ldapTitle": "LDAP",
+        "ldapBindOk": "Bind OK — search sample — {count} entries.",
+        "oidcTitle": "OIDC",
+        "oidcDiscoveryOk": "Discovery OK.",
+        "failure": "Failed"
+      },
+      "oidc": {
+        "cardTitle": "OpenID Connect",
+        "cardSubtitle": "SSO sign-in, token validation, and MFA policy on the ID token.",
+        "enableLabel": "Enable OpenID Connect",
+        "enableHelp": "Shows the SSO sign-in button on the sign-in page.",
+        "sectionConnection": "Connection settings",
+        "issuerLabel": "Issuer URL",
+        "issuerDesc": "HTTPS provider URL without secret. Used for OpenID discovery (/.well-known/openid-configuration).",
+        "issuerPlaceholder": "https://login.microsoftonline.com/{tenant}/v2.0",
+        "clientIdLabel": "Client ID",
+        "clientIdDesc": "Public application identifier registered with the IdP.",
+        "clientIdPlaceholder": "Application (client) ID",
+        "clientSecretLabel": "Client secret",
+        "clientSecretDesc": "Enter only to set or replace the secret. Never shown after save; leave empty to keep the current server-side value.",
+        "clientSecretPlaceholder": "New secret (optional)",
+        "secretStateTitle": "Server-side secret state",
+        "secretStateDesc": "Shows whether a secret is already stored. The API never returns the value.",
+        "secretConfigured": "OIDC secret configured",
+        "secretMissing": "No OIDC secret stored",
+        "scopesLabel": "OIDC scopes",
+        "scopesDesc": "Space-separated. The openid scope is required to obtain an ID token.",
+        "scopesPlaceholder": "openid profile email",
+        "redirectPathLabel": "Callback path (on this server)",
+        "redirectPathDesc": "Internal HTTP path; the full URL must be registered with the IdP. The real URL may differ behind a reverse proxy (see preview).",
+        "redirectPathPlaceholder": "/api/auth/oidc/callback",
+        "callbackPreviewLabel": "Full callback URL (browser preview)",
+        "callbackPreviewDesc": "Built from the current browser origin + the path above. In production, secure cookies require HTTPS.",
+        "clockSkewLabel": "Clock skew (seconds)",
+        "clockSkewDesc": "Allowed margin for OIDC token validation when client/server/IdP clocks differ slightly.",
+        "sectionSecurity": "Security, MFA, and transport",
+        "mfaPolicyLabel": "MFA policy on the ID token",
+        "mfaPolicyDesc": "Required = OIDC sign-in denied if the token lacks recognized MFA indicators. Off / preferred = no denial on this basis (preferred does not enforce MFA).",
+        "httpsProdTitle": "HTTPS in production",
+        "httpsProdDesc": "OIDC redirects and secure session cookies require HTTPS when NODE_ENV=production and secure cookies are enabled.",
+        "mfaRecommendTitle": "MFA strongly recommended",
+        "mfaRecommendDesc": "In production, requiring MFA at the IdP (Required mode) helps limit session takeover; other modes do not block sign-in without MFA indicators.",
+        "protectionsTitle": "OIDC protections (always on)",
+        "pkceTitle": "PKCE, state, and nonce",
+        "pkceBody": "PKCE (S256), state and nonce parameters to limit interception and replay.",
+        "correlationTitle": "OIDC account correlation",
+        "correlationBody": "preferred_username, else local-part of email, else sub (not configurable here).",
+        "mappingRolesTitle": "Role mapping",
+        "mappingRolesBody": "Fine-grained group/claim to ESOS role mapping is done via JSON rules (dedicated section).",
+        "testSection": "Connectivity test",
+        "testDesc": "Checks that issuer and client_id can fetch OpenID metadata (no secrets displayed).",
+        "testButton": "Test OIDC discovery"
+      },
+      "ldap": {
+        "cardTitle": "LDAP / Active Directory",
+        "cardSubtitle": "Directory, TLS, and service account for user lookup.",
+        "enableLabel": "Enable LDAP",
+        "enableHelp": "Shows the directory sign-in form on the sign-in page.",
+        "sectionTransport": "Transport and server",
+        "modeSummaryLabel": "Connection mode (summary)",
+        "modeSummaryDesc": "Derived from the URL and StartTLS. In production, remote ldap:// requires StartTLS or use ldaps://.",
+        "urlLabel": "LDAP server URL",
+        "urlDesc": "Prefer ldaps:// in production. Plain ldap:// without StartTLS is acceptable only to localhost in development.",
+        "urlPlaceholder": "ldaps://dc.example.com:636",
+        "startTlsLabel": "StartTLS",
+        "startTlsDesc": "Enable with ldap:// to negotiate TLS on the LDAP port (389). Not needed if you already use ldaps://.",
+        "startTlsCheckbox": "Use StartTLS (ldap:// only)",
+        "tlsVerifyLabel": "Verify TLS certificate",
+        "tlsVerifyDesc": "Disable only in lab: equivalent to trusting any certificate (MITM risk).",
+        "tlsVerifyCheckbox": "Verify server certificate (recommended)",
+        "sectionBind": "Service account (bind)",
+        "bindDnLabel": "Bind DN",
+        "bindDnDesc": "Service account with read rights on the directory to search for the user.",
+        "bindDnPlaceholder": "CN=svc-esos,OU=Services,DC=example,DC=com",
+        "bindPasswordLabel": "Bind password",
+        "bindPasswordDesc": "Write-only; leave empty to keep the password already stored on the server.",
+        "bindPasswordPlaceholder": "New password (optional)",
+        "bindPwStateTitle": "Server-side password state",
+        "bindPwStateDesc": "Shows whether a password is already stored. The API never returns the value.",
+        "bindPwConfigured": "Password configured",
+        "bindPwMissing": "No password stored",
+        "sectionSearch": "User search",
+        "baseDnLabel": "Search base DN",
+        "baseDnDesc": "Root under which users are searched (subtree scope).",
+        "baseDnPlaceholder": "DC=example,DC=com",
+        "userFilterLabel": "User search filter",
+        "userFilterDesc": "Use the {usernameMark} placeholder for the sign-in identifier. If the filter does not contain {usernameMark}, the login attribute below completes the filter.",
+        "userFilterPlaceholder": "(&(objectClass=user)(sAMAccountName=USER_PLACEHOLDER))",
+        "usernameAttrLabel": "Login identifier attribute",
+        "usernameAttrDesc": "LDAP attribute name (e.g. sAMAccountName) used when the filter lacks {usernameMark}.",
+        "usernameAttrPlaceholder": "sAMAccountName",
+        "displayNameAttrLabel": "Display name attribute",
+        "displayNameAttrDesc": "Value copied to the ESOS display name when provisioning.",
+        "displayNameAttrPlaceholder": "displayName",
+        "groupAttrLabel": "Groups attribute",
+        "groupAttrDesc": "Often memberOf in Active Directory; used for LDAP role mapping.",
+        "groupAttrPlaceholder": "memberOf",
+        "timeoutLabel": "Max timeout (seconds)",
+        "timeoutDesc": "Connection and operation timeout on the LDAP client.",
+        "searchLimitTitle": "Search result limit",
+        "searchLimitDesc": "User search is limited to {limit} entries on the server (not configurable).",
+        "customCaTitle": "Custom CA certificate",
+        "customCaDesc": "Not supported in this version: TLS trust follows the OS / Node trust store.",
+        "testSection": "Connectivity test",
+        "testDesc": "Tests service account bind and a sample search (no end-user password). You can enter a bind password above for this test without saving configuration.",
+        "testButton": "Test LDAP connection and search"
+      },
+      "mapping": {
+        "cardTitle": "Role mapping and provisioning",
+        "cardSubtitle": "JIT, default role, and JSON rules. Without a matching rule, new JIT accounts get the default role below; existing accounts are not blocked.",
+        "jitEnableLabel": "Create account on first external sign-in (JIT)",
+        "jitEnableHelp": "If disabled, only existing or linked accounts can sign in via LDAP/OIDC.",
+        "jitDefaultRoleLabel": "Default role for new JIT accounts",
+        "jitDefaultRoleDesc": "Applied when no mapping rule grants a higher role for a new account. Existing accounts are not blocked by missing rules.",
+        "jitActiveLabel": "JIT account active on creation",
+        "jitActiveDesc": "If enabled, accounts created automatically on first OIDC/LDAP sign-in are immediately usable (per server rules).",
+        "jitActiveCheckbox": "Automatically activate JIT-created accounts",
+        "oidcMaxRoleLabel": "OIDC role cap",
+        "oidcMaxRoleDesc": "Upper bound for the role from OIDC rules (after mapping).",
+        "ldapMaxRoleLabel": "LDAP role cap",
+        "ldapMaxRoleDesc": "Upper bound for the role from LDAP groups (after mapping).",
+        "rulesJsonLabel": "Mapping rules (JSON)",
+        "rulesJsonDesc": "Array of objects with match and role fields. OIDC rules use type oidc_claim; LDAP uses ldap_group_dn.",
+        "exampleLabel": "Example structure (copy / adapt)"
+      },
+      "save": {
+        "cardTitle": "Save and diagnostics",
+        "cardSubtitle": "Applies settings on the server (client-side JSON validation before send). OIDC/LDAP tests do not save configuration.",
+        "actionsSection": "Primary actions",
+        "actionsIntro": "Save sends configuration to the server. The tests below do not change stored settings.",
+        "saveButton": "Save configuration",
+        "cancelButton": "Cancel",
+        "quickTestsSection": "Quick tests (same as in cards)",
+        "quickTestsIntro": "Re-run tests after changing issuer, client_id, LDAP URL, or bind credentials.",
+        "testOidcButton": "Test OIDC discovery",
+        "testLdapButton": "Test LDAP (bind + search)",
+        "resultsTitle": "Latest test results",
+        "oidcResultHeading": "OpenID Connect — discovery",
+        "ldapResultHeading": "LDAP — bind and search",
+        "success": "Success",
+        "present": "present",
+        "absent": "absent",
+        "oidcFailTitle": "OIDC failure",
+        "ldapFailTitle": "LDAP failure",
+        "noOidcTest": "No OIDC test run since page load.",
+        "noLdapTest": "No LDAP test run since page load.",
+        "ldapSuccessSample": "Success — {count} entries in the search sample."
+      }
+    },
+    "users": {
+      "page": {
+        "title": "User management",
+        "subtitle": "Local accounts with access to the ESOS interface"
+      },
+      "actions": {
+        "newUser": "New user"
+      },
+      "matrix": {
+        "toggle": "Roles & permissions",
+        "permission": "Permission",
+        "roles": {
+          "admin": "Admin",
+          "operator": "Operator",
+          "viewer": "Viewer"
+        }
+      },
+      "permissions": {
+        "dashboard_monitoring": "Dashboard & monitoring",
+        "targets_devices_sessions": "Targets / devices / sessions",
+        "stats_history": "Stats & history",
+        "hardware_topology": "Hardware / topology",
+        "inventory": "Inventory",
+        "cluster_ha": "HA cluster",
+        "san_list": "SAN list",
+        "san_config_edit": "Edit SAN configuration",
+        "san_add_remove": "Add / remove a SAN",
+        "ssh_terminal": "SSH terminal",
+        "software_dependencies": "Software dependencies",
+        "user_management": "User management"
+      },
+      "table": {
+        "loading": "Loading…",
+        "headers": {
+          "user": "User",
+          "role": "Role",
+          "status": "Status",
+          "lastLogin": "Last sign-in",
+          "created": "Created"
+        },
+        "empty": "No users",
+        "you": "(you)",
+        "status": {
+          "active": "Active",
+          "inactive": "Disabled"
+        },
+        "forcePwTooltip": "Must change password on next sign-in"
+      },
+      "tooltips": {
+        "edit": "Edit (name / role)",
+        "deactivate": "Disable",
+        "activate": "Enable",
+        "resetPassword": "Reset password",
+        "delete": "Delete"
+      },
+      "modals": {
+        "deleteTitle": "Delete user",
+        "deleteMessage": "Permanently delete account « {username} »? This cannot be undone.",
+        "deleteConfirm": "Delete",
+        "resetTitle": "Reset password",
+        "resetMessage": "Generate a new random password for « {username} »? The user will need to sign in again.",
+        "resetConfirm": "Reset",
+        "revealHint": "Store this password safely — it will not be shown again.",
+        "revealCopied": "I have copied the password"
+      },
+      "reveal": {
+        "generatedPasswordTitle": "Generated password",
+        "resetPasswordTitle": "New password — {username}"
+      },
+      "toasts": {
+        "createdWithPassword": "User created",
+        "createdWithPasswordDesc": "The account was created with the password you provided.",
+        "updatedTitle": "Updated",
+        "updatedDesc": "The account was updated.",
+        "activatedTitle": "Account enabled",
+        "deactivatedTitle": "Account disabled",
+        "deletedTitle": "Deleted",
+        "deletedDesc": "Account « {username} » was deleted.",
+        "errorTitle": "Error",
+        "toggleFailed": "Could not update this account.",
+        "deleteFailed": "Could not delete this account.",
+        "resetFailed": "Could not reset password."
+      },
+      "create": {
+        "title": "Create user",
+        "usernameLabel": "Username *",
+        "usernamePlaceholder": "e.g. jdoe",
+        "displayNameLabel": "Display name",
+        "displayNamePlaceholder": "e.g. Jane Doe",
+        "roleLabel": "Role *",
+        "passwordLabel": "Password",
+        "passwordHint": "Leave empty to auto-generate",
+        "passwordPlaceholder": "Leave empty to generate",
+        "forcePwTitle": "Force password change",
+        "forcePwDesc": "The user must change their password on first sign-in",
+        "cancel": "Cancel",
+        "submit": "Create",
+        "roles": {
+          "admin": {
+            "label": "Admin",
+            "desc": "Full access"
+          },
+          "operator": {
+            "label": "Operator",
+            "desc": "Read + write"
+          },
+          "viewer": {
+            "label": "Viewer",
+            "desc": "Read-only"
+          }
+        }
+      },
+      "edit": {
+        "title": "Edit user",
+        "displayNameLabel": "Display name",
+        "displayNamePlaceholder": "e.g. Jane Doe",
+        "roleLabel": "Role",
+        "roleHint": "Admin: full access. Operator: read + changes, without account management. Viewer: view only.",
+        "cancel": "Cancel",
+        "save": "Save",
+        "roles": {
+          "admin": "Admin",
+          "operator": "Operator",
+          "viewer": "Viewer"
+        }
+      },
+      "validation": {
+        "usernameRequired": "Username is required.",
+        "usernameChars": "Allowed characters: letters, digits, _ . -"
+      }
+    },
+    "appVersion": {
+      "page": {
+        "title": "WebUI version",
+        "subtitle": "Build information and version history for the ESOS WebUI interface"
+      },
+      "actions": {
+        "refresh": "Refresh"
+      },
+      "build": {
+        "title": "Current build",
+        "loading": "Loading…",
+        "fields": {
+          "version": "Version",
+          "buildId": "Build ID",
+          "commit": "Commit",
+          "branch": "Branch",
+          "buildDate": "Build date",
+          "environment": "Environment"
+        }
+      },
+      "db": {
+        "title": "Database",
+        "loading": "Loading…",
+        "fields": {
+          "schema": "DB schema",
+          "updatedAt": "Updated",
+          "migrationsApplied": "Migrations applied"
+        },
+        "transientTitle": "Version not persisted",
+        "transientDesc": "The database is unavailable. The information shown is transient."
+      },
+      "history": {
+        "title": "Version history",
+        "entryCount": "{count} item(s)",
+        "empty": "No history available.",
+        "cols": {
+          "version": "Version",
+          "previous": "Previous",
+          "commit": "Commit",
+          "source": "Source",
+          "date": "Date"
+        }
+      },
+      "migrations": {
+        "title": "Applied SQL migrations",
+        "entryCount": "{count} item(s)",
+        "loadError": "Could not load migrations",
+        "loading": "Loading…",
+        "empty": "No migrations found",
+        "cols": {
+          "num": "#",
+          "name": "Migration",
+          "hash": "Hash",
+          "appliedAt": "Applied on"
+        }
+      }
+    },
+    "dependencies": {
+      "page": {
+        "title": "Dependencies",
+        "subtitle": "Comparison with the npm registry",
+        "subtitleScan": "· scanned {ago}"
+      },
+      "export": {
+        "scope": {
+          "all": "All packages",
+          "outdated": "Outdated only"
+        }
+      },
+      "actions": {
+        "exportCsv": "Export CSV",
+        "exportJson": "Export JSON",
+        "refresh": "Refresh"
+      },
+      "loading": {
+        "title": "Querying the npm registry…",
+        "hint": "May take a few seconds"
+      },
+      "status": {
+        "allUpToDate": "All packages are up to date."
+      },
+      "stats": {
+        "packages": "packages",
+        "major": "major",
+        "minor": "minor",
+        "patch": "patch"
+      },
+      "table": {
+        "filterPlaceholder": "Filter by name…",
+        "count": "{filtered} / {total} packages",
+        "headers": {
+          "package": "Package",
+          "installed": "Installed",
+          "latest": "Latest npm",
+          "bump": "Update",
+          "published": "Published",
+          "type": "Type",
+          "links": "Links"
+        },
+        "typeDep": "prod",
+        "typeDev": "dev",
+        "linkNpm": "View on npm",
+        "linkGithub": "View on GitHub",
+        "linkChangelog": "Changelog / releases",
+        "empty": "No packages match the filters"
+      },
+      "filters": {
+        "diff": {
+          "all": "All",
+          "major": "Major",
+          "minor": "Minor",
+          "patch": "Patch",
+          "upToDate": "Up to date"
+        },
+        "type": {
+          "all": "All",
+          "production": "Production",
+          "dev": "Dev"
+        }
+      },
+      "diff": {
+        "major": "major",
+        "minor": "minor",
+        "patch": "patch",
+        "upToDate": "up to date",
+        "unknown": "unknown"
+      }
+    }
+  },
+  "dashboard": {
+    "index": {
+      "loadErrorTitle": "Failed to load",
+      "sections": {
+        "sessions": "Active sessions",
+        "devices": "Devices"
+      },
+      "targets": {
+        "fc": "Fibre Channel targets",
+        "iscsi": "iSCSI targets",
+        "driverFallback": "Targets ({driver})"
+      }
+    },
+    "statsRow": {
+      "targets": "Targets",
+      "devices": "Devices",
+      "sessions": "Sessions",
+      "groups": "Groups",
+      "luns": "LUNs"
+    },
+    "clusterBanner": {
+      "modes": {
+        "unconfigured": "No resources",
+        "active-passive": "Active/Passive",
+        "active-active": "Active/Active",
+        "degraded": "Degraded",
+        "resyncing": "DRBD resync",
+        "split-brain": "Split-brain"
+      },
+      "modeDefaultHa": "HA",
+      "nodesLine": "{count} node(s)",
+      "primaryStats": "Primary node stats",
+      "sshUnknown": "unknown",
+      "monitoringCta": "Monitoring"
+    }
+  },
+  "storage": {
+    "targets": {
+      "list": {
+        "countLine": "{count} target(s)",
+        "searchPlaceholder": "Filter by IQN / WWN…"
+      },
+      "detail": {
+        "breadcrumbBack": "← Targets",
+        "loading": "Loading…",
+        "sections": {
+          "activeSessions": "Active sessions",
+          "accessGroups": "Access groups"
+        },
+        "empty": {
+          "noSessionsOnTarget": "No active sessions on this target.",
+          "noGroups": "No access groups",
+          "notFound": "Target not found"
+        },
+        "readOnlyBadge": "Read-only"
+      },
+      "actions": {
+        "enable": "Enable",
+        "disable": "Disable",
+        "delete": "Delete"
+      },
+      "toasts": {
+        "enabledTitle": "Target enabled",
+        "disabledTitle": "Target disabled",
+        "deletedTitle": "Target deleted",
+        "errorTitle": "Error",
+        "errorGeneric": "Unknown error",
+        "deleteErrorTitle": "Deletion failed"
+      },
+      "deleteModal": {
+        "title": "Delete \"{name}\"?",
+        "messageWithSessions": "This target has {count} active session(s). Deleting it will force them to disconnect.",
+        "messageNoSessions": "This will remove the target from /etc/scst.conf and reload SCST.",
+        "confirmLabel": "Delete permanently"
+      },
+      "table": {
+        "headers": {
+          "iqn": "IQN",
+          "driver": "Driver",
+          "state": "State",
+          "groups": "Groups",
+          "sessions": "Sessions"
+        },
+        "detail": "Details →",
+        "empty": "No targets",
+        "loading": "Loading…"
+      },
+      "badge": {
+        "on": "On",
+        "off": "Off"
+      },
+      "groupPanel": {
+        "initiatorsBadge": "{count} initiator(s)",
+        "lunsBadge": "{count} LUN(s)",
+        "initiatorsHeading": "Allowed initiators",
+        "noInitiators": "No initiators declared.",
+        "lunsHeading": "LUNs",
+        "lunTableHeaders": {
+          "id": "ID",
+          "device": "Device",
+          "handler": "Handler",
+          "path": "Path",
+          "ro": "R/O"
+        },
+        "noLuns": "No LUNs exposed in this group.",
+        "readOnlyBadge": "R/O"
+      }
+    },
+    "devices": {
+      "list": {
+        "countLine": "{count} device(s)",
+        "handlerFilterPlaceholder": "All handlers",
+        "searchPlaceholder": "Filter by name…"
+      },
+      "usage": {
+        "count": "{count} LUN(s)",
+        "withRoSuffix": ", {ro} R/O"
+      },
+      "table": {
+        "headers": {
+          "name": "Name",
+          "handler": "Handler",
+          "path": "Path",
+          "usedBy": "Used by"
+        },
+        "empty": "No devices",
+        "loading": "Loading…"
+      }
+    },
+    "sessions": {
+      "list": {
+        "statusActive": "{count} active session(s)",
+        "statusNone": "No sessions"
+      },
+      "table": {
+        "headers": {
+          "initiator": "Initiator",
+          "ip": "IP",
+          "target": "Target",
+          "sid": "SID"
+        },
+        "fcBadge": "Fibre Channel",
+        "emptyTitle": "No active iSCSI sessions",
+        "emptySub": "Connections will appear here when an initiator connects."
+      }
+    },
+    "common": {
+      "refreshBadge": {
+        "prefix": "Updated",
+        "justNow": "just now",
+        "secondsAgo": "{secs}s ago",
+        "minutesAgo": "{mins}m ago"
+      },
+      "sectionTitle": {
+        "live": "Live"
+      },
+      "destructiveModal": {
+        "frameTitle": "Confirm action",
+        "typeToConfirmBefore": "To confirm, type",
+        "typeToConfirmAfter": "below:",
+        "cancelDefault": "Cancel",
+        "confirmDefault": "Delete permanently"
+      }
+    }
+  },
+  "monitoring": {
+    "throughput": {
+      "title": "I/O throughput",
+      "readLabel": "READ",
+      "writeLabel": "WRITE",
+      "capacityAggregated": "{count} SAN(s) — aggregated throughput",
+      "capacityMaxLine": "{parts} — {maxFormatted} max",
+      "capacitySpeedUnknown": "{count} FC port(s) — speed unknown",
+      "noPortTrafficUndetected": "FC traffic — ports not detected via sysfs",
+      "noPortNoneOnline": "No FC port online"
+    }
+  },
+  "alerts": {
+    "panel": {
+      "title": "Alerts"
+    },
+    "level": {
+      "error": "Error",
+      "warning": "Warning"
+    }
+  },
+  "hardware": {
+    "page": {
+      "sshUnavailableTitle": "SSH unavailable",
+      "sshUnavailableDesc": "Hardware data cannot be retrieved. Check the SSH connection under Administration.",
+      "updated": "Updated: {time}",
+      "storageTitle": "Storage"
+    },
+    "fcPortCard": {
+      "title": "Fibre Channel ports",
+      "onlineBadge": "{online} / {total} online",
+      "empty": "No FC port detected"
+    },
+    "systemGauges": {
+      "cardTitle": "System",
+      "cpu": "CPU",
+      "memory": "Memory",
+      "cores": "{n} cores",
+      "loadPrefix": "load",
+      "host": "Host",
+      "uptimeLabel": "Uptime",
+      "ramLine": "{used} used / {total} total ({available} free)",
+      "uptimeFormat": {
+        "dhm": "{d}d {h}h {m}m",
+        "hm": "{h}h {m}m",
+        "m": "{m}m"
+      }
+    },
+    "diskTree": {
+      "badgeRo": "RO"
+    }
+  },
+  "volumes": {
+    "card": {
+      "title": "Volumes",
+      "empty": "No monitored volumes",
+      "free": "free"
+    }
+  },
+  "topology": {
+    "toolbar": {
+      "back": "← Back",
+      "title": "🗺️ SCST topology",
+      "allSans": "All",
+      "refresh": "Refresh",
+      "loading": "Loading…"
+    },
+    "legend": {
+      "hba": "HBA port",
+      "fcTarget": "FC target",
+      "accessGroup": "Access group",
+      "initiator": "Active initiator",
+      "volume": "Volume"
+    },
+    "status": {
+      "noNodes": "No nodes",
+      "summary": "{nodes} node(s) · {edges} link(s)"
+    },
+    "empty": {
+      "title": "No topology to display",
+      "hint": "Check SSH connectivity and SCST configuration."
+    },
+    "loading": "Loading topology…",
+    "nodes": {
+      "hbaPort": {
+        "label": "HBA port"
+      },
+      "fcTarget": {
+        "label": "FC target",
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "sessions": "{count} session(s)"
+      },
+      "fcInitiator": {
+        "label": "Initiator"
+      },
+      "scstGroup": {
+        "label": "Access group",
+        "summary": "{initiators} initiator(s) · {luns} LUN(s)"
+      },
+      "scstDevice": {
+        "label": "Volume"
+      }
+    }
+  }
+}
