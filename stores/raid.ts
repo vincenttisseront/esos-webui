@@ -14,6 +14,7 @@ import type {
 } from '~/types/raid'
 import {
   loadPendingAdvancedCleanup,
+  normalizePartitionPath,
   savePendingAdvancedCleanup,
 } from '~/utils/stopped-md'
 
@@ -28,6 +29,7 @@ export const useRaidStore = defineStore('raid', {
     sanId: null as string | null,
     preparedClusterMappingHints: {} as Record<string, RaidClusterPreparedMappingHint>,
     pendingAdvancedCleanup: {} as Record<string, PartitionMetadataDiagnostics>,
+    lastCleanupResultsByPartition: {} as Record<string, ZeroMdSuperblockPartitionResult>,
   }),
 
   getters: {
@@ -164,11 +166,15 @@ export const useRaidStore = defineStore('raid', {
     },
 
     async zeroMdSuperblocks(req: ZeroMdSuperblocksRequest) {
+      const mode = req.mode ?? 'basic'
+      const members = req.members.map(normalizePartitionPath)
+      console.info('[raid-md:cleanup-ui]', { mode, members })
       const result = await $fetch<ZeroMdSuperblocksResponse>('/api/raid/software/arrays/zero-superblocks', {
         method: 'POST',
-        body: { ...req, mode: req.mode ?? 'basic' },
+        body: { ...req, mode, members },
         params: this.query(),
       })
+      this.recordCleanupResults(result.results)
       await this.fetchOverview(true)
       return result
     },
@@ -184,12 +190,26 @@ export const useRaidStore = defineStore('raid', {
       savePendingAdvancedCleanup(this.sanId, this.pendingAdvancedCleanup)
     },
 
-    setPendingAdvancedCleanup(results: ZeroMdSuperblockPartitionResult[]) {
+    recordCleanupResults(results: ZeroMdSuperblockPartitionResult[]) {
+      const next = { ...this.lastCleanupResultsByPartition }
       for (const r of results) {
-        if (r.diagnostics?.recommendedAction === 'advanced_wipe_signatures' && r.diagnostics) {
-          this.pendingAdvancedCleanup[r.partition] = r.diagnostics
+        next[normalizePartitionPath(r.partition)] = {
+          ...r,
+          partition: normalizePartitionPath(r.partition),
         }
       }
+      this.lastCleanupResultsByPartition = next
+    },
+
+    setPendingAdvancedCleanup(results: ZeroMdSuperblockPartitionResult[]) {
+      const next = { ...this.pendingAdvancedCleanup }
+      for (const r of results) {
+        const path = normalizePartitionPath(r.partition)
+        if (r.diagnostics?.recommendedAction === 'advanced_wipe_signatures' && r.diagnostics) {
+          next[path] = { ...r.diagnostics, partition: path }
+        }
+      }
+      this.pendingAdvancedCleanup = next
       this.persistPendingAdvancedCleanup()
     },
 
@@ -197,21 +217,26 @@ export const useRaidStore = defineStore('raid', {
       if (!partitions?.length) {
         this.pendingAdvancedCleanup = {}
       } else {
+        const next = { ...this.pendingAdvancedCleanup }
         for (const p of partitions) {
-          delete this.pendingAdvancedCleanup[p]
+          delete next[normalizePartitionPath(p)]
         }
+        this.pendingAdvancedCleanup = next
       }
       this.persistPendingAdvancedCleanup()
     },
 
     async wipeMdSignatures(req: WipeMdSignaturesRequest) {
+      const members = req.members.map(normalizePartitionPath)
+      console.info('[raid-md:cleanup-ui]', { mode: 'advanced', members })
       const result = await $fetch<WipeMdSignaturesResponse>('/api/raid/software/arrays/wipe-signatures', {
         method: 'POST',
-        body: { ...req, mode: 'advanced' as const },
+        body: { ...req, mode: 'advanced' as const, members },
         params: this.query(),
       })
+      this.recordCleanupResults(result.results)
       await this.fetchOverview(true)
-      this.clearPendingAdvancedCleanup(req.members)
+      this.clearPendingAdvancedCleanup(members)
       return result
     },
 

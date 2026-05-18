@@ -16,6 +16,21 @@ export function pendingAdvancedStorageKey(sanId: string): string {
   return `raid-pending-advanced-${sanId}`
 }
 
+export function normalizePartitionPath(path: string): string {
+  if (!path?.trim()) return path
+  const trimmed = path.trim()
+  return trimmed.startsWith('/dev/') ? trimmed : `/dev/${trimmed}`
+}
+
+export function getFetchErrorData(err: unknown): Record<string, unknown> {
+  const e = err as { data?: Record<string, unknown> }
+  const nested = e?.data?.data
+  if (nested && typeof nested === 'object') {
+    return nested as Record<string, unknown>
+  }
+  return (e?.data ?? {}) as Record<string, unknown>
+}
+
 export function loadPendingAdvancedCleanup(
   sanId: string,
 ): Record<string, PartitionMetadataDiagnostics> {
@@ -24,7 +39,12 @@ export function loadPendingAdvancedCleanup(
     const raw = sessionStorage.getItem(pendingAdvancedStorageKey(sanId))
     if (!raw) return {}
     const parsed = JSON.parse(raw) as Record<string, PartitionMetadataDiagnostics>
-    return parsed && typeof parsed === 'object' ? parsed : {}
+    if (!parsed || typeof parsed !== 'object') return {}
+    const normalized: Record<string, PartitionMetadataDiagnostics> = {}
+    for (const [key, value] of Object.entries(parsed)) {
+      normalized[normalizePartitionPath(key)] = value
+    }
+    return normalized
   } catch {
     return {}
   }
@@ -53,7 +73,7 @@ export function stoppedArrayKey(arr: StoppedMdArray): string {
 }
 
 export function stoppedMemberPaths(arr: StoppedMdArray): string[] {
-  return arr.members.filter(m => m.present).map(m => m.path)
+  return arr.members.filter(m => m.present).map(m => normalizePartitionPath(m.path))
 }
 
 export function suggestDefaultMdName(overview: RaidOverviewResponse | null): string {
@@ -74,17 +94,32 @@ export function isModalDismiss(err: unknown): boolean {
 }
 
 export function extractFetchError(err: unknown): string {
+  const payload = getFetchErrorData(err)
   const e = err as {
     data?: { message?: string; statusMessage?: string }
     message?: string
     statusMessage?: string
   }
-  return e?.data?.message ?? e?.message ?? e?.data?.statusMessage ?? e?.statusMessage ?? 'Erreur inconnue'
+  const payloadMessage = typeof payload.message === 'string' ? payload.message : undefined
+  return payloadMessage
+    ?? e?.data?.message
+    ?? e?.message
+    ?? (typeof payload.statusMessage === 'string' ? payload.statusMessage : undefined)
+    ?? e?.data?.statusMessage
+    ?? e?.statusMessage
+    ?? 'Erreur inconnue'
 }
 
 export function getZeroCleanupErrorResults(err: unknown): ZeroMdSuperblockPartitionResult[] {
-  const e = err as { data?: { results?: ZeroMdSuperblockPartitionResult[] } }
-  return Array.isArray(e?.data?.results) ? e.data.results : []
+  const payload = getFetchErrorData(err)
+  const results = payload.results
+  if (!Array.isArray(results)) return []
+  return results
+    .filter((r): r is ZeroMdSuperblockPartitionResult => Boolean(r && typeof r === 'object'))
+    .map((row) => ({
+      ...row,
+      partition: normalizePartitionPath(row.partition ?? ''),
+    }))
 }
 
 export function formatDiagnosticsSummary(diagnostics: PartitionMetadataDiagnostics): string {
@@ -108,12 +143,14 @@ export function advancedCleanupMembersForArray(
   memberPaths: string[],
   pendingAdvancedCleanup: Record<string, unknown>,
 ): string[] {
-  return memberPaths.filter(p => p in pendingAdvancedCleanup)
+  return memberPaths
+    .map(normalizePartitionPath)
+    .filter(key => key in pendingAdvancedCleanup)
 }
 
 export function hasAdvancedWipeAvailable(err: unknown): boolean {
-  const e = err as { data?: { advancedCleanupAvailable?: boolean; results?: ZeroMdSuperblockPartitionResult[] } }
-  if (e?.data?.advancedCleanupAvailable) return true
+  const payload = getFetchErrorData(err)
+  if (payload.advancedCleanupAvailable === true) return true
   return getZeroCleanupErrorResults(err).some(
     r => r.diagnostics?.recommendedAction === 'advanced_wipe_signatures',
   )

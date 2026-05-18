@@ -50,7 +50,7 @@
             {{ t('raid.stopped_md.zero_superblocks') }}
           </UButton>
           <UButton
-            v-if="showAdvancedWipe"
+            v-if="showAdvancedCleanup"
             size="xs"
             color="amber"
             variant="soft"
@@ -65,7 +65,7 @@
         <p class="text-[10px] text-gray-500 text-right leading-snug">
           {{ t('raid.stopped_md.assemble_help') }}
           <span class="block mt-0.5">{{ t('raid.stopped_md.zero_superblocks_help') }}</span>
-          <span v-if="showAdvancedWipe" class="block mt-0.5 text-amber-600 dark:text-amber-400">
+          <span v-if="showAdvancedCleanup" class="block mt-0.5 text-amber-600 dark:text-amber-400">
             {{ t('raid.stopped_md.advanced_wipe_card_hint') }}
           </span>
         </p>
@@ -88,7 +88,16 @@
           <tr v-for="(member, idx) in array.members" :key="memberRowKey(member, idx)" class="border-b border-gray-100">
             <td class="py-1.5 pr-3 font-mono text-gray-800">{{ member.path }}</td>
             <td class="py-1.5 pr-3 text-gray-600" :title="memberStatusTitle(member)">
-              {{ memberStatusLabel(member) }}
+              <span class="inline-flex items-center gap-1.5 flex-wrap">
+                {{ memberStatusLabel(member) }}
+                <UBadge
+                  v-if="memberNeedsAdvancedCleanup(member)"
+                  color="amber"
+                  size="xs"
+                  variant="soft"
+                  :label="t('raid.stopped_md.advanced_cleanup')"
+                />
+              </span>
             </td>
           </tr>
         </tbody>
@@ -104,6 +113,7 @@ const props = defineProps<{
   array: StoppedMdArray
   readOnly?: boolean
   actionLoading?: boolean
+  needsAdvancedCleanup?: boolean
   advancedCleanupMembers?: string[]
 }>()
 
@@ -114,9 +124,22 @@ defineEmits<{
   inspect: [array: StoppedMdArray]
 }>()
 
-const showAdvancedWipe = computed(() => (props.advancedCleanupMembers?.length ?? 0) > 0)
+const showAdvancedCleanup = computed(() =>
+  props.needsAdvancedCleanup === true
+  || (props.advancedCleanupMembers?.length ?? 0) > 0,
+)
+
+const advancedMemberSet = computed(() => new Set(props.advancedCleanupMembers ?? []))
 
 const { t } = useEsosI18n()
+
+function memberPartitionPath(member: StoppedMdArrayMember): string {
+  return member.path.startsWith('/dev/') ? member.path : `/dev/${member.path}`
+}
+
+function memberNeedsAdvancedCleanup(member: StoppedMdArrayMember): boolean {
+  return advancedMemberSet.value.has(memberPartitionPath(member))
+}
 
 const displayPath = computed(() => props.array.path ?? `/dev/${props.array.name}`)
 const displayTitle = computed(() => {
