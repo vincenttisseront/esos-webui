@@ -23,6 +23,7 @@ import { runPreflight } from '../server/utils/raid-preflight'
 import type { StoppedMdArray } from '../server/utils/raid-types'
 import { validatePrepareMdPartitionsRequest } from '../server/utils/raid-md-partition-actions'
 import { buildCreateMdArrayNodeResults, buildPrepareMdPartitionsNodePlans, duplicateManualMappingBlockers, mapDeviceToPeer, runNodePreflight } from '../server/utils/raid-cluster-storage-preflight'
+import { detectStoppedMdArrays } from '../server/utils/stopped-md-arrays'
 import { derivePartitionMappingsFromDiskMappings, expectedFirstPartitionPath, filterPartitionMappingsForDevices } from '../utils/raid-cluster-mapping'
 
 // ─── RAID01 – parseMdstat : tableau vide ─────────────────────────────────────
@@ -168,6 +169,90 @@ Consistency Policy : resync
     expect(sda?.state).toContain('active')
   })
 })
+
+describe('RAID05b – stopped MD arrays from mdadm --examine', () => {
+  it('groups complete matching metadata as assemblable', () => {
+    const arrays = detectStoppedMdArrays({
+      mdadmScan: '',
+      blockDevices: [
+        stoppedMember('/dev/sdb1', { uuid: 'abcd', name: 'host:md0', raidLevel: '1', raidDevices: 2, events: 12 }),
+        stoppedMember('/dev/sdc1', { uuid: 'abcd', name: 'host:md0', raidLevel: '1', raidDevices: 2, events: 12 }),
+      ],
+      activeMdArrays: [],
+    })
+
+    expect(arrays).toHaveLength(1)
+    expect(arrays[0].stoppedState).toBe('assemblable')
+    expect(arrays[0].name).toBe('md0')
+    expect(arrays[0].raidDevices).toBe(2)
+    expect(arrays[0].members.map(m => m.path)).toEqual(['/dev/sdb1', '/dev/sdc1'])
+  })
+
+  it('keeps partial metadata incomplete and avoids RAIDunknown display data', () => {
+    const arrays = detectStoppedMdArrays({
+      mdadmScan: '',
+      blockDevices: [
+        stoppedMember('/dev/sdb1', { uuid: 'abcd', name: 'host:md0', raidLevel: 'unknown', raidDevices: 2, events: 12 }),
+      ],
+      activeMdArrays: [],
+    })
+
+    expect(arrays).toHaveLength(1)
+    expect(arrays[0].stoppedState).toBe('incomplete')
+    expect(arrays[0].name).toBe('md0')
+    expect(arrays[0].raidLevel).toBe('unknown')
+  })
+
+  it('keeps ungroupable metadata inspectable and excludes active members', () => {
+    const arrays = detectStoppedMdArrays({
+      mdadmScan: '',
+      blockDevices: [
+        stoppedMember('/dev/sdb1', { name: 'unknown', raidDevices: 2 }),
+        stoppedMember('/dev/sdc1', { uuid: 'active', raidLevel: '1', raidDevices: 2 }),
+      ],
+      activeMdArrays: [{
+        name: 'md1',
+        path: '/dev/md1',
+        uuid: 'active',
+        raidLevel: '1',
+        state: 'active',
+        raidDevices: 2,
+        activeDevices: 2,
+        workingDevices: 2,
+        failedDevices: 0,
+        spareDevices: 0,
+        members: [{ path: '/dev/sdc1', state: ['active', 'sync'] }],
+        usedBy: [],
+        warnings: [],
+      }],
+    })
+
+    expect(arrays).toHaveLength(1)
+    expect(arrays[0].name).toBe('unknown')
+    expect(arrays[0].members.map(m => m.path)).toEqual(['/dev/sdb1'])
+  })
+})
+
+function stoppedMember(path: string, mdExamine: Record<string, unknown>) {
+  return {
+    name: path.split('/').pop() ?? path,
+    path,
+    sizeBytes: 1024,
+    type: 'part',
+    hasMdSuperblock: true,
+    mdExamine: {
+      raw: `mdadm --examine ${path}`,
+      ...mdExamine,
+    },
+    mdEligibilityReasons: [],
+    eligibleForMdPartitionPrep: false,
+    mdPartitionPrepReasons: [],
+    usedBy: ['md'],
+    eligibleForMd: false,
+    eligibleForHardwareRaid: false,
+    warnings: [],
+  } as any
+}
 
 // ─── RAID06 – buildStorCliCreateLd ───────────────────────────────────────────
 describe('RAID06 – buildStorCliCreateLd', () => {

@@ -117,6 +117,12 @@
       Pré-requis validés — opération autorisée
     </div>
 
+    <!-- Commande prévue -->
+    <div v-if="preflight.commandPreview" class="bg-gray-100 dark:bg-gray-800 rounded px-3 py-2 text-xs text-gray-600 dark:text-gray-400">
+      Commande prévue :
+      <code class="block mt-1 text-gray-800 dark:text-gray-100 font-mono break-all">{{ preflight.commandPreview }}</code>
+    </div>
+
     <!-- Phrase de confirmation -->
     <div v-if="preflight.requiredConfirmation" class="bg-gray-100 dark:bg-gray-800 rounded px-3 py-2 text-xs text-gray-600 dark:text-gray-400">
       Phrase de confirmation requise :

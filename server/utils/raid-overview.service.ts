@@ -6,6 +6,7 @@ import type { SSHSessionManager } from './ssh-session-manager'
 import type {
   RaidOverviewResponse, RaidToolsInfo, RaidBlockDevice,
   MdArray, HardwareRaidController, MdExamineInfo,
+  StoppedMdArray,
 } from './raid-types'
 import { parseMdstat } from './parsers/mdstat.parser'
 import { parseMdadmDetail } from './parsers/mdadm-detail.parser'

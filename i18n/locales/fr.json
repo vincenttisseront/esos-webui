@@ -311,12 +311,14 @@
       "persisted_partial": "Configuration mdadm enregistrée sur certains nœuds seulement."
     },
     "stopped_md": {
-      "section_title": "Tableaux MD arrêtés / assemblables",
-      "section_description": "Ces tableaux ne sont plus actifs dans le noyau mais conservent des superblocks MD sur les partitions membres. L'assemblage relance le tableau ; le nettoyage des métadonnées est destructif.",
+      "section_title": "Tableaux RAID détectés mais arrêtés",
+      "section_description": "Ces tableaux ne sont pas actifs dans le noyau Linux, mais des métadonnées MD existent encore sur les partitions membres.",
       "cluster_notice": "Détection et actions sur ce nœud uniquement. L'assemblage multi-nœuds cluster n'est pas encore automatisé.",
+      "detected_array": "Tableau RAID détecté",
+      "orphan_metadata": "Métadonnées RAID orphelines",
       "inspect": "Inspecter",
-      "assemble": "Assembler / relancer",
-      "zero_superblocks": "Nettoyer métadonnées",
+      "assemble": "Relancer le tableau",
+      "zero_superblocks": "Supprimer les métadonnées RAID",
       "member_path": "Partition",
       "member_state": "État",
       "member_present": "présente",
@@ -393,6 +395,57 @@
       "blocked": "bloqué",
       "partition_table_replaced": "La table de partitions sera remplacée.",
       "expected_member_partition": "Partition membre RAID attendue"
+    },
+    "stopped_arrays": {
+      "title": "Tableaux RAID détectés mais arrêtés",
+      "description": "Ces tableaux ne sont pas actifs dans le noyau Linux, mais des métadonnées MD existent encore sur les partitions membres.",
+      "cluster_warning_title": "Attention cluster",
+      "cluster_warning_description": "La détection et les actions ci-dessous concernent uniquement le nœud courant tant que l'assemblage cluster-aware n'est pas implémenté.",
+      "categories": {
+        "assemblable": "Tableaux complets / assemblables",
+        "incomplete_orphan": "Métadonnées incomplètes / orphelines"
+      },
+      "labels": {
+        "detected_array": "Tableau RAID détecté",
+        "orphan_metadata": "Métadonnées RAID orphelines",
+        "unknown_md_name": "Nom MD inconnu"
+      },
+      "badges": {
+        "assemblable": "Assemblable",
+        "inspect": "À inspecter"
+      },
+      "confidence": {
+        "high": "confiance haute",
+        "medium": "confiance moyenne",
+        "low": "confiance faible"
+      },
+      "fields": {
+        "raid_level": "Niveau RAID",
+        "uuid": "UUID",
+        "members": "Membres",
+        "md_name": "Nom MD",
+        "member_partitions": "Partitions membres",
+        "missing_unknown": "Manquant / inconnu",
+        "command_preview": "Commande prévue"
+      },
+      "recommended_action": "Action recommandée",
+      "actions": {
+        "assemble": "Relancer le tableau",
+        "inspect": "Inspecter",
+        "cleanup": "Supprimer les métadonnées RAID",
+        "show_raw": "Afficher les détails bruts mdadm --examine"
+      },
+      "prompts": {
+        "md_name": "Nom du tableau MD à relancer (ex: md0)",
+        "assemble_command": "Commande mdadm prévue :",
+        "confirm_phrase": "Saisissez exactement pour confirmer :"
+      },
+      "cleanup": {
+        "title": "Zone destructive",
+        "description": "Ne supprimez ces métadonnées qu'après inspection et sauvegardes.",
+        "modal_title": "Supprimer les métadonnées RAID",
+        "modal_description": "Cette action exécute mdadm --zero-superblock sur les partitions sélectionnées. Elle supprime les métadonnées MD et peut empêcher la récupération du tableau."
+      }
     }
   },
   "admin": {

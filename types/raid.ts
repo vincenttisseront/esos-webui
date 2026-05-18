@@ -484,7 +484,8 @@ export interface RaidPreflightRequest {
   backend: RaidBackendType
   action:
     | 'create_hw_ld' | 'delete_hw_ld' | 'add_hotspare' | 'remove_hotspare'
-    | 'create_md' | 'prepare_md_partitions' | 'stop_md' | 'md_add_device' | 'md_set_faulty' | 'md_remove_device'
+    | 'create_md' | 'prepare_md_partitions' | 'stop_md' | 'assemble_md' | 'zero_md_superblocks'
+    | 'md_add_device' | 'md_set_faulty' | 'md_remove_device'
   payload: unknown
 }
 

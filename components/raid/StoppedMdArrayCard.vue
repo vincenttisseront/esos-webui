@@ -4,9 +4,9 @@
       <div>
         <div class="flex items-center gap-2 flex-wrap">
           <UIcon name="i-heroicons-server-stack" class="w-4 h-4 text-gray-400" />
-          <span class="font-mono font-semibold text-gray-900 dark:text-gray-100">{{ displayPath }}</span>
+          <span class="font-semibold text-gray-900 dark:text-gray-100">{{ displayTitle }}</span>
           <UBadge :color="stateColor" :label="stateLabel" size="xs" variant="soft" />
-          <UBadge color="gray" :label="`RAID${array.raidLevel}`" size="xs" variant="outline" />
+          <UBadge v-if="array.raidLevel !== 'unknown'" color="gray" :label="`RAID${array.raidLevel}`" size="xs" variant="outline" />
         </div>
         <div class="flex flex-wrap gap-x-4 mt-1 text-xs text-gray-500">
           <span v-if="array.uuid">UUID : {{ array.uuid }}</span>
@@ -69,6 +69,12 @@ defineEmits<{
 const { t } = useEsosI18n()
 
 const displayPath = computed(() => props.array.path ?? `/dev/${props.array.name}`)
+const displayTitle = computed(() => {
+  if (props.array.path) return props.array.path
+  if (props.array.name && props.array.name !== 'unknown') return `/dev/${props.array.name}`
+  if (props.array.stoppedState === 'assemblable') return t('raid.stopped_md.detected_array')
+  return t('raid.stopped_md.orphan_metadata')
+})
 
 const stateLabel = computed(() => t(`raid.stopped_md.state.${props.array.stoppedState}`))
 

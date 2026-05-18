@@ -311,12 +311,14 @@
       "persisted_partial": "mdadm configuration saved on some nodes only."
     },
     "stopped_md": {
-      "section_title": "Stopped / assemblable MD arrays",
-      "section_description": "These arrays are no longer active in the kernel but still have MD superblocks on member partitions. Assemble restarts the array; clearing metadata is destructive.",
+      "section_title": "RAID arrays detected but stopped",
+      "section_description": "These arrays are not active in the Linux kernel, but MD metadata still exists on member partitions.",
       "cluster_notice": "Detection and actions apply to this node only. Multi-node cluster assemble is not automated yet.",
+      "detected_array": "Detected RAID array",
+      "orphan_metadata": "Orphan RAID metadata",
       "inspect": "Inspect",
-      "assemble": "Assemble / restart",
-      "zero_superblocks": "Clear metadata",
+      "assemble": "Restart array",
+      "zero_superblocks": "Remove RAID metadata",
       "member_path": "Partition",
       "member_state": "State",
       "member_present": "present",
@@ -393,6 +395,57 @@
       "blocked": "blocked",
       "partition_table_replaced": "The partition table will be replaced.",
       "expected_member_partition": "Expected RAID member partition"
+    },
+    "stopped_arrays": {
+      "title": "RAID arrays detected but stopped",
+      "description": "These arrays are not active in the Linux kernel, but MD metadata still exists on member partitions.",
+      "cluster_warning_title": "Cluster warning",
+      "cluster_warning_description": "Detection and actions below apply only to the current node until cluster-aware assembly is implemented.",
+      "categories": {
+        "assemblable": "Complete / assemblable arrays",
+        "incomplete_orphan": "Incomplete / orphan metadata"
+      },
+      "labels": {
+        "detected_array": "Detected RAID array",
+        "orphan_metadata": "Orphan RAID metadata",
+        "unknown_md_name": "Unknown MD name"
+      },
+      "badges": {
+        "assemblable": "Assemblable",
+        "inspect": "Inspect"
+      },
+      "confidence": {
+        "high": "high confidence",
+        "medium": "medium confidence",
+        "low": "low confidence"
+      },
+      "fields": {
+        "raid_level": "RAID level",
+        "uuid": "UUID",
+        "members": "Members",
+        "md_name": "MD name",
+        "member_partitions": "Member partitions",
+        "missing_unknown": "Missing / unknown",
+        "command_preview": "Command preview"
+      },
+      "recommended_action": "Recommended action",
+      "actions": {
+        "assemble": "Restart array",
+        "inspect": "Inspect",
+        "cleanup": "Remove RAID metadata",
+        "show_raw": "Show raw mdadm --examine details"
+      },
+      "prompts": {
+        "md_name": "MD array name to restart (e.g. md0)",
+        "assemble_command": "Planned mdadm command:",
+        "confirm_phrase": "Type exactly to confirm:"
+      },
+      "cleanup": {
+        "title": "Destructive zone",
+        "description": "Remove this metadata only after inspection and backups.",
+        "modal_title": "Remove RAID metadata",
+        "modal_description": "This action runs mdadm --zero-superblock on the selected partitions. It removes MD metadata and can prevent array recovery."
+      }
     }
   },
   "admin": {
