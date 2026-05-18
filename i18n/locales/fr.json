@@ -297,7 +297,18 @@
         "selected_count": "Partitions sélectionnées : {count}",
         "min_devices_error": "RAID {level} requiert au minimum {min} partitions. Sélectionnées : {count}.",
         "raid10_even_error": "RAID 10 requiert un nombre pair de partitions."
-      }
+      },
+      "done_title": "Tableau MD créé",
+      "done_description": "Le tableau {path} a été créé. Les tableaux logiciels et block devices ont été rafraîchis.",
+      "view_array": "Voir le tableau",
+      "close": "Fermer",
+      "next_steps_title": "Étapes suivantes",
+      "next_step_use": "Utiliser {path} comme volume de stockage.",
+      "next_step_lvm": "Créer un volume LVM (PV/VG/LV) sur ce tableau si votre déploiement utilise LVM.",
+      "next_step_scst": "Créer un système de fichiers ou une cible SCST / mapping selon le flux stockage de l'application.",
+      "resync_notice": "Resynchronisation en cours — le tableau est actif et apparaît comme resync dans la liste.",
+      "persisted_notice": "Configuration mdadm enregistrée sur le nœud.",
+      "persisted_partial": "Configuration mdadm enregistrée sur certains nœuds seulement."
     },
     "prepare_partitions": {
       "title": "Préparer des partitions membres RAID",

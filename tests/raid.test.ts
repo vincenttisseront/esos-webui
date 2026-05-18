@@ -12,6 +12,7 @@ import {
   createMdArray,
   createMdArrayFromPlan,
   isMdadmAwaitingInteractiveConfirmation,
+  isMdadmCreateCommandFailure,
   MDADM_INTERACTIVE_CONFIRM_MESSAGE,
   resolveMdCreateExecErrorMessage,
 } from '../server/utils/raid-md-actions'
@@ -776,6 +777,14 @@ describe('RAID18c – erreurs exec mdadm', () => {
     expect(resolveMdCreateExecErrorMessage(err, command, 'partial output', undefined))
       .toBe(`SSH exec timeout (120000ms): ${command}`)
   })
+
+  it('n\'interprète pas la resync comme un échec mdadm', () => {
+    expect(isMdadmCreateCommandFailure('mdadm: array started\nresync = 12.3%\nEXIT_CODE=0')).toBe(false)
+  })
+
+  it('détecte EXIT_CODE non nul comme échec mdadm', () => {
+    expect(isMdadmCreateCommandFailure('mdadm: error message\nEXIT_CODE=1')).toBe(true)
+  })
 })
 
 describe('RAID18b – payload frontend création MD', () => {
@@ -810,6 +819,28 @@ describe('RAID18b – payload frontend création MD', () => {
     expect(endpoint).toContain('data: err.data')
     expect(endpoint).toContain('node.command = typeof errorData.command === \'string\' ? errorData.command : node.command')
     expect(endpoint).toContain('traceMdCreateNodeFailure')
+  })
+
+  it('affiche une étape Terminé et diffère la fermeture du modal', () => {
+    const source = readFileSync(new URL('../components/raid/CreateMdArrayWizard.vue', import.meta.url), 'utf8')
+    const submitBlock = source.slice(source.indexOf('async function submit'), source.indexOf('function resetExecutionState'))
+
+    expect(source).toContain('Terminé')
+    expect(source).toContain('v-else-if="step === 4"')
+    expect(source).toContain('function finishViewArray')
+    expect(source).toContain('function finishClose')
+    expect(source).toContain('step.value = 4')
+    expect(submitBlock).not.toContain("emit('confirm'")
+    expect(source).toContain("buildConfirmPayload('view-array')")
+  })
+
+  it('route vers le tableau MD après confirmation du wizard', () => {
+    const source = readFileSync(new URL('../pages/admin/sans/[id]/raid.vue', import.meta.url), 'utf8')
+
+    expect(source).toContain('isMdCreateConfirmPayload')
+    expect(source).toContain("activeTab.value = 'software'")
+    expect(source).toContain('highlightedArrayPath')
+    expect(source).toContain('md-array-${arr.name}')
   })
 })
 

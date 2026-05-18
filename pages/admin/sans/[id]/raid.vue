@@ -213,7 +213,12 @@
         <p>Aucun tableau MD détecté</p>
         <p class="text-xs mt-1">Utilisez le bouton "Créer tableau MD" pour en créer un</p>
       </div>
-      <UCard v-for="arr in raid.mdArrays" :key="arr.path">
+      <UCard
+        v-for="arr in raid.mdArrays"
+        :key="arr.path"
+        :id="mdArrayDomId(arr)"
+        :class="{ 'ring-2 ring-blue-500 ring-offset-1': arr.path === highlightedArrayPath }"
+      >
         <MdArrayCard
           :array="arr"
           @stop="handleStopMd"
@@ -339,7 +344,7 @@
 </template>
 
 <script setup lang="ts">
-import type { MdArray, MdMemberDevice, HardwareRaidController, HardwareRaidLogicalDrive, RaidPreflightResult } from '~/types/raid'
+import type { CreateMdArrayWizardConfirmPayload, MdArray, MdMemberDevice, HardwareRaidController, HardwareRaidLogicalDrive, RaidPreflightResult } from '~/types/raid'
 import type { SanSummary } from '~/server/db/repositories/san.repository'
 
 definePageMeta({ layout: 'default', ssr: false })
@@ -363,15 +368,47 @@ const tabs = [
   { key: 'ops',      label: 'Opérations',        icon: 'i-heroicons-queue-list' },
 ]
 const activeTab = ref('overview')
+const highlightedArrayPath = ref<string | null>(null)
 
 // Wizards & modals
 const { open: openModal } = useAppModal()
 
+function mdArrayDomId(arr: MdArray): string {
+  return `md-array-${arr.name}`
+}
+
+async function scrollToHighlightedArray(arrayPath: string) {
+  await nextTick()
+  const name = arrayPath.replace(/^\/dev\//, '')
+  document.getElementById(`md-array-${name}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+}
+
+function isMdCreateConfirmPayload(value: unknown): value is CreateMdArrayWizardConfirmPayload {
+  return typeof value === 'object'
+    && value !== null
+    && 'action' in value
+    && 'arrayPath' in value
+    && ((value as CreateMdArrayWizardConfirmPayload).action === 'view-array'
+      || (value as CreateMdArrayWizardConfirmPayload).action === 'close')
+}
+
 async function openMdWizard() {
+  highlightedArrayPath.value = null
   const { default: Wizard } = await import('~/components/raid/CreateMdArrayWizard.vue')
   try {
-    await openModal({ component: Wizard, props: { blockDevices: raid.blockDevices, sourceSanId: sanId, clusterId: san.value?.clusterId, persistent: true } })
-    await raid.fetchOverview(true)
+    const result = await openModal({
+      component: Wizard,
+      props: { blockDevices: raid.blockDevices, sourceSanId: sanId, clusterId: san.value?.clusterId, persistent: true },
+    })
+    if (!isMdCreateConfirmPayload(result)) return
+    if (!result.overviewRefreshed) {
+      await raid.fetchOverview(true)
+    }
+    if (result.action === 'view-array') {
+      activeTab.value = 'software'
+      highlightedArrayPath.value = result.arrayPath
+      await scrollToHighlightedArray(result.arrayPath)
+    }
   } catch { /* annulé */ }
 }
 

@@ -297,7 +297,18 @@
         "selected_count": "Selected partitions: {count}",
         "min_devices_error": "RAID {level} requires at least {min} partitions. Selected: {count}.",
         "raid10_even_error": "RAID 10 requires an even number of partitions."
-      }
+      },
+      "done_title": "MD array created",
+      "done_description": "Array {path} was created. Software arrays and block devices have been refreshed.",
+      "view_array": "View array",
+      "close": "Close",
+      "next_steps_title": "Next steps",
+      "next_step_use": "Use {path} as a storage volume.",
+      "next_step_lvm": "Create an LVM stack (PV/VG/LV) on this array if your deployment uses LVM.",
+      "next_step_scst": "Create a filesystem or SCST target / mapping according to your storage workflow.",
+      "resync_notice": "Resync in progress — the array is active and listed as resync.",
+      "persisted_notice": "mdadm configuration saved on the node.",
+      "persisted_partial": "mdadm configuration saved on some nodes only."
     },
     "prepare_partitions": {
       "title": "Prepare RAID member partitions",

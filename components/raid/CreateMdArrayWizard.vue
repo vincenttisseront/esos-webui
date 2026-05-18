@@ -349,6 +349,49 @@
 
         <p v-if="submitError && !executionNodeResults.length" class="text-sm text-red-600">{{ submitError }}</p>
       </div>
+
+      <!-- Étape 4 : Terminé -->
+      <div v-else-if="step === 4" class="space-y-4">
+        <UAlert
+          :title="t('raid.create_md.done_title')"
+          :description="t('raid.create_md.done_description', { path: createdArrayPath })"
+          color="green"
+          icon="i-heroicons-check-circle"
+        />
+        <UAlert
+          v-if="createdArrayIsResyncing"
+          :title="t('raid.create_md.resync_notice')"
+          color="amber"
+          icon="i-heroicons-arrow-path"
+          variant="soft"
+        />
+        <p v-if="createPersistedSummary" class="text-xs text-gray-600">{{ createPersistedSummary }}</p>
+        <div v-if="executionNodeResults.length" class="space-y-2">
+          <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">{{ t('raid.create_md.cluster_execution.status_title') }}</p>
+          <div
+            v-for="node in executionNodeResults"
+            :key="node.sanId"
+            class="rounded border border-gray-200 bg-gray-50 p-3 space-y-1"
+          >
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <p class="text-sm font-semibold text-gray-800">{{ node.label }}</p>
+                <p class="text-xs text-gray-500 font-mono">{{ node.devices.join(', ') }}</p>
+              </div>
+              <UBadge :color="nodeStatusColor(node.status)" :label="nodeStatusLabel(node.status)" variant="soft" size="xs" />
+            </div>
+            <p v-if="node.persisted" class="text-xs text-green-700">{{ t('raid.create_md.persisted_notice') }}</p>
+          </div>
+        </div>
+        <div class="space-y-2">
+          <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">{{ t('raid.create_md.next_steps_title') }}</p>
+          <ol class="list-decimal pl-5 text-sm text-gray-600 space-y-1">
+            <li>{{ t('raid.create_md.next_step_use', { path: createdArrayPath }) }}</li>
+            <li>{{ t('raid.create_md.next_step_lvm') }}</li>
+            <li>{{ t('raid.create_md.next_step_scst') }}</li>
+          </ol>
+        </div>
+      </div>
     </div>
 
     <!-- Footer -->
@@ -357,12 +400,20 @@
         color="gray"
         variant="ghost"
         :disabled="busy"
-        @click="step === 0 ? $emit('cancel') : step--"
+        @click="handleBackOrCancel"
       >
-        {{ step === 0 ? 'Annuler' : 'Retour' }}
+        {{ step === 0 ? 'Annuler' : step === 4 ? t('raid.create_md.close') : 'Retour' }}
       </UButton>
       <UButton
-        v-if="step < steps.length - 1"
+        v-if="step === 4"
+        color="blue"
+        icon="i-heroicons-server-stack"
+        @click="finishViewArray"
+      >
+        {{ t('raid.create_md.view_array') }}
+      </UButton>
+      <UButton
+        v-else-if="step < 3"
         color="blue"
         :disabled="!canNext || busy"
         @click="handleNext"
@@ -370,7 +421,7 @@
         Suivant
       </UButton>
       <UButton
-        v-else
+        v-else-if="step === 3"
         color="green"
         :disabled="!canSubmit || busy"
         :loading="busy"
@@ -384,7 +435,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ClusterDiskMapping, ClusterDiskMappingInput, ClusterStoragePreflightResult, CreateMdArrayExecutionPlan, CreateMdArrayNodeResult, RaidBlockDevice, RaidPreflightResult } from '~/types/raid'
+import type { ClusterDiskMapping, ClusterDiskMappingInput, ClusterStoragePreflightResult, CreateMdArrayExecutionPlan, CreateMdArrayNodeResult, CreateMdArrayResponse, CreateMdArrayWizardConfirmPayload, RaidBlockDevice, RaidPreflightResult } from '~/types/raid'
 import { filterPartitionMappingsForDevices } from '~/utils/raid-cluster-mapping'
 
 const props = defineProps<{
@@ -394,13 +445,13 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  confirm: []
+  confirm: [payload: CreateMdArrayWizardConfirmPayload]
   cancel: []
 }>()
 const raid = useRaidStore()
 const { t } = useEsosI18n()
 
-const steps = ['Partitions', 'Nom & RAID', 'Pré-vérification', 'Confirmation']
+const steps = ['Partitions', 'Nom & RAID', 'Pré-vérification', 'Confirmation', 'Terminé']
 const step = ref(0)
 const busy = ref(false)
 const understood = ref(false)
@@ -413,6 +464,8 @@ const clusterPreflightError = ref<string | null>(null)
 const executionPlan = ref<CreateMdArrayExecutionPlan | null>(null)
 const executionPlanError = ref<string | null>(null)
 const executionNodeResults = ref<CreateMdArrayNodeResult[]>([])
+const createResult = ref<CreateMdArrayResponse | null>(null)
+const overviewRefreshedOnDone = ref(false)
 const executionAttemptId = ref(0)
 const executionAttemptToken = ref(0)
 const executionStartedAt = ref<Date | null>(null)
@@ -541,6 +594,29 @@ const canSubmit = computed(() =>
   && (!preflightResult.value?.requiredConfirmation || form.confirmation === preflightResult.value.requiredConfirmation),
 )
 
+const createdArrayPath = computed(() => `/dev/${form.name}`)
+
+const createdArrayInOverview = computed(() =>
+  raid.mdArrays.find(arr => arr.path === createdArrayPath.value || arr.name === form.name),
+)
+
+const createdArrayIsResyncing = computed(() => {
+  const state = createdArrayInOverview.value?.state
+  return state === 'resync' || state === 'recovering'
+})
+
+const createPersistedSummary = computed(() => {
+  if (!createResult.value) return ''
+  const nodes = executionNodeResults.value
+  if (nodes.length === 0) {
+    return createResult.value.persisted ? t('raid.create_md.persisted_notice') : ''
+  }
+  const persistedCount = nodes.filter(node => node.persisted).length
+  if (persistedCount === nodes.length) return t('raid.create_md.persisted_notice')
+  if (persistedCount > 0) return t('raid.create_md.persisted_partial')
+  return ''
+})
+
 watch(
   () => [form.name, form.level, form.chunkKb, form.devices.join('\u0000')],
   () => {
@@ -557,6 +633,40 @@ watch(
 onMounted(() => {
   resetPlanAndExecutionState()
 })
+
+watch(step, async (value) => {
+  if (value !== 4) return
+  await raid.fetchOverview(true)
+  overviewRefreshedOnDone.value = true
+})
+
+function buildConfirmPayload(action: CreateMdArrayWizardConfirmPayload['action']): CreateMdArrayWizardConfirmPayload {
+  return {
+    action,
+    arrayPath: createdArrayPath.value,
+    overviewRefreshed: overviewRefreshedOnDone.value,
+  }
+}
+
+function finishClose() {
+  emit('confirm', buildConfirmPayload('close'))
+}
+
+function finishViewArray() {
+  emit('confirm', buildConfirmPayload('view-array'))
+}
+
+function handleBackOrCancel() {
+  if (step.value === 0) {
+    emit('cancel')
+    return
+  }
+  if (step.value === 4) {
+    finishClose()
+    return
+  }
+  step.value--
+}
 
 async function handleNext() {
   step.value++
@@ -691,6 +801,7 @@ async function submit() {
         : undefined,
     })
     if (attemptId !== executionAttemptId.value || attemptToken !== executionAttemptToken.value || attemptPlanSignature !== executionPlanSignature(executionPlan.value)) return
+    createResult.value = result
     if (result.clusterExecution?.nodeResults) {
       executionNodeResults.value = result.clusterExecution.nodeResults
     } else {
@@ -702,7 +813,7 @@ async function submit() {
         persisted: result.persisted,
       }))
     }
-    emit('confirm')
+    step.value = 4
   } catch (err: any) {
     if (attemptId !== executionAttemptId.value || attemptToken !== executionAttemptToken.value || attemptPlanSignature !== executionPlanSignature(executionPlan.value)) return
     const errorData = err?.data?.data ?? err?.data ?? {}
@@ -737,6 +848,8 @@ function resetExecutionState(): void {
   executionNodeResults.value = []
   executionStartedAt.value = null
   executionAttemptToken.value += 1
+  createResult.value = null
+  overviewRefreshedOnDone.value = false
 }
 
 function resetPlanAndExecutionState(): void {
