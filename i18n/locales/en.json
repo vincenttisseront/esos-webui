@@ -350,7 +350,52 @@
         "pending": "pending",
         "running": "running",
         "success": "success",
-        "failed": "failed"
+        "failed": "failed",
+        "skipped": "skipped"
+      },
+      "recovery": {
+        "node_state_title": "MD state per node",
+        "mode_title": "Recovery mode",
+        "degraded_title": "Degraded cluster",
+        "degraded_description": "Nodes are asymmetric — only selected nodes will be modified.",
+        "stop_active_only_title": "Stop on active nodes only",
+        "stop_active_only_description": "Some nodes do not have an active array. Only nodes with an active md array will be stopped; others are skipped.",
+        "assemble_missing_only_title": "Assemble on stopped nodes only",
+        "assemble_missing_only_description": "Some nodes already have the array active. Assembly runs only on nodes with stopped metadata.",
+        "confirm_stop_active_only": "Stop on active nodes",
+        "no_active_to_stop": "Nothing to stop — no active array on the cluster",
+        "repair_needed": "Manual repair required — no stopped metadata detected",
+        "col_node": "Node",
+        "col_state": "State",
+        "col_participation": "Participation",
+        "col_status": "Status",
+        "col_command": "Command",
+        "node_state": {
+          "active": "active",
+          "stopped": "stopped",
+          "missing": "missing",
+          "unreachable": "unreachable",
+          "metadata_only": "metadata",
+          "inactive_device": "inactive device",
+          "error": "error"
+        },
+        "participation": {
+          "execute": "execute",
+          "skip": "skip",
+          "blocked": "blocked"
+        },
+        "mode": {
+          "stop_all_active": "Stop on all active nodes",
+          "stop_active_only": "Stop on active nodes only",
+          "assemble_missing_only": "Assemble on stopped nodes only",
+          "assemble_stopped_nodes": "Assemble on all stopped nodes",
+          "cleanup_mapped_only": "Mapped cleanup only"
+        },
+        "skip_reason": {
+          "already_stopped": "Already stopped / absent",
+          "unreachable": "SSH unavailable",
+          "no_active_array": "Array not active"
+        }
       }
     },
     "stopped_md": {

@@ -5,6 +5,7 @@ import { sans } from '../db/schema'
 import { getSSHPool } from './ssh-pool'
 import { collectRaidOverview } from './raid-overview.service'
 import { prefixBlockerRefs } from './raid-md-detection'
+import { buildClusterMdRecoveryAssessment } from './raid-cluster-md-node-state'
 import { runPreflight } from './raid-preflight'
 import { buildMdCreateCommand, MD_CREATE_EMPTY_MEMBERS_MESSAGE } from './raid-md-validation'
 import type {
@@ -40,6 +41,16 @@ export const CLUSTER_MD_ACTIONS: ClusterStorageAction[] = [
 
 function isPathlessClusterAction(action: ClusterStorageAction): boolean {
   return action === 'stop_md'
+}
+
+function isDegradedRecoveryAction(action: ClusterStorageAction): boolean {
+  return action === 'stop_md' || action === 'assemble_md'
+}
+
+function isMissingArrayBlocker(message: string, arrayName: string): boolean {
+  return message.includes(`Array ${arrayName} introuvable`)
+    || message.includes(`Tableau MD arrêté ${arrayName} introuvable`)
+    || message.includes(`Le tableau ${arrayName} est déjà actif`)
 }
 
 interface ClusterSanRow {
@@ -91,9 +102,16 @@ export async function runClusterStoragePreflight(
   if (!source || !source.sshReady || !source.tools) {
     blockers.push('Inventaire du nœud source indisponible')
   } else {
+    const degradedRecovery = isDegradedRecoveryAction(req.action)
+    const arrayNameForRecovery = degradedRecovery
+      ? String((req.payload as Record<string, unknown>)?.name ?? '')
+      : ''
     const sourcePreflight = await runNodePreflight(req.action, req.payload, source)
     perNodePreflights[source.sanId] = sourcePreflight
-    blockers.push(...sourcePreflight.blockers.map(b => `${source.label} : ${b}`))
+    for (const b of sourcePreflight.blockers) {
+      if (degradedRecovery && isMissingArrayBlocker(b, arrayNameForRecovery)) continue
+      blockers.push(`${source.label} : ${b}`)
+    }
     blockerRefs.push(...prefixBlockerRefs(sourcePreflight.blockerRefs ?? [], source.label, source.sanId))
     warnings.push(...sourcePreflight.warnings.map(w => `${source.label} : ${w}`))
 
@@ -101,10 +119,13 @@ export async function runClusterStoragePreflight(
     for (const peer of inventories.filter(n => n.sanId !== source.sanId)) {
       if (!peer.sshReady || !peer.tools) continue
 
-      if (isPathlessClusterAction(req.action)) {
+      if (isPathlessClusterAction(req.action) || (degradedRecovery && req.action === 'assemble_md' && selectedPaths.length === 0)) {
         const peerPreflight = await runNodePreflight(req.action, req.payload, peer)
         perNodePreflights[peer.sanId] = peerPreflight
-        blockers.push(...peerPreflight.blockers.map(b => `${peer.label} : ${b}`))
+        for (const b of peerPreflight.blockers) {
+          if (degradedRecovery && isMissingArrayBlocker(b, arrayNameForRecovery)) continue
+          blockers.push(`${peer.label} : ${b}`)
+        }
         blockerRefs.push(...prefixBlockerRefs(peerPreflight.blockerRefs ?? [], peer.label, peer.sanId))
         warnings.push(...peerPreflight.warnings.map(w => `${peer.label} : ${w}`))
         continue
@@ -144,14 +165,28 @@ export async function runClusterStoragePreflight(
 
     if (req.action === 'stop_md') {
       const arrayName = String((req.payload as Record<string, unknown>)?.name ?? '')
-      const uuids = inventories
+      const activeUuids = inventories
         .map(n => n.mdArrays.find(a => a.name === arrayName)?.uuid)
         .filter((u): u is string => Boolean(u))
-      const uniqueUuids = [...new Set(uuids)]
+      const uniqueUuids = [...new Set(activeUuids)]
       if (uniqueUuids.length > 1) {
         blockers.push(`UUID MD incohérents entre nœuds pour ${arrayName} : ${uniqueUuids.join(', ')}`)
       }
     }
+  }
+
+  let recoveryAssessment: import('./raid-types').ClusterMdRecoveryAssessment | undefined
+  if (isDegradedRecoveryAction(req.action)) {
+    const arrayName = String((req.payload as Record<string, unknown>)?.name ?? '')
+    const uuid = (req.payload as Record<string, unknown>)?.uuid as string | undefined
+    recoveryAssessment = buildClusterMdRecoveryAssessment({
+      action: req.action,
+      arrayName,
+      uuid,
+      nodes: inventories,
+    })
+    blockers.push(...recoveryAssessment.hardBlockers)
+    warnings.push(...recoveryAssessment.warnings)
   }
 
   if (req.action === 'create_md') {
@@ -162,8 +197,16 @@ export async function runClusterStoragePreflight(
 
   const uniqueBlockers = [...new Set(blockers)]
   const uniqueWarnings = [...new Set(warnings)]
+  const okSymmetric = recoveryAssessment?.okSymmetric ?? (uniqueBlockers.length === 0)
+  const okDegraded = recoveryAssessment?.okDegraded ?? false
+  const ok = isDegradedRecoveryAction(req.action)
+    ? (okDegraded || (uniqueBlockers.length === 0 && okSymmetric))
+    : uniqueBlockers.length === 0
+
   return {
-    ok: uniqueBlockers.length === 0,
+    ok,
+    okSymmetric,
+    okDegraded,
     action: req.action,
     sourceSanId: req.primarySanId,
     blockers: uniqueBlockers,
@@ -174,6 +217,7 @@ export async function runClusterStoragePreflight(
     mappings,
     perNodePreflights,
     executionModesAllowed: executionModes(uniqueBlockers, mappings),
+    recoveryAssessment,
   }
 }
 

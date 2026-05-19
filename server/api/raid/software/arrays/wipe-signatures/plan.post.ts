@@ -23,6 +23,6 @@ export default defineEventHandler(async (event) => {
     'wipe_md_signatures',
     body.clusterExecution!.primarySanId,
     body.clusterExecution!.clusterId ?? san.clusterId,
-    nodeResults,
+    { nodeResults },
   )
 })

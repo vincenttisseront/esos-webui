@@ -18,13 +18,8 @@ export default defineEventHandler(async (event) => {
 
   if (!name) throw createError({ statusCode: 400, statusMessage: 'name requis' })
 
-  const expectedConfirm = `STOP ${name}`
   const clusterCtx = assertClusteredSanAllowsMutation(sanId, body?.clusterExecution)
   if (clusterCtx) {
-    if (body?.clusterExecution?.executionScope !== 'current_node_only'
-      && body?.confirmation !== expectedConfirm) {
-      throw createError({ statusCode: 400, statusMessage: `Confirmation invalide (attendu : "${expectedConfirm}")` })
-    }
     try {
       return await runClusterStopMdArray(sanId, name, body!)
     } catch (err: any) {

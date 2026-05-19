@@ -23,6 +23,6 @@ export default defineEventHandler(async (event) => {
     'zero_md_superblocks',
     body.clusterExecution!.primarySanId,
     body.clusterExecution!.clusterId ?? san.clusterId,
-    nodeResults,
+    { nodeResults },
   )
 })

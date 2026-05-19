@@ -21,17 +21,26 @@ export default defineEventHandler(async (event) => {
   }
   assertClusteredSanAllowsMutation(sanId, body?.clusterExecution)
 
-  const { nodeResults } = await buildStopMdClusterExecutionPlan({
+  const plan = await buildStopMdClusterExecutionPlan({
     clusterId: body!.clusterExecution!.clusterId ?? san.clusterId,
     primarySanId: body!.clusterExecution!.primarySanId,
     arrayName: name,
     diskMappings: body!.clusterExecution!.diskMappings,
+    recoveryMode: body!.clusterExecution!.recoveryMode,
   })
 
   return toClusterMdExecutionPlan(
     'stop_md',
     body!.clusterExecution!.primarySanId,
     body!.clusterExecution!.clusterId ?? san.clusterId,
-    nodeResults,
+    {
+      nodeResults: plan.nodeResults,
+      recoveryAssessment: plan.recoveryAssessment,
+      recoveryMode: plan.recoveryMode,
+      planToken: plan.planToken,
+      confirmationPhrase: plan.confirmationPhrase,
+      okSymmetric: plan.recoveryAssessment.okSymmetric,
+      okDegraded: plan.recoveryAssessment.okDegraded,
+    },
   )
 })

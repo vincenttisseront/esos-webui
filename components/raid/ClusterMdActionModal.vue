@@ -10,7 +10,17 @@
     <div class="space-y-4 max-h-[70vh] overflow-y-auto">
       <RaidRiskBadge :risk="riskLevel" />
       <p class="text-sm text-gray-700 dark:text-gray-300">{{ description }}</p>
+
       <UAlert
+        v-if="isDegradedMode"
+        :title="degradedAlertTitle"
+        :description="degradedAlertDescription"
+        color="amber"
+        icon="i-heroicons-exclamation-triangle"
+        variant="soft"
+      />
+      <UAlert
+        v-else
         :title="t('raid.cluster_md.all_nodes_title')"
         :description="t('raid.cluster_md.all_nodes_description')"
         color="amber"
@@ -20,16 +30,66 @@
 
       <RaidPreflightPanel v-if="localPreflight" :preflight="localPreflight" />
 
-      <div v-if="clusterLoading" class="text-sm text-gray-500 flex items-center gap-2">
+      <motion.div
+        v-if="clusterLoading"
+        class="text-sm text-gray-500 flex items-center gap-2"
+        :initial="{ opacity: 0 }"
+        :animate="{ opacity: 1 }"
+      >
         <UIcon name="i-heroicons-arrow-path" class="animate-spin w-4 h-4" />
         {{ t('raid.cluster_md.preflight_loading') }}
-      </div>
-      <ClusterStoragePreflightPanel v-else-if="clusterPreflight" :preflight="clusterPreflight" />
+      </motion.div>
+      <ClusterStoragePreflightPanel v-else-if="clusterPreflight && !recoveryAssessment" :preflight="clusterPreflight" />
+
+      <motion.div
+        v-if="recoveryAssessment?.nodeReports.length"
+        class="space-y-2"
+        :initial="{ opacity: 0, y: 6 }"
+        :animate="{ opacity: 1, y: 0 }"
+      >
+        <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+          {{ t('raid.cluster_md.recovery.node_state_title') }}
+        </p>
+        <motion.div
+          v-for="report in recoveryAssessment.nodeReports"
+          :key="report.sanId"
+          class="flex flex-wrap items-center gap-2 text-sm border border-gray-200 dark:border-gray-700 rounded px-3 py-2"
+          :initial="{ opacity: 0, x: -4 }"
+          :animate="{ opacity: 1, x: 0 }"
+        >
+          <span class="font-medium">{{ report.label }}</span>
+          <UBadge
+            :label="t(`raid.cluster_md.recovery.node_state.${report.state}`)"
+            size="xs"
+            variant="soft"
+          />
+          <span v-if="report.reasons[0]" class="text-xs text-gray-500">{{ report.reasons[0] }}</span>
+        </motion.div>
+      </motion.div>
+
+      <motion.div
+        v-if="recoveryModeOptions.length > 1"
+        class="space-y-2"
+        :initial="{ opacity: 0 }"
+        :animate="{ opacity: 1 }"
+      >
+        <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+          {{ t('raid.cluster_md.recovery.mode_title') }}
+        </p>
+        <USelect
+          v-model="selectedRecoveryMode"
+          :options="recoveryModeOptions"
+          value-attribute="value"
+          option-attribute="label"
+          size="sm"
+        />
+      </motion.div>
 
       <ClusterMdExecutionPlanTable
         v-if="executionPlan?.nodeResults.length"
         :title="t('raid.cluster_md.execution_plan_title')"
         :node-results="executionPlan.nodeResults"
+        show-recovery-columns
       />
 
       <ClusterMdExecutionPlanTable
@@ -37,6 +97,7 @@
         :title="t('raid.cluster_md.execution_results_title')"
         :node-results="executionResult.nodeResults"
         show-output
+        show-recovery-columns
       />
 
       <UAlert
@@ -47,20 +108,20 @@
         icon="i-heroicons-x-circle"
       />
 
-      <div v-if="confirmationPhrase" class="space-y-2">
+      <div v-if="effectiveConfirmationPhrase" class="space-y-2">
         <p class="text-sm text-gray-600">
           {{ t('raid.cluster_md.confirm_phrase_hint') }}
-          <code class="text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded font-mono text-xs">{{ confirmationPhrase }}</code>
+          <code class="text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded font-mono text-xs">{{ effectiveConfirmationPhrase }}</code>
         </p>
         <UInput
           v-model="inputPhrase"
-          :placeholder="confirmationPhrase"
+          :placeholder="effectiveConfirmationPhrase"
           :disabled="executing"
           class="font-mono"
           @paste.prevent
         />
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
 
     <template #actions>
       <UButton color="gray" variant="outline" size="sm" :disabled="executing" @click="$emit('cancel')">
@@ -86,6 +147,8 @@ import type {
   ClusterMdExecutionPlan,
   ClusterMdExecutionResult,
   ClusterMdPreflightAction,
+  ClusterMdRecoveryAssessment,
+  ClusterMdRecoveryMode,
   ClusterStoragePreflightResult,
   RaidPreflightResult,
   RaidRiskLevel,
@@ -123,6 +186,7 @@ const executionResult = ref<ClusterMdExecutionResult | null>(null)
 const planError = ref<string | null>(null)
 const inputPhrase = ref('')
 const executing = ref(false)
+const selectedRecoveryMode = ref<ClusterMdRecoveryMode | null>(null)
 
 const diskMappings = computed((): ClusterDiskMappingInput[] => {
   const hint = raid.getPreparedClusterMappings(props.sourceSanId, props.clusterId)
@@ -135,33 +199,99 @@ const diskMappings = computed((): ClusterDiskMappingInput[] => {
   return hint?.partitionMappings ?? []
 })
 
-const clusterExecutionBase = computed(() => ({
-  clusterId: props.clusterId,
-  primarySanId: props.sourceSanId,
-  diskMappings: diskMappings.value,
-  requirePreflightOk: true as const,
-  stopOnFirstFailure: true as const,
-  executionScope: 'all_nodes' as const,
-}))
+const recoveryAssessment = computed((): ClusterMdRecoveryAssessment | undefined =>
+  executionPlan.value?.recoveryAssessment
+  ?? clusterPreflight.value?.recoveryAssessment,
+)
+
+const recoveryModeOptions = computed(() => {
+  const modes = recoveryAssessment.value?.allowedRecoveryModes ?? []
+  return modes.map(mode => ({
+    value: mode,
+    label: t(`raid.cluster_md.recovery.mode.${mode}`),
+  }))
+})
+
+const isDegradedMode = computed(() =>
+  selectedRecoveryMode.value != null
+  && selectedRecoveryMode.value !== 'stop_all_active'
+  && selectedRecoveryMode.value !== 'assemble_stopped_nodes',
+)
+
+const degradedAlertTitle = computed(() => {
+  if (props.action === 'stop_md') return t('raid.cluster_md.recovery.stop_active_only_title')
+  if (props.action === 'assemble_md') return t('raid.cluster_md.recovery.assemble_missing_only_title')
+  return t('raid.cluster_md.recovery.degraded_title')
+})
+
+const degradedAlertDescription = computed(() => {
+  if (props.action === 'stop_md') return t('raid.cluster_md.recovery.stop_active_only_description')
+  if (props.action === 'assemble_md') return t('raid.cluster_md.recovery.assemble_missing_only_description')
+  return t('raid.cluster_md.recovery.degraded_description')
+})
+
+const effectiveConfirmationPhrase = computed(() =>
+  executionPlan.value?.confirmationPhrase ?? props.confirmationPhrase,
+)
+
+function clusterExecutionPayload(): import('~/types/raid').ClusterMdExecutionRequest {
+  const mode = selectedRecoveryMode.value ?? recoveryAssessment.value?.recommendedRecoveryMode
+  const degraded = mode != null && mode !== 'stop_all_active' && mode !== 'assemble_stopped_nodes'
+  return {
+    clusterId: props.clusterId,
+    primarySanId: props.sourceSanId,
+    diskMappings: diskMappings.value,
+    requirePreflightOk: true,
+    stopOnFirstFailure: true,
+    executionScope: 'all_nodes',
+    recoveryMode: mode ?? undefined,
+    degradedOk: degraded ? true : undefined,
+    planToken: executionPlan.value?.planToken,
+  }
+}
 
 const planReady = computed(() =>
   Boolean(executionPlan.value?.nodeResults.length)
-  && executionPlan.value!.nodeResults.every(n => n.command),
+  && executionPlan.value!.nodeResults.some(n => n.participation === 'execute' && n.command),
 )
 
 const canConfirm = computed(() =>
   !executing.value
   && planReady.value
-  && (clusterPreflight.value?.ok ?? false)
+  && (recoveryAssessment.value?.allowedRecoveryModes.length ?? 0) > 0
   && (props.localPreflight?.ok ?? true)
-  && inputPhrase.value === props.confirmationPhrase,
+  && inputPhrase.value === effectiveConfirmationPhrase.value,
 )
 
 const confirmLabel = computed(() => {
+  if (isDegradedMode.value && props.action === 'stop_md') {
+    return t('raid.cluster_md.recovery.confirm_stop_active_only')
+  }
   if (props.action === 'stop_md') return t('raid.cluster_md.confirm_stop')
   if (props.action === 'assemble_md') return t('raid.cluster_md.confirm_assemble')
   return t('raid.cluster_md.confirm_cleanup')
 })
+
+async function loadRecoveryPlan() {
+  if (props.action === 'stop_md' && props.arrayName) {
+    executionPlan.value = await raid.planStopMdArray(props.arrayName, {
+      ...clusterExecutionPayload(),
+      recoveryMode: selectedRecoveryMode.value ?? undefined,
+    })
+  } else if (props.action === 'assemble_md') {
+    executionPlan.value = await raid.planAssembleMdArray({
+      ...(props.payload as Omit<AssembleMdArrayRequest, 'confirmation' | 'clusterExecution'>),
+      confirmation: effectiveConfirmationPhrase.value,
+      clusterExecution: {
+        ...clusterExecutionPayload(),
+        recoveryMode: selectedRecoveryMode.value ?? undefined,
+      },
+    })
+  }
+  if (executionPlan.value?.recoveryAssessment?.recommendedRecoveryMode && !selectedRecoveryMode.value) {
+    selectedRecoveryMode.value = executionPlan.value.recoveryAssessment.recommendedRecoveryMode
+  }
+}
 
 async function loadPlan() {
   clusterLoading.value = true
@@ -176,19 +306,26 @@ async function loadPlan() {
       payload: props.payload,
       diskMappings: diskMappings.value,
     })
+
+    const assessment = clusterPreflight.value.recoveryAssessment
+    if (assessment) {
+      if (!clusterPreflight.value.okDegraded && !assessment.allowedRecoveryModes.length) {
+        planError.value = assessment.hardBlockers.join('; ')
+          || clusterPreflight.value.blockers.join('; ')
+        return
+      }
+      selectedRecoveryMode.value = assessment.recommendedRecoveryMode
+        ?? assessment.allowedRecoveryModes[0]
+        ?? null
+      await loadRecoveryPlan()
+      return
+    }
+
     if (!clusterPreflight.value.ok) {
       planError.value = clusterPreflight.value.blockers.join('; ')
       return
     }
-    if (props.action === 'stop_md' && props.arrayName) {
-      executionPlan.value = await raid.planStopMdArray(props.arrayName, clusterExecutionBase.value)
-    } else if (props.action === 'assemble_md') {
-      executionPlan.value = await raid.planAssembleMdArray({
-        ...(props.payload as Omit<AssembleMdArrayRequest, 'confirmation' | 'clusterExecution'>),
-        confirmation: props.confirmationPhrase,
-        clusterExecution: clusterExecutionBase.value,
-      })
-    }
+    await loadRecoveryPlan()
   } catch (err: any) {
     planError.value = err?.data?.statusMessage ?? err.message ?? t('raid.cluster_md.plan_error_title')
   } finally {
@@ -196,20 +333,36 @@ async function loadPlan() {
   }
 }
 
+watch(selectedRecoveryMode, async (mode, prev) => {
+  if (!mode || mode === prev || clusterLoading.value) return
+  if (props.action !== 'stop_md' && props.action !== 'assemble_md') return
+  clusterLoading.value = true
+  planError.value = null
+  inputPhrase.value = ''
+  try {
+    await loadRecoveryPlan()
+  } catch (err: any) {
+    planError.value = err?.data?.statusMessage ?? err.message
+  } finally {
+    clusterLoading.value = false
+  }
+})
+
 async function execute() {
   if (!canConfirm.value) return
   executing.value = true
   executionResult.value = null
   try {
     const confirmation = inputPhrase.value
+    const clusterExecution = clusterExecutionPayload()
     if (props.action === 'stop_md' && props.arrayName) {
-      const res = await raid.stopMdArray(props.arrayName, confirmation, clusterExecutionBase.value)
+      const res = await raid.stopMdArray(props.arrayName, confirmation, clusterExecution)
       executionResult.value = res.clusterExecution ?? null
     } else if (props.action === 'assemble_md') {
       const res = await raid.assembleMdArray({
         ...(props.payload as Omit<AssembleMdArrayRequest, 'confirmation' | 'clusterExecution'>),
         confirmation,
-        clusterExecution: clusterExecutionBase.value,
+        clusterExecution,
       })
       executionResult.value = res.clusterExecution ?? null
     } else if (props.action === 'zero_md_superblocks') {
@@ -217,7 +370,7 @@ async function execute() {
         ...(props.payload as Omit<ZeroMdSuperblocksRequest, 'confirmation' | 'clusterExecution'>),
         confirmation,
         mode: 'basic',
-        clusterExecution: clusterExecutionBase.value,
+        clusterExecution,
       })
       executionResult.value = res.clusterExecution ?? null
     } else if (props.action === 'wipe_md_signatures') {
@@ -225,7 +378,7 @@ async function execute() {
         ...(props.payload as Omit<WipeMdSignaturesRequest, 'confirmation' | 'clusterExecution'>),
         confirmation,
         mode: 'advanced',
-        clusterExecution: clusterExecutionBase.value,
+        clusterExecution,
       })
       executionResult.value = res.clusterExecution ?? null
     }
@@ -270,14 +423,14 @@ async function loadCleanupPlan() {
         ...(props.payload as Omit<ZeroMdSuperblocksRequest, 'confirmation' | 'clusterExecution'>),
         confirmation: props.confirmationPhrase,
         mode: 'basic',
-        clusterExecution: clusterExecutionBase.value,
+        clusterExecution: clusterExecutionPayload(),
       })
     } else {
       executionPlan.value = await raid.planWipeMdSignatures({
         ...(props.payload as Omit<WipeMdSignaturesRequest, 'confirmation' | 'clusterExecution'>),
         confirmation: props.confirmationPhrase,
         mode: 'advanced',
-        clusterExecution: clusterExecutionBase.value,
+        clusterExecution: clusterExecutionPayload(),
       })
     }
   } catch (err: any) {
