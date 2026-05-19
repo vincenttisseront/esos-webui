@@ -686,7 +686,11 @@
       }
     },
     "storage": {
-      "title": "Cohérence stockage (MD)",
+      "title": "Stockage",
+      "ok": "OK",
+      "warning": "Attention",
+      "critical": "Critique",
+      "unknown": "—",
       "symmetric": "Symétrique",
       "asymmetric": "Asymétrique",
       "overall": {
@@ -702,17 +706,28 @@
     },
     "nodes_section": "Nœuds ({count})",
     "fleet_summary": "{clusters} cluster(s) · {standalone} SAN autonome(s) · {attention} nécessite(nt) une action",
+    "services": {
+      "title": "Services HA",
+      "ok": "OK",
+      "degraded": "Dégradé"
+    },
     "remove_node": {
       "title": "Retirer un nœud du cluster",
       "select_node": "Nœud à retirer",
       "confirm": "Retirer du cluster",
-      "success": "Nœud retiré du cluster"
+      "success": "Nœud retiré du cluster",
+      "preflight": "Vérifications en cours…",
+      "in_progress": "Retrait en cours…",
+      "primary_title": "Nœud primaire",
+      "primary_hint": "Retirer le primaire peut bloquer le stockage cluster. Promouvez un autre nœud si possible."
     },
     "add_node": {
       "title": "Ajouter un nœud au cluster",
+      "short": "Ajouter nœud",
       "select_san": "SAN autonome à joindre",
       "confirm": "Rejoindre le cluster",
-      "success": "Nœud ajouté au cluster"
+      "success": "Nœud ajouté au cluster",
+      "preflight": "Vérification de compatibilité…"
     }
   },
   "admin": {

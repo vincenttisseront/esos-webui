@@ -5,9 +5,14 @@ import { readClusterNodeStatus } from '../../utils/cluster-reader'
 import type { ClusterAttentionResponse } from '../../utils/cluster-admin-types'
 import {
   appendMdAttentionPoints,
+  appendRegistryAttentionPoints,
+  appendScstAttentionPoints,
   buildClusterAttentionFromStatus,
   deriveClusterHealth,
+  mergeClusterHealth,
+  storageOverallToHealth,
 } from '../../utils/cluster-attention'
+import { buildClusterStorageConsistency } from '../../utils/cluster-storage-consistency'
 import { resolveClusterMembers } from '../../utils/cluster-resolve'
 import type { ClusterNodeRole, ClusterOverview } from '../../utils/types'
 
@@ -74,22 +79,47 @@ export default defineEventHandler(async (event): Promise<ClusterAttentionRespons
     probeError,
   )
 
+  const primaryId = members.find(m => m.clusterRole === 'primary')?.id
+
   if (includeMd && !probeError) {
-    const primaryId = members.find(m => m.clusterRole === 'primary')?.id
     attentionPoints = await appendMdAttentionPoints(clusterId, attentionPoints, primaryId)
   }
 
-  const health = deriveClusterHealth(attentionPoints, !probeError)
+  if (!probeError && members.length > 0) {
+    attentionPoints = await appendRegistryAttentionPoints(clusterId, members, attentionPoints, primaryId)
+  }
+
+  let storageOverall: import('../../utils/cluster-admin-types').ClusterStorageConsistencyResult['overall'] = 'unknown'
+  let storageSummary: string | undefined
+  if (!probeError && includeMd) {
+    try {
+      const storage = await buildClusterStorageConsistency(clusterId)
+      storageOverall = storage.overall
+      storageSummary = storage.mdSummary
+      attentionPoints = appendScstAttentionPoints(clusterId, attentionPoints, storage, primaryId)
+    } catch {
+      storageOverall = 'unknown'
+    }
+  }
+
+  const attentionHealth = deriveClusterHealth(attentionPoints, !probeError)
+  const health = mergeClusterHealth(
+    attentionHealth,
+    storageOverallToHealth(storageOverall),
+    !probeError,
+  )
 
   return {
     clusterId,
     clusterName: clusterRow?.name ?? overview?.clusterName,
     health,
     attentionPoints,
-    attentionCount: attentionPoints.length,
+    attentionCount: attentionPoints.filter(p => p.severity !== 'info').length,
     overview,
     probeError,
     scannedAt: overview?.scannedAt ?? Date.now(),
+    storageOverall,
+    storageSummary,
   }
 })
 

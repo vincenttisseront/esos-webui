@@ -1,3 +1,5 @@
+import type { ClusterOverview } from '~/server/utils/types'
+
 export type ClusterHealth = 'healthy' | 'warning' | 'critical' | 'unknown'
 
 export type ClusterAttentionSeverity = 'info' | 'warning' | 'critical' | 'blocking'
@@ -9,6 +11,7 @@ export type ClusterAttentionCategory =
   | 'storage_replication'
   | 'config_sync'
   | 'storage_md'
+  | 'scst'
   | 'config'
   | 'version'
 
@@ -35,7 +38,14 @@ export interface ClusterAttentionPoint {
   actionRoute?: string
   actionPayload?: Record<string, unknown>
   dismissible: boolean
-  source: string
+  source:
+    | 'cluster_status'
+    | 'md_detection'
+    | 'scst'
+    | 'config'
+    | 'san_registry'
+    | 'config_sync'
+    | 'version'
   detectedAt: number
 }
 
@@ -45,8 +55,11 @@ export interface ClusterAttentionResponse {
   health: ClusterHealth
   attentionPoints: ClusterAttentionPoint[]
   attentionCount: number
+  overview?: ClusterOverview
   probeError?: string
   scannedAt: number
+  storageOverall?: 'ok' | 'warning' | 'critical' | 'unknown'
+  storageSummary?: string
 }
 
 export interface ClusterStorageConsistencyResult {

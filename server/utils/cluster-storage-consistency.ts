@@ -1,19 +1,72 @@
+import type { ClusterNodeStatus } from './types'
 import type { ClusterStorageConsistencyResult } from './cluster-admin-types'
+import { readClusterNodeStatus } from './cluster-reader'
 import { resolveClusterMembers } from './cluster-resolve'
 import { collectClusterStorageInventory } from './raid-cluster-storage-preflight'
 import { buildClusterMdRecoveryAssessment } from './raid-cluster-md-node-state'
 import { getDB } from '../db'
 import { clusters } from '../db/schema'
 import { eq } from 'drizzle-orm'
+import type { ClusterNodeRole } from './types'
 
-function buildScstConsistencySummary(nodeCount: number): ClusterStorageConsistencyResult['scst'] {
-  return {
-    checked: nodeCount >= 2,
-    symmetric: null,
-    summary: nodeCount >= 2
-      ? 'Comparaison automatique SCST inter-nœuds non disponible — en Active/Active, valider manuellement les cibles et groupes ALUA.'
-      : 'Un seul nœud — cohérence SCST inter-nœuds non applicable.',
+function aluaFingerprint(node: ClusterNodeStatus): string {
+  return node.aluaGroups
+    .map(g => `${g.deviceGroup}/${g.targetGroup}:${g.state}`)
+    .sort()
+    .join('|')
+}
+
+export function compareScstAluaSymmetry(
+  nodeStatuses: ClusterNodeStatus[],
+): ClusterStorageConsistencyResult['scst'] {
+  const ready = nodeStatuses.filter(n => n.sshReady)
+  if (ready.length < 2) {
+    return {
+      checked: ready.length >= 2,
+      symmetric: null,
+      summary: 'Un seul nœud joignable — cohérence SCST inter-nœuds non applicable.',
+    }
   }
+
+  const fingerprints = ready.map(n => aluaFingerprint(n))
+  const nonEmpty = fingerprints.filter(f => f.length > 0)
+  if (nonEmpty.length < 2) {
+    return {
+      checked: true,
+      symmetric: null,
+      summary: 'Groupes ALUA non exposés sur tous les nœuds — validation manuelle recommandée en Active/Active.',
+    }
+  }
+
+  const unique = new Set(nonEmpty)
+  const symmetric = unique.size === 1
+  return {
+    checked: true,
+    symmetric,
+    summary: symmetric
+      ? 'Groupes ALUA identiques sur les nœuds joignables.'
+      : `Empreintes ALUA différentes entre nœuds (${unique.size} profils) — vérifier SCST et basculement.`,
+  }
+}
+
+async function buildScstConsistencyForCluster(
+  clusterId: string,
+  members: ReturnType<typeof resolveClusterMembers>,
+): Promise<ClusterStorageConsistencyResult['scst']> {
+  if (members.length < 2) {
+    return {
+      checked: false,
+      symmetric: null,
+      summary: 'Un seul nœud — cohérence SCST inter-nœuds non applicable.',
+    }
+  }
+
+  const statuses = await Promise.all(
+    members.map(m =>
+      readClusterNodeStatus(m.id, m.host, (m.clusterRole ?? 'secondary') as ClusterNodeRole),
+    ),
+  )
+  return compareScstAluaSymmetry(statuses)
 }
 
 export async function buildClusterStorageConsistency(
@@ -91,6 +144,6 @@ export async function buildClusterStorageConsistency(
     mdSummary,
     mdArrays,
     nodes,
-    scst: buildScstConsistencySummary(members.length),
+    scst: await buildScstConsistencyForCluster(clusterId, members),
   }
 }

@@ -8,24 +8,39 @@
         value-attribute="value"
         option-attribute="label"
         placeholder="SAN autonome"
+        @update:model-value="runPreflight"
       />
     </UFormGroup>
-    <UAlert
-      color="blue"
-      variant="soft"
-      icon="i-heroicons-information-circle"
-      :title="t('cluster.sync.help_title')"
-    >
-      <template #description>
-        <ul class="list-disc pl-4 text-xs mt-1 space-y-0.5">
-          <li v-for="line in syncLines" :key="line">{{ line }}</li>
-        </ul>
-      </template>
-    </UAlert>
+    <div v-if="preflightLoading" class="text-sm text-gray-500 flex items-center gap-2">
+      <UIcon name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
+      {{ t('cluster.add_node.preflight') }}
+    </div>
+    <ul v-if="preflightChecks.length" class="text-xs space-y-1">
+      <li
+        v-for="c in preflightChecks"
+        :key="c.label"
+        :class="c.ok ? 'text-green-700' : 'text-red-700'"
+      >
+        {{ c.label }} — {{ c.detail }}
+      </li>
+    </ul>
+    <details class="rounded border border-gray-200 px-3 py-2">
+      <summary class="cursor-pointer text-sm font-medium text-gray-700 select-none list-none">
+        {{ t('cluster.sync.help_title') }}
+      </summary>
+      <ul class="mt-2 text-xs text-gray-600 list-disc pl-4 space-y-0.5">
+        <li v-for="line in syncLines" :key="line">{{ line }}</li>
+      </ul>
+    </details>
     <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
     <div class="flex justify-end gap-2">
       <UButton color="gray" variant="ghost" @click="$emit('close')">Annuler</UButton>
-      <UButton color="primary" :loading="loading" :disabled="!selectedSanId" @click="submit">
+      <UButton
+        color="primary"
+        :loading="loading"
+        :disabled="!selectedSanId || !preflightOk || preflightLoading"
+        @click="submit"
+      >
         {{ t('cluster.add_node.confirm') }}
       </UButton>
     </div>
@@ -46,6 +61,9 @@ const { t } = useEsosI18n()
 const toast = useAppToast()
 const selectedSanId = ref<string | null>(null)
 const loading = ref(false)
+const preflightLoading = ref(false)
+const preflightOk = ref(false)
+const preflightChecks = ref<Array<{ label: string; ok: boolean; detail: string }>>([])
 const error = ref<string | null>(null)
 const syncLines = CLUSTER_SYNC_LIMITATION_LINES
 
@@ -53,16 +71,48 @@ const standaloneOptions = computed(() =>
   props.standaloneSans.map(s => ({ value: s.id, label: s.label })),
 )
 
+async function runPreflight() {
+  if (!selectedSanId.value) {
+    preflightOk.value = false
+    preflightChecks.value = []
+    return
+  }
+  preflightLoading.value = true
+  try {
+    const pre = await $fetch<{
+      ok: boolean
+      checks: Array<{ label: string; ok: boolean; detail: string }>
+      blockers: string[]
+    }>('/api/admin/cluster/add-node/preflight', {
+      query: { clusterId: props.clusterId, sanId: selectedSanId.value },
+    })
+    preflightChecks.value = pre.checks ?? []
+    preflightOk.value = pre.ok
+  } catch {
+    preflightOk.value = false
+    preflightChecks.value = []
+  } finally {
+    preflightLoading.value = false
+  }
+}
+
 async function submit() {
-  if (!selectedSanId.value) return
+  if (!selectedSanId.value || !preflightOk.value) return
   loading.value = true
   error.value = null
   try {
-    await $fetch('/api/admin/cluster/add-node', {
+    const result = await $fetch<{ ok: boolean; warnings?: string[] }>('/api/admin/cluster/add-node', {
       method: 'POST',
       body: { clusterId: props.clusterId, sanId: selectedSanId.value, role: 'secondary' },
     })
     toast.success(t('cluster.add_node.success'))
+    if (result.warnings?.length) {
+      await modalAlert({
+        title: t('cluster.add_node.success'),
+        message: result.warnings.join('\n'),
+        level: 'warning',
+      })
+    }
     emit('close')
   } catch (err: unknown) {
     const e = err as { statusMessage?: string; message?: string }

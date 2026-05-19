@@ -3,6 +3,7 @@ import { createError } from 'h3'
 import { getDB } from '../../../db'
 import { sans, clusters } from '../../../db/schema'
 import { resolveClusterMembers } from '../../../utils/cluster-resolve'
+import { syncClusterNodesFromSans } from '../../../db/repositories/cluster.repository'
 
 /**
  * POST /api/admin/cluster/add-node
@@ -59,6 +60,8 @@ export default defineEventHandler(async (event) => {
       .where(eq(sans.id, peer))
       .run()
   }
+
+  syncClusterNodesFromSans(body.clusterId)
 
   return {
     ok: true,

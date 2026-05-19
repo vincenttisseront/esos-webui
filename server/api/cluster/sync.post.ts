@@ -3,6 +3,7 @@ import { getDB } from '../../db'
 import { sans } from '../../db/schema'
 import { getSSHPool } from '../../utils/ssh-pool'
 import { MULTI_CLUSTER_DISAMBIGUATION } from '../../utils/cluster-scope'
+import { setSanSetting } from '../../db/repositories/san.repository'
 
 /**
  * POST /api/cluster/sync — Déclenche conf_sync.sh sur le nœud primaire.
@@ -71,6 +72,8 @@ export default defineEventHandler(async (event) => {
       message: output || `conf_sync.sh a échoué (code ${result.code})`,
     })
   }
+
+  setSanSetting(primary.id, 'cluster_last_sync_at', String(Date.now()))
 
   return { ok: true, output }
 })

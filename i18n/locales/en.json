@@ -686,7 +686,11 @@
       }
     },
     "storage": {
-      "title": "Storage consistency (MD)",
+      "title": "Storage",
+      "ok": "OK",
+      "warning": "Warning",
+      "critical": "Critical",
+      "unknown": "—",
       "symmetric": "Symmetric",
       "asymmetric": "Asymmetric",
       "overall": {
@@ -702,17 +706,28 @@
     },
     "nodes_section": "Nodes ({count})",
     "fleet_summary": "{clusters} cluster(s) · {standalone} standalone SAN(s) · {attention} need action",
+    "services": {
+      "title": "HA services",
+      "ok": "OK",
+      "degraded": "Degraded"
+    },
     "remove_node": {
       "title": "Remove node from cluster",
       "select_node": "Node to remove",
       "confirm": "Remove from cluster",
-      "success": "Node removed from cluster"
+      "success": "Node removed from cluster",
+      "preflight": "Running checks…",
+      "in_progress": "Removing…",
+      "primary_title": "Primary node",
+      "primary_hint": "Removing the primary may block cluster storage. Promote another node if possible."
     },
     "add_node": {
       "title": "Add node to cluster",
+      "short": "Add node",
       "select_san": "Standalone SAN to join",
       "confirm": "Join cluster",
-      "success": "Node added to cluster"
+      "success": "Node added to cluster",
+      "preflight": "Compatibility check…"
     }
   },
   "admin": {

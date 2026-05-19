@@ -4,6 +4,7 @@ import { sans, clusters } from '../../../db/schema'
 import { readClusterNodeStatus } from '../../../utils/cluster-reader'
 import { getSSHPool } from '../../../utils/ssh-pool'
 import type { ClusterNodeRole } from '../../../utils/types'
+import { syncClusterNodesFromSans } from '../../../db/repositories/cluster.repository'
 
 /**
  * POST /api/admin/cluster/remove-node
@@ -17,7 +18,7 @@ export default defineEventHandler(async (event) => {
   const user = event.context.user
   if (!user || user.role !== 'admin') throw createError({ statusCode: 403, message: 'Forbidden' })
 
-  const body = await readBody<{ nodeId: string; primaryNodeId?: string; skipDb?: boolean }>(event)
+  const body = await readBody<{ nodeId: string; primaryNodeId?: string; clusterId?: string; skipDb?: boolean }>(event)
   if (!body.nodeId) throw createError({ statusCode: 400, message: 'nodeId requis' })
 
   const db   = getDB()
@@ -26,6 +27,9 @@ export default defineEventHandler(async (event) => {
   // Récupère le label du nœud pour crm node delete
   const node = db.select().from(sans).where(eq(sans.id, body.nodeId)).get()
   if (!node) throw createError({ statusCode: 404, message: 'Nœud introuvable' })
+  if (body.clusterId && node.clusterId !== body.clusterId) {
+    throw createError({ statusCode: 400, statusMessage: 'Le nœud n\'appartient pas à ce cluster' })
+  }
 
   const warnings: string[] = []
 
@@ -94,6 +98,8 @@ export default defineEventHandler(async (event) => {
           warnings.push(`Cluster dissous — ${remaining.map(n => n.label).join(', ')} redevient standalone.`)
         }
         db.delete(clusters).where(eq(clusters.id, clusterIdRef)).run()
+      } else {
+        syncClusterNodesFromSans(clusterIdRef)
       }
     }
   }
