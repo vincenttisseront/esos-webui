@@ -237,6 +237,10 @@
     }
   },
   "raid": {
+    "progress": {
+      "auto_refresh_active": "Mise à jour automatique active",
+      "auto_refresh_failed": "La mise à jour automatique de la progression RAID a été interrompue"
+    },
     "workflow": {
       "title": "Flux RAID logiciel",
       "step_prepare": "Préparer des partitions membres RAID sur les disques physiques.",

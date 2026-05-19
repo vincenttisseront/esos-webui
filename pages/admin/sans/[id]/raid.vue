@@ -18,16 +18,23 @@
         <RaidHealthBadge :health="raid.globalHealth" />
       </div>
       <div class="flex items-center gap-2">
-        <span v-if="raid.overview" class="text-xs text-gray-600">
+        <span v-if="raid.overview" class="text-xs text-gray-600 dark:text-gray-400">
           Scan : {{ new Date(raid.overview.scannedAt).toLocaleTimeString() }}
+        </span>
+        <span
+          v-if="raid.autoRefreshActive"
+          class="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1"
+        >
+          <UIcon name="i-heroicons-arrow-path" class="w-3 h-3 animate-spin" />
+          {{ t('raid.progress.auto_refresh_active') }}
         </span>
         <UButton
           size="sm"
           color="gray"
           variant="ghost"
           icon="i-heroicons-arrow-path"
-          :loading="raid.loading"
-          @click="raid.fetchOverview(true)"
+          :loading="raid.loading || raid.polling"
+          @click="manualRefreshRaid"
         >
           Rafraîchir
         </UButton>
@@ -1299,14 +1306,55 @@ const canCreateHwRaid = computed(() =>
   raid.controllers.some(c => c.supportsCreate),
 )
 
-onMounted(() => {
-  raid.sanId = sanId
+async function manualRefreshRaid() {
+  await raid.fetchOverview(true)
+  await raid.fetchOperations()
+}
+
+function bindRaidPage(sanIdValue: string) {
+  raid.teardownRaidPage()
+  raid.sanId = sanIdValue
   raid.hydratePendingAdvancedCleanup()
-  raid.startPolling(10_000)
+  void raid.initRaidPage()
+}
+
+watch(
+  () => route.params.id as string,
+  (nextId, prevId) => {
+    if (!nextId || nextId === prevId) return
+    bindRaidPage(nextId)
+  },
+)
+
+watch(
+  () => raid.progressPollWarning,
+  (msg) => {
+    if (!msg) return
+    toast.warning(t('raid.progress.auto_refresh_failed'), msg)
+    raid.clearProgressPollWarning()
+  },
+)
+
+function onVisibilityChange() {
+  if (typeof document === 'undefined') return
+  if (document.hidden) {
+    raid.pauseProgressPolling()
+  } else {
+    raid.resumeProgressPolling()
+  }
+}
+
+onMounted(() => {
+  bindRaidPage(sanId)
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', onVisibilityChange)
+  }
 })
 
 onUnmounted(() => {
-  raid.stopPolling()
-  raid.sanId = null
+  if (typeof document !== 'undefined') {
+    document.removeEventListener('visibilitychange', onVisibilityChange)
+  }
+  raid.teardownRaidPage()
 })
 </script>
