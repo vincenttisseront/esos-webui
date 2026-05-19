@@ -327,10 +327,14 @@ export interface ALUAGroup {
   targets:     string[]
 }
 
+export type ClusterHealth = 'healthy' | 'warning' | 'critical' | 'unknown'
+
 export interface ClusterOverview {
   nodes:        ClusterNodeStatus[]
   mode:         'active-passive' | 'active-active' | 'unconfigured' | 'degraded' | 'resyncing' | 'split-brain'
   healthy:      boolean
+  health?:      ClusterHealth
+  attentionCount?: number
   scannedAt:    number
   clusterId?:   string
   clusterName?: string

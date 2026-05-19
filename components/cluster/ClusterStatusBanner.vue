@@ -2,9 +2,9 @@
   <div
     class="rounded-xl border px-5 py-4 flex items-center gap-4"
     :class="{
-      'bg-green-50 border-green-200':  overview.healthy,
-      'bg-red-50 border-red-200':      !overview.healthy && overview.mode === 'degraded',
-      'bg-amber-50 border-amber-200':  overview.mode === 'unconfigured' || (!overview.healthy && overview.mode !== 'degraded'),
+      'bg-green-50 border-green-200':  overview.healthy && overview.mode !== 'split-brain',
+      'bg-red-50 border-red-200':      overview.mode === 'degraded' || overview.mode === 'split-brain' || (!overview.healthy && overview.mode === 'degraded'),
+      'bg-amber-50 border-amber-200':  overview.mode === 'unconfigured' || overview.mode === 'resyncing' || (!overview.healthy && overview.mode !== 'degraded' && overview.mode !== 'split-brain'),
     }"
   >
     <!-- Icône état -->
@@ -54,6 +54,8 @@ const modeLabelMap: Record<ClusterOverview['mode'], string> = {
   'active-active':  'Active/Active',
   'unconfigured':   'Non configuré',
   'degraded':       'Dégradé',
+  'resyncing':      'Resync DRBD',
+  'split-brain':    'Split-brain',
 }
 
 const statusIcon = computed(() =>

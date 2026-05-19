@@ -662,10 +662,64 @@
       }
     }
   },
+  "cluster": {
+    "health": {
+      "healthy": "OK",
+      "warning": "Attention",
+      "critical": "Critique",
+      "unknown": "Inconnu"
+    },
+    "attention": {
+      "title": "Points d'attention",
+      "show_all": "Voir tout ({count})",
+      "show_all_details": "Tous les points d'attention",
+      "action": {
+        "reconnect": "Reconnecter",
+        "open_cluster_ha": "Ouvrir Cluster HA",
+        "sync_config": "Sync config",
+        "open_raid": "Ouvrir RAID",
+        "remove_node": "Retirer le nœud",
+        "add_node": "Ajouter un nœud",
+        "run_recovery": "Récupération MD",
+        "set_primary": "Définir le primaire",
+        "none": "Voir"
+      }
+    },
+    "storage": {
+      "title": "Cohérence stockage (MD)",
+      "symmetric": "Symétrique",
+      "asymmetric": "Asymétrique",
+      "overall": {
+        "ok": "OK",
+        "warning": "Attention",
+        "critical": "Critique",
+        "unknown": "Inconnu"
+      }
+    },
+    "sync": {
+      "help_title": "Limites de Sync config",
+      "last_sync": "Dernière synchronisation"
+    },
+    "nodes_section": "Nœuds ({count})",
+    "fleet_summary": "{clusters} cluster(s) · {standalone} SAN autonome(s) · {attention} nécessite(nt) une action",
+    "remove_node": {
+      "title": "Retirer un nœud du cluster",
+      "select_node": "Nœud à retirer",
+      "confirm": "Retirer du cluster",
+      "success": "Nœud retiré du cluster"
+    },
+    "add_node": {
+      "title": "Ajouter un nœud au cluster",
+      "select_san": "SAN autonome à joindre",
+      "confirm": "Rejoindre le cluster",
+      "success": "Nœud ajouté au cluster"
+    }
+  },
   "admin": {
     "sans": {
       "cluster_card": {
-        "description": "Configuration HA globale du cluster. Le stockage reste rattaché au nœud primaire.",
+        "description": "Cluster HA — santé et actions ci-dessous. Le stockage s'ouvre sur le nœud primaire.",
+        "nodes_toggle": "Afficher les nœuds",
         "configure_ha": "Configurer HA",
         "monitor": "Monitoring",
         "storage": "Stockage",

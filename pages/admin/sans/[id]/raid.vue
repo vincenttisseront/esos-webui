@@ -180,15 +180,7 @@
 
     <!-- Onglet RAID Logiciel (MD) -->
     <div v-else-if="activeTab === 'software' && raid.overview" class="space-y-4">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <UAlert
-          v-if="isClusteredSan"
-          class="flex-1 min-w-[12rem]"
-          :title="t('raid.cluster_md.software_alert_title')"
-          color="amber"
-          icon="i-heroicons-exclamation-triangle"
-          variant="soft"
-        />
+      <div class="flex flex-wrap items-center justify-end gap-3">
         <div class="flex flex-wrap justify-end gap-2 shrink-0">
           <UButton
             v-if="!isReadOnly"

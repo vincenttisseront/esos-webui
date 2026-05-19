@@ -662,10 +662,64 @@
       }
     }
   },
+  "cluster": {
+    "health": {
+      "healthy": "OK",
+      "warning": "Attention",
+      "critical": "Critical",
+      "unknown": "Unknown"
+    },
+    "attention": {
+      "title": "Attention points",
+      "show_all": "View all ({count})",
+      "show_all_details": "All attention points",
+      "action": {
+        "reconnect": "Reconnect",
+        "open_cluster_ha": "Open Cluster HA",
+        "sync_config": "Sync config",
+        "open_raid": "Open RAID",
+        "remove_node": "Remove node",
+        "add_node": "Add node",
+        "run_recovery": "MD recovery",
+        "set_primary": "Set primary",
+        "none": "View"
+      }
+    },
+    "storage": {
+      "title": "Storage consistency (MD)",
+      "symmetric": "Symmetric",
+      "asymmetric": "Asymmetric",
+      "overall": {
+        "ok": "OK",
+        "warning": "Warning",
+        "critical": "Critical",
+        "unknown": "Unknown"
+      }
+    },
+    "sync": {
+      "help_title": "Sync config limitations",
+      "last_sync": "Last sync"
+    },
+    "nodes_section": "Nodes ({count})",
+    "fleet_summary": "{clusters} cluster(s) · {standalone} standalone SAN(s) · {attention} need action",
+    "remove_node": {
+      "title": "Remove node from cluster",
+      "select_node": "Node to remove",
+      "confirm": "Remove from cluster",
+      "success": "Node removed from cluster"
+    },
+    "add_node": {
+      "title": "Add node to cluster",
+      "select_san": "Standalone SAN to join",
+      "confirm": "Join cluster",
+      "success": "Node added to cluster"
+    }
+  },
   "admin": {
     "sans": {
       "cluster_card": {
-        "description": "Global HA configuration for the cluster. Storage remains attached to the primary node.",
+        "description": "HA cluster — health and actions below. Storage opens on the primary node.",
+        "nodes_toggle": "Show nodes",
         "configure_ha": "Configure HA",
         "monitor": "Monitoring",
         "storage": "Storage",

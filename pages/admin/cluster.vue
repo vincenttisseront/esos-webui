@@ -303,12 +303,18 @@ definePageMeta({ layout: 'default' })
 
 const cluster = useClusterStore()
 const auth = useAuthStore()
+const route = useRoute()
 const isViewer = computed(() => auth.user?.role === 'viewer')
 const reconfiguring = ref(false)
 
 const { data: adminSans } = await useFetch<SanSummary[]>('/api/admin/sans', {
   default: () => [],
 })
+
+const { data: clustersRegistry } = await useFetch<Array<{ id: string; name: string; nodes: Array<{ id: string }> }>>(
+  '/api/admin/clusters',
+  { default: () => [] },
+)
 
 const activeAdminSans = computed(() =>
   (adminSans.value ?? []).filter(s => s.status === 'active'),
@@ -404,6 +410,24 @@ function selectGroup(group: ClusterGroup) {
     cluster.fetch(group.ids)
   }
 }
+
+function trySelectFromQuery() {
+  const q = route.query.clusterId
+  if (typeof q !== 'string' || !q) return
+  const reg = (clustersRegistry.value ?? []).find(c => c.id === q)
+  if (!reg) return
+  const nodeIds = new Set(reg.nodes.map(n => n.id))
+  const group = clusterGroups.value.find(g =>
+    g.ids.length === nodeIds.size && g.ids.every(id => nodeIds.has(id)),
+  )
+  if (group) selectGroup(group)
+}
+
+watch(() => route.query.clusterId, () => trySelectFromQuery())
+
+onMounted(() => {
+  trySelectFromQuery()
+})
 
 function onSetupComplete() {
   reconfiguring.value = false
