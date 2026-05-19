@@ -370,6 +370,32 @@
       }
     },
     "software": {
+      "cockpit": {
+        "refresh": "Refresh",
+        "toggle_show": "Expand",
+        "toggle_hide": "Collapse",
+        "section": {
+          "active_title": "Active MD arrays",
+          "recovery_title": "Recovery ({count})",
+          "footer_title": "Help and technical details"
+        },
+        "empty": {
+          "active_title": "No active MD array",
+          "active_hint": "Create an array or assemble a stopped array to expose storage."
+        },
+        "severity": {
+          "critical": "Critical",
+          "warning": "Warning",
+          "info": "Info"
+        },
+        "array": {
+          "members": "{active}/{total} active members",
+          "stop": "Stop",
+          "add": "Add device",
+          "details": "Details",
+          "resync_aria": "Resync progress"
+        }
+      },
       "layout": {
         "actions_row": "Software RAID actions"
       },

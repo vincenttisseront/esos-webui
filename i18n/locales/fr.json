@@ -370,6 +370,32 @@
       }
     },
     "software": {
+      "cockpit": {
+        "refresh": "Rafraîchir",
+        "toggle_show": "Développer",
+        "toggle_hide": "Replier",
+        "section": {
+          "active_title": "Tableaux MD actifs",
+          "recovery_title": "Récupération ({count})",
+          "footer_title": "Aide et détails techniques"
+        },
+        "empty": {
+          "active_title": "Aucun tableau MD actif",
+          "active_hint": "Créez un tableau ou assemblez un tableau arrêté pour exposer le stockage."
+        },
+        "severity": {
+          "critical": "Critique",
+          "warning": "Attention",
+          "info": "Information"
+        },
+        "array": {
+          "members": "{active}/{total} membres actifs",
+          "stop": "Arrêter",
+          "add": "Ajouter",
+          "details": "Détails",
+          "resync_aria": "Progression de resynchronisation"
+        }
+      },
       "layout": {
         "actions_row": "Actions RAID logiciel"
       },

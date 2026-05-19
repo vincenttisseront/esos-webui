@@ -178,174 +178,39 @@
       </UCard>
     </div>
 
-    <!-- Onglet RAID Logiciel (MD) -->
-    <div v-else-if="activeTab === 'software' && raid.overview" class="space-y-4">
-      <div class="flex flex-wrap items-center justify-end gap-3">
-        <div class="flex flex-wrap justify-end gap-2 shrink-0">
-          <UButton
-            v-if="!isReadOnly"
-            color="amber"
-            size="sm"
-            icon="i-heroicons-circle-stack"
-            @click="openPrepareMdPartitionsWizard()"
-          >
-            {{ t('raid.prepare_partitions.action') }}
-          </UButton>
-          <UButton
-            v-if="!isReadOnly"
-            color="blue"
-            size="sm"
-            icon="i-heroicons-plus"
-            @click="openMdWizard()"
-          >
-            {{ t('raid.create_md.action') }}
-          </UButton>
-        </div>
-      </div>
-
-      <RaidClusterHealthCard
-        :view-model="raidCockpit"
-        :auto-refresh-active="raid.autoRefreshActive"
-      />
-
-      <RaidActionableItemsCard
-        :groups="groupedActions"
-        @action="onCockpitAction"
-      />
-
-      <motion.div
-        v-if="showSoftwareEmpty"
-        class="text-center py-8 text-gray-500"
-        :initial="{ opacity: 0 }"
-        :animate="{ opacity: 1 }"
-      >
-        <UIcon name="i-heroicons-server-stack" class="w-10 h-10 mx-auto mb-2 opacity-30" />
-        <p>{{ t('raid.md_detection.empty_title') }}</p>
-        <p class="text-xs mt-1">{{ t('raid.md_detection.empty_hint') }}</p>
-      </motion.div>
-      <div v-if="raid.mdArrays.length" id="raid-software-active" class="space-y-3">
-        <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Tableaux MD actifs</h3>
-        <UCard
-          v-for="arr in raid.mdArrays"
-          :key="arr.path"
-          :id="mdArrayDomId(arr)"
-          :class="{ 'ring-2 ring-blue-500 ring-offset-1': arr.path === highlightedArrayPath }"
-        >
-          <MdArrayCard
-            compact
-            :array="arr"
-            @stop="handleStopMd"
-            @add-device="handleAddMdDevice"
-            @set-faulty="(arr, m) => handleSetFaulty(arr, m)"
-            @remove-device="(arr, m) => handleRemoveMdDevice(arr, m)"
-          />
-        </UCard>
-      </div>
-
-      <motion.div
-        v-if="partitionedStopped.assemblable.length"
-        id="raid-software-stopped-assemblable"
-        class="space-y-3 pt-2 border-t border-gray-200 dark:border-gray-700"
-      >
-        <div>
-          <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('raid.stopped_md.section_assemblable_title') }}</h3>
-          <p class="text-xs text-gray-500 mt-1">{{ t('raid.stopped_md.section_assemblable_description') }}</p>
-        </div>
-        <UAlert
-          v-if="isClusteredSan && partitionedStopped.assemblable.length > 0"
-          :title="t('raid.stopped_md.cluster_notice')"
-          color="amber"
-          icon="i-heroicons-exclamation-triangle"
-          variant="soft"
-        />
-        <UCard v-for="arr in partitionedStopped.assemblable" :key="stoppedArrayKey(arr)">
-          <StoppedMdArrayCard
-            :array="arr"
-            :read-only="isReadOnly"
-            :action-loading="stoppedMdActionKey === stoppedArrayKey(arr)"
-            :needs-advanced-cleanup="arrayNeedsAdvancedCleanup(arr)"
-            :advanced-cleanup-members="advancedCleanupMembersForArray(stoppedMemberPaths(arr), raid.pendingAdvancedCleanup)"
-            @assemble="handleAssembleStoppedMd"
-            @zero-superblocks="handleZeroStoppedMd"
-            @advanced-cleanup="handleAdvancedCleanupStoppedMd"
-            @inspect="handleInspectStoppedMd"
-          />
-        </UCard>
-      </motion.div>
-
-      <motion.div
-        v-if="partitionedStopped.orphanOrIncomplete.length"
-        id="raid-software-stopped-orphan"
-        class="space-y-3 pt-2 border-t border-gray-200 dark:border-gray-700"
-      >
-        <div>
-          <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('raid.stopped_md.section_orphan_title') }}</h3>
-          <p class="text-xs text-gray-500 mt-1">{{ t('raid.stopped_md.section_orphan_description') }}</p>
-        </div>
-        <UCard v-for="arr in partitionedStopped.orphanOrIncomplete" :key="stoppedArrayKey(arr)">
-          <StoppedMdArrayCard
-            :array="arr"
-            :read-only="isReadOnly"
-            :action-loading="stoppedMdActionKey === stoppedArrayKey(arr)"
-            :needs-advanced-cleanup="arrayNeedsAdvancedCleanup(arr)"
-            :advanced-cleanup-members="advancedCleanupMembersForArray(stoppedMemberPaths(arr), raid.pendingAdvancedCleanup)"
-            @assemble="handleAssembleStoppedMd"
-            @zero-superblocks="handleZeroStoppedMd"
-            @advanced-cleanup="handleAdvancedCleanupStoppedMd"
-            @inspect="handleInspectStoppedMd"
-          />
-        </UCard>
-      </motion.div>
-
-
-      <details
-        v-if="raidCockpit.technicalDetails.length || mdBlockerItems.length"
-        class="rounded-lg border border-gray-200 dark:border-gray-700"
-      >
-        <summary class="cursor-pointer px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 select-none list-none">
-          {{ t('raid.cockpit.technical_details.title') }}
-        </summary>
-        <motion.div
-          class="px-3 pb-3 space-y-3 border-t border-gray-200 dark:border-gray-700 pt-2"
-          :initial="{ opacity: 0 }"
-          :animate="{ opacity: 1 }"
-        >
-          <motion.div
-            v-for="(detail, di) in raidCockpit.technicalDetails"
-            :key="detail.id"
-            class="text-xs font-mono space-y-0.5"
-            :initial="{ opacity: 0 }"
-            :animate="{ opacity: 1 }"
-            :transition="{ delay: di * 0.03 }"
-          >
-            <p class="font-semibold text-gray-700 dark:text-gray-300">{{ detail.label }}</p>
-            <p v-for="(line, li) in detail.lines" :key="li" class="text-gray-500 dark:text-gray-400 pl-2">{{ line }}</p>
-          </motion.div>
-          <RaidMdBlockersPanel
-            v-if="mdBlockerItems.length"
-            embedded
-            :items="mdBlockerItems"
-            :current-san-id="sanId"
-            :peer-raid-link="peerRaidLink"
-            @navigate="navigateMdDetectionItem"
-          />
-        </motion.div>
-      </details>
-
-      <RaidCollapsibleHelp :title="t('raid.cockpit.help.title')">
-        <p class="font-medium text-gray-800 dark:text-gray-200">{{ t('raid.workflow.title') }}</p>
-        <ol class="mt-1 list-decimal pl-5 space-y-0.5">
-          <li>{{ t('raid.workflow.step_prepare') }}</li>
-          <li>{{ t('raid.workflow.step_create') }}</li>
-          <li>{{ t('raid.workflow.step_use') }}</li>
-        </ol>
-        <template v-if="isClusteredSan">
-          <p class="mt-3 font-medium text-gray-800 dark:text-gray-200">{{ t('raid.software.help.cluster_title') }}</p>
-          <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{{ t('raid.cluster_md.software_alert_description') }}</p>
-          <p v-if="raid.mdArrays.length" class="mt-1 text-sm text-gray-600 dark:text-gray-400">{{ t('raid.cluster_md.active_arrays_description') }}</p>
-        </template>
-      </RaidCollapsibleHelp>
-    </div>
+    <!-- Onglet RAID Logiciel (MD) — cockpit opérationnel -->
+    <RaidSoftwareCockpit
+      v-else-if="activeTab === 'software' && raid.overview"
+      :cockpit="softwareCockpit"
+      :read-only="isReadOnly"
+      :is-clustered="isClusteredSan"
+      :current-san-id="sanId"
+      :loading="raid.loading"
+      :polling="raid.polling"
+      :auto-refresh-active="raid.autoRefreshActive"
+      :critical-alerts="raid.criticalAlerts"
+      :highlighted-array-path="highlightedArrayPath"
+      :assemblable="partitionedStopped.assemblable"
+      :orphan-or-incomplete="partitionedStopped.orphanOrIncomplete"
+      :stopped-md-action-key="stoppedMdActionKey"
+      :md-blocker-items="mdBlockerItems"
+      :needs-advanced-cleanup="arrayNeedsAdvancedCleanup"
+      :advanced-cleanup-members-for="advancedCleanupMembersForStopped"
+      :peer-raid-link="peerRaidLink"
+      @prepare-partitions="openPrepareMdPartitionsWizard()"
+      @create-md="openMdWizard()"
+      @refresh="manualRefreshRaid()"
+      @stop-md="handleStopMd"
+      @add-md-device="handleAddMdDevice"
+      @set-faulty="(arr, m) => handleSetFaulty(arr, m)"
+      @remove-md-device="(arr, m) => handleRemoveMdDevice(arr, m)"
+      @assemble-stopped="handleAssembleStoppedMd"
+      @zero-stopped="handleZeroStoppedMd"
+      @advanced-cleanup-stopped="handleAdvancedCleanupStoppedMd"
+      @inspect-stopped="handleInspectStoppedMd"
+      @cockpit-action="onCockpitAction"
+      @navigate-md-detection="navigateMdDetectionItem"
+    />
 
     <!-- Onglet Block Devices -->
     <div v-else-if="activeTab === 'devices' && raid.overview" class="space-y-3">
@@ -514,7 +379,7 @@ import {
   mdDetectionPathSet,
 } from '~/utils/raid-md-detection'
 import { hasActiveMdArrayProgress } from '~/utils/raid-md-progress'
-import { buildRaidClusterHealthViewModel, groupRaidActionableItems } from '~/utils/raid-cluster-health-view-model'
+import { buildRaidSoftwareCockpitViewModel } from '~/utils/raid-software-cockpit-view-model'
 import {
   partitionStoppedMdArrays,
 } from '~/utils/stopped-md'
@@ -551,18 +416,21 @@ const showSoftwareEmpty = computed(() => !hasAnyMdStateVisible(raid.overview))
 const partitionedStopped = computed(() => partitionStoppedMdArrays(raid.stoppedMdArrays))
 const mdBlockerItems = computed(() => allMdDetectionItems(raid.overview))
 
-const raidCockpit = computed(() =>
-  buildRaidClusterHealthViewModel({
+const softwareCockpit = computed(() =>
+  buildRaidSoftwareCockpitViewModel({
     overview: raid.overview,
     currentSanId: sanId,
     isClustered: isClusteredSan.value,
+    stoppedAssemblable: partitionedStopped.value.assemblable,
+    stoppedOrphan: partitionedStopped.value.orphanOrIncomplete,
+    showEmptyMdState: showSoftwareEmpty.value,
     t: (key, params) => t(key, params ?? {}),
   }),
 )
 
-const groupedActions = computed(() =>
-  groupRaidActionableItems(raidCockpit.value.actionableItems, (key, params) => t(key, params ?? {})),
-)
+function advancedCleanupMembersForStopped(paths: string[]) {
+  return advancedCleanupMembersForArray(paths, raid.pendingAdvancedCleanup)
+}
 
 // Wizards & modals
 const { open: openModal } = useAppModal()

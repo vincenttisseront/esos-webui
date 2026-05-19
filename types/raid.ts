@@ -338,6 +338,19 @@ export interface RaidClusterHealthViewModel {
   technicalDetails: RaidTechnicalDetail[]
 }
 
+/** Operational layout model for the RAID Logiciel (MD) cockpit tab. */
+export interface RaidSoftwareCockpitViewModel {
+  status: RaidClusterHealthViewModel
+  activeArrays: MdArray[]
+  recommendedActions: RaidGroupedActionableItem[]
+  hasActiveArrays: boolean
+  hasRecommendedActions: boolean
+  hasRecovery: boolean
+  recoveryAssemblableCount: number
+  recoveryOrphanCount: number
+  showEmptyMdState: boolean
+}
+
 export type PreflightBlockerCode =
   | 'md_array_exists'
   | 'md_block_device_exists'
