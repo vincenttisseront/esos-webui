@@ -565,6 +565,15 @@
         "assemble_missing_only_title": "Assemble on stopped nodes only",
         "assemble_missing_only_description": "Some nodes already have the array active. Assembly runs only on nodes with stopped metadata.",
         "confirm_stop_active_only": "Stop on active nodes",
+        "confirm_stop_inconsistent": "Stop inconsistent arrays",
+        "uuid_conflict_title": "Same name, different UUIDs",
+        "uuid_conflict_description": "Same /dev/{name}, different UUIDs. These are different arrays.",
+        "stop_inconsistent_title": "Stop inconsistent arrays",
+        "stop_inconsistent_description": "Stops active arrays on each node without assuming they are the same MD set.",
+        "stop_inconsistent_risk_metadata": "Does not erase MD metadata.",
+        "stop_inconsistent_risk_stop_only": "Only stops active arrays.",
+        "stop_inconsistent_risk_followup": "Manual cleanup or repair may still be required.",
+        "col_uuid": "UUID",
         "no_active_to_stop": "Nothing to stop — no active array on the cluster",
         "repair_needed": "Manual repair required — no stopped metadata detected",
         "col_node": "Node",
@@ -589,6 +598,7 @@
         "mode": {
           "stop_all_active": "Stop on all active nodes",
           "stop_active_only": "Stop on active nodes only",
+          "stop_inconsistent_active": "Stop inconsistent arrays (different UUIDs)",
           "assemble_missing_only": "Assemble on stopped nodes only",
           "assemble_stopped_nodes": "Assemble on all stopped nodes",
           "cleanup_mapped_only": "Mapped cleanup only"

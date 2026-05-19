@@ -9,6 +9,7 @@ import { runNodePreflight } from './raid-cluster-storage-preflight'
 import type {
   ClusterMdPreflightAction,
   ClusterMdRecoveryMode,
+  ClusterMdUuidConflict,
   ClusterStorageNodeInventory,
   MdArray,
   RaidPreflightResult,
@@ -49,6 +50,7 @@ export interface ClusterMdRecoveryAssessment {
   recommendedRecoveryMode: ClusterMdRecoveryMode | null
   okSymmetric: boolean
   okDegraded: boolean
+  uuidConflict?: ClusterMdUuidConflict
 }
 
 function normalizeArrayName(name: string): string {
@@ -225,25 +227,47 @@ export function classifyClusterMdNodeStates(
   return nodes.map(node => classifyMdArrayNodeState(node, arrayName, uuid))
 }
 
-function activeUuids(reports: MdArrayNodeStateReport[]): string[] {
-  return reports
-    .filter(r => r.state === 'active' && r.uuid)
-    .map(r => r.uuid!)
+export function getActiveUuidConflict(
+  nodeReports: MdArrayNodeStateReport[],
+  arrayName: string,
+): {
+  conflict: boolean
+  nodes: ClusterMdUuidConflict['nodes']
+  uniqueUuids: string[]
+} {
+  const activeWithUuid = nodeReports.filter(r => r.state === 'active' && r.uuid)
+  const uniqueUuids = [...new Set(activeWithUuid.map(r => r.uuid!))]
+  return {
+    conflict: uniqueUuids.length > 1,
+    nodes: activeWithUuid.map(r => ({
+      sanId: r.sanId,
+      label: r.label,
+      uuid: r.uuid!,
+      arrayPath: r.arrayPath ?? `/dev/${arrayName}`,
+    })),
+    uniqueUuids,
+  }
 }
+
+type StopRecoveryAssessmentResult = Pick<
+  ClusterMdRecoveryAssessment,
+  'hardBlockers' | 'warnings' | 'allowedRecoveryModes' | 'recommendedRecoveryMode' | 'okSymmetric' | 'okDegraded' | 'uuidConflict'
+>
 
 export function buildStopRecoveryAssessment(
   nodeReports: MdArrayNodeStateReport[],
   arrayName: string,
-): Pick<ClusterMdRecoveryAssessment, 'hardBlockers' | 'warnings' | 'allowedRecoveryModes' | 'recommendedRecoveryMode' | 'okSymmetric' | 'okDegraded'> {
+): StopRecoveryAssessmentResult {
   const hardBlockers: string[] = []
   const warnings: string[] = []
   const activeReports = nodeReports.filter(r => r.state === 'active')
   const activeClean = activeReports.filter(r => r.nodeBlockers.length === 0)
+  const uuidInfo = getActiveUuidConflict(nodeReports, arrayName)
 
-  const uuids = activeUuids(nodeReports)
-  const uniqueUuids = [...new Set(uuids)]
-  if (uniqueUuids.length > 1) {
-    hardBlockers.push(`UUID MD incohérents entre nœuds actifs pour ${arrayName} : ${uniqueUuids.join(', ')}`)
+  if (uuidInfo.conflict) {
+    warnings.push(
+      `UUID MD différents entre nœuds actifs pour ${arrayName} : ${uuidInfo.uniqueUuids.join(', ')} — ce ne sont pas le même tableau`,
+    )
   }
 
   for (const report of activeReports) {
@@ -258,14 +282,17 @@ export function buildStopRecoveryAssessment(
   }
 
   const allowedRecoveryModes: ClusterMdRecoveryMode[] = []
+  const allNodesActive = nodeReports.length > 0 && nodeReports.every(r => r.state === 'active')
 
-  if (activeClean.length === nodeReports.length && nodeReports.length > 0 && nodeReports.every(r => r.state === 'active')) {
+  if (uuidInfo.conflict && activeReports.length >= 2) {
+    allowedRecoveryModes.push('stop_inconsistent_active')
+  } else if (!uuidInfo.conflict && activeClean.length === nodeReports.length && allNodesActive) {
     allowedRecoveryModes.push('stop_all_active')
   }
 
-  if (activeClean.length >= 1 && activeClean.length < nodeReports.length) {
+  if (!uuidInfo.conflict && activeClean.length >= 1 && activeClean.length < nodeReports.length) {
     allowedRecoveryModes.push('stop_active_only')
-  } else if (activeClean.length >= 1 && nodeReports.some(r => r.state !== 'active')) {
+  } else if (!uuidInfo.conflict && activeClean.length >= 1 && nodeReports.some(r => r.state !== 'active')) {
     allowedRecoveryModes.push('stop_active_only')
   }
 
@@ -285,7 +312,13 @@ export function buildStopRecoveryAssessment(
 
   let recommendedRecoveryMode: ClusterMdRecoveryMode | null = null
   if (okDegraded) {
-    recommendedRecoveryMode = okSymmetric ? 'stop_all_active' : 'stop_active_only'
+    if (allowedRecoveryModes.includes('stop_inconsistent_active')) {
+      recommendedRecoveryMode = 'stop_inconsistent_active'
+    } else if (allowedRecoveryModes.includes('stop_all_active')) {
+      recommendedRecoveryMode = 'stop_all_active'
+    } else {
+      recommendedRecoveryMode = 'stop_active_only'
+    }
   }
 
   return {
@@ -295,6 +328,9 @@ export function buildStopRecoveryAssessment(
     recommendedRecoveryMode,
     okSymmetric,
     okDegraded,
+    uuidConflict: uuidInfo.conflict
+      ? { arrayName, nodes: uuidInfo.nodes }
+      : undefined,
   }
 }
 
@@ -401,6 +437,9 @@ export function expectedClusterStopConfirmation(
   recoveryMode: ClusterMdRecoveryMode,
 ): string {
   const name = normalizeArrayName(arrayName)
+  if (recoveryMode === 'stop_inconsistent_active') {
+    return `STOP INCONSISTENT ${name}`
+  }
   if (recoveryMode === 'stop_active_only') {
     return `STOP ${name} ON ACTIVE CLUSTER NODES`
   }

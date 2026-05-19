@@ -581,9 +581,15 @@ export interface CreateMdArrayClusterExecutionResult {
 export type ClusterMdRecoveryMode =
   | 'stop_all_active'
   | 'stop_active_only'
+  | 'stop_inconsistent_active'
   | 'assemble_missing_only'
   | 'assemble_stopped_nodes'
   | 'cleanup_mapped_only'
+
+export interface ClusterMdUuidConflict {
+  arrayName: string
+  nodes: Array<{ sanId: string, label: string, uuid: string, arrayPath: string }>
+}
 
 export type MdArrayNodeState =
   | 'unreachable'
@@ -621,6 +627,7 @@ export interface ClusterMdRecoveryAssessment {
   recommendedRecoveryMode: ClusterMdRecoveryMode | null
   okSymmetric: boolean
   okDegraded: boolean
+  uuidConflict?: ClusterMdUuidConflict
 }
 
 export interface ClusterMdExecutionRequest {

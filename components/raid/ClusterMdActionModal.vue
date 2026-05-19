@@ -12,7 +12,15 @@
       <p class="text-sm text-gray-700 dark:text-gray-300">{{ description }}</p>
 
       <UAlert
-        v-if="isDegradedMode"
+        v-if="uuidConflict"
+        :title="t('raid.cluster_md.recovery.uuid_conflict_title')"
+        :description="uuidConflictDescription"
+        color="red"
+        icon="i-heroicons-exclamation-triangle"
+        variant="soft"
+      />
+      <UAlert
+        v-else-if="isDegradedMode"
         :title="degradedAlertTitle"
         :description="degradedAlertDescription"
         color="amber"
@@ -27,6 +35,15 @@
         icon="i-heroicons-server-stack"
         variant="soft"
       />
+
+      <ul
+        v-if="isInconsistentStopMode"
+        class="text-sm text-amber-800 dark:text-amber-200 list-disc pl-5 space-y-1 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/80 dark:bg-amber-950/30 px-4 py-3"
+      >
+        <li>{{ t('raid.cluster_md.recovery.stop_inconsistent_risk_metadata') }}</li>
+        <li>{{ t('raid.cluster_md.recovery.stop_inconsistent_risk_stop_only') }}</li>
+        <li>{{ t('raid.cluster_md.recovery.stop_inconsistent_risk_followup') }}</li>
+      </ul>
 
       <RaidPreflightPanel v-if="localPreflight" :preflight="localPreflight" />
 
@@ -66,6 +83,8 @@
             size="xs"
             variant="soft"
           />
+          <span v-if="report.uuid" class="text-xs font-mono text-gray-500">{{ t('raid.cluster_md.recovery.col_uuid') }}: {{ report.uuid }}</span>
+          <span v-if="report.arrayPath" class="text-xs font-mono text-gray-500">{{ report.arrayPath }}</span>
           <span v-if="report.reasons[0]" class="text-xs text-gray-500">{{ report.reasons[0] }}</span>
         </motion.div>
       </motion.div>
@@ -353,19 +372,42 @@ const recoveryModeOptions = computed(() => {
   }))
 })
 
+const uuidConflict = computed(() => recoveryAssessment.value?.uuidConflict)
+
+const uuidConflictDescription = computed(() => {
+  if (!uuidConflict.value) return ''
+  return t('raid.cluster_md.recovery.uuid_conflict_description', {
+    name: uuidConflict.value.arrayName,
+  })
+})
+
+const effectiveStopRecoveryMode = computed(
+  () => selectedRecoveryMode.value ?? recoveryAssessment.value?.recommendedRecoveryMode ?? null,
+)
+
+const isInconsistentStopMode = computed(
+  () => props.action === 'stop_md' && effectiveStopRecoveryMode.value === 'stop_inconsistent_active',
+)
+
 const isDegradedMode = computed(() =>
-  selectedRecoveryMode.value != null
-  && selectedRecoveryMode.value !== 'stop_all_active'
-  && selectedRecoveryMode.value !== 'assemble_stopped_nodes',
+  effectiveStopRecoveryMode.value != null
+  && effectiveStopRecoveryMode.value !== 'stop_all_active'
+  && effectiveStopRecoveryMode.value !== 'assemble_stopped_nodes',
 )
 
 const degradedAlertTitle = computed(() => {
+  if (props.action === 'stop_md' && isInconsistentStopMode.value) {
+    return t('raid.cluster_md.recovery.stop_inconsistent_title')
+  }
   if (props.action === 'stop_md') return t('raid.cluster_md.recovery.stop_active_only_title')
   if (props.action === 'assemble_md') return t('raid.cluster_md.recovery.assemble_missing_only_title')
   return t('raid.cluster_md.recovery.degraded_title')
 })
 
 const degradedAlertDescription = computed(() => {
+  if (props.action === 'stop_md' && isInconsistentStopMode.value) {
+    return t('raid.cluster_md.recovery.stop_inconsistent_description')
+  }
   if (props.action === 'stop_md') return t('raid.cluster_md.recovery.stop_active_only_description')
   if (props.action === 'assemble_md') return t('raid.cluster_md.recovery.assemble_missing_only_description')
   return t('raid.cluster_md.recovery.degraded_description')
@@ -428,6 +470,9 @@ async function retryClusterCleanupAfterMapping() {
 const confirmLabel = computed(() => {
   if (showLocalRecoveryMode.value) {
     return t('raid.cluster_md.local_recovery.confirm_run_local')
+  }
+  if (isInconsistentStopMode.value) {
+    return t('raid.cluster_md.recovery.confirm_stop_inconsistent')
   }
   if (isDegradedMode.value && props.action === 'stop_md') {
     return t('raid.cluster_md.recovery.confirm_stop_active_only')

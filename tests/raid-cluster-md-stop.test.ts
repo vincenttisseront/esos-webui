@@ -117,5 +117,89 @@ describe('buildStopMdClusterExecutionPlan', () => {
     expect(plan.nodeResults[0].source).toBe('primary')
     expect(plan.nodeResults[1].source).toBe('peer')
     expect(plan.recoveryMode).toBe('stop_all_active')
+    expect(plan.confirmationPhrase).toBe('STOP md0')
+  })
+
+  it('builds inconsistent stop plan with degraded confirmation', async () => {
+    const md0a = { name: 'md0', path: '/dev/md0', uuid: 'uuid-a', members: [{ path: '/dev/sda1' }], state: 'active', raidLevel: '1', raidDevices: 2, activeDevices: 2, workingDevices: 2, failedDevices: 0, spareDevices: 0, usedBy: [], warnings: [] }
+    const md0b = { ...md0a, uuid: 'uuid-b', members: [{ path: '/dev/sdb1' }] }
+    const nodes = [
+      {
+        sanId: 'san-1',
+        label: 'esos1',
+        role: 'primary',
+        readOnly: false,
+        sshReady: true,
+        blockDevices: [],
+        mdArrays: [md0a],
+        stoppedMdArrays: [],
+      },
+      {
+        sanId: 'san-2',
+        label: 'esos2',
+        role: 'secondary',
+        readOnly: false,
+        sshReady: true,
+        blockDevices: [],
+        mdArrays: [md0b],
+        stoppedMdArrays: [],
+      },
+    ]
+    const nodeReports = nodes.map(n => ({
+      sanId: n.sanId,
+      label: n.label,
+      role: n.role,
+      sshReady: true,
+      state: 'active' as const,
+      arrayPath: '/dev/md0',
+      members: n.mdArrays[0].members.map((m: { path: string }) => m.path),
+      uuid: n.mdArrays[0].uuid,
+      reasons: [],
+      nodeBlockers: [],
+      nodeWarnings: [],
+    }))
+    vi.spyOn(clusterPreflight, 'runClusterStoragePreflight').mockResolvedValue({
+      ok: true,
+      okSymmetric: false,
+      okDegraded: true,
+      action: 'stop_md',
+      sourceSanId: 'san-1',
+      blockers: [],
+      warnings: ['UUID MD différents'],
+      syncLimitations: [],
+      mappings: [],
+      perNodePreflights: {},
+      executionModesAllowed: ['all_nodes'],
+      nodes,
+      recoveryAssessment: {
+        action: 'stop_md',
+        arrayName: 'md0',
+        nodeReports,
+        hardBlockers: [],
+        warnings: [],
+        allowedRecoveryModes: ['stop_inconsistent_active'],
+        recommendedRecoveryMode: 'stop_inconsistent_active',
+        okSymmetric: false,
+        okDegraded: true,
+        uuidConflict: {
+          arrayName: 'md0',
+          nodes: [
+            { sanId: 'san-1', label: 'esos1', uuid: 'uuid-a', arrayPath: '/dev/md0' },
+            { sanId: 'san-2', label: 'esos2', uuid: 'uuid-b', arrayPath: '/dev/md0' },
+          ],
+        },
+      },
+    } as any)
+
+    const plan = await buildStopMdClusterExecutionPlan({
+      primarySanId: 'san-1',
+      arrayName: 'md0',
+      recoveryMode: 'stop_inconsistent_active',
+    })
+
+    expect(plan.recoveryMode).toBe('stop_inconsistent_active')
+    expect(plan.confirmationPhrase).toBe('STOP INCONSISTENT md0')
+    expect(plan.nodeResults.filter(n => n.participation === 'execute')).toHaveLength(2)
+    expect(plan.nodeResults.every(n => n.command === 'mdadm --stop /dev/md0')).toBe(true)
   })
 })

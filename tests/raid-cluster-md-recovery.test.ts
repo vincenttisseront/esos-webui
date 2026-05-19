@@ -6,6 +6,7 @@ import {
   classifyMdArrayNodeState,
   computeClusterMdPlanToken,
   expectedClusterStopConfirmation,
+  getActiveUuidConflict,
   SKIP_REASON,
   skipReasonForStopState,
 } from '../server/utils/raid-cluster-md-node-state'
@@ -97,7 +98,7 @@ describe('buildStopRecoveryAssessment', () => {
     expect(assessment.hardBlockers.some(b => b.includes('actif'))).toBe(true)
   })
 
-  it('blocks UUID conflict among active nodes', () => {
+  it('allows stop_inconsistent_active on UUID conflict without hard blocker', () => {
     const reports = [
       classifyMdArrayNodeState(node({
         sanId: 'san-1',
@@ -111,7 +112,13 @@ describe('buildStopRecoveryAssessment', () => {
       }), 'md0'),
     ]
     const assessment = buildStopRecoveryAssessment(reports, 'md0')
-    expect(assessment.hardBlockers.some(b => b.includes('UUID'))).toBe(true)
+    expect(assessment.hardBlockers.some(b => b.includes('UUID'))).toBe(false)
+    expect(assessment.allowedRecoveryModes).toContain('stop_inconsistent_active')
+    expect(assessment.allowedRecoveryModes).not.toContain('stop_all_active')
+    expect(assessment.recommendedRecoveryMode).toBe('stop_inconsistent_active')
+    expect(assessment.okDegraded).toBe(true)
+    expect(assessment.uuidConflict?.nodes).toHaveLength(2)
+    expect(getActiveUuidConflict(reports, 'md0').conflict).toBe(true)
   })
 
   it('allows stop_active_only with unreachable peer when one active', () => {
@@ -150,6 +157,7 @@ describe('plan token and confirmation', () => {
   it('uses degraded stop confirmation phrase', () => {
     expect(expectedClusterStopConfirmation('md0', 'stop_active_only')).toBe('STOP md0 ON ACTIVE CLUSTER NODES')
     expect(expectedClusterStopConfirmation('md0', 'stop_all_active')).toBe('STOP md0')
+    expect(expectedClusterStopConfirmation('md0', 'stop_inconsistent_active')).toBe('STOP INCONSISTENT md0')
   })
 
   it('changes plan token when recovery mode changes', () => {
@@ -172,6 +180,28 @@ describe('plan token and confirmation', () => {
       nodeReports: reports,
     })
     expect(t1).not.toBe(t2)
+  })
+
+  it('changes plan token between inconsistent and active-only modes', () => {
+    const reports = [
+      classifyMdArrayNodeState(node({ sanId: 'san-1', label: 'esos1', mdArrays: [activeMd0 as any] }), 'md0'),
+      classifyMdArrayNodeState(node({ sanId: 'san-2', label: 'esos2' }), 'md0'),
+    ]
+    const tInconsistent = computeClusterMdPlanToken({
+      action: 'stop_md',
+      arrayName: 'md0',
+      recoveryMode: 'stop_inconsistent_active',
+      primarySanId: 'san-1',
+      nodeReports: reports,
+    })
+    const tActiveOnly = computeClusterMdPlanToken({
+      action: 'stop_md',
+      arrayName: 'md0',
+      recoveryMode: 'stop_active_only',
+      primarySanId: 'san-1',
+      nodeReports: reports,
+    })
+    expect(tInconsistent).not.toBe(tActiveOnly)
   })
 })
 

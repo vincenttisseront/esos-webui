@@ -565,6 +565,15 @@
         "assemble_missing_only_title": "Assemblage sur les nœuds arrêtés uniquement",
         "assemble_missing_only_description": "Certains nœuds ont déjà le tableau actif. L'assemblage ne s'appliquera qu'aux nœuds avec métadonnées arrêtées.",
         "confirm_stop_active_only": "Arrêter sur les nœuds actifs",
+        "confirm_stop_inconsistent": "Arrêter les tableaux incohérents",
+        "uuid_conflict_title": "Même nom, UUID différents",
+        "uuid_conflict_description": "Même /dev/{name}, UUID différents. Ce ne sont pas le même tableau.",
+        "stop_inconsistent_title": "Arrêter des tableaux incohérents",
+        "stop_inconsistent_description": "Arrête les tableaux actifs sur chaque nœud sans supposer qu'il s'agit du même ensemble MD.",
+        "stop_inconsistent_risk_metadata": "N'efface pas les métadonnées MD.",
+        "stop_inconsistent_risk_stop_only": "N'arrête que les tableaux actifs.",
+        "stop_inconsistent_risk_followup": "Un nettoyage ou une réparation manuelle peut être nécessaire ensuite.",
+        "col_uuid": "UUID",
         "no_active_to_stop": "Rien à arrêter — aucun tableau actif sur le cluster",
         "repair_needed": "Réparation manuelle requise — aucune métadonnée arrêtée détectée",
         "col_node": "Nœud",
@@ -589,6 +598,7 @@
         "mode": {
           "stop_all_active": "Arrêter sur tous les nœuds actifs",
           "stop_active_only": "Arrêter sur les nœuds actifs uniquement",
+          "stop_inconsistent_active": "Arrêter les tableaux incohérents (UUID différents)",
           "assemble_missing_only": "Assembler sur les nœuds arrêtés uniquement",
           "assemble_stopped_nodes": "Assembler sur tous les nœuds arrêtés",
           "cleanup_mapped_only": "Nettoyage mappé uniquement"

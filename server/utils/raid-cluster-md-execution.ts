@@ -201,7 +201,8 @@ function buildStopNodeResultsFromAssessment(
 
     const shouldExecute = recoveryMode === 'stop_all_active'
       ? report.state === 'active'
-      : recoveryMode === 'stop_active_only' && report.state === 'active'
+      : (recoveryMode === 'stop_active_only' || recoveryMode === 'stop_inconsistent_active')
+        && report.state === 'active'
 
     if (shouldExecute) {
       const arrayPath = report.arrayPath ?? `/dev/${arrayName}`

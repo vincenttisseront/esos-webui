@@ -162,16 +162,6 @@ export async function runClusterStoragePreflight(
       }
     }
 
-    if (req.action === 'stop_md') {
-      const arrayName = String((req.payload as Record<string, unknown>)?.name ?? '')
-      const activeUuids = inventories
-        .map(n => n.mdArrays.find(a => a.name === arrayName)?.uuid)
-        .filter((u): u is string => Boolean(u))
-      const uniqueUuids = [...new Set(activeUuids)]
-      if (uniqueUuids.length > 1) {
-        blockers.push(`UUID MD incohérents entre nœuds pour ${arrayName} : ${uniqueUuids.join(', ')}`)
-      }
-    }
   }
 
   let recoveryAssessment: import('./raid-types').ClusterMdRecoveryAssessment | undefined
