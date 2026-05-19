@@ -39,7 +39,10 @@
         <UIcon name="i-heroicons-arrow-path" class="animate-spin w-4 h-4" />
         {{ t('raid.cluster_md.preflight_loading') }}
       </motion.div>
-      <ClusterStoragePreflightPanel v-else-if="clusterPreflight && !recoveryAssessment" :preflight="clusterPreflight" />
+      <ClusterStoragePreflightPanel
+        v-else-if="clusterPreflight && !recoveryAssessment && !showMappingFork && !showLocalRecoveryMode"
+        :preflight="clusterPreflight"
+      />
 
       <motion.div
         v-if="recoveryAssessment?.nodeReports.length"
@@ -100,15 +103,79 @@
         show-recovery-columns
       />
 
+      <motion.div
+        v-if="showMappingFork && !showLocalRecoveryMode && !showMappingResolver"
+        class="space-y-3 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-4"
+        :initial="{ opacity: 0 }"
+        :animate="{ opacity: 1 }"
+      >
+        <p class="text-sm font-semibold text-amber-900 dark:text-amber-200">
+          {{ t('raid.cluster_md.local_recovery.mapping_blocked_title') }}
+        </p>
+        <p class="text-xs text-amber-800 dark:text-amber-300">
+          {{ t('raid.cluster_md.local_recovery.mapping_blocked_description') }}
+        </p>
+        <motion.div class="flex flex-wrap gap-2">
+          <UButton size="sm" color="amber" variant="soft" @click="showMappingResolver = true">
+            {{ t('raid.cluster_md.local_recovery.resolve_mapping') }}
+          </UButton>
+          <UButton size="sm" color="red" variant="solid" @click="enterLocalRecoveryMode">
+            {{ t('raid.cluster_md.local_recovery.run_local_only') }}
+          </UButton>
+        </motion.div>
+      </motion.div>
+
+      <motion.div
+        v-if="showMappingResolver && ambiguousMappings.length"
+        class="space-y-3"
+        :initial="{ opacity: 0 }"
+        :animate="{ opacity: 1 }"
+      >
+        <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+          {{ t('raid.cluster_md.local_recovery.resolve_mapping_title') }}
+        </p>
+        <motion.div
+          v-for="mapping in ambiguousMappings"
+          :key="mappingKey(mapping)"
+          class="rounded border border-amber-200 dark:border-amber-800 p-3 space-y-2 text-sm"
+        >
+          <p class="font-mono text-xs">{{ mapping.sourcePath }} → {{ nodeLabel(mapping.targetSanId) }}</p>
+          <select
+            v-model="manualMappingSelection[mappingKey(mapping)]"
+            class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 py-1.5 text-sm"
+          >
+            <option value="">{{ t('raid.create_md.mapping.select_placeholder') }}</option>
+            <option v-for="c in mapping.candidates" :key="c.path" :value="c.path">{{ c.path }}</option>
+          </select>
+        </motion.div>
+        <motion.div class="flex gap-2">
+          <UButton size="sm" color="gray" variant="outline" @click="showMappingResolver = false">
+            {{ t('common.actions.cancel') }}
+          </UButton>
+          <UButton size="sm" color="amber" :disabled="!manualMappingComplete" @click="retryClusterCleanupAfterMapping">
+            {{ t('raid.cluster_md.local_recovery.retry_cluster_plan') }}
+          </UButton>
+        </motion.div>
+      </motion.div>
+
+      <ClusterLocalRecoveryPanel
+        v-if="showLocalRecoveryMode && localRecoveryOffered"
+        v-model:input-phrase="localRecoveryPhrase"
+        :offered="localRecoveryOffered"
+        :members="cleanupMembers"
+        :confirmation-phrase="localRecoveryConfirmationPhrase"
+        :disabled="executing"
+      />
+
       <UAlert
-        v-if="planError"
+        v-if="planError && !showMappingFork"
         :title="t('raid.cluster_md.plan_error_title')"
         :description="planError"
         color="red"
         icon="i-heroicons-x-circle"
       />
 
-      <div v-if="effectiveConfirmationPhrase" class="space-y-2">
+      <div v-if="effectiveConfirmationPhrase && !showLocalRecoveryMode" class="space-y-2">
         <p class="text-sm text-gray-600">
           {{ t('raid.cluster_md.confirm_phrase_hint') }}
           <code class="text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded font-mono text-xs">{{ effectiveConfirmationPhrase }}</code>
@@ -128,7 +195,7 @@
         {{ t('common.actions.cancel') }}
       </UButton>
       <UButton
-        :color="riskLevel === 'destructive' ? 'red' : 'amber'"
+        :color="showLocalRecoveryMode ? 'red' : (riskLevel === 'destructive' ? 'red' : 'amber')"
         size="sm"
         :loading="executing"
         :disabled="!canConfirm"
@@ -149,13 +216,16 @@ import type {
   ClusterMdPreflightAction,
   ClusterMdRecoveryAssessment,
   ClusterMdRecoveryMode,
+  ClusterDiskMapping,
   ClusterStoragePreflightResult,
+  MdLocalRecoveryOffered,
   RaidPreflightResult,
   RaidRiskLevel,
   WipeMdSignaturesRequest,
   ZeroMdSuperblocksRequest,
 } from '~/types/raid'
 import { filterPartitionMappingsForDevices } from '~/utils/raid-cluster-mapping'
+import { expectedLocalCleanupConfirmation } from '~/utils/raid-local-recovery-confirm'
 
 const props = defineProps<{
   action: ClusterMdPreflightAction
@@ -187,16 +257,86 @@ const planError = ref<string | null>(null)
 const inputPhrase = ref('')
 const executing = ref(false)
 const selectedRecoveryMode = ref<ClusterMdRecoveryMode | null>(null)
+const showLocalRecoveryMode = ref(false)
+const showMappingResolver = ref(false)
+const localRecoveryPhrase = ref('')
+const manualMappingSelection = reactive<Record<string, string>>({})
+
+const isCleanupAction = computed(() =>
+  props.action === 'zero_md_superblocks' || props.action === 'wipe_md_signatures',
+)
+
+const cleanupMembers = computed(() =>
+  Array.isArray(props.payload.members) ? (props.payload.members as string[]) : [],
+)
+
+const localRecoveryOffered = computed((): MdLocalRecoveryOffered | undefined =>
+  clusterPreflight.value?.localRecoveryOffered,
+)
+
+const showMappingFork = computed(() =>
+  isCleanupAction.value
+  && Boolean(localRecoveryOffered.value?.allowed)
+  && !clusterPreflight.value?.ok
+  && !showLocalRecoveryMode.value,
+)
+
+const localRecoveryConfirmationPhrase = computed(() => {
+  const label = localRecoveryOffered.value?.primaryLabel ?? ''
+  return label ? expectedLocalCleanupConfirmation(label) : ''
+})
+
+const ambiguousMappings = computed(() =>
+  clusterPreflight.value?.mappings.filter(m =>
+    m.confidence === 'none' && (m.candidates?.length ?? 0) > 0,
+  ) ?? [],
+)
+
+function mappingKey(mapping: ClusterDiskMapping): string {
+  return `${mapping.sourcePath}:${mapping.targetSanId}`
+}
+
+function nodeLabel(sanId: string): string {
+  return clusterPreflight.value?.nodes.find(n => n.sanId === sanId)?.label ?? sanId
+}
+
+const manualMappingComplete = computed(() =>
+  ambiguousMappings.value.length > 0
+  && ambiguousMappings.value.every(m => Boolean(manualMappingSelection[mappingKey(m)])),
+)
+
+const manualDiskMappings = computed((): ClusterDiskMappingInput[] =>
+  ambiguousMappings.value
+    .map((m) => {
+      const targetPath = manualMappingSelection[mappingKey(m)]
+      if (!targetPath) return null
+      return {
+        sourcePath: m.sourcePath,
+        targetSanId: m.targetSanId,
+        targetPath,
+        confirmedBy: 'operator' as const,
+        sourceKind: 'partition' as const,
+      }
+    })
+    .filter((m): m is ClusterDiskMappingInput => m !== null),
+)
 
 const diskMappings = computed((): ClusterDiskMappingInput[] => {
   const hint = raid.getPreparedClusterMappings(props.sourceSanId, props.clusterId)
   const members = Array.isArray(props.payload.members)
     ? (props.payload.members as string[])
     : []
-  if (hint && members.length) {
-    return filterPartitionMappingsForDevices(hint.partitionMappings, members)
-  }
-  return hint?.partitionMappings ?? []
+  const base = hint && members.length
+    ? filterPartitionMappingsForDevices(hint.partitionMappings, members)
+    : (hint?.partitionMappings ?? [])
+  const merged = [...base, ...manualDiskMappings.value]
+  const seen = new Set<string>()
+  return merged.filter((m) => {
+    const key = `${m.sourcePath}:${m.targetSanId}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 })
 
 const recoveryAssessment = computed((): ClusterMdRecoveryAssessment | undefined =>
@@ -255,15 +395,39 @@ const planReady = computed(() =>
   && executionPlan.value!.nodeResults.some(n => n.participation === 'execute' && n.command),
 )
 
-const canConfirm = computed(() =>
-  !executing.value
-  && planReady.value
-  && (recoveryAssessment.value?.allowedRecoveryModes.length ?? 0) > 0
-  && (props.localPreflight?.ok ?? true)
-  && inputPhrase.value === effectiveConfirmationPhrase.value,
-)
+const canConfirm = computed(() => {
+  if (executing.value) return false
+  if (showLocalRecoveryMode.value) {
+    return Boolean(localRecoveryConfirmationPhrase.value)
+      && localRecoveryPhrase.value === localRecoveryConfirmationPhrase.value
+      && cleanupMembers.value.length > 0
+  }
+  if (isCleanupAction.value && !showLocalRecoveryMode.value) {
+    return planReady.value && inputPhrase.value === effectiveConfirmationPhrase.value
+  }
+  return planReady.value
+    && (recoveryAssessment.value?.allowedRecoveryModes.length ?? 0) > 0
+    && (props.localPreflight?.ok ?? true)
+    && inputPhrase.value === effectiveConfirmationPhrase.value
+})
+
+function enterLocalRecoveryMode() {
+  showLocalRecoveryMode.value = true
+  showMappingResolver.value = false
+  planError.value = null
+  localRecoveryPhrase.value = ''
+}
+
+async function retryClusterCleanupAfterMapping() {
+  showMappingResolver.value = false
+  showLocalRecoveryMode.value = false
+  await loadCleanupPlan()
+}
 
 const confirmLabel = computed(() => {
+  if (showLocalRecoveryMode.value) {
+    return t('raid.cluster_md.local_recovery.confirm_run_local')
+  }
   if (isDegradedMode.value && props.action === 'stop_md') {
     return t('raid.cluster_md.recovery.confirm_stop_active_only')
   }
@@ -348,11 +512,54 @@ watch(selectedRecoveryMode, async (mode, prev) => {
   }
 })
 
+async function executeLocalRecovery() {
+  const confirmation = localRecoveryPhrase.value
+  const members = cleanupMembers.value
+  const localRecovery = {
+    scope: 'local' as const,
+    sanId: props.sourceSanId,
+    members,
+    confirmation,
+    reason: 'mapping_ambiguous' as const,
+  }
+  if (props.action === 'zero_md_superblocks') {
+    const res = await raid.zeroMdSuperblocks({
+      ...(props.payload as Omit<ZeroMdSuperblocksRequest, 'confirmation' | 'clusterExecution' | 'localRecovery'>),
+      members,
+      confirmation,
+      mode: 'basic',
+      localRecovery,
+    })
+    if (res.warnings?.some(w => w.includes('pairs'))) {
+      toast.warning(t('raid.cluster_md.local_recovery.peers_not_modified'))
+    }
+    return
+  }
+  if (props.action === 'wipe_md_signatures') {
+    const res = await raid.wipeMdSignatures({
+      ...(props.payload as Omit<WipeMdSignaturesRequest, 'confirmation' | 'clusterExecution' | 'localRecovery'>),
+      members,
+      confirmation,
+      mode: 'advanced',
+      localRecovery,
+    })
+    if (res.warnings?.some(w => w.includes('pairs') || w.includes('pairs du cluster'))) {
+      toast.warning(t('raid.cluster_md.local_recovery.peers_not_modified'))
+    }
+  }
+}
+
 async function execute() {
   if (!canConfirm.value) return
   executing.value = true
   executionResult.value = null
   try {
+    if (showLocalRecoveryMode.value) {
+      await executeLocalRecovery()
+      toast.success(t('raid.cluster_md.local_recovery.toast_success'))
+      emit('confirm')
+      return
+    }
     const confirmation = inputPhrase.value
     const clusterExecution = clusterExecutionPayload()
     if (props.action === 'stop_md' && props.arrayName) {
@@ -406,6 +613,7 @@ onMounted(() => {
 async function loadCleanupPlan() {
   clusterLoading.value = true
   planError.value = null
+  showLocalRecoveryMode.value = false
   try {
     clusterPreflight.value = await raid.clusterStoragePreflight({
       clusterId: props.clusterId,
@@ -415,6 +623,9 @@ async function loadCleanupPlan() {
       diskMappings: diskMappings.value,
     })
     if (!clusterPreflight.value.ok) {
+      if (clusterPreflight.value.localRecoveryOffered?.allowed) {
+        return
+      }
       planError.value = clusterPreflight.value.blockers.join('; ')
       return
     }

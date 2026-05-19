@@ -28,6 +28,12 @@ import {
   validateClusterMdPlanToken,
   isSymmetricRecoveryMode,
 } from './raid-cluster-md-node-state'
+import {
+  assertMutualExclusiveClusterAndLocal,
+  getSanLabelForLocalRecovery,
+  logLocalRecoveryExecution,
+  validateLocalRecoveryForCleanup,
+} from './raid-local-recovery'
 import { collectRaidOverview } from './raid-overview.service'
 import { getActiveSSHManager, withSanContext } from './ssh-runtime'
 function normalizeMdArrayName(name: string): string {
@@ -48,6 +54,7 @@ import type {
   ClusterMdRecoveryMode,
   ClusterStoragePreflightResult,
   MdArrayNodeStateReport,
+  MdLocalRecoveryRequest,
   StopMdArrayRequest,
   WipeMdSignaturesRequest,
   ZeroMdSuperblocksRequest,
@@ -56,12 +63,25 @@ import type {
 export const CLUSTER_MD_BLOCKED_MESSAGE =
   'Action MD bloquée pour SAN clusterisé : validez le stockage sur tous les nœuds et utilisez le flux multi-nœud. Une exécution sur un seul nœud créerait un état cluster incohérent. Sync config n\'arrête ni ne démarre pas les tableaux MD sur les pairs.'
 
+export type ClusteredMdMutationMode = 'cluster' | 'local'
+
 export function assertClusteredSanAllowsMutation(
   sanId: string,
   clusterExecution: ClusterMdExecutionRequest | undefined,
-): { clusterId: string; san: NonNullable<ReturnType<typeof getSanSummary>> } | null {
+  localRecovery?: MdLocalRecoveryRequest,
+): { clusterId: string; san: NonNullable<ReturnType<typeof getSanSummary>>; mode: ClusteredMdMutationMode } | null {
   const san = getSanSummary(sanId)
   if (!san?.clusterId) return null
+
+  assertMutualExclusiveClusterAndLocal(clusterExecution, localRecovery)
+
+  if (localRecovery?.scope === 'local') {
+    if (localRecovery.sanId !== sanId) {
+      throw createError({ statusCode: 400, statusMessage: 'localRecovery.sanId doit correspondre au SAN courant' })
+    }
+    return { clusterId: san.clusterId, san, mode: 'local' }
+  }
+
   if (!clusterExecution) {
     throw createError({ statusCode: 409, statusMessage: CLUSTER_MD_BLOCKED_MESSAGE })
   }
@@ -74,7 +94,7 @@ export function assertClusteredSanAllowsMutation(
   if (clusterExecution.requirePreflightOk !== true) {
     throw createError({ statusCode: 400, statusMessage: 'clusterExecution.requirePreflightOk=true requis' })
   }
-  return { clusterId: san.clusterId, san }
+  return { clusterId: san.clusterId, san, mode: 'cluster' }
 }
 
 export function validateClusterExecutionScope(
@@ -824,6 +844,125 @@ export async function runClusterZeroMdSuperblocks(
     stdout: clusterResult.nodeResults.map(n => `[${n.label}]\n${n.stdout ?? ''}`).join('\n'),
     commands: nodeResults.flatMap(n => (n.command ?? '').split('\n')).filter(Boolean),
     clusterExecution: clusterResult,
+  }
+}
+
+const PEERS_NOT_MODIFIED_WARNING = 'Les nœuds pairs du cluster n\'ont pas été modifiés (mode recovery locale).'
+
+export async function runLocalZeroMdSuperblocks(
+  sanId: string,
+  body: ZeroMdSuperblocksRequest,
+): Promise<ZeroMdSuperblocksRequest & {
+  mode: 'local_recovery'
+  scope: 'local'
+  ok: boolean
+  warnings: string[]
+  refreshedSanIds: string[]
+}> {
+  const localRecovery = body.localRecovery!
+  assertMutualExclusiveClusterAndLocal(body.clusterExecution, localRecovery)
+  const members = body.members.map(String)
+  validateLocalRecoveryForCleanup({
+    querySanId: sanId,
+    action: 'zero_md_superblocks',
+    localRecovery,
+    requestMembers: members,
+    clusterExecution: body.clusterExecution,
+  })
+
+  const label = getSanLabelForLocalRecovery(sanId)
+  const san = getSanSummary(sanId)
+  logLocalRecoveryExecution({
+    action: 'zero_md_superblocks',
+    sanId,
+    label,
+    members,
+    reason: localRecovery.reason,
+    clusterId: san?.clusterId,
+  })
+
+  const result = await withSanContext(sanId, async () => {
+    const manager = getActiveSSHManager()
+    if (!manager?.isReady()) throw createError({ statusCode: 503, statusMessage: 'SSH non connecté' })
+    const overview = await collectRaidOverview(manager)
+    const blockers = validateZeroSuperblockMembers(members, overview.blockDevices, overview.mdArrays)
+    if (blockers.length > 0) throw createError({ statusCode: 400, statusMessage: blockers[0] })
+    return await zeroMdSuperblocks(manager, members)
+  })
+
+  invalidateCacheKey(`raid-overview-${sanId}`)
+
+  return {
+    ...body,
+    mode: 'local_recovery',
+    scope: 'local',
+    ok: result.ok,
+    results: result.results,
+    warnings: [...new Set([...result.warnings, PEERS_NOT_MODIFIED_WARNING])],
+    stdout: result.stdout,
+    commands: result.commands,
+    refreshedSanIds: [sanId],
+  }
+}
+
+export async function runLocalWipeMdSignatures(
+  sanId: string,
+  body: WipeMdSignaturesRequest,
+): Promise<WipeMdSignaturesRequest & {
+  mode: 'local_recovery'
+  scope: 'local'
+  ok: boolean
+  warnings: string[]
+  refreshedSanIds: string[]
+}> {
+  const localRecovery = body.localRecovery!
+  assertMutualExclusiveClusterAndLocal(body.clusterExecution, localRecovery)
+  const members = body.members.map(String)
+  validateLocalRecoveryForCleanup({
+    querySanId: sanId,
+    action: 'wipe_md_signatures',
+    localRecovery,
+    requestMembers: members,
+    clusterExecution: body.clusterExecution,
+  })
+
+  const label = getSanLabelForLocalRecovery(sanId)
+  const san = getSanSummary(sanId)
+  logLocalRecoveryExecution({
+    action: 'wipe_md_signatures',
+    sanId,
+    label,
+    members,
+    reason: localRecovery.reason,
+    clusterId: san?.clusterId,
+  })
+
+  const result = await withSanContext(sanId, async () => {
+    const manager = getActiveSSHManager()
+    if (!manager?.isReady()) throw createError({ statusCode: 503, statusMessage: 'SSH non connecté' })
+    const overview = await collectRaidOverview(manager)
+    const blockers = validateWipeSignatureMembers(members, overview.blockDevices, overview.mdArrays)
+    if (blockers.length > 0) throw createError({ statusCode: 400, statusMessage: blockers[0] })
+    return await wipeMdSignatures(
+      manager,
+      members,
+      body.remainingSignatureTypes,
+      body.detectionSourcesByMember,
+    )
+  })
+
+  invalidateCacheKey(`raid-overview-${sanId}`)
+
+  return {
+    ...body,
+    mode: 'local_recovery',
+    scope: 'local',
+    ok: result.ok,
+    results: result.results,
+    warnings: [...new Set([...result.warnings, PEERS_NOT_MODIFIED_WARNING])],
+    stdout: result.stdout,
+    commands: result.commands,
+    refreshedSanIds: [sanId],
   }
 }
 

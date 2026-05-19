@@ -13,7 +13,9 @@ import { requireSanIdQuery } from '../../../../utils/san-query'
 import {
   assertClusteredSanAllowsMutation,
   runClusterWipeMdSignatures,
+  runLocalWipeMdSignatures,
 } from '../../../../utils/raid-cluster-md-execution'
+import { assertMutualExclusiveClusterAndLocal } from '../../../../utils/raid-local-recovery'
 import type { WipeMdSignaturesRequest } from '../../../../utils/raid-types'
 
 export default defineEventHandler(async (event) => {
@@ -32,8 +34,21 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const clusterCtx = assertClusteredSanAllowsMutation(sanId, body?.clusterExecution)
-  if (clusterCtx) {
+  assertMutualExclusiveClusterAndLocal(body?.clusterExecution, body?.localRecovery)
+
+  const clusterCtx = assertClusteredSanAllowsMutation(sanId, body?.clusterExecution, body?.localRecovery)
+  if (clusterCtx?.mode === 'local') {
+    try {
+      return await runLocalWipeMdSignatures(sanId, body!)
+    } catch (err: any) {
+      throw createError({
+        statusCode: err.statusCode ?? 500,
+        statusMessage: err.statusMessage ?? err.message ?? 'Erreur nettoyage signatures RAID (recovery locale)',
+        data: err.data,
+      })
+    }
+  }
+  if (clusterCtx?.mode === 'cluster') {
     try {
       return await runClusterWipeMdSignatures(sanId, body!)
     } catch (err: any) {

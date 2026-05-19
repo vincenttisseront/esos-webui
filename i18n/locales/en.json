@@ -396,6 +396,21 @@
           "unreachable": "SSH unavailable",
           "no_active_array": "Array not active"
         }
+      },
+      "local_recovery": {
+        "title": "Advanced recovery — current node only",
+        "description": "Destructive action limited to this node. Cluster peers will not be modified.",
+        "mapping_blocked_title": "Cluster plan blocked by mapping",
+        "mapping_blocked_description": "Automatic mapping to peer partition paths is ambiguous or incomplete. Resolve mapping for cluster-wide execution, or use local recovery knowingly.",
+        "resolve_mapping": "Resolve cluster mapping",
+        "resolve_mapping_title": "Manual peer partition mapping",
+        "retry_cluster_plan": "Retry cluster plan",
+        "run_local_only": "Run on this node only (recovery)",
+        "affected_node": "Affected node",
+        "skipped_peers_title": "Skipped peer nodes",
+        "confirm_run_local": "Clean this node only",
+        "toast_success": "Local cleanup completed",
+        "peers_not_modified": "Cluster peer nodes were not modified."
       }
     },
     "stopped_md": {
