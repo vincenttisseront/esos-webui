@@ -8,11 +8,6 @@
           <UBadge :color="stateColor" :label="stateLabel" size="xs" variant="soft" />
           <UBadge v-if="array.raidLevel !== 'unknown'" color="gray" :label="`RAID${array.raidLevel}`" size="xs" variant="outline" />
         </div>
-        <div class="flex flex-wrap gap-x-4 mt-1 text-xs text-gray-500">
-          <span v-if="array.uuid">UUID : {{ array.uuid }}</span>
-          <span v-if="array.metadataVersion">metadata {{ array.metadataVersion }}</span>
-          <span>{{ t('raid.stopped_md.members_count', { count: presentMemberCount, expected: array.raidDevices }) }}</span>
-        </div>
         <StoppedMdRecommendedActions :array="array" class="mt-2" />
         <p v-if="isOrphanOnly" class="text-xs text-amber-700 dark:text-amber-300 mt-1">
           {{ t('raid.stopped_md.orphan_only_notice') }}
@@ -95,33 +90,40 @@
       <UIcon name="i-heroicons-exclamation-triangle" class="w-3 h-3" />{{ w }}
     </div>
 
-    <div class="overflow-x-auto">
-      <table class="w-full text-xs">
-        <thead>
-          <tr class="text-left text-gray-500 border-b border-gray-200">
-            <th class="py-1 pr-3">{{ t('raid.stopped_md.member_path') }}</th>
-            <th class="py-1 pr-3">{{ t('raid.stopped_md.member_state') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(member, idx) in array.members" :key="memberRowKey(member, idx)" class="border-b border-gray-100">
-            <td class="py-1.5 pr-3 font-mono text-gray-800">{{ member.path }}</td>
-            <td class="py-1.5 pr-3 text-gray-600" :title="memberStatusTitle(member)">
-              <span class="inline-flex items-center gap-1.5 flex-wrap">
-                {{ memberStatusLabel(member) }}
-                <UBadge
-                  v-if="memberNeedsAdvancedCleanup(member)"
-                  color="amber"
-                  size="xs"
-                  variant="soft"
-                  :label="t('raid.stopped_md.advanced_cleanup')"
-                />
-              </span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <RaidArrayDetailsCollapse>
+      <div class="flex flex-wrap gap-x-4 text-xs text-gray-500">
+        <span v-if="array.uuid">UUID : {{ array.uuid }}</span>
+        <span v-if="array.metadataVersion">metadata {{ array.metadataVersion }}</span>
+        <span>{{ t('raid.stopped_md.members_count', { count: presentMemberCount, expected: array.raidDevices }) }}</span>
+      </div>
+      <div class="overflow-x-auto mt-2">
+        <table class="w-full text-xs">
+          <thead>
+            <tr class="text-left text-gray-500 border-b border-gray-200">
+              <th class="py-1 pr-3">{{ t('raid.stopped_md.member_path') }}</th>
+              <th class="py-1 pr-3">{{ t('raid.stopped_md.member_state') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(member, idx) in array.members" :key="memberRowKey(member, idx)" class="border-b border-gray-100">
+              <td class="py-1.5 pr-3 font-mono text-gray-800">{{ member.path }}</td>
+              <td class="py-1.5 pr-3 text-gray-600" :title="memberStatusTitle(member)">
+                <span class="inline-flex items-center gap-1.5 flex-wrap">
+                  {{ memberStatusLabel(member) }}
+                  <UBadge
+                    v-if="memberNeedsAdvancedCleanup(member)"
+                    color="amber"
+                    size="xs"
+                    variant="soft"
+                    :label="t('raid.stopped_md.advanced_cleanup')"
+                  />
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </RaidArrayDetailsCollapse>
   </div>
 </template>
 

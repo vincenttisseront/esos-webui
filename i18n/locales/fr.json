@@ -242,13 +242,22 @@
       "auto_refresh_failed": "La mise à jour automatique de la progression RAID a été interrompue"
     },
     "software": {
+      "layout": {
+        "actions_row": "Actions RAID logiciel"
+      },
       "summary": {
         "title": "État RAID logiciel",
         "active": "{count} tableau(x) actif(s)",
         "rebuilding": "{count} en resync / recovery",
         "stopped": "{count} arrêté(s) assemblable(s)",
         "orphan": "{count} métadonnée(s) orpheline(s)",
-        "peer_md": "{count} alerte(s) sur nœud pair"
+        "peer_md": "{count} alerte(s) sur nœud pair",
+        "resync_line": "{path} {action} {percent}% · {speed} · ETA {eta}",
+        "no_resync": "Aucune resynchronisation en cours"
+      },
+      "section": {
+        "inactive_devices": "Périphériques MD inactifs ({count})",
+        "metadata_holdouts": "Métadonnées sur partitions ({count})"
       },
       "help": {
         "workflow_title": "Flux RAID logiciel",
@@ -256,6 +265,21 @@
         "toggle_show": "Afficher l'aide",
         "toggle_hide": "Masquer l'aide"
       }
+    },
+    "attention": {
+      "title": "Points d'attention",
+      "local_group": "Ce nœud ({count})",
+      "peer_group": "Nœuds pairs ({count})",
+      "peer_items": "{count} élément(s) MD",
+      "show_all": "Voir tout ({count})",
+      "show_all_details": "Tous les points d'attention",
+      "empty": "Aucun point d'attention MD"
+    },
+    "peer_section": {
+      "summary": "Métadonnées MD sur les nœuds pairs ({count})"
+    },
+    "details": {
+      "toggle": "Détails"
     },
     "detection": {
       "blockers_title": "Points d'attention MD",

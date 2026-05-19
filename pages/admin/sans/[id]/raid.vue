@@ -180,87 +180,50 @@
 
     <!-- Onglet RAID Logiciel (MD) -->
     <div v-else-if="activeTab === 'software' && raid.overview" class="space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <UAlert
+          v-if="isClusteredSan"
+          class="flex-1 min-w-[12rem]"
+          :title="t('raid.cluster_md.software_alert_title')"
+          color="amber"
+          icon="i-heroicons-exclamation-triangle"
+          variant="soft"
+        />
+        <div class="flex flex-wrap justify-end gap-2 shrink-0">
+          <UButton
+            v-if="!isReadOnly"
+            color="amber"
+            size="sm"
+            icon="i-heroicons-circle-stack"
+            @click="openPrepareMdPartitionsWizard()"
+          >
+            {{ t('raid.prepare_partitions.action') }}
+          </UButton>
+          <UButton
+            v-if="!isReadOnly"
+            color="blue"
+            size="sm"
+            icon="i-heroicons-plus"
+            @click="openMdWizard()"
+          >
+            {{ t('raid.create_md.action') }}
+          </UButton>
+        </div>
+      </div>
+
       <RaidSoftwareSummaryCard
         :counts="softwareSummaryCounts"
+        :resync="primaryResyncSummary"
+        :auto-refresh-active="raid.autoRefreshActive"
         @navigate="scrollToSoftwareSection"
       />
 
-      <RaidMdBlockersPanel
+      <RaidAttentionSummary
         :items="mdBlockerItems"
         :current-san-id="sanId"
         :peer-raid-link="peerRaidLink"
         @navigate="navigateMdDetectionItem"
       />
-
-      <RaidCollapsibleHelp :title="t('raid.software.help.workflow_title')">
-        <p class="font-medium text-gray-800 dark:text-gray-200">{{ t('raid.workflow.title') }}</p>
-        <ol class="mt-1 list-decimal pl-5 space-y-0.5">
-          <li>{{ t('raid.workflow.step_prepare') }}</li>
-          <li>{{ t('raid.workflow.step_create') }}</li>
-          <li>{{ t('raid.workflow.step_use') }}</li>
-        </ol>
-      </RaidCollapsibleHelp>
-
-      <RaidCollapsibleHelp
-        v-if="isClusteredSan"
-        :title="t('raid.software.help.cluster_title')"
-      >
-        <p>{{ t('raid.cluster_md.software_alert_description') }}</p>
-      </RaidCollapsibleHelp>
-      <UAlert
-        v-if="isClusteredSan"
-        :title="t('raid.cluster_md.software_alert_title')"
-        color="amber"
-        icon="i-heroicons-exclamation-triangle"
-        variant="soft"
-      />
-      <div class="flex justify-end gap-2">
-        <UButton
-          v-if="!isReadOnly"
-          color="amber"
-          size="sm"
-          icon="i-heroicons-circle-stack"
-          @click="openPrepareMdPartitionsWizard()"
-        >
-          {{ t('raid.prepare_partitions.action') }}
-        </UButton>
-        <UButton
-          v-if="!isReadOnly"
-          color="blue"
-          size="sm"
-          icon="i-heroicons-plus"
-          @click="openMdWizard()"
-        >
-          {{ t('raid.create_md.action') }}
-        </UButton>
-      </div>
-      <div id="raid-software-peer">
-        <UAlert
-          v-for="peer in peersWithMd"
-          :key="peer.nodeSanId"
-          :title="t('raid.md_detection.peer_banner_title', { label: peer.nodeLabel })"
-          color="amber"
-          icon="i-heroicons-exclamation-triangle"
-          variant="soft"
-        >
-        <template #description>
-          <ul class="list-disc pl-4 text-sm space-y-0.5 mt-1">
-            <li v-for="item in peer.items.slice(0, 5)" :key="item.path + item.kind">
-              {{ item.summary }}
-            </li>
-          </ul>
-          <UButton
-            class="mt-2"
-            size="xs"
-            color="amber"
-            variant="soft"
-            :to="peerRaidLink(peer.nodeSanId)"
-          >
-            {{ t('raid.md_detection.view_peer_raid', { label: peer.nodeLabel }) }}
-          </UButton>
-        </template>
-        </UAlert>
-      </div>
 
       <motion.div
         v-if="showSoftwareEmpty"
@@ -272,14 +235,6 @@
         <p>{{ t('raid.md_detection.empty_title') }}</p>
         <p class="text-xs mt-1">{{ t('raid.md_detection.empty_hint') }}</p>
       </motion.div>
-      <UAlert
-        v-if="isClusteredSan && raid.mdArrays.length"
-        :title="t('raid.cluster_md.active_arrays_title')"
-        :description="t('raid.cluster_md.active_arrays_description')"
-        color="amber"
-        icon="i-heroicons-exclamation-triangle"
-        variant="soft"
-      />
       <div v-if="raid.mdArrays.length" id="raid-software-active" class="space-y-3">
         <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Tableaux MD actifs</h3>
         <UCard
@@ -353,49 +308,75 @@
         </UCard>
       </motion.div>
 
-      <div
+      <details
         v-if="inactiveMdDevices.length"
-        class="space-y-3 pt-2 border-t border-gray-200 dark:border-gray-700"
+        class="rounded-lg border border-gray-200 dark:border-gray-700"
       >
-        <div>
-          <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('raid.md_detection.inactive_device_title') }}</h3>
-          <p class="text-xs text-gray-500 mt-1">{{ t('raid.md_detection.current_node_only') }}</p>
-        </div>
-        <UCard v-for="item in inactiveMdDevices" :key="item.path">
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <p class="font-mono text-sm font-medium">{{ item.path }}</p>
-              <p class="text-xs text-gray-500 mt-1">{{ item.summary }}</p>
-            </div>
-            <UButton size="xs" color="gray" variant="soft" @click="goToDevicesForPath(item.path)">
-              {{ t('raid.md_detection.view_in_devices') }}
-            </UButton>
-          </div>
-        </UCard>
-      </div>
-
-      <div
-        v-if="metadataHoldouts.length"
-        class="space-y-3 pt-2 border-t border-gray-200 dark:border-gray-700"
-      >
-        <div>
-          <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('raid.md_detection.partition_metadata_title') }}</h3>
-          <p class="text-xs text-gray-500 mt-1">{{ t('raid.md_detection.partition_metadata_description') }}</p>
-        </div>
-        <UCard v-for="item in metadataHoldouts" :key="item.path">
-          <div class="space-y-2">
+        <summary class="cursor-pointer px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 select-none list-none">
+          {{ t('raid.software.section.inactive_devices', { count: inactiveMdDevices.length }) }}
+        </summary>
+        <div class="px-3 pb-3 space-y-2 border-t border-gray-200 dark:border-gray-700">
+          <p class="text-xs text-gray-500 pt-2">{{ t('raid.md_detection.current_node_only') }}</p>
+          <UCard v-for="item in inactiveMdDevices" :key="item.path">
             <div class="flex items-start justify-between gap-3">
-              <p class="font-mono text-sm font-medium">{{ item.path }}</p>
-              <UButton size="xs" color="amber" variant="soft" @click="goToDevicesForPath(item.path)">
+              <div>
+                <p class="font-mono text-sm font-medium">{{ item.path }}</p>
+                <p class="text-xs text-gray-500 mt-1">{{ item.summary }}</p>
+              </div>
+              <UButton size="xs" color="gray" variant="soft" @click="goToDevicesForPath(item.path)">
                 {{ t('raid.md_detection.view_in_devices') }}
               </UButton>
             </div>
-            <ul v-if="item.reasons.length" class="text-xs text-amber-800 dark:text-amber-300 list-disc pl-4">
-              <li v-for="reason in item.reasons" :key="reason">{{ reason }}</li>
-            </ul>
-          </div>
-        </UCard>
-      </div>
+          </UCard>
+        </div>
+      </details>
+
+      <details
+        v-if="metadataHoldouts.length"
+        class="rounded-lg border border-gray-200 dark:border-gray-700"
+      >
+        <summary class="cursor-pointer px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 select-none list-none">
+          {{ t('raid.software.section.metadata_holdouts', { count: metadataHoldouts.length }) }}
+        </summary>
+        <div class="px-3 pb-3 space-y-2 border-t border-gray-200 dark:border-gray-700">
+          <p class="text-xs text-gray-500 pt-2">{{ t('raid.md_detection.partition_metadata_description') }}</p>
+          <UCard v-for="item in metadataHoldouts" :key="item.path">
+            <div class="space-y-2">
+              <div class="flex items-start justify-between gap-3">
+                <p class="font-mono text-sm font-medium">{{ item.path }}</p>
+                <UButton size="xs" color="amber" variant="soft" @click="goToDevicesForPath(item.path)">
+                  {{ t('raid.md_detection.view_in_devices') }}
+                </UButton>
+              </div>
+              <ul v-if="item.reasons.length" class="text-xs text-amber-800 dark:text-amber-300 list-disc pl-4">
+                <li v-for="reason in item.reasons" :key="reason">{{ reason }}</li>
+              </ul>
+            </div>
+          </UCard>
+        </div>
+      </details>
+
+      <RaidPeerMdSection
+        :peers="peersWithMd"
+        :peer-raid-link="peerRaidLink"
+      />
+
+      <RaidCollapsibleHelp :title="t('raid.software.help.workflow_title')">
+        <p class="font-medium text-gray-800 dark:text-gray-200">{{ t('raid.workflow.title') }}</p>
+        <ol class="mt-1 list-decimal pl-5 space-y-0.5">
+          <li>{{ t('raid.workflow.step_prepare') }}</li>
+          <li>{{ t('raid.workflow.step_create') }}</li>
+          <li>{{ t('raid.workflow.step_use') }}</li>
+        </ol>
+      </RaidCollapsibleHelp>
+
+      <RaidCollapsibleHelp
+        v-if="isClusteredSan"
+        :title="t('raid.software.help.cluster_title')"
+      >
+        <p>{{ t('raid.cluster_md.software_alert_description') }}</p>
+        <p v-if="raid.mdArrays.length" class="mt-2">{{ t('raid.cluster_md.active_arrays_description') }}</p>
+      </RaidCollapsibleHelp>
     </div>
 
     <!-- Onglet Block Devices -->
@@ -567,7 +548,7 @@ import {
   partitionMetadataItems,
   peerNodesWithMdState,
 } from '~/utils/raid-md-detection'
-import { hasActiveMdArrayProgress } from '~/utils/raid-md-progress'
+import { hasActiveMdArrayProgress, primaryResyncSummary as computePrimaryResyncSummary } from '~/utils/raid-md-progress'
 import type { RaidSoftwareSummaryAnchor } from '~/components/raid/RaidSoftwareSummaryCard.vue'
 import {
   partitionStoppedMdArrays,
@@ -614,6 +595,7 @@ const softwareSummaryCounts = computed(() => ({
   orphan: partitionedStopped.value.orphanOrIncomplete.length,
   peerMd: peersWithMd.value.length,
 }))
+const primaryResyncSummary = computed(() => computePrimaryResyncSummary(raid.mdArrays))
 
 // Wizards & modals
 const { open: openModal } = useAppModal()

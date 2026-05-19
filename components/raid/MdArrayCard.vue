@@ -1,23 +1,14 @@
 <template>
-  <div class="space-y-3">
-    <!-- Header -->
+  <div class="space-y-2">
     <div class="flex items-start justify-between gap-4">
-      <div>
+      <div class="min-w-0 flex-1">
         <div class="flex items-center gap-2 flex-wrap">
-          <UIcon name="i-heroicons-server-stack" class="w-4 h-4 text-gray-400" />
+          <UIcon name="i-heroicons-server-stack" class="w-4 h-4 text-gray-400 shrink-0" />
           <span class="font-mono font-semibold text-gray-900 dark:text-gray-100">{{ array.path }}</span>
           <UBadge :color="stateColor" :label="array.state" size="xs" variant="soft" />
           <UBadge color="gray" :label="`RAID${array.raidLevel}`" size="xs" variant="outline" />
-        </div>
-        <div class="flex flex-wrap gap-x-4 mt-1 text-xs text-gray-500">
-          <span v-if="array.uuid">UUID : {{ array.uuid.slice(0, 18) }}…</span>
-          <span v-if="array.metadataVersion">metadata {{ array.metadataVersion }}</span>
-          <span v-if="array.detailState">état mdadm : {{ array.detailState }}</span>
-          <span>{{ array.activeDevices }}/{{ array.raidDevices }} actif(s)</span>
-          <span v-if="array.failedDevices > 0" class="text-red-600 dark:text-red-400">{{ array.failedDevices }} en échec</span>
-          <span v-if="array.spareDevices > 0" class="text-blue-600 dark:text-blue-400">{{ array.spareDevices }} spare(s)</span>
-          <span v-if="array.sizeBytes">{{ formatSize(array.sizeBytes) }}</span>
-          <span v-if="array.chunkKb">chunk {{ array.chunkKb }}K</span>
+          <span class="text-xs text-gray-500">{{ array.activeDevices }}/{{ array.raidDevices }} actif(s)</span>
+          <span v-if="array.failedDevices > 0" class="text-xs text-red-600 dark:text-red-400">{{ array.failedDevices }} en échec</span>
         </div>
       </div>
       <div class="flex gap-2 shrink-0">
@@ -32,14 +23,13 @@
       </div>
     </div>
 
-    <!-- Rebuild progress -->
     <div v-if="array.progress" class="bg-gray-100 dark:bg-gray-800 rounded px-3 py-2">
       <div class="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
         <span class="capitalize">{{ array.progress.action }}</span>
         <span>{{ array.progress.percent.toFixed(1) }}%</span>
       </div>
       <div class="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-        <div
+        <motion.div
           class="h-full bg-amber-500 transition-all"
           :style="{ width: `${array.progress.percent}%` }"
         />
@@ -50,17 +40,26 @@
       </div>
     </div>
 
-    <!-- Warnings -->
     <div v-for="w in array.warnings" :key="w" class="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
-      <UIcon name="i-heroicons-exclamation-triangle" class="w-3 h-3" />{{ w }}
+      <UIcon name="i-heroicons-exclamation-triangle" class="w-3 h-3 shrink-0" />{{ w }}
     </div>
 
-    <!-- Membres -->
-    <MdMembersTable
-      :members="array.members"
-      @set-faulty="(m) => $emit('set-faulty', array, m)"
-      @remove="(m) => $emit('remove-device', array, m)"
-    />
+    <RaidArrayDetailsCollapse>
+      <div class="flex flex-wrap gap-x-4 text-xs text-gray-500">
+        <span v-if="array.uuid">UUID : {{ array.uuid }}</span>
+        <span v-if="array.metadataVersion">metadata {{ array.metadataVersion }}</span>
+        <span v-if="array.detailState">état mdadm : {{ array.detailState }}</span>
+        <span v-if="array.spareDevices > 0" class="text-blue-600 dark:text-blue-400">{{ array.spareDevices }} spare(s)</span>
+        <span v-if="array.sizeBytes">{{ formatSize(array.sizeBytes) }}</span>
+        <span v-if="array.chunkKb">chunk {{ array.chunkKb }}K</span>
+      </div>
+      <MdMembersTable
+        class="mt-2"
+        :members="array.members"
+        @set-faulty="(m) => $emit('set-faulty', array, m)"
+        @remove="(m) => $emit('remove-device', array, m)"
+      />
+    </RaidArrayDetailsCollapse>
   </div>
 </template>
 
@@ -88,7 +87,7 @@ const stateColor = computed(() => {
 function formatSize(bytes: number): string {
   if (!bytes) return '—'
   if (bytes >= 1e12) return `${(bytes / 1e12).toFixed(2)} TB`
-  if (bytes >= 1e9)  return `${(bytes / 1e9).toFixed(1)} GB`
+  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`
   return `${(bytes / 1e6).toFixed(0)} MB`
 }
 </script>
