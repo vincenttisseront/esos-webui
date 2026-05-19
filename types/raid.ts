@@ -368,6 +368,27 @@ export interface ClusterStoragePreflightRequest {
   diskMappings?: ClusterDiskMappingInput[]
 }
 
+export type MdLocalRecoveryReason =
+  | 'mapping_ambiguous'
+  | 'peer_unreachable'
+  | 'operator_declared_degraded'
+
+export interface MdLocalRecoveryRequest {
+  scope: 'local'
+  sanId: string
+  members: string[]
+  confirmation: string
+  reason?: MdLocalRecoveryReason
+}
+
+export interface MdLocalRecoveryOffered {
+  allowed: boolean
+  reason: 'mapping_ambiguous'
+  primarySanId: string
+  primaryLabel: string
+  skippedPeers: Array<{ sanId: string; label: string; reasons: string[] }>
+}
+
 export interface ClusterStoragePreflightResult {
   ok: boolean
   okSymmetric?: boolean
@@ -383,6 +404,7 @@ export interface ClusterStoragePreflightResult {
   perNodePreflights: Record<string, RaidPreflightResult>
   executionModesAllowed: Array<'primary_only_with_warning' | 'all_nodes' | 'staged'>
   recoveryAssessment?: ClusterMdRecoveryAssessment
+  localRecoveryOffered?: MdLocalRecoveryOffered
 }
 
 export interface PrepareMdPartitionsClusterExecutionRequest {
@@ -567,6 +589,7 @@ export interface ClusterMdExecutionResult {
 export interface StopMdArrayRequest {
   confirmation: string
   clusterExecution?: ClusterMdExecutionRequest
+  localRecovery?: MdLocalRecoveryRequest
 }
 
 export interface StopMdArrayResponse {
@@ -660,6 +683,7 @@ export interface ZeroMdSuperblocksRequest {
   confirmation: string
   mode?: MdMetadataCleanupMode
   clusterExecution?: ClusterMdExecutionRequest
+  localRecovery?: MdLocalRecoveryRequest
 }
 
 export interface PartitionDetectionSources {
@@ -675,6 +699,7 @@ export interface WipeMdSignaturesRequest {
   remainingSignatureTypes?: Record<string, string[]>
   detectionSourcesByMember?: Record<string, PartitionDetectionSources>
   clusterExecution?: ClusterMdExecutionRequest
+  localRecovery?: MdLocalRecoveryRequest
 }
 
 export interface ZeroMdSuperblockPartitionResult {

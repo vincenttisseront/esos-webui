@@ -6,6 +6,7 @@ import { getSSHPool } from './ssh-pool'
 import { collectRaidOverview } from './raid-overview.service'
 import { prefixBlockerRefs } from './raid-md-detection'
 import { buildClusterMdRecoveryAssessment } from './raid-cluster-md-node-state'
+import { buildLocalRecoveryOffered } from './raid-local-recovery'
 import { runPreflight } from './raid-preflight'
 import { buildMdCreateCommand, MD_CREATE_EMPTY_MEMBERS_MESSAGE } from './raid-md-validation'
 import type {
@@ -203,7 +204,7 @@ export async function runClusterStoragePreflight(
     ? (okDegraded || (uniqueBlockers.length === 0 && okSymmetric))
     : uniqueBlockers.length === 0
 
-  return {
+  const preflightResult: ClusterStoragePreflightResult = {
     ok,
     okSymmetric,
     okDegraded,
@@ -219,6 +220,13 @@ export async function runClusterStoragePreflight(
     executionModesAllowed: executionModes(uniqueBlockers, mappings),
     recoveryAssessment,
   }
+
+  const localRecoveryOffered = buildLocalRecoveryOffered(preflightResult)
+  if (localRecoveryOffered) {
+    preflightResult.localRecoveryOffered = localRecoveryOffered
+  }
+
+  return preflightResult
 }
 
 export async function buildPrepareMdPartitionsClusterExecutionPlan(

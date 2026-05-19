@@ -396,6 +396,21 @@
           "unreachable": "SSH indisponible",
           "no_active_array": "Tableau non actif"
         }
+      },
+      "local_recovery": {
+        "title": "Recovery avancée — nœud courant uniquement",
+        "description": "Action destructive limitée à ce nœud. Les pairs du cluster ne seront pas modifiés.",
+        "mapping_blocked_title": "Plan cluster bloqué par le mapping",
+        "mapping_blocked_description": "Le mapping automatique vers les partitions des nœuds pairs est ambigu ou incomplet. Résolvez le mapping pour une exécution cluster, ou utilisez la recovery locale en connaissance de cause.",
+        "resolve_mapping": "Résoudre le mapping cluster",
+        "resolve_mapping_title": "Mapping manuel des partitions pairs",
+        "retry_cluster_plan": "Relancer le plan cluster",
+        "run_local_only": "Exécuter sur ce nœud uniquement (recovery)",
+        "affected_node": "Nœud affecté",
+        "skipped_peers_title": "Nœuds pairs ignorés",
+        "confirm_run_local": "Nettoyer ce nœud uniquement",
+        "toast_success": "Nettoyage local terminé",
+        "peers_not_modified": "Les nœuds pairs du cluster n'ont pas été modifiés."
       }
     },
     "stopped_md": {
