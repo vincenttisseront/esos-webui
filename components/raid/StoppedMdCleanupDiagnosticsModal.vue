@@ -14,8 +14,8 @@
       >
         {{ result.partition }}
         <UBadge
-          :label="result.diagnostics?.verifiedRemoved ? 'OK' : 'Détecté'"
-          :color="result.diagnostics?.verifiedRemoved ? 'green' : 'amber'"
+          :label="mdCleanupOk(result) ? 'OK' : 'Détecté'"
+          :color="mdCleanupOk(result) ? 'green' : 'amber'"
           variant="soft"
           size="xs"
           class="ml-2"
@@ -29,8 +29,17 @@
       >
         <div class="px-3 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
           <p class="text-sm font-medium font-mono text-gray-800 dark:text-gray-200">{{ result.partition }}</p>
-          <p v-if="result.diagnostics?.remainingSignatureTypes?.length" class="text-xs text-amber-700 dark:text-amber-400 mt-1">
-            {{ t('raid.stopped_md.diagnostics_remaining', { types: result.diagnostics.remainingSignatureTypes.join(', ') }) }}
+          <p
+            v-if="raidRemainingTypes(result).length"
+            class="text-xs text-amber-700 dark:text-amber-400 mt-1"
+          >
+            {{ t('raid.stopped_md.diagnostics_remaining', { types: raidRemainingTypes(result).join(', ') }) }}
+          </p>
+          <p
+            v-if="result.diagnostics?.remainingNonMdSignatures?.length"
+            class="text-xs text-gray-600 dark:text-gray-400 mt-1"
+          >
+            {{ t('raid.stopped_md.diagnostics_non_md_signatures', { types: result.diagnostics.remainingNonMdSignatures.join(', ') }) }}
           </p>
         </div>
 
@@ -68,7 +77,7 @@
                 />
               </td>
               <td class="px-3 py-2 text-gray-500">
-                {{ result.diagnostics?.wipefsProbe.signatures.join(', ') || '—' }}
+                {{ wipefsDetail(result) }}
               </td>
             </tr>
             <tr>
@@ -82,7 +91,7 @@
                 />
               </td>
               <td class="px-3 py-2 text-gray-500">
-                {{ result.diagnostics?.blkidProbe.types.join(', ') || '—' }}
+                {{ blkidDetail(result) }}
               </td>
             </tr>
           </tbody>
@@ -153,6 +162,44 @@ const resultsWithDiagnostics = computed(() =>
 const canAdvancedWipe = computed(() =>
   props.results.some(r => r.diagnostics?.recommendedAction === 'advanced_wipe_signatures'),
 )
+
+function mdCleanupOk(result: ZeroMdSuperblockPartitionResult): boolean {
+  return result.diagnostics?.mdMetadataRemoved ?? result.diagnostics?.verifiedRemoved === true
+}
+
+function raidRemainingTypes(result: ZeroMdSuperblockPartitionResult): string[] {
+  const d = result.diagnostics
+  if (!d) return []
+  return d.remainingRaidSignatureTypes ?? d.remainingSignatureTypes ?? []
+}
+
+function wipefsDetail(result: ZeroMdSuperblockPartitionResult): string {
+  const sigs = result.diagnostics?.wipefsProbe.signatures ?? []
+  if (!sigs.length) return '—'
+  const raid = result.diagnostics?.detectionSources.wipefs
+    ? sigs.filter(s => raidRemainingTypes(result).includes(s) || s === 'linux_raid_member' || /^raid/i.test(s))
+    : []
+  const nonMd = result.diagnostics?.remainingNonMdSignatures?.filter(t => sigs.includes(t)) ?? []
+  const parts: string[] = []
+  if (raid.length) parts.push(`RAID: ${raid.join(', ')}`)
+  if (nonMd.length) parts.push(`autre: ${nonMd.join(', ')}`)
+  if (!parts.length) return sigs.join(', ')
+  return parts.join(' · ')
+}
+
+function blkidDetail(result: ZeroMdSuperblockPartitionResult): string {
+  const types = result.diagnostics?.blkidProbe.types ?? []
+  if (!types.length) return '—'
+  const raid = result.diagnostics?.detectionSources.blkid
+    ? types.filter(t => raidRemainingTypes(result).includes(t) || t === 'linux_raid_member' || /^raid/i.test(t))
+    : []
+  const nonMd = result.diagnostics?.remainingNonMdSignatures?.filter(t => types.includes(t)) ?? []
+  const parts: string[] = []
+  if (raid.length) parts.push(`RAID: ${raid.join(', ')}`)
+  if (nonMd.length) parts.push(`autre: ${nonMd.join(', ')}`)
+  if (!parts.length) return types.join(', ')
+  return parts.join(' · ')
+}
 
 const zeroStepPreview = computed(() => {
   const z = props.results[0]?.diagnostics?.zeroSuperblock

@@ -122,19 +122,38 @@ export function getZeroCleanupErrorResults(err: unknown): ZeroMdSuperblockPartit
     }))
 }
 
+export function partitionMdMetadataRemoved(r: {
+  mdMetadataRemoved?: boolean
+  verifiedRemoved?: boolean | null
+  diagnostics?: PartitionMetadataDiagnostics
+}): boolean {
+  if (r.mdMetadataRemoved !== undefined) return r.mdMetadataRemoved
+  if (r.diagnostics?.mdMetadataRemoved !== undefined) return r.diagnostics.mdMetadataRemoved
+  return r.verifiedRemoved === true
+}
+
+export function isRaidCleanupFailureResult(r: ZeroMdSuperblockPartitionResult): boolean {
+  if (!r.success) return true
+  return !partitionMdMetadataRemoved(r)
+}
+
 export function formatDiagnosticsSummary(diagnostics: PartitionMetadataDiagnostics): string {
+  if (diagnostics.mdMetadataRemoved && diagnostics.remainingNonMdSignatures?.length) {
+    return `${diagnostics.partition} : métadonnées MD supprimées. Signature(s) non-RAID : ${diagnostics.remainingNonMdSignatures.join(', ')}`
+  }
   const lines = [`${diagnostics.partition} : métadonnées encore détectées.`]
   if (diagnostics.detectionSources.mdadmExamine) {
     lines.push('- mdadm --examine : superblock détecté')
   }
   if (diagnostics.detectionSources.wipefs && diagnostics.wipefsProbe.signatures.length) {
-    lines.push(`- wipefs -n : ${diagnostics.wipefsProbe.signatures.join(', ')}`)
+    lines.push(`- wipefs -n (RAID) : ${diagnostics.wipefsProbe.signatures.join(', ')}`)
   }
   if (diagnostics.detectionSources.blkid && diagnostics.blkidProbe.types.length) {
-    lines.push(`- blkid : ${diagnostics.blkidProbe.types.join(', ')}`)
+    lines.push(`- blkid (RAID) : ${diagnostics.blkidProbe.types.join(', ')}`)
   }
-  if (diagnostics.remainingSignatureTypes.length) {
-    lines.push(`Signatures restantes : ${diagnostics.remainingSignatureTypes.join(', ')}`)
+  const raidTypes = diagnostics.remainingRaidSignatureTypes ?? diagnostics.remainingSignatureTypes
+  if (raidTypes.length) {
+    lines.push(`Signatures RAID restantes : ${raidTypes.join(', ')}`)
   }
   return lines.join('\n')
 }
@@ -170,10 +189,37 @@ export function membersStillInStoppedArrays(
   return still
 }
 
-export function isZeroCleanupFullyVerified(
-  result: { ok: boolean; results: Array<{ success: boolean; verifiedRemoved: boolean | null }>; warnings: string[] },
+export function isMdMetadataCleanupSuccessful(
+  result: {
+    ok: boolean
+    results: Array<{
+      success: boolean
+      verifiedRemoved?: boolean | null
+      mdMetadataRemoved?: boolean
+      diagnostics?: PartitionMetadataDiagnostics
+    }>
+    warnings?: string[]
+  },
 ): boolean {
   if (!result.ok) return false
-  if (result.warnings.length > 0) return false
-  return result.results.every(r => r.success && r.verifiedRemoved === true)
+  return result.results.every(r => r.success && partitionMdMetadataRemoved(r))
+}
+
+export function hasRemainingNonMdSignatures(
+  result: { results: Array<{ remainingNonMdSignatures?: string[]; diagnostics?: PartitionMetadataDiagnostics }> },
+): string[] {
+  const types = new Set<string>()
+  for (const r of result.results) {
+    for (const s of r.remainingNonMdSignatures ?? r.diagnostics?.remainingNonMdSignatures ?? []) {
+      types.add(s)
+    }
+  }
+  return [...types]
+}
+
+/** @deprecated Use isMdMetadataCleanupSuccessful — non-RAID signature warnings do not fail verification */
+export function isZeroCleanupFullyVerified(
+  result: Parameters<typeof isMdMetadataCleanupSuccessful>[0],
+): boolean {
+  return isMdMetadataCleanupSuccessful(result)
 }

@@ -50,11 +50,11 @@ describe('stopped-md utils', () => {
     expect(MD_ZERO_METADATA_CONFIRMATION).toBe('ZERO RAID METADATA')
   })
 
-  it('isZeroCleanupFullyVerified rejects warnings or unverified partitions', () => {
+  it('isZeroCleanupFullyVerified allows non-RAID warnings when MD removed', () => {
     expect(isZeroCleanupFullyVerified({
       ok: true,
-      warnings: [],
-      results: [{ success: true, verifiedRemoved: true }],
+      warnings: ['signature non-RAID vfat'],
+      results: [{ success: true, verifiedRemoved: true, mdMetadataRemoved: true }],
     })).toBe(true)
     expect(membersStillInStoppedArrays(['/dev/sda1'], [])).toEqual([])
   })

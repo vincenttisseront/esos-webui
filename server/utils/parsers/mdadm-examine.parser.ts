@@ -8,6 +8,23 @@ export function parseExamineValue(output: string, key: string): string | undefin
   return m?.[1].trim()
 }
 
+/** True when examine output describes a real MD superblock (not bare Magic / ambiguous data). */
+export function isValidMdSuperblockInfo(info: MdExamineInfo | undefined): boolean {
+  if (!info) return false
+  if (info.uuid?.trim()) return true
+  if (info.raidLevel?.trim()) return true
+  if (info.raidDevices != null && info.raidDevices > 0) return true
+  const name = info.name?.trim()
+  if (name && /^[^:]+:md[a-z0-9_-]{0,15}$/i.test(name)) return true
+  return false
+}
+
+export function isMdSuperblockDetected(stdout: string): boolean {
+  const trimmed = stdout.trim()
+  if (!trimmed || /No md superblock detected/i.test(trimmed)) return false
+  return isValidMdSuperblockInfo(parseMdadmExamineOutput(trimmed))
+}
+
 export function parseMdadmExamineOutput(raw: string): MdExamineInfo | undefined {
   const trimmed = raw.trim()
   if (!trimmed || /No md superblock detected/i.test(trimmed)) return undefined
@@ -20,8 +37,7 @@ export function parseMdadmExamineOutput(raw: string): MdExamineInfo | undefined 
     state: parseExamineValue(trimmed, 'State')?.toLowerCase(),
     raw: trimmed.slice(0, 2000),
   }
-  if (info.uuid || info.name || /Magic|superblock/i.test(trimmed)) return info
-  return undefined
+  return isValidMdSuperblockInfo(info) ? info : undefined
 }
 
 export function parseMdadmExamineBulk(output: string): Map<string, MdExamineInfo> {
@@ -32,7 +48,7 @@ export function parseMdadmExamineBulk(output: string): Map<string, MdExamineInfo
   const flush = () => {
     if (!current) return
     const info = parseMdadmExamineOutput(buffer.join('\n'))
-    if (info) map.set(current, info)
+    if (info && isValidMdSuperblockInfo(info)) map.set(current, info)
   }
 
   for (const line of output.split('\n')) {

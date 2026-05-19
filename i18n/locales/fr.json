@@ -359,6 +359,8 @@
       "advanced_cleanup_confirm_phrase": "FORCE CLEAN MD METADATA",
       "toast_advanced_cleanup_available": "Métadonnées encore présentes — utilisez « Nettoyage avancé » sur la carte.",
       "toast_advanced_cleanup_ok": "Nettoyage avancé réussi et vérifié sur {partitions}",
+      "toast_md_removed_non_md_signature": "Métadonnées MD supprimées. Une signature non-RAID reste détectée : {types}.",
+      "diagnostics_non_md_signatures": "Signatures non-RAID (informatif) : {types}",
       "wipe_signatures": "Nettoyer les signatures restantes",
       "wipe_signatures_help": "Nettoyage avancé : wipefs ciblé si nécessaire, puis mdadm --zero-superblock --force si examine détecte encore des métadonnées (destructif).",
       "wipe_signatures_confirm_phrase": "FORCE CLEAN MD METADATA",

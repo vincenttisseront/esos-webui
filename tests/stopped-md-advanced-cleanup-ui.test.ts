@@ -13,8 +13,12 @@ const sampleDiag = (partition: string): PartitionMetadataDiagnostics => ({
   mdadmExamine: { command: 'e', exitCode: 0, stdout: '', stderr: '', detected: true },
   wipefsProbe: { command: 'w', exitCode: 0, stdout: '', stderr: '', signatures: [] },
   blkidProbe: { command: 'b', exitCode: 0, stdout: '', stderr: '', types: [], available: true },
+  mdMetadataRemoved: false,
   verifiedRemoved: false,
   remainingSignatureTypes: ['mdadm_examine'],
+  remainingRaidSignatureTypes: ['mdadm_examine'],
+  remainingNonMdSignatures: [],
+  nonMdSignaturesDetected: false,
   detectionSources: { mdadmExamine: true, wipefs: false, blkid: false },
   recommendedAction: 'advanced_wipe_signatures',
 })
