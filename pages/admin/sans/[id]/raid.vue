@@ -203,18 +203,14 @@
         </div>
       </div>
 
-      <RaidSoftwareSummaryCard
-        :counts="softwareSummaryCounts"
-        :resync="primaryResyncSummary"
+      <RaidClusterHealthCard
+        :view-model="raidCockpit"
         :auto-refresh-active="raid.autoRefreshActive"
-        @navigate="scrollToSoftwareSection"
       />
 
-      <RaidAttentionSummary
-        :items="mdBlockerItems"
-        :current-san-id="sanId"
-        :peer-raid-link="peerRaidLink"
-        @navigate="navigateMdDetectionItem"
+      <RaidActionableItemsCard
+        :items="raidCockpit.actionableItems"
+        @action="onCockpitAction"
       />
 
       <motion.div
@@ -300,74 +296,53 @@
         </UCard>
       </motion.div>
 
+
       <details
-        v-if="inactiveMdDevices.length"
+        v-if="raidCockpit.technicalDetails.length || mdBlockerItems.length"
         class="rounded-lg border border-gray-200 dark:border-gray-700"
       >
         <summary class="cursor-pointer px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 select-none list-none">
-          {{ t('raid.software.section.inactive_devices', { count: inactiveMdDevices.length }) }}
+          {{ t('raid.cockpit.technical_details.title') }}
         </summary>
-        <div class="px-3 pb-3 space-y-2 border-t border-gray-200 dark:border-gray-700">
-          <p class="text-xs text-gray-500 pt-2">{{ t('raid.md_detection.current_node_only') }}</p>
-          <UCard v-for="item in inactiveMdDevices" :key="item.path">
-            <div class="flex items-start justify-between gap-3">
-              <div>
-                <p class="font-mono text-sm font-medium">{{ item.path }}</p>
-                <p class="text-xs text-gray-500 mt-1">{{ item.summary }}</p>
-              </div>
-              <UButton size="xs" color="gray" variant="soft" @click="goToDevicesForPath(item.path)">
-                {{ t('raid.md_detection.view_in_devices') }}
-              </UButton>
-            </div>
-          </UCard>
-        </div>
+        <motion.div
+          class="px-3 pb-3 space-y-3 border-t border-gray-200 dark:border-gray-700 pt-2"
+          :initial="{ opacity: 0 }"
+          :animate="{ opacity: 1 }"
+        >
+          <motion.div
+            v-for="(detail, di) in raidCockpit.technicalDetails"
+            :key="detail.id"
+            class="text-xs font-mono space-y-0.5"
+            :initial="{ opacity: 0 }"
+            :animate="{ opacity: 1 }"
+            :transition="{ delay: di * 0.03 }"
+          >
+            <p class="font-semibold text-gray-700 dark:text-gray-300">{{ detail.label }}</p>
+            <p v-for="(line, li) in detail.lines" :key="li" class="text-gray-500 dark:text-gray-400 pl-2">{{ line }}</p>
+          </motion.div>
+          <RaidMdBlockersPanel
+            v-if="mdBlockerItems.length"
+            embedded
+            :items="mdBlockerItems"
+            :current-san-id="sanId"
+            :peer-raid-link="peerRaidLink"
+            @navigate="navigateMdDetectionItem"
+          />
+        </motion.div>
       </details>
 
-      <details
-        v-if="metadataHoldouts.length"
-        class="rounded-lg border border-gray-200 dark:border-gray-700"
-      >
-        <summary class="cursor-pointer px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 select-none list-none">
-          {{ t('raid.software.section.metadata_holdouts', { count: metadataHoldouts.length }) }}
-        </summary>
-        <div class="px-3 pb-3 space-y-2 border-t border-gray-200 dark:border-gray-700">
-          <p class="text-xs text-gray-500 pt-2">{{ t('raid.md_detection.partition_metadata_description') }}</p>
-          <UCard v-for="item in metadataHoldouts" :key="item.path">
-            <div class="space-y-2">
-              <div class="flex items-start justify-between gap-3">
-                <p class="font-mono text-sm font-medium">{{ item.path }}</p>
-                <UButton size="xs" color="amber" variant="soft" @click="goToDevicesForPath(item.path)">
-                  {{ t('raid.md_detection.view_in_devices') }}
-                </UButton>
-              </div>
-              <ul v-if="item.reasons.length" class="text-xs text-amber-800 dark:text-amber-300 list-disc pl-4">
-                <li v-for="reason in item.reasons" :key="reason">{{ reason }}</li>
-              </ul>
-            </div>
-          </UCard>
-        </div>
-      </details>
-
-      <RaidPeerMdSection
-        :peers="peersWithMd"
-        :peer-raid-link="peerRaidLink"
-      />
-
-      <RaidCollapsibleHelp :title="t('raid.software.help.workflow_title')">
+      <RaidCollapsibleHelp :title="t('raid.cockpit.help.title')">
         <p class="font-medium text-gray-800 dark:text-gray-200">{{ t('raid.workflow.title') }}</p>
         <ol class="mt-1 list-decimal pl-5 space-y-0.5">
           <li>{{ t('raid.workflow.step_prepare') }}</li>
           <li>{{ t('raid.workflow.step_create') }}</li>
           <li>{{ t('raid.workflow.step_use') }}</li>
         </ol>
-      </RaidCollapsibleHelp>
-
-      <RaidCollapsibleHelp
-        v-if="isClusteredSan"
-        :title="t('raid.software.help.cluster_title')"
-      >
-        <p>{{ t('raid.cluster_md.software_alert_description') }}</p>
-        <p v-if="raid.mdArrays.length" class="mt-2">{{ t('raid.cluster_md.active_arrays_description') }}</p>
+        <template v-if="isClusteredSan">
+          <p class="mt-3 font-medium text-gray-800 dark:text-gray-200">{{ t('raid.software.help.cluster_title') }}</p>
+          <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{{ t('raid.cluster_md.software_alert_description') }}</p>
+          <p v-if="raid.mdArrays.length" class="mt-1 text-sm text-gray-600 dark:text-gray-400">{{ t('raid.cluster_md.active_arrays_description') }}</p>
+        </template>
       </RaidCollapsibleHelp>
     </div>
 
@@ -534,18 +509,15 @@ import {
 } from '~/utils/stopped-md'
 import {
   allMdDetectionItems,
-  blockDeviceRaidItems,
   hasAnyMdStateVisible,
   mdDetectionPathSet,
-  partitionMetadataItems,
-  peerNodesWithMdState,
 } from '~/utils/raid-md-detection'
-import { hasActiveMdArrayProgress, primaryResyncSummary as computePrimaryResyncSummary } from '~/utils/raid-md-progress'
-import type { RaidSoftwareSummaryAnchor } from '~/components/raid/RaidSoftwareSummaryCard.vue'
+import { hasActiveMdArrayProgress } from '~/utils/raid-md-progress'
+import { buildRaidClusterHealthViewModel } from '~/utils/raid-cluster-health-view-model'
 import {
   partitionStoppedMdArrays,
 } from '~/utils/stopped-md'
-import type { MdDetectionItem } from '~/types/raid'
+import type { MdDetectionItem, RaidActionableItem } from '~/types/raid'
 import type { ClusterMdPreflightAction, PreflightBlockerRef, RaidRiskLevel } from '~/types/raid'
 import { raidDetectionNavigateKey } from '~/composables/useRaidDetectionNavigate'
 
@@ -575,19 +547,17 @@ const highlightedArrayPath = ref<string | null>(null)
 const highlightedDevicePath = ref<string | null>(null)
 
 const showSoftwareEmpty = computed(() => !hasAnyMdStateVisible(raid.overview))
-const metadataHoldouts = computed(() => partitionMetadataItems(raid.overview))
-const inactiveMdDevices = computed(() => blockDeviceRaidItems(raid.overview))
-const peersWithMd = computed(() => peerNodesWithMdState(raid.overview, sanId))
 const partitionedStopped = computed(() => partitionStoppedMdArrays(raid.stoppedMdArrays))
 const mdBlockerItems = computed(() => allMdDetectionItems(raid.overview))
-const softwareSummaryCounts = computed(() => ({
-  active: raid.mdArrays.length,
-  rebuilding: raid.mdArrays.filter(a => hasActiveMdArrayProgress(a)).length,
-  stoppedAssemblable: partitionedStopped.value.assemblable.length,
-  orphan: partitionedStopped.value.orphanOrIncomplete.length,
-  peerMd: peersWithMd.value.length,
-}))
-const primaryResyncSummary = computed(() => computePrimaryResyncSummary(raid.mdArrays))
+
+const raidCockpit = computed(() =>
+  buildRaidClusterHealthViewModel({
+    overview: raid.overview,
+    currentSanId: sanId,
+    isClustered: isClusteredSan.value,
+    t: (key, params) => t(key, params ?? {}),
+  }),
+)
 
 // Wizards & modals
 const { open: openModal } = useAppModal()
@@ -633,16 +603,37 @@ function navigateMdDetectionItem(item: MdDetectionItem) {
   })
 }
 
-function scrollToSoftwareSection(anchor: RaidSoftwareSummaryAnchor) {
-  activeTab.value = 'software'
-  const idMap: Record<RaidSoftwareSummaryAnchor, string> = {
-    'software-active': 'raid-software-active',
-    'software-stopped-assemblable': 'raid-software-stopped-assemblable',
-    'software-stopped-orphan': 'raid-software-stopped-orphan',
-    'software-peer': 'raid-software-peer',
+function onCockpitAction(item: RaidActionableItem) {
+  const target = item.primaryActionTarget
+  if (!target) return
+  if (target.type === 'navigate' && target.sanId && target.sanId !== sanId) {
+    void navigateTo(`/admin/sans/${target.sanId}/raid`)
+    return
   }
+  if (target.type === 'devices' && target.path) {
+    goToDevicesForPath(target.path)
+    return
+  }
+  if (target.tab === 'software') activeTab.value = 'software'
   void nextTick(() => {
-    document.getElementById(idMap[anchor])?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    if (target.anchor) {
+      document.getElementById(target.anchor)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+    if (target.path?.startsWith('/dev/md')) {
+      highlightedArrayPath.value = target.path
+      void scrollToHighlightedArray(target.path)
+    } else if (target.path) {
+      navigateMdDetectionItem({
+        kind: 'partition_metadata',
+        path: target.path,
+        nodeSanId: target.sanId ?? sanId,
+        nodeLabel: '',
+        severity: 'blocking',
+        summary: '',
+        reasons: [],
+        uiAnchor: 'devices',
+      })
+    }
   })
 }
 

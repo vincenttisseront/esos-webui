@@ -259,6 +259,73 @@ export interface MdDetectionSummary {
   items: MdDetectionItem[]
 }
 
+export type RaidCockpitHealth = 'healthy' | 'warning' | 'critical' | 'unknown'
+export type RaidProductionImpact = 'none' | 'degraded' | 'unavailable' | 'unknown'
+
+export type RaidClusterArrayMainStatus =
+  | 'clean'
+  | 'active'
+  | 'degraded'
+  | 'resync'
+  | 'none'
+  | 'unknown'
+
+export interface RaidClusterHealthSummary {
+  activeArraysCount: number
+  activeArrayMainStatus: RaidClusterArrayMainStatus
+  connectedNodes: number
+  totalNodes: number
+  resyncStatus: 'none' | 'in_progress' | 'unknown'
+  peerConsistencyStatus: 'ok' | 'warning' | 'critical' | 'unknown'
+}
+
+export type RaidActionableCategory =
+  | 'metadata_local'
+  | 'metadata_peer'
+  | 'metadata_orphan'
+  | 'array_stopped'
+  | 'array_degraded'
+  | 'array_inactive'
+  | 'resync'
+  | 'cluster_asymmetry'
+
+export interface RaidActionTarget {
+  type: 'scroll' | 'navigate' | 'devices' | 'modal'
+  tab?: 'software' | 'devices'
+  path?: string
+  sanId?: string
+  anchor?: string
+  modal?: 'zero_superblock' | 'assemble' | 'inspect' | 'cluster_recovery'
+  arrayName?: string
+}
+
+export interface RaidActionableItem {
+  id: string
+  severity: 'info' | 'warning' | 'critical'
+  category: RaidActionableCategory
+  title: string
+  impact: string
+  recommendation: string
+  primaryActionLabel?: string
+  primaryActionTarget?: RaidActionTarget
+  details: string[]
+}
+
+export interface RaidTechnicalDetail {
+  id: string
+  label: string
+  lines: string[]
+}
+
+export interface RaidClusterHealthViewModel {
+  health: RaidCockpitHealth
+  productionImpact: RaidProductionImpact
+  headline: string
+  summary: RaidClusterHealthSummary
+  actionableItems: RaidActionableItem[]
+  technicalDetails: RaidTechnicalDetail[]
+}
+
 export type PreflightBlockerCode =
   | 'md_array_exists'
   | 'md_block_device_exists'

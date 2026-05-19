@@ -241,6 +241,113 @@
       "auto_refresh_active": "Mise à jour automatique active",
       "auto_refresh_failed": "La mise à jour automatique de la progression RAID a été interrompue"
     },
+    "cockpit": {
+      "health": {
+        "healthy": "Sain",
+        "warning": "Attention",
+        "critical": "Critique",
+        "unknown": "Inconnu"
+      },
+      "headline": {
+        "healthy": "Le cluster RAID fonctionne normalement.",
+        "actions": "Le cluster fonctionne, mais {count} action(s) est/sont recommandée(s).",
+        "critical": "Le cluster RAID nécessite une intervention.",
+        "unknown": "État RAID indisponible — actualisez le scan."
+      },
+      "impact": {
+        "none": "Aucun impact production identifié.",
+        "degraded": "Performance ou redondance potentiellement réduite.",
+        "unavailable": "Stockage cluster partiellement indisponible ou non symétrique.",
+        "unknown": "Impact production inconnu."
+      },
+      "metric": {
+        "active_arrays": "Tableaux actifs",
+        "nodes": "Nœuds",
+        "peer_consistency": "Cohérence pairs",
+        "resync": "Resynchronisation"
+      },
+      "peer_consistency": {
+        "ok": "OK",
+        "warning": "À vérifier",
+        "critical": "Incohérent",
+        "unknown": "N/A"
+      },
+      "resync": {
+        "none": "Aucune",
+        "in_progress": "En cours",
+        "unknown": "—"
+      },
+      "array_status": {
+        "clean": "Clean",
+        "active": "Actif",
+        "degraded": "Dégradé",
+        "resync": "Resync",
+        "none": "Aucun",
+        "unknown": "Inconnu"
+      },
+      "action": {
+        "recommended_title": "Actions recommandées",
+        "show_all": "Voir tout ({count})"
+      },
+      "impact_label": "Impact",
+      "recommendation_label": "Recommandation",
+      "technical_details": {
+        "title": "Détails techniques"
+      },
+      "help": {
+        "title": "Aide RAID logiciel"
+      },
+      "item": {
+        "metadata_local": {
+          "title": "Métadonnées MD orphelines sur ce nœud",
+          "impact": "Peut empêcher la réutilisation de la partition.",
+          "recommendation": "Nettoyez les superblocks si la partition n'est plus membre d'un tableau.",
+          "action": "Nettoyer les superblocks MD"
+        },
+        "metadata_peer": {
+          "title": "Métadonnées MD résiduelles sur le nœud pair {label}",
+          "impact": "Peut bloquer les prochaines opérations RAID ou créer un mapping ambigu.",
+          "recommendation": "Vérifiez le nœud pair et nettoyez les superblocks si ces partitions ne sont plus utilisées.",
+          "action": "Ouvrir le RAID sur {label}"
+        },
+        "metadata_orphan": {
+          "title": "Métadonnées RAID orphelines",
+          "impact": "Ne pas traiter comme un tableau MD complet.",
+          "recommendation": "Inspectez puis nettoyez les superblocks si le tableau n'est plus requis.",
+          "action": "Nettoyer les superblocks MD"
+        },
+        "array_stopped": {
+          "title": "Tableau MD arrêté détecté",
+          "impact": "Le stockage n'est pas exposé tant que le tableau n'est pas assemblé.",
+          "recommendation": "Réassemblez le tableau si les métadonnées sont cohérentes.",
+          "action": "Réassembler le tableau"
+        },
+        "array_degraded": {
+          "title": "Tableau MD dégradé",
+          "impact": "Redondance ou disponibilité réduite sur ce nœud.",
+          "recommendation": "Vérifiez les membres et l'état du tableau actif.",
+          "action": "Voir le tableau"
+        },
+        "array_inactive": {
+          "title": "Périphérique MD sans tableau actif",
+          "impact": "État ambigu — le noyau ne monte pas le tableau attendu.",
+          "recommendation": "Inspectez les métadonnées avant toute opération.",
+          "action": "Inspecter"
+        },
+        "resync": {
+          "title": "Resync RAID en cours",
+          "impact": "Performance potentiellement réduite jusqu'à la fin.",
+          "recommendation": "Surveillez la progression ; aucune action immédiate requise.",
+          "action": "Voir progression"
+        },
+        "cluster_asymmetry": {
+          "title": "État RAID incohérent entre nœuds",
+          "impact": "Risque de perte de symétrie HA ou d'opérations bloquées.",
+          "recommendation": "Alignez l'état MD sur tous les nœuds avant toute modification.",
+          "action": "Réparer le cluster RAID"
+        }
+      }
+    },
     "software": {
       "layout": {
         "actions_row": "Actions RAID logiciel"

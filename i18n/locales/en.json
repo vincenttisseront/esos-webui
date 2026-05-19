@@ -241,6 +241,113 @@
       "auto_refresh_active": "Auto-refresh active",
       "auto_refresh_failed": "RAID progress auto-refresh was stopped"
     },
+    "cockpit": {
+      "health": {
+        "healthy": "Healthy",
+        "warning": "Warning",
+        "critical": "Critical",
+        "unknown": "Unknown"
+      },
+      "headline": {
+        "healthy": "Cluster RAID is operating normally.",
+        "actions": "The cluster is running, but {count} recommended action(s).",
+        "critical": "Cluster RAID requires attention.",
+        "unknown": "RAID status unavailable — refresh the scan."
+      },
+      "impact": {
+        "none": "No production impact identified.",
+        "degraded": "Performance or redundancy may be reduced.",
+        "unavailable": "Cluster storage partially unavailable or asymmetric.",
+        "unknown": "Production impact unknown."
+      },
+      "metric": {
+        "active_arrays": "Active arrays",
+        "nodes": "Nodes",
+        "peer_consistency": "Peer consistency",
+        "resync": "Resync"
+      },
+      "peer_consistency": {
+        "ok": "OK",
+        "warning": "Needs review",
+        "critical": "Inconsistent",
+        "unknown": "N/A"
+      },
+      "resync": {
+        "none": "None",
+        "in_progress": "In progress",
+        "unknown": "—"
+      },
+      "array_status": {
+        "clean": "Clean",
+        "active": "Active",
+        "degraded": "Degraded",
+        "resync": "Resync",
+        "none": "None",
+        "unknown": "Unknown"
+      },
+      "action": {
+        "recommended_title": "Recommended actions",
+        "show_all": "Show all ({count})"
+      },
+      "impact_label": "Impact",
+      "recommendation_label": "Recommendation",
+      "technical_details": {
+        "title": "Technical details"
+      },
+      "help": {
+        "title": "Software RAID help"
+      },
+      "item": {
+        "metadata_local": {
+          "title": "Orphan MD metadata on this node",
+          "impact": "May prevent reusing the partition.",
+          "recommendation": "Clear superblocks if the partition is no longer a member.",
+          "action": "Clear MD superblocks"
+        },
+        "metadata_peer": {
+          "title": "Residual MD metadata on peer node {label}",
+          "impact": "May block future RAID operations or cause ambiguous mapping.",
+          "recommendation": "Check the peer node and clear superblocks if partitions are unused.",
+          "action": "Open RAID on {label}"
+        },
+        "metadata_orphan": {
+          "title": "Orphan RAID metadata",
+          "impact": "Do not treat as a complete MD array.",
+          "recommendation": "Inspect then clear superblocks if the array is no longer required.",
+          "action": "Clear MD superblocks"
+        },
+        "array_stopped": {
+          "title": "Stopped MD array detected",
+          "impact": "Storage is not exposed until the array is assembled.",
+          "recommendation": "Assemble the array if metadata is consistent.",
+          "action": "Assemble array"
+        },
+        "array_degraded": {
+          "title": "Degraded MD array",
+          "impact": "Reduced redundancy or availability on this node.",
+          "recommendation": "Check members and active array state.",
+          "action": "View array"
+        },
+        "array_inactive": {
+          "title": "MD device without active array",
+          "impact": "Ambiguous state — kernel is not running the expected array.",
+          "recommendation": "Inspect metadata before any operation.",
+          "action": "Inspect"
+        },
+        "resync": {
+          "title": "RAID resync in progress",
+          "impact": "Performance may be reduced until completion.",
+          "recommendation": "Monitor progress; no immediate action required.",
+          "action": "View progress"
+        },
+        "cluster_asymmetry": {
+          "title": "Inconsistent RAID state across nodes",
+          "impact": "Risk of HA asymmetry or blocked operations.",
+          "recommendation": "Align MD state on all nodes before changes.",
+          "action": "Repair cluster RAID"
+        }
+      }
+    },
     "software": {
       "layout": {
         "actions_row": "Software RAID actions"
