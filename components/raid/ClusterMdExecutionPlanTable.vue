@@ -67,7 +67,7 @@
           </tr>
         </tbody>
       </table>
-    </motion.div>
+    </div>
   </motion.div>
 </template>
 

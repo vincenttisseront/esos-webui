@@ -120,8 +120,8 @@
           class="font-mono"
           @paste.prevent
         />
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
 
     <template #actions>
       <UButton color="gray" variant="outline" size="sm" :disabled="executing" @click="$emit('cancel')">

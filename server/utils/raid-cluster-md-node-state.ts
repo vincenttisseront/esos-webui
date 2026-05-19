@@ -4,7 +4,7 @@
  */
 import { createHash } from 'node:crypto'
 import { createError } from 'h3'
-import { MD_ARRAY_PATH_RE } from './raid-md-detection'
+const MD_ARRAY_PATH_RE = /^\/dev\/md[a-z0-9_-]{0,15}$/
 import { runNodePreflight } from './raid-cluster-storage-preflight'
 import type {
   ClusterMdPreflightAction,
@@ -50,8 +50,6 @@ export interface ClusterMdRecoveryAssessment {
   okSymmetric: boolean
   okDegraded: boolean
 }
-
-export type { ClusterMdRecoveryMode } from './raid-types'
 
 function normalizeArrayName(name: string): string {
   return name.trim()
