@@ -32,3 +32,16 @@ export function mdDetectionPathSet(overview: RaidOverviewResponse | null | undef
   for (const item of currentNodeDetectionItems(overview)) paths.add(item.path)
   return paths
 }
+
+/** Local + peer detection items for blocker panel and navigation. */
+export function allMdDetectionItems(overview: RaidOverviewResponse | null | undefined): MdDetectionItem[] {
+  const local = currentNodeDetectionItems(overview)
+  const peerItems = (overview?.clusterMdDetection ?? []).flatMap(node =>
+    node.items.map(item => ({
+      ...item,
+      nodeSanId: node.nodeSanId,
+      nodeLabel: node.nodeLabel,
+    })),
+  )
+  return [...local, ...peerItems]
+}

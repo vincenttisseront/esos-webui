@@ -2,7 +2,7 @@
  * DELETE /api/raid/software/arrays/[name] — Arrêter un tableau MD actif (mdadm --stop, SDD v3.12 §8.4).
  */
 import { getActiveSSHManager, withSanContext } from '../../../../utils/ssh-runtime'
-import { stopMdArray } from '../../../../utils/raid-md-actions'
+import { expectedMdStopConfirmation, stopMdArray } from '../../../../utils/raid-md-actions'
 import { invalidateCacheKey } from '../../../../utils/cache'
 import { requireSanIdQuery } from '../../../../utils/san-query'
 import {
@@ -31,6 +31,7 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  const expectedConfirm = expectedMdStopConfirmation(name)
   if (!body?.confirmation || body.confirmation !== expectedConfirm) {
     throw createError({ statusCode: 400, statusMessage: `Confirmation invalide (attendu : "${expectedConfirm}")` })
   }
