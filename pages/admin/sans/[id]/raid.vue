@@ -183,10 +183,11 @@
       </div>
       <UAlert
         v-if="isClusteredSan"
-        title="Changement stockage cluster-aware requis"
-        description="Ce SAN appartient à un cluster HA. Sync config ne crée pas les partitions, superblocks MD, métadonnées LVM ni block devices sur les autres nœuds ; les wizards RAID exécutent donc un préflight cluster et bloquent l'écriture tant que l'exécution multi-nœud n'est pas disponible."
+        :title="t('raid.cluster_md.software_alert_title')"
+        :description="t('raid.cluster_md.software_alert_description')"
         color="amber"
         icon="i-heroicons-exclamation-triangle"
+        variant="soft"
       />
       <div class="flex justify-end gap-2">
         <UButton
@@ -242,6 +243,14 @@
         <p>{{ t('raid.md_detection.empty_title') }}</p>
         <p class="text-xs mt-1">{{ t('raid.md_detection.empty_hint') }}</p>
       </div>
+      <UAlert
+        v-if="isClusteredSan && raid.mdArrays.length"
+        :title="t('raid.cluster_md.active_arrays_title')"
+        :description="t('raid.cluster_md.active_arrays_description')"
+        color="amber"
+        icon="i-heroicons-exclamation-triangle"
+        variant="soft"
+      />
       <div v-if="raid.mdArrays.length" class="space-y-3">
         <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Tableaux MD actifs</h3>
         <UCard
@@ -500,7 +509,7 @@ import {
   partitionMetadataItems,
   peerNodesWithMdState,
 } from '~/utils/raid-md-detection'
-import type { PreflightBlockerRef } from '~/types/raid'
+import type { ClusterMdPreflightAction, PreflightBlockerRef, RaidRiskLevel } from '~/types/raid'
 import { raidDetectionNavigateKey } from '~/composables/useRaidDetectionNavigate'
 
 definePageMeta({ layout: 'default', ssr: false })
@@ -568,6 +577,35 @@ function navigateRaidDetection(ref: PreflightBlockerRef) {
 }
 
 provide(raidDetectionNavigateKey, navigateRaidDetection)
+
+async function openClusterMdActionModal(input: {
+  action: ClusterMdPreflightAction
+  title: string
+  description: string
+  riskLevel: RaidRiskLevel
+  payload: Record<string, unknown>
+  localPreflight: RaidPreflightResult | null
+  confirmationPhrase: string
+  arrayName?: string
+}): Promise<boolean> {
+  if (!isClusteredSan.value || !san.value?.clusterId) return false
+  const { default: ClusterModal } = await import('~/components/raid/ClusterMdActionModal.vue')
+  try {
+    await openModal({
+      component: ClusterModal,
+      props: {
+        ...input,
+        sourceSanId: sanId,
+        clusterId: san.value.clusterId,
+        persistent: true,
+      },
+    })
+    await raid.fetchOverview(true)
+    return true
+  } catch {
+    return false
+  }
+}
 
 function goToDevicesForPath(path: string) {
   activeTab.value = 'devices'
@@ -815,6 +853,21 @@ async function handleZeroStoppedMd(arr: StoppedMdArray) {
       return
     }
 
+    if (isClusteredSan.value && preflight?.ok) {
+      const isOrphan = arr.name === 'unknown' || arr.members.some(m => m.memberStatus === 'orphan_metadata')
+      const done = await openClusterMdActionModal({
+        action: 'zero_md_superblocks',
+        title: isOrphan ? t('raid.stopped_md.zero_orphan_title') : t('raid.stopped_md.zero_title'),
+        description: buildZeroSuperblockDescription(arr, members),
+        riskLevel: 'destructive',
+        payload: zeroSuperblockPreflightPayload(arr, members),
+        localPreflight: preflight,
+        confirmationPhrase: preflight.requiredConfirmation ?? confirmPhrase,
+      })
+      if (done) toast.success(t('raid.stopped_md.toast_zero_ok', { partitions: members.join(', ') }))
+      return
+    }
+
     const isOrphan = arr.name === 'unknown' || arr.members.some(m => m.memberStatus === 'orphan_metadata')
     const { default: Modal } = await import('~/components/raid/RaidDestructiveConfirmModal.vue')
     try {
@@ -955,7 +1008,21 @@ async function handleWipeMdSignatures(diagnosticsResults: ZeroMdSuperblockPartit
     return
   }
 
-  const confirmPhrase = t('raid.stopped_md.advanced_cleanup_confirm_phrase')
+    const confirmPhrase = preflight.requiredConfirmation || t('raid.stopped_md.advanced_cleanup_confirm_phrase')
+  if (isClusteredSan.value && preflight.ok) {
+    const done = await openClusterMdActionModal({
+      action: 'wipe_md_signatures',
+      title: t('raid.stopped_md.advanced_cleanup'),
+      description: t('raid.stopped_md.advanced_cleanup_help'),
+      riskLevel: 'destructive',
+      payload: { mode: 'advanced', members, remainingSignatureTypes, detectionSourcesByMember },
+      localPreflight: preflight,
+      confirmationPhrase: confirmPhrase,
+    })
+    if (done) toast.success(t('raid.stopped_md.toast_advanced_cleanup_ok'))
+    return
+  }
+
   const { default: Modal } = await import('~/components/raid/RaidDestructiveConfirmModal.vue')
   try {
     const confirmation = await openModal({
@@ -1057,6 +1124,25 @@ async function handleAssembleStoppedMd(arr: StoppedMdArray) {
       return
     }
 
+    if (isClusteredSan.value && preflight?.ok) {
+      const done = await openClusterMdActionModal({
+        action: 'assemble_md',
+        title: t('raid.stopped_md.assemble_title'),
+        description: t('raid.stopped_md.assemble_description', { path }),
+        riskLevel: 'risky',
+        payload: { name: arr.name, uuid: arr.uuid, members, targetName },
+        localPreflight: preflight,
+        confirmationPhrase: phrase,
+      })
+      if (done) {
+        toast.success(t('raid.stopped_md.toast_assemble_ok', { path }))
+        activeTab.value = 'software'
+        highlightedArrayPath.value = path
+        await scrollToHighlightedArray(path)
+      }
+      return
+    }
+
     const { default: Modal } = await import('~/components/raid/RaidDestructiveConfirmModal.vue')
     try {
       const confirmation = await openModal({
@@ -1097,14 +1183,37 @@ async function handleStopMd(arr: MdArray) {
   try {
     preflight = await raid.preflight({ backend: 'software_md', action: 'stop_md', payload: { name: arr.name } })
     phrase = preflight.requiredConfirmation
-  } catch { /* non bloquant */ }
+    if (!preflight.ok) {
+      toast.warning(t('raid.stopped_md.toast_preflight_blocked'), preflight.blockers[0])
+      return
+    }
+  } catch (err: unknown) {
+    toast.error(t('raid.stopped_md.toast_action_failed'), extractFetchError(err))
+    return
+  }
+
+  if (isClusteredSan.value) {
+    const done = await openClusterMdActionModal({
+      action: 'stop_md',
+      title: t('raid.cluster_md.stop_title'),
+      description: t('raid.cluster_md.stop_description', { name: arr.name }),
+      riskLevel: 'risky',
+      payload: { name: arr.name },
+      localPreflight: preflight,
+      confirmationPhrase: phrase,
+      arrayName: arr.name,
+    })
+    if (done) toast.success(t('raid.cluster_md.toast_stop_ok', { name: arr.name }))
+    return
+  }
+
   const { default: Modal } = await import('~/components/raid/RaidDestructiveConfirmModal.vue')
   try {
     const confirmation = await openModal({
       component: Modal,
       props: {
-        title: 'Arrêter le tableau MD',
-        description: `Voulez-vous vraiment arrêter ${arr.name} ? Cette opération est réversible mais interrompra l'accès au volume.`,
+        title: t('raid.cluster_md.stop_title'),
+        description: t('raid.cluster_md.stop_description', { name: arr.name }),
         riskLevel: 'risky',
         confirmationPhrase: phrase || undefined,
         preflight,
@@ -1112,6 +1221,7 @@ async function handleStopMd(arr: MdArray) {
       },
     })
     await raid.stopMdArray(arr.name, confirmation as string)
+    toast.success(t('raid.cluster_md.toast_stop_ok', { name: arr.name }))
   } catch { /* annulé */ }
 }
 

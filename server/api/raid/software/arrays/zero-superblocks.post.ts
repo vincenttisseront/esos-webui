@@ -10,6 +10,10 @@ import {
 import { collectRaidOverview } from '../../../../utils/raid-overview.service'
 import { invalidateCacheKey, withCache } from '../../../../utils/cache'
 import { requireSanIdQuery } from '../../../../utils/san-query'
+import {
+  assertClusteredSanAllowsMutation,
+  runClusterZeroMdSuperblocks,
+} from '../../../../utils/raid-cluster-md-execution'
 import type { ZeroMdSuperblocksRequest } from '../../../../utils/raid-types'
 
 export default defineEventHandler(async (event) => {
@@ -27,6 +31,19 @@ export default defineEventHandler(async (event) => {
       statusCode: 400,
       statusMessage: 'Utilisez POST /api/raid/software/arrays/wipe-signatures avec mode: "advanced" pour le nettoyage avancé',
     })
+  }
+
+  const clusterCtx = assertClusteredSanAllowsMutation(sanId, body?.clusterExecution)
+  if (clusterCtx) {
+    try {
+      return await runClusterZeroMdSuperblocks(sanId, body!)
+    } catch (err: any) {
+      throw createError({
+        statusCode: err.statusCode ?? 500,
+        statusMessage: err.statusMessage ?? err.message ?? 'Erreur nettoyage superblocks MD cluster',
+        data: err.data,
+      })
+    }
   }
 
   const expectedConfirm = expectedMdZeroMetadataConfirmation()
@@ -51,21 +68,9 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.info('[raid-api:zero-superblocks]', { sanId, mode: 'basic', members, auditName: body?.name, uuid: body?.uuid })
     const result = await zeroMdSuperblocks(manager, members)
     invalidateCacheKey(cacheKey)
-    console.info('[raid-api:zero-superblocks]', {
-      sanId,
-      mode: 'basic',
-      ok: result.ok,
-      partitions: result.results.map(r => ({
-        partition: r.partition,
-        success: r.success,
-        verifiedRemoved: r.verifiedRemoved,
-      })),
-      warnings: result.warnings,
-    })
-    return result
+    return { mode: 'standalone' as const, ...result }
   }
 
   try {
