@@ -370,6 +370,8 @@ export interface ClusterStoragePreflightRequest {
 
 export interface ClusterStoragePreflightResult {
   ok: boolean
+  okSymmetric?: boolean
+  okDegraded?: boolean
   action: ClusterStorageAction
   sourceSanId: string
   blockers: string[]
@@ -380,6 +382,7 @@ export interface ClusterStoragePreflightResult {
   mappings: ClusterDiskMapping[]
   perNodePreflights: Record<string, RaidPreflightResult>
   executionModesAllowed: Array<'primary_only_with_warning' | 'all_nodes' | 'staged'>
+  recoveryAssessment?: ClusterMdRecoveryAssessment
 }
 
 export interface PrepareMdPartitionsClusterExecutionRequest {
@@ -461,6 +464,51 @@ export interface CreateMdArrayClusterExecutionResult {
   refreshedSanIds?: string[]
 }
 
+export type ClusterMdRecoveryMode =
+  | 'stop_all_active'
+  | 'stop_active_only'
+  | 'assemble_missing_only'
+  | 'assemble_stopped_nodes'
+  | 'cleanup_mapped_only'
+
+export type MdArrayNodeState =
+  | 'unreachable'
+  | 'error'
+  | 'active'
+  | 'stopped'
+  | 'metadata_only'
+  | 'inactive_device'
+  | 'missing'
+
+export type ClusterMdNodeParticipation = 'execute' | 'skip' | 'blocked'
+
+export interface MdArrayNodeStateReport {
+  sanId: string
+  label: string
+  role: string | null
+  sshReady: boolean
+  state: MdArrayNodeState
+  arrayPath?: string
+  members: string[]
+  uuid?: string
+  reasons: string[]
+  nodeBlockers: string[]
+  nodeWarnings: string[]
+}
+
+export interface ClusterMdRecoveryAssessment {
+  action: ClusterMdPreflightAction
+  arrayName: string
+  uuid?: string
+  nodeReports: MdArrayNodeStateReport[]
+  hardBlockers: string[]
+  warnings: string[]
+  allowedRecoveryModes: ClusterMdRecoveryMode[]
+  recommendedRecoveryMode: ClusterMdRecoveryMode | null
+  okSymmetric: boolean
+  okDegraded: boolean
+}
+
 export interface ClusterMdExecutionRequest {
   clusterId?: string
   primarySanId: string
@@ -468,6 +516,9 @@ export interface ClusterMdExecutionRequest {
   requirePreflightOk: true
   stopOnFirstFailure?: true
   executionScope?: 'all_nodes' | 'current_node_only'
+  recoveryMode?: ClusterMdRecoveryMode
+  degradedOk?: boolean
+  planToken?: string
 }
 
 export interface ClusterMdNodeResult {
@@ -479,7 +530,10 @@ export interface ClusterMdNodeResult {
   members: string[]
   devices: string[]
   command?: string
-  status: 'pending' | 'running' | 'success' | 'failed'
+  status: 'pending' | 'running' | 'success' | 'failed' | 'skipped'
+  participation?: ClusterMdNodeParticipation
+  skipReason?: string
+  nodeState?: MdArrayNodeState
   stdout?: string
   stderr?: string
   error?: string
@@ -491,6 +545,11 @@ export interface ClusterMdExecutionPlan {
   sourceSanId: string
   clusterId?: string
   nodeResults: ClusterMdNodeResult[]
+  recoveryAssessment?: ClusterMdRecoveryAssessment
+  confirmationPhrase?: string
+  planToken?: string
+  okSymmetric?: boolean
+  okDegraded?: boolean
 }
 
 export interface ClusterMdExecutionResult {

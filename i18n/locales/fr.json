@@ -350,7 +350,52 @@
         "pending": "en attente",
         "running": "en cours",
         "success": "réussi",
-        "failed": "échoué"
+        "failed": "échoué",
+        "skipped": "ignoré"
+      },
+      "recovery": {
+        "node_state_title": "État MD par nœud",
+        "mode_title": "Mode de récupération",
+        "degraded_title": "Cluster dégradé",
+        "degraded_description": "Les nœuds ne sont pas symétriques — seuls les nœuds sélectionnés seront modifiés.",
+        "stop_active_only_title": "Arrêt sur les nœuds actifs uniquement",
+        "stop_active_only_description": "Certains nœuds n'ont pas le tableau actif. Seuls les nœuds où md est actif seront arrêtés ; les autres seront ignorés.",
+        "assemble_missing_only_title": "Assemblage sur les nœuds arrêtés uniquement",
+        "assemble_missing_only_description": "Certains nœuds ont déjà le tableau actif. L'assemblage ne s'appliquera qu'aux nœuds avec métadonnées arrêtées.",
+        "confirm_stop_active_only": "Arrêter sur les nœuds actifs",
+        "no_active_to_stop": "Rien à arrêter — aucun tableau actif sur le cluster",
+        "repair_needed": "Réparation manuelle requise — aucune métadonnée arrêtée détectée",
+        "col_node": "Nœud",
+        "col_state": "État",
+        "col_participation": "Participation",
+        "col_status": "Statut",
+        "col_command": "Commande",
+        "node_state": {
+          "active": "actif",
+          "stopped": "arrêté",
+          "missing": "absent",
+          "unreachable": "inaccessible",
+          "metadata_only": "métadonnées",
+          "inactive_device": "périphérique inactif",
+          "error": "erreur"
+        },
+        "participation": {
+          "execute": "exécuter",
+          "skip": "ignorer",
+          "blocked": "bloqué"
+        },
+        "mode": {
+          "stop_all_active": "Arrêter sur tous les nœuds actifs",
+          "stop_active_only": "Arrêter sur les nœuds actifs uniquement",
+          "assemble_missing_only": "Assembler sur les nœuds arrêtés uniquement",
+          "assemble_stopped_nodes": "Assembler sur tous les nœuds arrêtés",
+          "cleanup_mapped_only": "Nettoyage mappé uniquement"
+        },
+        "skip_reason": {
+          "already_stopped": "Déjà arrêté / absent",
+          "unreachable": "SSH indisponible",
+          "no_active_array": "Tableau non actif"
+        }
       }
     },
     "stopped_md": {
