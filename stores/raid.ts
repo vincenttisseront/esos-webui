@@ -53,8 +53,20 @@ export const useRaidStore = defineStore('raid', {
     },
 
     hasRaid: (s): boolean => {
-      return (s.overview?.mdArrays?.length ?? 0) > 0
+      return (s.overview?.mdDetection?.hasAnyMdState ?? false)
         || (s.overview?.hardwareControllers?.length ?? 0) > 0
+    },
+
+    hasMdDetection: (s): boolean => s.overview?.mdDetection?.hasAnyMdState ?? false,
+
+    mdDetectionItems: (s) => s.overview?.mdDetection?.items ?? [],
+
+    peerMdDetection: (s) => s.overview?.clusterMdDetection ?? [],
+
+    mdSoftwareCount: (s): number => {
+      const items = s.overview?.mdDetection?.items ?? []
+      const paths = new Set(items.map(i => i.relatedArrayPath ?? i.path))
+      return paths.size
     },
 
     runningOperations: (s) => s.operations.filter(o => o.status === 'running'),

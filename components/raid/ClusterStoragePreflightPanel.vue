@@ -31,6 +31,25 @@
       </div>
     </div>
 
+    <div v-if="preflight.blockerRefs?.length" class="space-y-1">
+      <div
+        v-for="ref in preflight.blockerRefs"
+        :key="`${ref.code}-${ref.path ?? ''}-${ref.sanId ?? ''}-${ref.message}`"
+        class="flex flex-wrap items-center justify-between gap-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+      >
+        <span class="flex-1 min-w-0">{{ ref.message }}</span>
+        <UButton
+          v-if="canNavigate(ref)"
+          size="xs"
+          color="red"
+          variant="soft"
+          @click="navigateToDetection(ref)"
+        >
+          {{ t('raid.md_detection.view_in_raid_ui') }}
+        </UButton>
+      </div>
+    </div>
+
     <div v-if="preflight.warnings.length" class="space-y-1">
       <p class="text-xs font-semibold text-amber-600 uppercase tracking-wide">Avertissements cluster</p>
       <div
@@ -103,9 +122,32 @@
 </template>
 
 <script setup lang="ts">
-import type { ClusterStoragePreflightResult, ClusterDiskMappingConfidence } from '~/types/raid'
+import type {
+  ClusterDiskMappingConfidence,
+  ClusterStoragePreflightResult,
+  PreflightBlockerRef,
+} from '~/types/raid'
+import {
+  raidDetectionNavigateKey,
+  type RaidDetectionNavigateFn,
+} from '~/composables/useRaidDetectionNavigate'
 
-const props = defineProps<{ preflight: ClusterStoragePreflightResult }>()
+const props = defineProps<{
+  preflight: ClusterStoragePreflightResult
+  onNavigateDetection?: RaidDetectionNavigateFn
+}>()
+
+const { t } = useEsosI18n()
+const injectedNavigate = inject(raidDetectionNavigateKey, null)
+
+function canNavigate(_ref: PreflightBlockerRef): boolean {
+  return Boolean(props.onNavigateDetection ?? injectedNavigate)
+}
+
+function navigateToDetection(ref: PreflightBlockerRef) {
+  const fn = props.onNavigateDetection ?? injectedNavigate
+  fn?.(ref)
+}
 
 function nodeLabel(sanId: string): string {
   return props.preflight.nodes.find(n => n.sanId === sanId)?.label ?? sanId

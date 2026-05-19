@@ -103,7 +103,7 @@
           <UIcon name="i-heroicons-arrow-path" class="animate-spin w-4 h-4" />
           Analyse en cours…
         </div>
-        <RaidPreflightPanel v-else-if="preflightResult" :preflight="preflightResult" />
+        <RaidPreflightPanel v-else-if="preflightResult" :preflight="preflightResult" :on-navigate-detection="props.onNavigateDetection" />
         <div v-if="preflightResult" class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700 space-y-1">
           <p>
             <span class="font-semibold">{{ t('raid.prepare_partitions.partition_table.selected') }} :</span>
@@ -118,7 +118,7 @@
           <UIcon name="i-heroicons-arrow-path" class="animate-spin w-4 h-4" />
           Préflight stockage cluster en cours…
         </div>
-        <ClusterStoragePreflightPanel v-else-if="clusterPreflightResult" :preflight="clusterPreflightResult" />
+        <ClusterStoragePreflightPanel v-else-if="clusterPreflightResult" :preflight="clusterPreflightResult" :on-navigate-detection="props.onNavigateDetection" />
         <div v-if="ambiguousMappings.length" class="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-3">
           <div class="space-y-1">
             <p class="text-sm font-semibold text-amber-900">{{ t('raid.prepare_partitions.mapping.title') }}</p>
@@ -220,7 +220,7 @@
       </div>
 
       <div v-else-if="step === 3" class="space-y-4">
-        <RaidPreflightPanel v-if="preflightResult" :preflight="preflightResult" />
+        <RaidPreflightPanel v-if="preflightResult" :preflight="preflightResult" :on-navigate-detection="props.onNavigateDetection" />
         <div v-if="preflightResult" class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700 space-y-1">
           <p>
             <span class="font-semibold">{{ t('raid.prepare_partitions.partition_table.selected') }} :</span>
@@ -231,7 +231,7 @@
             {{ partitionTableLabel(preflightResult.partitionTableResolved) }}
           </p>
         </div>
-        <ClusterStoragePreflightPanel v-if="clusterPreflightResult" :preflight="clusterPreflightResult" />
+        <ClusterStoragePreflightPanel v-if="clusterPreflightResult" :preflight="clusterPreflightResult" :on-navigate-detection="props.onNavigateDetection" />
         <UAlert
           v-if="isClustered"
           :title="t('raid.prepare_partitions.cluster_execution.title')"
@@ -385,11 +385,13 @@ import type {
   RaidPreflightResult,
 } from '~/types/raid'
 import { buildPreparedClusterMappingHint } from '~/utils/raid-cluster-mapping'
+import type { RaidDetectionNavigateFn } from '~/composables/useRaidDetectionNavigate'
 
 const props = defineProps<{
   blockDevices: RaidBlockDevice[]
   sourceSanId?: string
   clusterId?: string | null
+  onNavigateDetection?: RaidDetectionNavigateFn
 }>()
 
 const emit = defineEmits<{

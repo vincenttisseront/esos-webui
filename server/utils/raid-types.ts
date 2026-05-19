@@ -233,10 +233,61 @@ export interface RaidOperationStep {
   finishedAt?: number
 }
 
+export type MdDetectionKind =
+  | 'active_kernel'
+  | 'stopped_scan'
+  | 'stopped_examine'
+  | 'block_device_raid'
+  | 'partition_metadata'
+
+export type MdDetectionUiAnchor = 'software-active' | 'software-stopped' | 'devices' | 'preflight'
+
+export type MdDetectionRecommendedAction =
+  | 'assemble'
+  | 'zero_superblock'
+  | 'advanced_cleanup'
+  | 'inspect'
+  | 'none'
+
+export interface MdDetectionItem {
+  kind: MdDetectionKind
+  path: string
+  nodeSanId: string
+  nodeLabel: string
+  severity: 'info' | 'warning' | 'blocking'
+  summary: string
+  reasons: string[]
+  recommendedAction?: MdDetectionRecommendedAction
+  uiAnchor: MdDetectionUiAnchor
+  relatedArrayPath?: string
+}
+
+export interface MdDetectionSummary {
+  nodeSanId: string
+  nodeLabel: string
+  hasAnyMdState: boolean
+  items: MdDetectionItem[]
+}
+
+export type PreflightBlockerCode =
+  | 'md_array_exists'
+  | 'md_block_device_exists'
+  | 'md_superblock_on_partition'
+  | 'other'
+
+export interface PreflightBlockerRef {
+  code: PreflightBlockerCode
+  message: string
+  path?: string
+  sanId?: string
+  uiAnchor: MdDetectionUiAnchor
+}
+
 export interface RaidPreflightResult {
   ok: boolean
   riskLevel: RaidRiskLevel
   blockers: string[]
+  blockerRefs?: PreflightBlockerRef[]
   warnings: string[]
   requiredConfirmation: string
   impactedDevices: string[]
@@ -332,6 +383,7 @@ export interface ClusterStoragePreflightResult {
   action: ClusterStorageAction
   sourceSanId: string
   blockers: string[]
+  blockerRefs?: PreflightBlockerRef[]
   warnings: string[]
   syncLimitations: string[]
   nodes: ClusterStorageNodeInventory[]
@@ -445,6 +497,8 @@ export interface RaidOverviewResponse {
   stoppedMdArrays: StoppedMdArray[]
   blockDevices: RaidBlockDevice[]
   alerts: Array<{ severity: 'info' | 'warning' | 'critical'; message: string }>
+  mdDetection: MdDetectionSummary
+  clusterMdDetection?: MdDetectionSummary[]
 }
 
 export interface RaidPreflightRequest {

@@ -129,7 +129,7 @@
           <UIcon name="i-heroicons-arrow-path" class="animate-spin w-4 h-4" />
           Analyse en cours…
         </div>
-        <RaidPreflightPanel v-else-if="preflightResult" :preflight="preflightResult" />
+        <RaidPreflightPanel v-else-if="preflightResult" :preflight="preflightResult" :on-navigate-detection="props.onNavigateDetection" />
         <div v-if="preflightResult?.commandPreview" class="space-y-1">
           <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Commande prévue</p>
           <pre class="text-xs bg-gray-50 border border-gray-200 rounded p-3 max-h-64 overflow-auto font-mono text-gray-700">{{ preflightResult.commandPreview }}</pre>
@@ -138,7 +138,7 @@
           <UIcon name="i-heroicons-arrow-path" class="animate-spin w-4 h-4" />
           Préflight stockage cluster en cours…
         </div>
-        <ClusterStoragePreflightPanel v-else-if="clusterPreflightResult" :preflight="clusterPreflightResult" />
+        <ClusterStoragePreflightPanel v-else-if="clusterPreflightResult" :preflight="clusterPreflightResult" :on-navigate-detection="props.onNavigateDetection" />
         <div v-if="executionPlanRows.length" class="space-y-2">
           <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">{{ t('raid.create_md.execution_plan.title') }}</p>
           <div
@@ -255,12 +255,12 @@
 
       <!-- Étape 3 : Confirmation -->
       <div v-else-if="step === 3" class="space-y-4">
-        <RaidPreflightPanel v-if="preflightResult" :preflight="preflightResult" />
+        <RaidPreflightPanel v-if="preflightResult" :preflight="preflightResult" :on-navigate-detection="props.onNavigateDetection" />
         <div v-if="preflightResult?.commandPreview" class="space-y-1">
           <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Commande prévue</p>
           <pre class="text-xs bg-gray-50 border border-gray-200 rounded p-3 max-h-64 overflow-auto font-mono text-gray-700">{{ preflightResult.commandPreview }}</pre>
         </div>
-        <ClusterStoragePreflightPanel v-if="clusterPreflightResult" :preflight="clusterPreflightResult" />
+        <ClusterStoragePreflightPanel v-if="clusterPreflightResult" :preflight="clusterPreflightResult" :on-navigate-detection="props.onNavigateDetection" />
         <div v-if="executionPlanRows.length" class="space-y-2">
           <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">{{ t('raid.create_md.execution_plan.title') }}</p>
           <div
@@ -437,11 +437,13 @@
 <script setup lang="ts">
 import type { ClusterDiskMapping, ClusterDiskMappingInput, ClusterStoragePreflightResult, CreateMdArrayExecutionPlan, CreateMdArrayNodeResult, CreateMdArrayResponse, CreateMdArrayWizardConfirmPayload, RaidBlockDevice, RaidPreflightResult } from '~/types/raid'
 import { filterPartitionMappingsForDevices } from '~/utils/raid-cluster-mapping'
+import type { RaidDetectionNavigateFn } from '~/composables/useRaidDetectionNavigate'
 
 const props = defineProps<{
   blockDevices: RaidBlockDevice[]
   sourceSanId?: string
   clusterId?: string | null
+  onNavigateDetection?: RaidDetectionNavigateFn
 }>()
 
 const emit = defineEmits<{

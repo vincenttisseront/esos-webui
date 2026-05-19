@@ -13,6 +13,7 @@ import { parseMdadmDetail } from './parsers/mdadm-detail.parser'
 import { parseMdadmExamineBulk } from './parsers/mdadm-examine.parser'
 import { discoverHardwareControllers } from './raid-hardware'
 import { collectKernelRaidInfo } from './raid-pci-detection'
+import { buildMdDetectionSummary, getMdEligibilityReasons } from './raid-md-detection'
 import { detectStoppedMdArrays } from './stopped-md-arrays'
 
 // ─── Commande bulk ───────────────────────────────────────────────────────────
@@ -89,6 +90,14 @@ export async function collectRaidOverview(manager: SSHSessionManager): Promise<R
 
   const alerts = buildAlerts(mdArrays, hardwareControllers, tools, blockDevices, stoppedMdArrays)
 
+  const mdDetection = buildMdDetectionSummary({
+    nodeSanId: '',
+    nodeLabel: 'local',
+    mdArrays,
+    stoppedMdArrays,
+    blockDevices,
+  })
+
   return {
     scannedAt: Date.now(),
     tools,
@@ -97,7 +106,23 @@ export async function collectRaidOverview(manager: SSHSessionManager): Promise<R
     stoppedMdArrays,
     blockDevices,
     alerts,
+    mdDetection,
   }
+}
+
+export function attachMdDetectionLabels(
+  overview: RaidOverviewResponse,
+  nodeSanId: string,
+  nodeLabel: string,
+): RaidOverviewResponse {
+  const mdDetection = buildMdDetectionSummary({
+    nodeSanId,
+    nodeLabel,
+    mdArrays: overview.mdArrays,
+    stoppedMdArrays: overview.stoppedMdArrays,
+    blockDevices: overview.blockDevices,
+  })
+  return { ...overview, mdDetection }
 }
 
 // ─── Parsing outils ──────────────────────────────────────────────────────────
@@ -435,38 +460,6 @@ function parseUdevadmInfo(output: string): Map<string, Record<string, string>> {
     map.set(current, info)
   }
   return map
-}
-
-function getMdEligibilityReasons(input: {
-  type: RaidBlockDevice['type']
-  usedBy: RaidBlockDevice['usedBy']
-  partitionTypeCode?: string
-  partitionTypeName?: string
-  hasMdSuperblock: boolean
-  mountpoint?: string
-}): string[] {
-  const reasons: string[] = []
-  if (input.type !== 'part') reasons.push('Seules les partitions existantes sont éligibles')
-  if (!isLinuxRaidPartition(input.partitionTypeCode, input.partitionTypeName)) {
-    reasons.push('Type de partition Linux RAID Autodetect requis')
-  }
-  if (input.mountpoint) reasons.push(`Monté sur ${input.mountpoint}`)
-  if (input.usedBy.includes('filesystem')) reasons.push('Système de fichiers détecté')
-  if (input.usedBy.includes('lvm')) reasons.push('PV LVM détecté')
-  if (input.usedBy.includes('scst')) reasons.push('Utilisé par SCST')
-  if (input.usedBy.includes('md')) reasons.push(input.hasMdSuperblock ? 'Superblock MD existant détecté' : 'Déjà membre MD')
-  if (input.usedBy.includes('unknown_signature')) reasons.push('Signature existante non autorisée')
-  return [...new Set(reasons)]
-}
-
-function isLinuxRaidPartition(partitionTypeCode?: string, partitionTypeName?: string): boolean {
-  const code = partitionTypeCode?.toLowerCase()
-  const name = partitionTypeName?.toLowerCase() ?? ''
-  return code === '0xfd'
-    || code === 'fd'
-    || code === 'a19d880f-05fc-4d3b-a006-743f0f84911e'
-    || name.includes('linux raid')
-    || name.includes('raid autodetect')
 }
 
 // ─── Parse MD arrays enrichis ─────────────────────────────────────────────────

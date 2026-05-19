@@ -45,9 +45,11 @@ export async function runPreflight(
   mdArrays: MdArray[],
   tools?: RaidToolsInfo,
   stoppedMdArrays: StoppedMdArray[] = [],
+  options?: { sanId?: string },
 ): Promise<RaidPreflightResult> {
   const riskLevel = RISK_MAP[req.action]
   const blockers: string[] = []
+  const blockerRefs: import('./raid-types').PreflightBlockerRef[] = []
   const warnings: string[] = []
   const impactedDevices: string[] = []
   const detectedUsage: Record<string, string[]> = {}
@@ -56,8 +58,9 @@ export async function runPreflight(
 
   switch (req.action) {
     case 'create_md': {
-      const validation = validateMdCreateRequest(payload, blockDevices, mdArrays)
+      const validation = validateMdCreateRequest(payload, blockDevices, mdArrays, { sanId: options?.sanId })
       blockers.push(...validation.blockers)
+      blockerRefs.push(...validation.blockerRefs)
       warnings.push(...validation.warnings)
       impactedDevices.push(...validation.impactedDevices)
       Object.assign(detectedUsage, validation.detectedUsage)
@@ -66,6 +69,7 @@ export async function runPreflight(
         ok,
         riskLevel,
         blockers,
+        blockerRefs,
         warnings,
         requiredConfirmation: buildConfirmationPhrase(req),
         impactedDevices,
