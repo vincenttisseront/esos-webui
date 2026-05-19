@@ -237,6 +237,10 @@
     }
   },
   "raid": {
+    "progress": {
+      "auto_refresh_active": "Auto-refresh active",
+      "auto_refresh_failed": "RAID progress auto-refresh was stopped"
+    },
     "workflow": {
       "title": "Software RAID workflow",
       "step_prepare": "Prepare RAID member partitions on physical disks.",

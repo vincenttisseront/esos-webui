@@ -18,6 +18,10 @@ import {
   normalizePartitionPath,
   savePendingAdvancedCleanup,
 } from '~/utils/stopped-md'
+import { overviewHasActiveMdProgress } from '~/utils/raid-md-progress'
+
+const MD_PROGRESS_POLL_INTERVAL_MS = 4_000
+const MD_PROGRESS_POLL_MAX_FAILURES = 3
 
 export const useRaidStore = defineStore('raid', {
   state: () => ({
@@ -27,6 +31,13 @@ export const useRaidStore = defineStore('raid', {
     loading: false,
     error: null as string | null,
     pollTimer: null as ReturnType<typeof setInterval> | null,
+    progressPollTimer: null as ReturnType<typeof setInterval> | null,
+    pollInFlight: false,
+    polling: false,
+    autoRefreshActive: false,
+    progressPollFailures: 0,
+    progressPollPaused: false,
+    progressPollWarning: null as string | null,
     sanId: null as string | null,
     preparedClusterMappingHints: {} as Record<string, RaidClusterPreparedMappingHint>,
     pendingAdvancedCleanup: {} as Record<string, PartitionMetadataDiagnostics>,
@@ -94,17 +105,93 @@ export const useRaidStore = defineStore('raid', {
       delete this.preparedClusterMappingHints[this.clusterMappingKey(sourceSanId, clusterId)]
     },
 
-    async fetchOverview(refresh = false) {
-      this.loading = true
-      this.error = null
+    async fetchOverview(
+      refresh = false,
+      options?: { silent?: boolean; reconcilePolling?: boolean },
+    ) {
+      const silent = options?.silent ?? false
+      const reconcilePolling = options?.reconcilePolling ?? true
+      if (silent && this.pollInFlight) return false
+
+      if (!silent) {
+        this.loading = true
+        this.error = null
+      } else {
+        this.polling = true
+      }
+      this.pollInFlight = true
+
+      let ok = false
       try {
         const params = { ...this.query(), ...(refresh ? { refresh: '1' } : {}) }
         this.overview = await $fetch<RaidOverviewResponse>('/api/raid/overview', { params })
+        if (silent) this.progressPollFailures = 0
+        ok = true
       } catch (err: any) {
-        this.error = err?.data?.statusMessage ?? err.message ?? 'Erreur scan RAID'
+        if (silent) {
+          this.progressPollFailures += 1
+          if (this.progressPollFailures >= MD_PROGRESS_POLL_MAX_FAILURES) {
+            this.stopProgressPolling()
+            this.progressPollWarning = err?.data?.statusMessage ?? err.message ?? 'Erreur scan RAID'
+          }
+        } else {
+          this.error = err?.data?.statusMessage ?? err.message ?? 'Erreur scan RAID'
+        }
       } finally {
-        this.loading = false
+        this.pollInFlight = false
+        if (!silent) this.loading = false
+        else this.polling = false
+        if (reconcilePolling && ok) this.reconcileProgressPolling()
       }
+      return ok
+    },
+
+    async refreshOverviewForProgress() {
+      return await this.fetchOverview(true, { silent: true })
+    },
+
+    reconcileProgressPolling() {
+      if (this.progressPollPaused || !this.sanId) {
+        this.stopProgressPolling()
+        return
+      }
+      if (overviewHasActiveMdProgress(this.overview)) {
+        if (!this.progressPollTimer) {
+          this.autoRefreshActive = true
+          this.progressPollFailures = 0
+          this.progressPollTimer = setInterval(() => {
+            void this.refreshOverviewForProgress()
+          }, MD_PROGRESS_POLL_INTERVAL_MS)
+        }
+      } else {
+        this.stopProgressPolling()
+      }
+    },
+
+    stopProgressPolling() {
+      if (this.progressPollTimer) clearInterval(this.progressPollTimer)
+      this.progressPollTimer = null
+      this.autoRefreshActive = false
+    },
+
+    pauseProgressPolling() {
+      this.progressPollPaused = true
+      this.stopProgressPolling()
+    },
+
+    resumeProgressPolling() {
+      this.progressPollPaused = false
+      this.reconcileProgressPolling()
+    },
+
+    clearProgressPollWarning() {
+      this.progressPollWarning = null
+    },
+
+    async initRaidPage() {
+      await this.fetchOverview(true, { reconcilePolling: false })
+      await this.fetchOperations()
+      this.reconcileProgressPolling()
     },
 
     async preflight(payload: RaidPreflightRequest): Promise<RaidPreflightResult> {
@@ -335,18 +422,23 @@ export const useRaidStore = defineStore('raid', {
       return result
     },
 
+    /** @deprecated Use initRaidPage + progress polling instead */
     startPolling(intervalMs = 10_000) {
-      this.fetchOverview()
-      this.fetchOperations()
-      this.pollTimer = setInterval(() => {
-        this.fetchOverview()
-        this.fetchOperations()
-      }, intervalMs)
+      void this.initRaidPage()
     },
 
     stopPolling() {
+      this.stopProgressPolling()
       if (this.pollTimer) clearInterval(this.pollTimer)
       this.pollTimer = null
+      this.progressPollPaused = false
+      this.progressPollFailures = 0
+    },
+
+    teardownRaidPage() {
+      this.stopPolling()
+      this.sanId = null
+      this.clearProgressPollWarning()
     },
   },
 })
