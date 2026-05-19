@@ -241,6 +241,26 @@
       "auto_refresh_active": "Mise à jour automatique active",
       "auto_refresh_failed": "La mise à jour automatique de la progression RAID a été interrompue"
     },
+    "software": {
+      "summary": {
+        "title": "État RAID logiciel",
+        "active": "{count} tableau(x) actif(s)",
+        "rebuilding": "{count} en resync / recovery",
+        "stopped": "{count} arrêté(s) assemblable(s)",
+        "orphan": "{count} métadonnée(s) orpheline(s)",
+        "peer_md": "{count} alerte(s) sur nœud pair"
+      },
+      "help": {
+        "workflow_title": "Flux RAID logiciel",
+        "cluster_title": "Rappel cluster HA",
+        "toggle_show": "Afficher l'aide",
+        "toggle_hide": "Masquer l'aide"
+      }
+    },
+    "detection": {
+      "blockers_title": "Points d'attention MD",
+      "view_peer_raid": "Voir le RAID sur {label}"
+    },
     "workflow": {
       "title": "Flux RAID logiciel",
       "step_prepare": "Préparer des partitions membres RAID sur les disques physiques.",
@@ -419,7 +439,22 @@
     },
     "stopped_md": {
       "section_title": "Tableaux RAID détectés mais arrêtés",
+      "section_assemblable_title": "Tableaux arrêtés assemblables",
+      "section_assemblable_description": "Métadonnées cohérentes — vous pouvez réassembler le tableau sur ce nœud (cluster : plan multi-nœuds).",
+      "section_orphan_title": "Métadonnées orphelines ou incomplètes",
+      "section_orphan_description": "Pas un tableau MD complet — privilégiez le nettoyage des superblocks ou l'inspection.",
       "section_description": "Ces tableaux ne sont pas actifs dans le noyau Linux, mais des métadonnées MD existent encore sur les partitions membres.",
+      "recommended_label": "Action recommandée",
+      "recommended": {
+        "assemble": "Réassembler le tableau",
+        "zero_superblock": "Nettoyer les superblocks MD",
+        "advanced_cleanup": "Nettoyage avancé",
+        "inspect": "Inspecter les métadonnées"
+      },
+      "orphan_only_notice": "Métadonnées orphelines — ne pas traiter comme un tableau MD complet.",
+      "assemble_disabled_hint": "Assemblage indisponible pour des métadonnées orphelines ou incomplètes.",
+      "actions_help_title": "Aide sur les actions",
+      "toast_cluster_cleanup_partial": "Nettoyage cluster terminé mais métadonnées MD encore détectées sur au moins une partition.",
       "cluster_notice": "Arrêt, assemblage et nettoyage MD s'exécutent sur tous les nœuds du cluster lorsque le mapping est validé. Sync config n'arrête ni ne démarre pas les tableaux MD sur les pairs.",
       "detected_array": "Tableau RAID détecté",
       "orphan_metadata": "Métadonnées RAID orphelines",

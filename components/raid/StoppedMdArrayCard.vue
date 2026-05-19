@@ -13,6 +13,10 @@
           <span v-if="array.metadataVersion">metadata {{ array.metadataVersion }}</span>
           <span>{{ t('raid.stopped_md.members_count', { count: presentMemberCount, expected: array.raidDevices }) }}</span>
         </div>
+        <StoppedMdRecommendedActions :array="array" class="mt-2" />
+        <p v-if="isOrphanOnly" class="text-xs text-amber-700 dark:text-amber-300 mt-1">
+          {{ t('raid.stopped_md.orphan_only_notice') }}
+        </p>
       </div>
       <div v-if="!readOnly" class="flex flex-col items-end gap-1 shrink-0 max-w-md">
         <div class="flex flex-wrap gap-2 justify-end">
@@ -27,7 +31,19 @@
           >
             {{ t('raid.stopped_md.inspect') }}
           </UButton>
+          <UTooltip v-if="!canAssemble" :text="t('raid.stopped_md.assemble_disabled_hint')">
+            <UButton
+              size="xs"
+              color="blue"
+              variant="soft"
+              icon="i-heroicons-play"
+              :disabled="true"
+            >
+              {{ t('raid.stopped_md.assemble') }}
+            </UButton>
+          </UTooltip>
           <UButton
+            v-else
             size="xs"
             color="blue"
             variant="soft"
@@ -62,13 +78,16 @@
             {{ t('raid.stopped_md.advanced_cleanup') }}
           </UButton>
         </div>
-        <p class="text-[10px] text-gray-500 text-right leading-snug">
-          {{ t('raid.stopped_md.assemble_help') }}
-          <span class="block mt-0.5">{{ t('raid.stopped_md.zero_superblocks_help') }}</span>
-          <span v-if="showAdvancedCleanup" class="block mt-0.5 text-amber-600 dark:text-amber-400">
+        <RaidCollapsibleHelp
+          :title="t('raid.stopped_md.actions_help_title')"
+          class="w-full max-w-md text-left"
+        >
+          <p v-if="canAssemble">{{ t('raid.stopped_md.assemble_help') }}</p>
+          <p class="mt-1">{{ t('raid.stopped_md.zero_superblocks_help') }}</p>
+          <p v-if="showAdvancedCleanup" class="mt-1 text-amber-600 dark:text-amber-400">
             {{ t('raid.stopped_md.advanced_wipe_card_hint') }}
-          </span>
-        </p>
+          </p>
+        </RaidCollapsibleHelp>
       </div>
     </div>
 
@@ -108,6 +127,7 @@
 
 <script setup lang="ts">
 import type { StoppedMdArray, StoppedMdArrayMember } from '~/types/raid'
+import { isAssemblableStoppedArray, isOrphanStoppedArray } from '~/utils/stopped-md'
 
 const props = defineProps<{
   array: StoppedMdArray
@@ -128,6 +148,9 @@ const showAdvancedCleanup = computed(() =>
   props.needsAdvancedCleanup === true
   || (props.advancedCleanupMembers?.length ?? 0) > 0,
 )
+
+const canAssemble = computed(() => isAssemblableStoppedArray(props.array))
+const isOrphanOnly = computed(() => isOrphanStoppedArray(props.array))
 
 const advancedMemberSet = computed(() => new Set(props.advancedCleanupMembers ?? []))
 

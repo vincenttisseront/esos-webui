@@ -256,6 +256,10 @@ function extractErrorText(err: any, key: 'stdout' | 'stderr'): string | undefine
 
 // ─── Assemble stopped array ───────────────────────────────────────────────────
 
+export function expectedMdStopConfirmation(name: string): string {
+  return `STOP ${sanitizeArrayName(name)}`
+}
+
 export function expectedMdAssembleConfirmation(name: string): string {
   return `ASSEMBLE ${sanitizeArrayName(name)}`
 }

@@ -223,3 +223,37 @@ export function isZeroCleanupFullyVerified(
 ): boolean {
   return isMdMetadataCleanupSuccessful(result)
 }
+
+export function isOrphanStoppedArray(arr: StoppedMdArray): boolean {
+  if (arr.name === 'unknown') return true
+  if (arr.stoppedState === 'incomplete' || arr.stoppedState === 'ambiguous') return true
+  const present = arr.members.filter(m => m.present)
+  if (present.length === 0) return arr.stoppedState !== 'assemblable'
+  return present.every(m => m.memberStatus === 'orphan_metadata')
+}
+
+export function isAssemblableStoppedArray(arr: StoppedMdArray): boolean {
+  return arr.stoppedState === 'assemblable' && !isOrphanStoppedArray(arr)
+}
+
+export function partitionStoppedMdArrays(arrays: StoppedMdArray[]): {
+  assemblable: StoppedMdArray[]
+  orphanOrIncomplete: StoppedMdArray[]
+} {
+  const assemblable: StoppedMdArray[] = []
+  const orphanOrIncomplete: StoppedMdArray[] = []
+  for (const arr of arrays) {
+    if (isAssemblableStoppedArray(arr)) assemblable.push(arr)
+    else orphanOrIncomplete.push(arr)
+  }
+  return { assemblable, orphanOrIncomplete }
+}
+
+export function primaryRecommendedActionForStoppedArray(
+  arr: StoppedMdArray,
+): 'assemble' | 'zero_superblock' | 'inspect' | null {
+  if (isAssemblableStoppedArray(arr)) return 'assemble'
+  if (isOrphanStoppedArray(arr)) return 'zero_superblock'
+  if (arr.stoppedState === 'incomplete' || arr.stoppedState === 'ambiguous') return 'inspect'
+  return 'zero_superblock'
+}

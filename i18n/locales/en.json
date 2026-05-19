@@ -241,6 +241,26 @@
       "auto_refresh_active": "Auto-refresh active",
       "auto_refresh_failed": "RAID progress auto-refresh was stopped"
     },
+    "software": {
+      "summary": {
+        "title": "Software RAID status",
+        "active": "{count} active array(s)",
+        "rebuilding": "{count} resync / recovery",
+        "stopped": "{count} assemblable stopped",
+        "orphan": "{count} orphan metadata",
+        "peer_md": "{count} peer node alert(s)"
+      },
+      "help": {
+        "workflow_title": "Software RAID workflow",
+        "cluster_title": "HA cluster reminder",
+        "toggle_show": "Show help",
+        "toggle_hide": "Hide help"
+      }
+    },
+    "detection": {
+      "blockers_title": "MD attention points",
+      "view_peer_raid": "View RAID on {label}"
+    },
     "workflow": {
       "title": "Software RAID workflow",
       "step_prepare": "Prepare RAID member partitions on physical disks.",
@@ -419,7 +439,22 @@
     },
     "stopped_md": {
       "section_title": "RAID arrays detected but stopped",
+      "section_assemblable_title": "Assemblable stopped arrays",
+      "section_assemblable_description": "Consistent metadata — you can reassemble on this node (cluster: multi-node plan).",
+      "section_orphan_title": "Orphan or incomplete metadata",
+      "section_orphan_description": "Not a complete MD array — prefer superblock cleanup or inspect.",
       "section_description": "These arrays are not active in the Linux kernel, but MD metadata still exists on member partitions.",
+      "recommended_label": "Recommended action",
+      "recommended": {
+        "assemble": "Reassemble array",
+        "zero_superblock": "Zero MD superblocks",
+        "advanced_cleanup": "Advanced cleanup",
+        "inspect": "Inspect metadata"
+      },
+      "orphan_only_notice": "Orphan metadata — do not treat as a complete MD array.",
+      "assemble_disabled_hint": "Reassemble is not available for orphan or incomplete metadata.",
+      "actions_help_title": "Action help",
+      "toast_cluster_cleanup_partial": "Cluster cleanup finished but MD metadata is still detected on at least one partition.",
       "cluster_notice": "MD stop, assemble, and cleanup run on all cluster nodes when mapping is validated. Sync config does not stop or start MD arrays on peers.",
       "detected_array": "Detected RAID array",
       "orphan_metadata": "Orphan RAID metadata",

@@ -226,6 +226,7 @@ import type {
 } from '~/types/raid'
 import { filterPartitionMappingsForDevices } from '~/utils/raid-cluster-mapping'
 import { expectedLocalCleanupConfirmation } from '~/utils/raid-local-recovery-confirm'
+import { isMdMetadataCleanupSuccessful } from '~/utils/stopped-md'
 
 const props = defineProps<{
   action: ClusterMdPreflightAction
@@ -580,6 +581,10 @@ async function execute() {
         clusterExecution,
       })
       executionResult.value = res.clusterExecution ?? null
+      if (!isMdMetadataCleanupSuccessful(res)) {
+        toast.warning(t('raid.stopped_md.toast_cluster_cleanup_partial'))
+        return
+      }
     } else if (props.action === 'wipe_md_signatures') {
       const res = await raid.wipeMdSignatures({
         ...(props.payload as Omit<WipeMdSignaturesRequest, 'confirmation' | 'clusterExecution'>),
@@ -588,6 +593,10 @@ async function execute() {
         clusterExecution,
       })
       executionResult.value = res.clusterExecution ?? null
+      if (!isMdMetadataCleanupSuccessful(res)) {
+        toast.warning(t('raid.stopped_md.toast_cluster_cleanup_partial'))
+        return
+      }
     }
     toast.success(t('raid.cluster_md.toast_success'))
     emit('confirm')

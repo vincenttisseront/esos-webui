@@ -180,18 +180,36 @@
 
     <!-- Onglet RAID Logiciel (MD) -->
     <div v-else-if="activeTab === 'software' && raid.overview" class="space-y-4">
-      <div class="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-        <p class="font-semibold">{{ t('raid.workflow.title') }}</p>
+      <RaidSoftwareSummaryCard
+        :counts="softwareSummaryCounts"
+        @navigate="scrollToSoftwareSection"
+      />
+
+      <RaidMdBlockersPanel
+        :items="mdBlockerItems"
+        :current-san-id="sanId"
+        :peer-raid-link="peerRaidLink"
+        @navigate="navigateMdDetectionItem"
+      />
+
+      <RaidCollapsibleHelp :title="t('raid.software.help.workflow_title')">
+        <p class="font-medium text-gray-800 dark:text-gray-200">{{ t('raid.workflow.title') }}</p>
         <ol class="mt-1 list-decimal pl-5 space-y-0.5">
           <li>{{ t('raid.workflow.step_prepare') }}</li>
           <li>{{ t('raid.workflow.step_create') }}</li>
           <li>{{ t('raid.workflow.step_use') }}</li>
         </ol>
-      </div>
+      </RaidCollapsibleHelp>
+
+      <RaidCollapsibleHelp
+        v-if="isClusteredSan"
+        :title="t('raid.software.help.cluster_title')"
+      >
+        <p>{{ t('raid.cluster_md.software_alert_description') }}</p>
+      </RaidCollapsibleHelp>
       <UAlert
         v-if="isClusteredSan"
         :title="t('raid.cluster_md.software_alert_title')"
-        :description="t('raid.cluster_md.software_alert_description')"
         color="amber"
         icon="i-heroicons-exclamation-triangle"
         variant="soft"
@@ -216,14 +234,15 @@
           {{ t('raid.create_md.action') }}
         </UButton>
       </div>
-      <UAlert
-        v-for="peer in peersWithMd"
-        :key="peer.nodeSanId"
-        :title="t('raid.md_detection.peer_banner_title', { label: peer.nodeLabel })"
-        color="amber"
-        icon="i-heroicons-exclamation-triangle"
-        variant="soft"
-      >
+      <div id="raid-software-peer">
+        <UAlert
+          v-for="peer in peersWithMd"
+          :key="peer.nodeSanId"
+          :title="t('raid.md_detection.peer_banner_title', { label: peer.nodeLabel })"
+          color="amber"
+          icon="i-heroicons-exclamation-triangle"
+          variant="soft"
+        >
         <template #description>
           <ul class="list-disc pl-4 text-sm space-y-0.5 mt-1">
             <li v-for="item in peer.items.slice(0, 5)" :key="item.path + item.kind">
@@ -240,16 +259,19 @@
             {{ t('raid.md_detection.view_peer_raid', { label: peer.nodeLabel }) }}
           </UButton>
         </template>
-      </UAlert>
+        </UAlert>
+      </div>
 
-      <div
+      <motion.div
         v-if="showSoftwareEmpty"
         class="text-center py-8 text-gray-500"
+        :initial="{ opacity: 0 }"
+        :animate="{ opacity: 1 }"
       >
         <UIcon name="i-heroicons-server-stack" class="w-10 h-10 mx-auto mb-2 opacity-30" />
         <p>{{ t('raid.md_detection.empty_title') }}</p>
         <p class="text-xs mt-1">{{ t('raid.md_detection.empty_hint') }}</p>
-      </div>
+      </motion.div>
       <UAlert
         v-if="isClusteredSan && raid.mdArrays.length"
         :title="t('raid.cluster_md.active_arrays_title')"
@@ -258,7 +280,7 @@
         icon="i-heroicons-exclamation-triangle"
         variant="soft"
       />
-      <div v-if="raid.mdArrays.length" class="space-y-3">
+      <div v-if="raid.mdArrays.length" id="raid-software-active" class="space-y-3">
         <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Tableaux MD actifs</h3>
         <UCard
           v-for="arr in raid.mdArrays"
@@ -276,10 +298,14 @@
         </UCard>
       </div>
 
-      <div v-if="raid.stoppedMdArrays.length" class="space-y-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+      <motion.div
+        v-if="partitionedStopped.assemblable.length"
+        id="raid-software-stopped-assemblable"
+        class="space-y-3 pt-2 border-t border-gray-200 dark:border-gray-700"
+      >
         <div>
-          <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('raid.stopped_md.section_title') }}</h3>
-          <p class="text-xs text-gray-500 mt-1">{{ t('raid.stopped_md.section_description') }}</p>
+          <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('raid.stopped_md.section_assemblable_title') }}</h3>
+          <p class="text-xs text-gray-500 mt-1">{{ t('raid.stopped_md.section_assemblable_description') }}</p>
         </div>
         <UAlert
           v-if="isClusteredSan"
@@ -288,7 +314,7 @@
           icon="i-heroicons-exclamation-triangle"
           variant="soft"
         />
-        <UCard v-for="arr in raid.stoppedMdArrays" :key="stoppedArrayKey(arr)">
+        <UCard v-for="arr in partitionedStopped.assemblable" :key="stoppedArrayKey(arr)">
           <StoppedMdArrayCard
             :array="arr"
             :read-only="isReadOnly"
@@ -301,7 +327,31 @@
             @inspect="handleInspectStoppedMd"
           />
         </UCard>
-      </div>
+      </motion.div>
+
+      <motion.div
+        v-if="partitionedStopped.orphanOrIncomplete.length"
+        id="raid-software-stopped-orphan"
+        class="space-y-3 pt-2 border-t border-gray-200 dark:border-gray-700"
+      >
+        <div>
+          <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('raid.stopped_md.section_orphan_title') }}</h3>
+          <p class="text-xs text-gray-500 mt-1">{{ t('raid.stopped_md.section_orphan_description') }}</p>
+        </div>
+        <UCard v-for="arr in partitionedStopped.orphanOrIncomplete" :key="stoppedArrayKey(arr)">
+          <StoppedMdArrayCard
+            :array="arr"
+            :read-only="isReadOnly"
+            :action-loading="stoppedMdActionKey === stoppedArrayKey(arr)"
+            :needs-advanced-cleanup="arrayNeedsAdvancedCleanup(arr)"
+            :advanced-cleanup-members="advancedCleanupMembersForArray(stoppedMemberPaths(arr), raid.pendingAdvancedCleanup)"
+            @assemble="handleAssembleStoppedMd"
+            @zero-superblocks="handleZeroStoppedMd"
+            @advanced-cleanup="handleAdvancedCleanupStoppedMd"
+            @inspect="handleInspectStoppedMd"
+          />
+        </UCard>
+      </motion.div>
 
       <div
         v-if="inactiveMdDevices.length"
@@ -510,12 +560,19 @@ import {
   suggestDefaultMdName,
 } from '~/utils/stopped-md'
 import {
+  allMdDetectionItems,
   blockDeviceRaidItems,
   hasAnyMdStateVisible,
   mdDetectionPathSet,
   partitionMetadataItems,
   peerNodesWithMdState,
 } from '~/utils/raid-md-detection'
+import { hasActiveMdArrayProgress } from '~/utils/raid-md-progress'
+import type { RaidSoftwareSummaryAnchor } from '~/components/raid/RaidSoftwareSummaryCard.vue'
+import {
+  partitionStoppedMdArrays,
+} from '~/utils/stopped-md'
+import type { MdDetectionItem } from '~/types/raid'
 import type { ClusterMdPreflightAction, PreflightBlockerRef, RaidRiskLevel } from '~/types/raid'
 import { raidDetectionNavigateKey } from '~/composables/useRaidDetectionNavigate'
 
@@ -548,6 +605,15 @@ const showSoftwareEmpty = computed(() => !hasAnyMdStateVisible(raid.overview))
 const metadataHoldouts = computed(() => partitionMetadataItems(raid.overview))
 const inactiveMdDevices = computed(() => blockDeviceRaidItems(raid.overview))
 const peersWithMd = computed(() => peerNodesWithMdState(raid.overview, sanId))
+const partitionedStopped = computed(() => partitionStoppedMdArrays(raid.stoppedMdArrays))
+const mdBlockerItems = computed(() => allMdDetectionItems(raid.overview))
+const softwareSummaryCounts = computed(() => ({
+  active: raid.mdArrays.length,
+  rebuilding: raid.mdArrays.filter(a => hasActiveMdArrayProgress(a)).length,
+  stoppedAssemblable: partitionedStopped.value.assemblable.length,
+  orphan: partitionedStopped.value.orphanOrIncomplete.length,
+  peerMd: peersWithMd.value.length,
+}))
 
 // Wizards & modals
 const { open: openModal } = useAppModal()
@@ -581,6 +647,29 @@ function navigateRaidDetection(ref: PreflightBlockerRef) {
     highlightedArrayPath.value = ref.path.startsWith('/dev/md') ? ref.path : null
     if (highlightedArrayPath.value) void scrollToHighlightedArray(highlightedArrayPath.value)
   }
+}
+
+function navigateMdDetectionItem(item: MdDetectionItem) {
+  navigateRaidDetection({
+    code: 'md_superblock_on_partition',
+    message: item.summary,
+    path: item.path,
+    sanId: item.nodeSanId,
+    uiAnchor: item.uiAnchor,
+  })
+}
+
+function scrollToSoftwareSection(anchor: RaidSoftwareSummaryAnchor) {
+  activeTab.value = 'software'
+  const idMap: Record<RaidSoftwareSummaryAnchor, string> = {
+    'software-active': 'raid-software-active',
+    'software-stopped-assemblable': 'raid-software-stopped-assemblable',
+    'software-stopped-orphan': 'raid-software-stopped-orphan',
+    'software-peer': 'raid-software-peer',
+  }
+  void nextTick(() => {
+    document.getElementById(idMap[anchor])?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  })
 }
 
 provide(raidDetectionNavigateKey, navigateRaidDetection)
@@ -871,7 +960,6 @@ async function handleZeroStoppedMd(arr: StoppedMdArray) {
         localPreflight: preflight,
         confirmationPhrase: preflight.requiredConfirmation ?? confirmPhrase,
       })
-      if (done) toast.success(t('raid.stopped_md.toast_zero_ok', { partitions: members.join(', ') }))
       return
     }
 
@@ -1026,7 +1114,6 @@ async function handleWipeMdSignatures(diagnosticsResults: ZeroMdSuperblockPartit
       localPreflight: preflight,
       confirmationPhrase: confirmPhrase,
     })
-    if (done) toast.success(t('raid.stopped_md.toast_advanced_cleanup_ok'))
     return
   }
 
