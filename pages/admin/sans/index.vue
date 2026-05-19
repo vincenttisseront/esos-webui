@@ -321,11 +321,6 @@ function scrollToClusterFromQuery() {
   })
 }
 
-const clusterAttentionHandlers: ClusterAttentionActionHandlers = {
-  onSync: clusterId => onClusterSync(clusterId),
-  onAddNode: clusterId => onClusterAddNode(clusterId),
-  onReconnect: nodeId => onReconnect(nodeId),
-}
 interface SanRow {
   id: string
   label: string
@@ -859,5 +854,11 @@ async function onClusterProbe(clusterId: string) {
   } finally {
     probing[clusterId] = false
   }
+}
+
+const clusterAttentionHandlers: ClusterAttentionActionHandlers = {
+  onSync: clusterId => onClusterSync(clusterId),
+  onAddNode: clusterId => onClusterAddNode(clusterId),
+  onReconnect: nodeId => onReconnect(nodeId),
 }
 </script>

@@ -4,10 +4,6 @@ import { useClusterAttentionAction, type ClusterAttentionActionHandlers } from '
 import type { ClusterAttentionResponse } from '~/types/cluster-admin'
 import type { ClusterOverview } from '~/server/utils/types'
 
-const { isPending } = useNetworkPendingRestart()
-const { t } = useEsosI18n()
-const { handleAttentionAction } = useClusterAttentionAction(props.actionHandlers ?? {})
-
 interface SanRow {
   id: string
   label: string
@@ -57,6 +53,10 @@ const emit = defineEmits<{
   (e: 'toggleReadOnly', san: SanRow): void
   (e: 'addNode', clusterId: string): void
 }>()
+
+const { isPending } = useNetworkPendingRestart()
+const { t } = useEsosI18n()
+const { handleAttentionAction } = useClusterAttentionAction(props.actionHandlers ?? {})
 
 const primaryNode = computed(() =>
   props.nodes.find(n => n.clusterRole === 'primary'),
