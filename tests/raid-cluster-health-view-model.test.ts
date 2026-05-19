@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { buildRaidClusterHealthViewModel, prioritySortActionable } from '../utils/raid-cluster-health-view-model'
+import {
+  buildRaidClusterHealthViewModel,
+  groupRaidActionableItems,
+  prioritySortActionable,
+} from '../utils/raid-cluster-health-view-model'
 import type { RaidOverviewResponse } from '../types/raid'
 
 const t = (key: string, params?: Record<string, string | number>) => {
@@ -156,6 +160,39 @@ describe('buildRaidClusterHealthViewModel', () => {
     })
     expect(vm.actionableItems.some(i => i.category === 'cluster_asymmetry')).toBe(true)
     expect(vm.health).toBe('critical')
+  })
+})
+
+describe('groupRaidActionableItems', () => {
+  it('merges metadata_local items with same title into one group', () => {
+    const items = [
+      {
+        id: 'metadata_local:/dev/sdb1',
+        severity: 'warning' as const,
+        category: 'metadata_local' as const,
+        title: 'Métadonnées MD orphelines sur ce nœud',
+        impact: 'Peut empêcher la réutilisation de la partition.',
+        recommendation: 'Effacer les superblocks.',
+        details: ['/dev/sdb1'],
+        primaryActionLabel: 'Voir périphériques',
+        primaryActionTarget: { type: 'devices' as const, path: '/dev/sdb1' },
+      },
+      {
+        id: 'metadata_local:/dev/sdc1',
+        severity: 'warning' as const,
+        category: 'metadata_local' as const,
+        title: 'Métadonnées MD orphelines sur ce nœud',
+        impact: 'Peut empêcher la réutilisation de la partition.',
+        recommendation: 'Effacer les superblocks.',
+        details: ['/dev/sdc1'],
+        primaryActionLabel: 'Voir périphériques',
+        primaryActionTarget: { type: 'devices' as const, path: '/dev/sdc1' },
+      },
+    ]
+    const grouped = groupRaidActionableItems(items, t)
+    expect(grouped).toHaveLength(1)
+    expect(grouped[0]?.affectedPaths.sort()).toEqual(['/dev/sdb1', '/dev/sdc1'])
+    expect(grouped[0]?.impact).toBe('raid.cockpit.item.metadata_local.impact_plural')
   })
 })
 

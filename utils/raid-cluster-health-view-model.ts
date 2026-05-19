@@ -2,12 +2,14 @@ import type {
   MdArray,
   MdDetectionItem,
   MdDetectionSummary,
+  RaidActionableCategory,
   RaidActionableItem,
   RaidActionTarget,
   RaidClusterArrayMainStatus,
   RaidClusterHealthSummary,
   RaidClusterHealthViewModel,
   RaidCockpitHealth,
+  RaidGroupedActionableItem,
   RaidOverviewResponse,
   RaidProductionImpact,
   RaidTechnicalDetail,
@@ -281,9 +283,104 @@ function buildHeadline(
   actionableCount: number,
   t: RaidCockpitTranslate,
 ): string {
-  if (health === 'healthy') return t('raid.cockpit.headline.healthy')
+  if (health === 'healthy') return t('raid.cockpit.headline.no_attention')
   if (health === 'critical') return t('raid.cockpit.headline.critical')
   return t('raid.cockpit.headline.actions', { count: actionableCount })
+}
+
+function actionTargetGroupKey(target?: RaidActionTarget): string {
+  if (!target) return ''
+  const { path: _path, ...rest } = target
+  return JSON.stringify(rest)
+}
+
+function extractPathsFromItem(item: RaidActionableItem): string[] {
+  const paths = new Set<string>()
+  if (item.primaryActionTarget?.path?.startsWith('/dev/')) {
+    paths.add(item.primaryActionTarget.path)
+  }
+  for (const line of item.details) {
+    const m = line.match(/^(\/dev\/\S+)/)
+    if (m) paths.add(m[1])
+  }
+  return [...paths]
+}
+
+function mergeSeverity(
+  a: RaidActionableItem['severity'],
+  b: RaidActionableItem['severity'],
+): RaidActionableItem['severity'] {
+  const rank = { critical: 0, warning: 1, info: 2 }
+  return rank[a] <= rank[b] ? a : b
+}
+
+function pluralizeGroupedImpact(
+  category: RaidActionableCategory,
+  count: number,
+  impact: string,
+  t: RaidCockpitTranslate,
+): string {
+  if (count > 1 && category === 'metadata_local') {
+    return t('raid.cockpit.item.metadata_local.impact_plural')
+  }
+  return impact
+}
+
+export function groupRaidActionableItems(
+  items: RaidActionableItem[],
+  t: RaidCockpitTranslate,
+): RaidGroupedActionableItem[] {
+  const map = new Map<string, RaidGroupedActionableItem>()
+
+  for (const item of prioritySortActionable(items)) {
+    const groupKey = [
+      item.category,
+      item.title,
+      item.primaryActionLabel ?? '',
+      actionTargetGroupKey(item.primaryActionTarget),
+    ].join('|')
+
+    const paths = extractPathsFromItem(item)
+    const existing = map.get(groupKey)
+    if (!existing) {
+      map.set(groupKey, {
+        groupKey,
+        severity: item.severity,
+        title: item.title,
+        impact: item.impact,
+        recommendation: item.recommendation,
+        affectedPaths: paths,
+        primaryActionLabel: item.primaryActionLabel,
+        primaryActionTarget: item.primaryActionTarget,
+        representative: item,
+      })
+      continue
+    }
+
+    existing.severity = mergeSeverity(existing.severity, item.severity)
+    for (const p of paths) {
+      if (!existing.affectedPaths.includes(p)) existing.affectedPaths.push(p)
+    }
+  }
+
+  return [...map.values()].map((g) => ({
+    ...g,
+    impact: pluralizeGroupedImpact(
+      g.representative.category,
+      g.affectedPaths.length,
+      g.impact,
+      t,
+    ),
+  }))
+}
+
+export function formatAffectedPaths(
+  paths: string[],
+  t: RaidCockpitTranslate,
+): string {
+  const joined = paths.join(', ')
+  if (paths.length <= 1) return t('raid.cockpit.affected.single', { paths: joined })
+  return t('raid.cockpit.affected.multiple', { count: paths.length, paths: joined })
 }
 
 export function buildRaidClusterHealthViewModel(input: {

@@ -209,7 +209,7 @@
       />
 
       <RaidActionableItemsCard
-        :items="raidCockpit.actionableItems"
+        :groups="groupedActions"
         @action="onCockpitAction"
       />
 
@@ -232,6 +232,7 @@
           :class="{ 'ring-2 ring-blue-500 ring-offset-1': arr.path === highlightedArrayPath }"
         >
           <MdArrayCard
+            compact
             :array="arr"
             @stop="handleStopMd"
             @add-device="handleAddMdDevice"
@@ -513,7 +514,7 @@ import {
   mdDetectionPathSet,
 } from '~/utils/raid-md-detection'
 import { hasActiveMdArrayProgress } from '~/utils/raid-md-progress'
-import { buildRaidClusterHealthViewModel } from '~/utils/raid-cluster-health-view-model'
+import { buildRaidClusterHealthViewModel, groupRaidActionableItems } from '~/utils/raid-cluster-health-view-model'
 import {
   partitionStoppedMdArrays,
 } from '~/utils/stopped-md'
@@ -557,6 +558,10 @@ const raidCockpit = computed(() =>
     isClustered: isClusteredSan.value,
     t: (key, params) => t(key, params ?? {}),
   }),
+)
+
+const groupedActions = computed(() =>
+  groupRaidActionableItems(raidCockpit.value.actionableItems, (key, params) => t(key, params ?? {})),
 )
 
 // Wizards & modals

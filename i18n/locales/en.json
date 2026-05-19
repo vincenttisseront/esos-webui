@@ -242,17 +242,37 @@
       "auto_refresh_failed": "RAID progress auto-refresh was stopped"
     },
     "cockpit": {
+      "status": {
+        "title": "Cluster RAID status"
+      },
       "health": {
         "healthy": "Healthy",
         "warning": "Warning",
+        "warning_long": "Attention required",
         "critical": "Critical",
         "unknown": "Unknown"
       },
       "headline": {
         "healthy": "Cluster RAID is operating normally.",
+        "no_attention": "No issues require attention.",
         "actions": "The cluster is running, but {count} recommended action(s).",
         "critical": "Cluster RAID requires attention.",
         "unknown": "RAID status unavailable — refresh the scan."
+      },
+      "facts_line": "Active arrays: {arrays} · Nodes: {nodes} · Redundancy: {redundancy} · Resync: {resync}",
+      "redundancy": {
+        "ok": "OK",
+        "warning": "Needs review",
+        "critical": "Inconsistent",
+        "unknown": "—"
+      },
+      "affected": {
+        "label": "Affected",
+        "single": "{paths}",
+        "multiple": "{count} partitions affected: {paths}"
+      },
+      "array": {
+        "technical_toggle": "Technical details"
       },
       "impact": {
         "none": "No production impact identified.",
@@ -301,7 +321,8 @@
         "metadata_local": {
           "title": "Orphan MD metadata on this node",
           "impact": "May prevent reusing the partition.",
-          "recommendation": "Clear superblocks if the partition is no longer a member.",
+          "impact_plural": "May prevent reusing the partitions.",
+          "recommendation": "Clear superblocks if the partitions are no longer members of an array.",
           "action": "Clear MD superblocks"
         },
         "metadata_peer": {

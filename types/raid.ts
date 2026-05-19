@@ -311,6 +311,18 @@ export interface RaidActionableItem {
   details: string[]
 }
 
+export interface RaidGroupedActionableItem {
+  groupKey: string
+  severity: 'info' | 'warning' | 'critical'
+  title: string
+  impact: string
+  recommendation: string
+  affectedPaths: string[]
+  primaryActionLabel?: string
+  primaryActionTarget?: RaidActionTarget
+  representative: RaidActionableItem
+}
+
 export interface RaidTechnicalDetail {
   id: string
   label: string

@@ -242,17 +242,37 @@
       "auto_refresh_failed": "La mise à jour automatique de la progression RAID a été interrompue"
     },
     "cockpit": {
+      "status": {
+        "title": "Statut RAID cluster"
+      },
       "health": {
         "healthy": "Sain",
         "warning": "Attention",
+        "warning_long": "Attention requise",
         "critical": "Critique",
         "unknown": "Inconnu"
       },
       "headline": {
         "healthy": "Le cluster RAID fonctionne normalement.",
+        "no_attention": "Aucun point d'attention.",
         "actions": "Le cluster fonctionne, mais {count} action(s) est/sont recommandée(s).",
         "critical": "Le cluster RAID nécessite une intervention.",
         "unknown": "État RAID indisponible — actualisez le scan."
+      },
+      "facts_line": "Tableaux actifs : {arrays} · Nœuds : {nodes} · Redondance : {redundancy} · Resync : {resync}",
+      "redundancy": {
+        "ok": "OK",
+        "warning": "À vérifier",
+        "critical": "Incohérent",
+        "unknown": "—"
+      },
+      "affected": {
+        "label": "Concerné",
+        "single": "{paths}",
+        "multiple": "{count} partitions concernées : {paths}"
+      },
+      "array": {
+        "technical_toggle": "Détails techniques"
       },
       "impact": {
         "none": "Aucun impact production identifié.",
@@ -301,6 +321,7 @@
         "metadata_local": {
           "title": "Métadonnées MD orphelines sur ce nœud",
           "impact": "Peut empêcher la réutilisation de la partition.",
+          "impact_plural": "Peut empêcher la réutilisation des partitions.",
           "recommendation": "Nettoyez les superblocks si la partition n'est plus membre d'un tableau.",
           "action": "Nettoyer les superblocks MD"
         },
