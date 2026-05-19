@@ -327,7 +327,8 @@ export interface PreparedMdPartitionPreview {
   expectedPartitionPath: string
 }
 
-export type ClusterStorageAction = 'prepare_md_partitions' | 'create_md'
+export type ClusterMdPreflightAction = 'stop_md' | 'assemble_md' | 'zero_md_superblocks' | 'wipe_md_signatures'
+export type ClusterStorageAction = 'prepare_md_partitions' | 'create_md' | ClusterMdPreflightAction
 export type ClusterDiskMappingConfidence = 'high' | 'medium' | 'low' | 'none'
 
 export interface ClusterDiskMappingInput {
@@ -471,6 +472,61 @@ export interface CreateMdArrayClusterExecutionResult {
   refreshedSanIds?: string[]
 }
 
+export interface ClusterMdExecutionRequest {
+  clusterId?: string
+  primarySanId: string
+  diskMappings?: ClusterDiskMappingInput[]
+  requirePreflightOk: true
+  stopOnFirstFailure?: true
+  executionScope?: 'all_nodes' | 'current_node_only'
+}
+
+export interface ClusterMdNodeResult {
+  sanId: string
+  label: string
+  role: string | null
+  source: 'primary' | 'peer'
+  arrayPath?: string
+  members: string[]
+  devices: string[]
+  command?: string
+  status: 'pending' | 'running' | 'success' | 'failed'
+  stdout?: string
+  stderr?: string
+  error?: string
+}
+
+export interface ClusterMdExecutionPlan {
+  mode: 'standalone' | 'cluster'
+  action: ClusterMdPreflightAction
+  sourceSanId: string
+  clusterId?: string
+  nodeResults: ClusterMdNodeResult[]
+}
+
+export interface ClusterMdExecutionResult {
+  mode: 'cluster'
+  action: ClusterMdPreflightAction
+  clusterId?: string
+  sourceSanId: string
+  stopOnFirstFailure: true
+  executionScope?: 'all_nodes' | 'current_node_only'
+  nodeResults: ClusterMdNodeResult[]
+  failedSanId?: string
+  refreshedSanIds?: string[]
+}
+
+export interface StopMdArrayRequest {
+  confirmation: string
+  clusterExecution?: ClusterMdExecutionRequest
+}
+
+export interface StopMdArrayResponse {
+  mode?: 'standalone' | 'cluster' | 'single_node_override'
+  stdout?: string
+  clusterExecution?: ClusterMdExecutionResult
+}
+
 // ─── API shapes ──────────────────────────────────────────────────────────────
 
 export interface RaidToolsInfo {
@@ -526,11 +582,14 @@ export interface AssembleMdArrayRequest {
   members?: string[]
   targetName?: string
   confirmation: string
+  clusterExecution?: ClusterMdExecutionRequest
 }
 
 export interface AssembleMdArrayResponse {
-  stdout: string
-  command: string
+  mode?: 'standalone' | 'cluster' | 'single_node_override'
+  stdout?: string
+  command?: string
+  clusterExecution?: ClusterMdExecutionResult
 }
 
 export interface CommandProbeResult {
@@ -572,6 +631,7 @@ export interface ZeroMdSuperblocksRequest {
   members: string[]
   confirmation: string
   mode?: MdMetadataCleanupMode
+  clusterExecution?: ClusterMdExecutionRequest
 }
 
 export interface PartitionDetectionSources {
@@ -586,6 +646,7 @@ export interface WipeMdSignaturesRequest {
   mode: MdMetadataCleanupMode
   remainingSignatureTypes?: Record<string, string[]>
   detectionSourcesByMember?: Record<string, PartitionDetectionSources>
+  clusterExecution?: ClusterMdExecutionRequest
 }
 
 export interface ZeroMdSuperblockPartitionResult {
@@ -609,6 +670,8 @@ export interface ZeroMdSuperblocksResponse {
   stdout: string
   commands: string[]
   advancedCleanupAvailable?: boolean
+  mode?: 'standalone' | 'cluster'
+  clusterExecution?: ClusterMdExecutionResult
 }
 
 export type WipeMdSignaturesResponse = ZeroMdSuperblocksResponse

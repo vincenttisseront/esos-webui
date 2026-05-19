@@ -23,10 +23,24 @@ import type {
   RaidPreflightRequest,
 } from './raid-types'
 
-const SYNC_LIMITATIONS = [
+export const SYNC_LIMITATIONS = [
   'Sync config exécute conf_sync.sh et synchronise des fichiers/configuration uniquement.',
   'Sync config ne crée pas de partitions physiques, superblocks MD, métadonnées LVM ni block devices sur les autres nœuds.',
+  'Sync config n\'arrête ni ne démarre pas les tableaux MD (mdadm stop/assemble) sur les nœuds pairs.',
 ]
+
+export const CLUSTER_MD_ACTIONS: ClusterStorageAction[] = [
+  'prepare_md_partitions',
+  'create_md',
+  'stop_md',
+  'assemble_md',
+  'zero_md_superblocks',
+  'wipe_md_signatures',
+]
+
+function isPathlessClusterAction(action: ClusterStorageAction): boolean {
+  return action === 'stop_md'
+}
 
 interface ClusterSanRow {
   id: string
@@ -49,7 +63,7 @@ export async function runClusterStoragePreflight(
   if (!req.primarySanId) {
     throw createError({ statusCode: 400, statusMessage: 'primarySanId requis' })
   }
-  if (req.action !== 'prepare_md_partitions' && req.action !== 'create_md') {
+  if (!CLUSTER_MD_ACTIONS.includes(req.action)) {
     throw createError({ statusCode: 400, statusMessage: `Action cluster storage invalide : ${String(req.action)}` })
   }
 
@@ -86,6 +100,16 @@ export async function runClusterStoragePreflight(
     const selectedPaths = selectedStoragePaths(req.action, req.payload)
     for (const peer of inventories.filter(n => n.sanId !== source.sanId)) {
       if (!peer.sshReady || !peer.tools) continue
+
+      if (isPathlessClusterAction(req.action)) {
+        const peerPreflight = await runNodePreflight(req.action, req.payload, peer)
+        perNodePreflights[peer.sanId] = peerPreflight
+        blockers.push(...peerPreflight.blockers.map(b => `${peer.label} : ${b}`))
+        blockerRefs.push(...prefixBlockerRefs(peerPreflight.blockerRefs ?? [], peer.label, peer.sanId))
+        warnings.push(...peerPreflight.warnings.map(w => `${peer.label} : ${w}`))
+        continue
+      }
+
       const peerPaths: string[] = []
       for (const sourcePath of selectedPaths) {
         const mapping = mapDeviceToPeer(
@@ -101,6 +125,11 @@ export async function runClusterStoragePreflight(
         warnings.push(...mapping.warnings.map(w => `${peer.label} : ${w}`))
       }
 
+      if (selectedPaths.length === 0) {
+        blockers.push(`${peer.label} : aucun chemin membre à mapper pour ${req.action}`)
+        continue
+      }
+
       if (peerPaths.length === selectedPaths.length) {
         const peerPayload = remapPayload(req.action, req.payload, peerPaths)
         const peerPreflight = await runNodePreflight(req.action, peerPayload, peer)
@@ -108,6 +137,19 @@ export async function runClusterStoragePreflight(
         blockers.push(...peerPreflight.blockers.map(b => `${peer.label} : ${b}`))
         blockerRefs.push(...prefixBlockerRefs(peerPreflight.blockerRefs ?? [], peer.label, peer.sanId))
         warnings.push(...peerPreflight.warnings.map(w => `${peer.label} : ${w}`))
+      } else {
+        blockers.push(`${peer.label} : mapping incomplet (${peerPaths.length}/${selectedPaths.length} chemins)`)
+      }
+    }
+
+    if (req.action === 'stop_md') {
+      const arrayName = String((req.payload as Record<string, unknown>)?.name ?? '')
+      const uuids = inventories
+        .map(n => n.mdArrays.find(a => a.name === arrayName)?.uuid)
+        .filter((u): u is string => Boolean(u))
+      const uniqueUuids = [...new Set(uuids)]
+      if (uniqueUuids.length > 1) {
+        blockers.push(`UUID MD incohérents entre nœuds pour ${arrayName} : ${uniqueUuids.join(', ')}`)
       }
     }
   }
@@ -444,14 +486,26 @@ export async function runNodePreflight(
 
 function selectedStoragePaths(action: ClusterStorageAction, payload: unknown): string[] {
   const p = payload as Record<string, unknown>
-  const key = action === 'prepare_md_partitions' ? 'disks' : 'devices'
-  return Array.isArray(p[key]) ? p[key].filter(v => typeof v === 'string') as string[] : []
+  if (action === 'prepare_md_partitions') {
+    return Array.isArray(p.disks) ? p.disks.filter(v => typeof v === 'string') as string[] : []
+  }
+  if (action === 'create_md') {
+    return Array.isArray(p.devices) ? p.devices.filter(v => typeof v === 'string') as string[] : []
+  }
+  if (action === 'stop_md') return []
+  if (action === 'assemble_md' || action === 'zero_md_superblocks' || action === 'wipe_md_signatures') {
+    return Array.isArray(p.members) ? p.members.filter(v => typeof v === 'string') as string[] : []
+  }
+  return []
 }
 
 function remapPayload(action: ClusterStorageAction, payload: unknown, mappedPaths: string[]): unknown {
   const p = { ...(payload as Record<string, unknown>) }
   if (action === 'prepare_md_partitions') p.disks = mappedPaths
-  else p.devices = mappedPaths
+  else if (action === 'create_md') p.devices = mappedPaths
+  else if (action === 'assemble_md' || action === 'zero_md_superblocks' || action === 'wipe_md_signatures') {
+    p.members = mappedPaths
+  }
   return p
 }
 

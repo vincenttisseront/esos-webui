@@ -6,6 +6,10 @@ import { assembleMdArray, expectedMdAssembleConfirmation } from '../../../../uti
 import { invalidateCacheKey } from '../../../../utils/cache'
 import { requireSanIdQuery } from '../../../../utils/san-query'
 import { isValidMdArrayName } from '../../../../utils/stopped-md-arrays'
+import {
+  assertClusteredSanAllowsMutation,
+  runClusterAssembleMdArray,
+} from '../../../../utils/raid-cluster-md-execution'
 import type { AssembleMdArrayRequest } from '../../../../utils/raid-types'
 
 export default defineEventHandler(async (event) => {
@@ -22,6 +26,20 @@ export default defineEventHandler(async (event) => {
       statusMessage: 'Nom de tableau MD invalide — spécifiez un nom cible valide (ex: md0)',
     })
   }
+
+  const clusterCtx = assertClusteredSanAllowsMutation(sanId, body.clusterExecution)
+  if (clusterCtx) {
+    try {
+      return await runClusterAssembleMdArray(sanId, body)
+    } catch (err: any) {
+      throw createError({
+        statusCode: err.statusCode ?? 500,
+        statusMessage: err.statusMessage ?? err.message ?? 'Erreur assemblage MD array cluster',
+        data: err.data,
+      })
+    }
+  }
+
   const expectedConfirm = expectedMdAssembleConfirmation(effectiveName)
   if (!body.confirmation || body.confirmation !== expectedConfirm) {
     throw createError({ statusCode: 400, statusMessage: `Confirmation invalide (attendu : "${expectedConfirm}")` })
@@ -34,7 +52,7 @@ export default defineEventHandler(async (event) => {
     }
     const result = await assembleMdArray(manager, body)
     invalidateCacheKey(`raid-overview-${sanId}`)
-    return result
+    return { mode: 'standalone' as const, ...result }
   }
 
   try {

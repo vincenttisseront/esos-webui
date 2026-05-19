@@ -10,6 +10,10 @@ import {
 import { collectRaidOverview } from '../../../../utils/raid-overview.service'
 import { invalidateCacheKey, withCache } from '../../../../utils/cache'
 import { requireSanIdQuery } from '../../../../utils/san-query'
+import {
+  assertClusteredSanAllowsMutation,
+  runClusterWipeMdSignatures,
+} from '../../../../utils/raid-cluster-md-execution'
 import type { WipeMdSignaturesRequest } from '../../../../utils/raid-types'
 
 export default defineEventHandler(async (event) => {
@@ -26,6 +30,19 @@ export default defineEventHandler(async (event) => {
       statusCode: 400,
       statusMessage: 'mode requis : "advanced" pour le nettoyage MD avancé',
     })
+  }
+
+  const clusterCtx = assertClusteredSanAllowsMutation(sanId, body?.clusterExecution)
+  if (clusterCtx) {
+    try {
+      return await runClusterWipeMdSignatures(sanId, body!)
+    } catch (err: any) {
+      throw createError({
+        statusCode: err.statusCode ?? 500,
+        statusMessage: err.statusMessage ?? 'Erreur nettoyage signatures RAID cluster',
+        data: err.data,
+      })
+    }
   }
 
   const expectedConfirm = expectedMdAdvancedCleanupConfirmation()
@@ -50,7 +67,6 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.info('[raid-api:wipe-signatures]', { sanId, mode: 'advanced', members })
     const result = await wipeMdSignatures(
       manager,
       members,
@@ -58,20 +74,7 @@ export default defineEventHandler(async (event) => {
       body.detectionSourcesByMember,
     )
     invalidateCacheKey(cacheKey)
-    console.info('[raid-api:wipe-signatures]', {
-      sanId,
-      mode: 'advanced',
-      ok: result.ok,
-      partitions: result.results.map(r => ({
-        partition: r.partition,
-        command: r.command,
-        success: r.success,
-        verifiedRemoved: r.verifiedRemoved,
-        recommendedAction: r.diagnostics?.recommendedAction,
-      })),
-      warnings: result.warnings,
-    })
-    return result
+    return { mode: 'standalone' as const, ...result }
   }
 
   try {

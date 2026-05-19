@@ -9,6 +9,7 @@ import type {
   AssembleMdArrayRequest, AssembleMdArrayResponse,
   ZeroMdSuperblocksRequest, ZeroMdSuperblocksResponse,
   WipeMdSignaturesRequest, WipeMdSignaturesResponse,
+  ClusterMdExecutionPlan, ClusterMdExecutionRequest, StopMdArrayResponse,
   ClusterStoragePreflightRequest, ClusterStoragePreflightResult, RaidClusterPreparedMappingHint,
   PartitionMetadataDiagnostics, ZeroMdSuperblockPartitionResult,
 } from '~/types/raid'
@@ -157,10 +158,42 @@ export const useRaidStore = defineStore('raid', {
       return result
     },
 
-    async stopMdArray(name: string, confirmation: string) {
-      const result = await $fetch(`/api/raid/software/arrays/${encodeURIComponent(name)}`, {
+    async planStopMdArray(name: string, clusterExecution: ClusterMdExecutionRequest): Promise<ClusterMdExecutionPlan> {
+      return await $fetch<ClusterMdExecutionPlan>('/api/raid/software/arrays/stop/plan', {
+        method: 'POST',
+        body: { name, clusterExecution },
+        params: this.query(),
+      })
+    },
+
+    async planAssembleMdArray(req: AssembleMdArrayRequest): Promise<ClusterMdExecutionPlan> {
+      return await $fetch<ClusterMdExecutionPlan>('/api/raid/software/arrays/assemble/plan', {
+        method: 'POST',
+        body: req,
+        params: this.query(),
+      })
+    },
+
+    async planZeroMdSuperblocks(req: ZeroMdSuperblocksRequest): Promise<ClusterMdExecutionPlan> {
+      return await $fetch<ClusterMdExecutionPlan>('/api/raid/software/arrays/zero-superblocks/plan', {
+        method: 'POST',
+        body: req,
+        params: this.query(),
+      })
+    },
+
+    async planWipeMdSignatures(req: WipeMdSignaturesRequest): Promise<ClusterMdExecutionPlan> {
+      return await $fetch<ClusterMdExecutionPlan>('/api/raid/software/arrays/wipe-signatures/plan', {
+        method: 'POST',
+        body: req,
+        params: this.query(),
+      })
+    },
+
+    async stopMdArray(name: string, confirmation: string, clusterExecution?: ClusterMdExecutionRequest) {
+      const result = await $fetch<StopMdArrayResponse>(`/api/raid/software/arrays/${encodeURIComponent(name)}`, {
         method: 'DELETE',
-        body: { confirmation },
+        body: { confirmation, clusterExecution },
         params: this.query(),
       })
       await this.fetchOverview(true)

@@ -538,6 +538,10 @@ export async function wipeMdSignatures(
   return { ok: true, results, warnings, stdout, commands }
 }
 
+export function expectedCurrentNodeOnlyStopConfirmation(name: string): string {
+  return `STOP ${sanitizeArrayName(name)} ON CURRENT NODE ONLY`
+}
+
 // ─── Stop array ───────────────────────────────────────────────────────────────
 
 export async function stopMdArray(
