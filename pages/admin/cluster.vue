@@ -32,7 +32,7 @@
           color="primary"
           variant="soft"
           label="Nouveau cluster"
-          @click="selectGroup({ ids: [], nodes: [] })"
+          @click="selectGroup({ clusterId: '', clusterName: '', ids: [], nodes: [] })"
         />
       </div>
     </header>
@@ -60,7 +60,7 @@
           <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
             <tr
               v-for="group in clusterGroups"
-              :key="group.ids.join('|')"
+              :key="group.clusterId"
               class="transition-colors"
               :class="[
                 !isViewer ? 'cursor-pointer' : 'cursor-default',
@@ -74,14 +74,8 @@
               <td class="px-4 py-3">
                 <div class="flex items-center gap-2">
                   <UIcon name="i-heroicons-server-stack" class="w-4 h-4 text-primary-400 shrink-0" />
-                  <span v-if="groupOverview(group)?.clusterName" class="font-semibold text-gray-800 dark:text-gray-100">
-                    {{ groupOverview(group)!.clusterName }}
-                  </span>
-                  <span v-else-if="groupLoadingMap[group.ids.join('|')]" class="text-gray-400 italic text-xs">
-                    Chargement…
-                  </span>
-                  <span v-else class="text-gray-400 italic text-xs">
-                    {{ group.nodes.map(n => n.label).join(' + ') }}
+                  <span class="font-semibold text-gray-800 dark:text-gray-100">
+                    {{ group.clusterName }}
                   </span>
                 </div>
               </td>
@@ -146,13 +140,9 @@
               <!-- État -->
               <td class="px-4 py-3">
                 <template v-if="groupOverview(group)">
-                  <UBadge
-                    :color="groupOverview(group)!.healthy ? 'green' : 'red'"
-                    variant="soft"
-                    size="xs"
-                  >
-                    {{ groupOverview(group)!.healthy ? 'Sain' : 'Dégradé' }}
-                  </UBadge>
+                  <ClusterHealthBadge
+                    :health="groupOverview(group)?.healthy ? 'healthy' : 'warning'"
+                  />
                 </template>
                 <UIcon
                   v-else-if="groupLoadingMap[group.ids.join('|')]"
@@ -223,9 +213,7 @@
                 <UBadge :color="modeColor(cluster.clusterMode)" variant="soft" size="xs">
                   {{ cluster.clusterMode }}
                 </UBadge>
-                <UBadge :color="cluster.isHealthy ? 'green' : 'red'" variant="soft" size="xs">
-                  {{ cluster.isHealthy ? 'Sain' : 'Dégradé' }}
-                </UBadge>
+                <ClusterHealthBadge :health="selectedAttention?.health ?? (cluster.isHealthy ? 'healthy' : 'warning')" />
               </div>
 
               <!-- Nœuds du cluster -->
@@ -330,28 +318,33 @@ interface ClusterNode {
 }
 
 interface ClusterGroup {
-  ids:   string[]
+  clusterId: string
+  clusterName: string
+  ids: string[]
   nodes: ClusterNode[]
 }
 
 const clusterGroups = computed<ClusterGroup[]>(() => {
-  const seen   = new Set<string>()
-  const groups: ClusterGroup[] = []
-
-  for (const san of activeAdminSans.value) {
-    if (!san.clusterEnabled || seen.has(san.id)) continue
-    const peer = activeAdminSans.value.find(s => s.id === san.clusterPeer)
-
-    const nodes: ClusterNode[] = [
-      { id: san.id, label: san.label, host: san.host, role: san.clusterRole ?? null },
-      ...(peer ? [{ id: peer.id, label: peer.label, host: peer.host, role: peer.clusterRole ?? null }] : []),
-    ]
-
-    groups.push({ ids: nodes.map(n => n.id), nodes })
-    seen.add(san.id)
-    if (peer) seen.add(peer.id)
-  }
-  return groups
+  const sansById = new Map(activeAdminSans.value.map(s => [s.id, s]))
+  return (clustersRegistry.value ?? [])
+    .map(reg => {
+      const nodes: ClusterNode[] = reg.nodes
+        .map(rn => sansById.get(rn.id))
+        .filter((s): s is SanSummary => Boolean(s))
+        .map(s => ({
+          id: s.id,
+          label: s.label,
+          host: s.host,
+          role: s.clusterRole ?? null,
+        }))
+      return {
+        clusterId: reg.id,
+        clusterName: reg.name,
+        ids: nodes.map(n => n.id),
+        nodes,
+      }
+    })
+    .filter(g => g.nodes.length > 0)
 })
 
 // ── Prépopulation des overviews pour le tableau ───────────────────────────────
@@ -360,7 +353,7 @@ const groupOverviewMap  = reactive<Record<string, ClusterOverview>>({})
 const groupLoadingMap   = reactive<Record<string, boolean>>({})
 
 function groupKey(group: ClusterGroup) {
-  return group.ids.join('|')
+  return group.clusterId || group.ids.join('|')
 }
 
 function groupOverview(group: ClusterGroup): ClusterOverview | undefined {
@@ -374,7 +367,7 @@ async function fetchGroupOverview(group: ClusterGroup) {
   groupLoadingMap[key] = true
   try {
     const overview = await $fetch<ClusterOverview>('/api/cluster/status', {
-      query: { nodeIds: group.ids.join(',') },
+      query: { clusterId: group.clusterId },
     })
     groupOverviewMap[key] = overview
   } catch { /* silencieux */ }
@@ -399,27 +392,42 @@ watch(clusterGroups, (groups) => {
 
 const selectedGroup = ref<ClusterGroup | null>(null)
 
+const selectedAttention = ref<import('~/types/cluster-admin').ClusterAttentionResponse | null>(null)
+
 function isSelected(group: ClusterGroup) {
   return selectedGroup.value !== null && groupKey(selectedGroup.value) === groupKey(group)
+}
+
+async function loadSelectedAttention(group: ClusterGroup) {
+  if (!group.clusterId) {
+    selectedAttention.value = null
+    return
+  }
+  try {
+    selectedAttention.value = await $fetch('/api/cluster/attention', {
+      query: { clusterId: group.clusterId, includeMd: 'false' },
+    })
+  } catch {
+    selectedAttention.value = null
+  }
 }
 
 function selectGroup(group: ClusterGroup) {
   selectedGroup.value = group
   reconfiguring.value = false
-  if (group.ids.length > 0) {
+  if (group.clusterId) {
+    cluster.fetchByClusterId(group.clusterId, group.ids)
+    void loadSelectedAttention(group)
+  } else if (group.ids.length > 0) {
     cluster.fetch(group.ids)
+    selectedAttention.value = null
   }
 }
 
 function trySelectFromQuery() {
   const q = route.query.clusterId
   if (typeof q !== 'string' || !q) return
-  const reg = (clustersRegistry.value ?? []).find(c => c.id === q)
-  if (!reg) return
-  const nodeIds = new Set(reg.nodes.map(n => n.id))
-  const group = clusterGroups.value.find(g =>
-    g.ids.length === nodeIds.size && g.ids.every(id => nodeIds.has(id)),
-  )
+  const group = clusterGroups.value.find(g => g.clusterId === q)
   if (group) selectGroup(group)
 }
 

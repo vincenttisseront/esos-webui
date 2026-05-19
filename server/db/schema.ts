@@ -32,6 +32,24 @@ export const sans = sqliteTable('sans', {
   updatedAt: text('updated_at').notNull(),
 })
 
+/** Optional N-node membership (migration 0014). */
+export const clusterNodes = sqliteTable(
+  'cluster_nodes',
+  {
+    clusterId: text('cluster_id')
+      .notNull()
+      .references(() => clusters.id, { onDelete: 'cascade' }),
+    sanId: text('san_id')
+      .notNull()
+      .references(() => sans.id, { onDelete: 'cascade' }),
+    role: text('role'),
+    sortOrder: integer('sort_order').notNull().default(0),
+  },
+  t => ({
+    pk: primaryKey({ columns: [t.clusterId, t.sanId] }),
+  }),
+)
+
 /**
  * Credentials SSH chiffrés (AES-256-GCM). Séparés de `sans` pour
  * isolation de sécurité. Cf. SDD v2.0 §4.3.

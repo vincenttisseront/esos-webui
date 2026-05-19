@@ -14,6 +14,7 @@ export type ClusterAttentionCategory =
   | 'storage_replication'
   | 'config_sync'
   | 'storage_md'
+  | 'scst'
   | 'config'
   | 'version'
 
@@ -40,7 +41,7 @@ export interface ClusterAttentionPoint {
   actionRoute?: string
   actionPayload?: Record<string, unknown>
   dismissible: boolean
-  source: 'cluster_status' | 'md_detection' | 'scst' | 'config' | 'san_registry'
+  source: 'cluster_status' | 'md_detection' | 'scst' | 'config' | 'san_registry' | 'config_sync' | 'version'
   detectedAt: number
 }
 
@@ -53,6 +54,8 @@ export interface ClusterAttentionResponse {
   overview?: ClusterOverview
   probeError?: string
   scannedAt: number
+  storageOverall?: ClusterStorageConsistencyResult['overall']
+  storageSummary?: string
 }
 
 export interface ClusterMdArrayConsistency {

@@ -83,6 +83,7 @@
             <div class="flex items-center gap-2">
               <UIcon name="i-heroicons-server-stack" class="w-5 h-5 text-blue-500 shrink-0" />
               <span class="text-base font-semibold text-gray-800">{{ c.name }}</span>
+              <ClusterHealthBadge :health="listAttentionMap[c.id]?.health" />
             </div>
             <span class="text-[11px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium border border-blue-100 shrink-0">
               {{ c.nodes.length }} nœud{{ c.nodes.length > 1 ? 's' : '' }}
@@ -194,7 +195,24 @@ const auth = useAuthStore()
 const isViewer = computed(() => auth.user?.role === 'viewer')
 const route = useRoute()
 const { t } = useEsosI18n()
-const { handleAttentionAction } = useClusterAttentionAction()
+const { handleAttentionAction } = useClusterAttentionAction({
+  onSync: async (clusterId) => {
+    if (!selected.value) return
+    syncing.value = true
+    try {
+      const result = await $fetch<{ output: string }>('/api/cluster/sync', {
+        method: 'POST',
+        body: { clusterId },
+      })
+      useAppToast().success('Synchronisation réussie', result.output.slice(0, 120))
+      await loadDetail()
+    } catch (err: any) {
+      useAppToast().error('Erreur de synchronisation', err?.data?.message ?? 'Erreur')
+    } finally {
+      syncing.value = false
+    }
+  },
+})
 
 const sanSelector = useSelectedSan()
 const syncLimitationLines = CLUSTER_SYNC_LIMITATION_LINES
@@ -202,6 +220,7 @@ const syncLimitationLines = CLUSTER_SYNC_LIMITATION_LINES
 // ── Liste ────────────────────────────────────────────────────────────────────
 const clusters    = ref<ClusterListEntry[]>([])
 const listLoading = ref(false)
+const listAttentionMap = reactive<Record<string, ClusterAttentionResponse>>({})
 
 async function loadList() {
   listLoading.value = true
@@ -216,6 +235,19 @@ async function loadList() {
       clusters.value = [...sanSelector.clusters.value]
     } else {
       clusters.value = await $fetch<ClusterWithNodes[]>('/api/admin/clusters')
+    }
+    if (!isViewer.value) {
+      await Promise.all(
+        clusters.value
+          .filter((c): c is ClusterWithNodes => 'id' in c && Boolean(c.id))
+          .map(async (c) => {
+            try {
+              listAttentionMap[c.id] = await $fetch<ClusterAttentionResponse>('/api/cluster/attention', {
+                query: { clusterId: c.id, includeMd: 'false' },
+              })
+            } catch { /* optional */ }
+          }),
+      )
     }
   } finally {
     listLoading.value = false

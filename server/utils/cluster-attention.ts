@@ -109,6 +109,28 @@ export function buildClusterAttentionFromStatus(
     })
   }
 
+  if (overview.mode === 'resyncing') {
+    const syncingNodes = overview.nodes.filter(n =>
+      n.drbd.resources.some(r => r.isSyncing),
+    )
+    if (syncingNodes.length) {
+      points.push({
+        id: 'drbd_resyncing',
+        severity: 'warning',
+        category: 'storage_replication',
+        title: 'Resynchronisation DRBD en cours',
+        summary: 'Une ou plusieurs ressources DRBD sont en cours de resync — évitez les basculements forcés.',
+        affectedNodeIds: syncingNodes.map(n => n.nodeId),
+        affectedNodeLabels: syncingNodes.map(n => n.hostname),
+        recommendedAction: 'open_cluster_ha',
+        actionRoute: overview.clusterId ? `/cluster?clusterId=${overview.clusterId}` : '/cluster',
+        dismissible: false,
+        source: 'cluster_status',
+        detectedAt: now,
+      })
+    }
+  }
+
   if (overview.mode === 'split-brain') {
     points.push({
       id: 'drbd_split_brain',
@@ -285,13 +307,101 @@ function dedupeAttention(points: ClusterAttentionPoint[]): ClusterAttentionPoint
   return [...map.values()].sort((a, b) => SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity])
 }
 
-export function deriveClusterHealth(
-  attentionPoints: ClusterAttentionPoint[],
-  probeSucceeded: boolean,
-): ClusterHealth {
-  if (!probeSucceeded) return 'unknown'
-  const actionable = attentionPoints.filter(p => p.severity !== 'info')
-  if (actionable.length === 0) return 'healthy'
-  if (actionable.some(p => p.severity === 'blocking' || p.severity === 'critical')) return 'critical'
-  return 'warning'
+import { readClusterMemberVersions } from './cluster-version'
+import { getSanSetting } from '../db/repositories/san.repository'
+import type { ClusterStorageConsistencyResult } from './cluster-admin-types'
+
+const SYNC_STALE_MS = 7 * 24 * 60 * 60 * 1000
+
+export async function appendRegistryAttentionPoints(
+  clusterId: string,
+  members: ClusterSanMember[],
+  points: ClusterAttentionPoint[],
+  primarySanId?: string,
+): Promise<ClusterAttentionPoint[]> {
+  const merged = [...points]
+  const now = Date.now()
+  const primary = primarySanId ?? members.find(m => m.clusterRole === 'primary')?.id
+
+  if (primary && members.length > 1) {
+    const lastSyncRaw = getSanSetting(primary, 'cluster_last_sync_at')
+    const lastSync = lastSyncRaw ? Number(lastSyncRaw) : 0
+    if (!lastSync || now - lastSync > SYNC_STALE_MS) {
+      merged.push({
+        id: 'config_sync_stale',
+        severity: 'warning',
+        category: 'config_sync',
+        title: 'Synchronisation configuration recommandée',
+        summary: lastSync
+          ? 'La dernière synchronisation conf_sync date de plus de 7 jours.'
+          : 'Aucune synchronisation conf_sync enregistrée pour ce cluster.',
+        affectedNodeIds: members.map(m => m.id),
+        affectedNodeLabels: members.map(m => m.label),
+        recommendedAction: 'sync_config',
+        actionPayload: { clusterId },
+        dismissible: false,
+        source: 'config_sync',
+        detectedAt: now,
+      })
+    }
+  }
+
+  try {
+    const versions = await readClusterMemberVersions(members)
+    const known = versions.filter(v => v.normalized)
+    if (known.length >= 2) {
+      const unique = new Set(known.map(v => v.normalized))
+      if (unique.size > 1) {
+        merged.push({
+          id: 'version_mismatch',
+          severity: 'warning',
+          category: 'version',
+          title: 'Versions ESOS différentes',
+          summary: `Versions détectées : ${[...unique].join(' · ')} — alignez les builds avant d\'ajouter un nœud.`,
+          affectedNodeIds: known.map(v => v.sanId),
+          affectedNodeLabels: known.map(v => v.label),
+          recommendedAction: 'open_cluster_ha',
+          actionRoute: `/cluster?clusterId=${clusterId}`,
+          dismissible: false,
+          source: 'version',
+          detectedAt: now,
+        })
+      }
+    }
+  } catch {
+    // version check optional
+  }
+
+  return dedupeAttention(merged)
 }
+
+export function appendScstAttentionPoints(
+  clusterId: string,
+  points: ClusterAttentionPoint[],
+  storage: ClusterStorageConsistencyResult,
+  primarySanId?: string,
+): ClusterAttentionPoint[] {
+  if (!storage.scst.checked || storage.scst.symmetric !== false) return points
+  const merged = [...points]
+  merged.push({
+    id: 'scst_asymmetry',
+    severity: 'warning',
+    category: 'scst',
+    title: 'Cohérence SCST / ALUA',
+    summary: storage.scst.summary,
+    affectedNodeIds: storage.nodes.map(n => n.sanId),
+    affectedNodeLabels: storage.nodes.map(n => n.label),
+    recommendedAction: 'open_cluster_ha',
+    actionRoute: `/cluster?clusterId=${clusterId}`,
+    dismissible: false,
+    source: 'scst',
+    detectedAt: Date.now(),
+  })
+  if (primarySanId) {
+    const scst = merged[merged.length - 1]
+    if (scst) scst.actionRoute = `/cluster?clusterId=${clusterId}`
+  }
+  return dedupeAttention(merged)
+}
+
+export { deriveClusterHealth, mergeClusterHealth, storageOverallToHealth } from './cluster-health'

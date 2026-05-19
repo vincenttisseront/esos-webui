@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { useNetworkPendingRestart } from '~/composables/useNetworkPendingRestart'
-import { useClusterAttentionAction } from '~/composables/useClusterAttentionAction'
+import { useClusterAttentionAction, type ClusterAttentionActionHandlers } from '~/composables/useClusterAttentionAction'
 import type { ClusterAttentionResponse } from '~/types/cluster-admin'
 import type { ClusterOverview } from '~/server/utils/types'
 
 const { isPending } = useNetworkPendingRestart()
 const { t } = useEsosI18n()
-const { handleAttentionAction } = useClusterAttentionAction()
+const { handleAttentionAction } = useClusterAttentionAction(props.actionHandlers ?? {})
 
 interface SanRow {
   id: string
@@ -40,6 +40,7 @@ const props = defineProps<{
   toggling: Record<string, boolean>
   syncing?: boolean
   probing?: boolean
+  actionHandlers?: ClusterAttentionActionHandlers
 }>()
 
 const emit = defineEmits<{
@@ -54,6 +55,7 @@ const emit = defineEmits<{
   (e: 'reconnectNode', id: string): void
   (e: 'removeNode', id: string): void
   (e: 'toggleReadOnly', san: SanRow): void
+  (e: 'addNode', clusterId: string): void
 }>()
 
 const primaryNode = computed(() =>
@@ -68,9 +70,29 @@ const secondaryNodes = computed(() =>
 
 const clusterHealth = computed(() => props.attention?.health)
 
-const attentionPoints = computed(() => props.attention?.attentionPoints ?? [])
+const attentionPoints = computed(() =>
+  (props.attention?.attentionPoints ?? []).filter(p => p.severity !== 'info'),
+)
 
-const topAction = computed(() => attentionPoints.value[0] ?? null)
+const showAttention = computed(() =>
+  props.attention?.health === 'warning' || props.attention?.health === 'critical',
+)
+
+const storageKpi = computed(() => {
+  const o = props.attention?.storageOverall
+  if (!o || o === 'ok') return { label: t('cluster.storage.ok'), class: 'text-green-600' }
+  if (o === 'critical') return { label: t('cluster.storage.critical'), class: 'text-red-600' }
+  if (o === 'warning') return { label: t('cluster.storage.warning'), class: 'text-amber-600' }
+  return { label: t('cluster.storage.unknown'), class: 'text-gray-500' }
+})
+
+const servicesKpi = computed(() => {
+  if (!props.overview) return { label: '—', class: 'text-gray-500' }
+  const ok = props.overview.healthy
+  return ok
+    ? { label: t('cluster.services.ok'), class: 'text-green-600' }
+    : { label: t('cluster.services.degraded'), class: 'text-amber-600' }
+})
 
 const storageMenuItems = computed(() => [[
   {
@@ -208,13 +230,14 @@ function liveStatusTextColor(s: SSHStatus | undefined): string {
             </span>
           </UTooltip>
           <UButton
-            v-if="topAction && !isViewer"
+            v-if="!isViewer"
             size="xs"
-            color="amber"
-            variant="solid"
-            @click="handleAttentionAction(topAction)"
+            color="gray"
+            variant="outline"
+            icon="i-heroicons-user-plus"
+            @click="emit('addNode', clusterId)"
           >
-            {{ t(`cluster.attention.action.${topAction.recommendedAction}`) }}
+            {{ t('cluster.add_node.short') }}
           </UButton>
         </div>
       </div>
@@ -233,20 +256,17 @@ function liveStatusTextColor(s: SSHStatus | undefined): string {
           </p>
         </div>
         <div class="rounded-lg bg-gray-50 border border-gray-100 px-2.5 py-2">
-          <p class="text-[10px] uppercase text-gray-400 font-semibold">{{ t('admin.sans.cluster_card.node_count', { count: nodes.length }) }}</p>
-          <p class="font-medium text-gray-800 truncate">
-            {{ secondaryNodes.map(n => n.label).join(', ') || '—' }}
-          </p>
+          <p class="text-[10px] uppercase text-gray-400 font-semibold">{{ t('cluster.storage.title') }}</p>
+          <p class="font-medium truncate" :class="storageKpi.class">{{ storageKpi.label }}</p>
         </div>
         <div class="rounded-lg bg-gray-50 border border-gray-100 px-2.5 py-2">
-          <p class="text-[10px] uppercase text-gray-400 font-semibold">{{ t('cluster.attention.title') }}</p>
-          <p class="font-medium" :class="attentionPoints.length ? 'text-amber-600' : 'text-green-600'">
-            {{ attentionPoints.length || '0' }}
-          </p>
+          <p class="text-[10px] uppercase text-gray-400 font-semibold">{{ t('cluster.services.title') }}</p>
+          <p class="font-medium" :class="servicesKpi.class">{{ servicesKpi.label }}</p>
         </div>
       </div>
 
       <ClusterAttentionPanel
+        v-if="showAttention"
         :points="attentionPoints"
         :max-visible="3"
         @action="handleAttentionAction"

@@ -255,7 +255,7 @@
           <p class="text-xs text-gray-500 mt-1">{{ t('raid.stopped_md.section_assemblable_description') }}</p>
         </div>
         <UAlert
-          v-if="isClusteredSan"
+          v-if="isClusteredSan && partitionedStopped.assemblable.length > 0"
           :title="t('raid.stopped_md.cluster_notice')"
           color="amber"
           icon="i-heroicons-exclamation-triangle"

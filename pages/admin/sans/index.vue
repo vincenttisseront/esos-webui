@@ -165,7 +165,8 @@
     <template v-else>
       <p
         v-if="clusterGroups.length"
-        class="text-sm text-gray-600 dark:text-gray-400"
+        class="text-sm"
+        :class="fleetNeedsAttention ? 'text-amber-700 dark:text-amber-400' : 'text-gray-600 dark:text-gray-400'"
       >
         {{ t('cluster.fleet_summary', {
           clusters: clusterGroups.length,
@@ -183,9 +184,13 @@
           <UButton variant="ghost" icon="i-heroicons-arrow-path" :loading="pending" size="xs" @click="refresh()" />
         </div>
 
-        <AdminClusterCard
+        <div
           v-for="group in clusterGroups"
           :key="group.clusterId"
+          :ref="(el: unknown) => setClusterCardRef(group.clusterId, el as HTMLElement | null)"
+          class="rounded-xl transition-shadow"
+        >
+        <AdminClusterCard
           :cluster-id="group.clusterId"
           :cluster-name="group.clusterName"
           :nodes="group.sans"
@@ -198,6 +203,7 @@
           :toggling="toggling"
           :syncing="syncing[group.clusterId]"
           :probing="probing[group.clusterId]"
+          :action-handlers="clusterAttentionHandlers"
           @configure="onClusterConfigure"
           @monitor="onClusterMonitor"
           @test-all="onClusterTestAll"
@@ -209,7 +215,9 @@
           @reconnect-node="onReconnect"
           @remove-node="onRemoveClusterNode"
           @toggle-read-only="onToggleReadOnly"
+          @add-node="onClusterAddNode"
         />
+        </div>
       </template>
 
       <!-- ── SANs seuls ── -->
@@ -284,6 +292,7 @@
 
 <script setup lang="ts">
 import { useNetworkPendingRestart } from '~/composables/useNetworkPendingRestart'
+import type { ClusterAttentionActionHandlers } from '~/composables/useClusterAttentionAction'
 import type { ClusterWithNodes } from '~/server/api/admin/clusters/index.get'
 import type { ClusterAttentionResponse } from '~/types/cluster-admin'
 import type { ClusterOverview } from '~/server/utils/types'
@@ -292,6 +301,31 @@ const { isPending } = useNetworkPendingRestart()
 const authStore = useAuthStore()
 const isViewer  = computed(() => authStore.user?.role === 'viewer')
 const router = useRouter()
+const route = useRoute()
+
+const clusterCardRefs = ref<Record<string, HTMLElement | null>>({})
+
+function setClusterCardRef(clusterId: string, el: HTMLElement | null) {
+  if (el) clusterCardRefs.value[clusterId] = el
+}
+
+function scrollToClusterFromQuery() {
+  const q = route.query.clusterId
+  if (typeof q !== 'string' || !q) return
+  nextTick(() => {
+    const el = clusterCardRefs.value[q]
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    el.classList.add('ring-2', 'ring-indigo-400', 'ring-offset-2')
+    setTimeout(() => el.classList.remove('ring-2', 'ring-indigo-400', 'ring-offset-2'), 3500)
+  })
+}
+
+const clusterAttentionHandlers: ClusterAttentionActionHandlers = {
+  onSync: clusterId => onClusterSync(clusterId),
+  onAddNode: clusterId => onClusterAddNode(clusterId),
+  onReconnect: nodeId => onReconnect(nodeId),
+}
 interface SanRow {
   id: string
   label: string
@@ -413,7 +447,10 @@ onMounted(() => {
   for (const group of clusterGroups.value) {
     void refreshClusterGroup(group)
   }
+  scrollToClusterFromQuery()
 })
+
+watch(() => route.query.clusterId, () => scrollToClusterFromQuery())
 onUnmounted(() => {
   if (pollingInterval) clearInterval(pollingInterval)
 })
@@ -557,6 +594,25 @@ async function onToggleReadOnly(san: SanRow) {
     })
   } finally {
     toggling[san.id] = false
+  }
+}
+
+async function onClusterAddNode(clusterId: string) {
+  if (isViewer.value) return
+  const group = groupById(clusterId)
+  if (!group) return
+  try {
+    const { default: ClusterAddNodeModal } = await import('~/components/cluster/ClusterAddNodeModal.vue')
+    await openModal({
+      component: ClusterAddNodeModal,
+      props: {
+        clusterId,
+        standaloneSans: standaloneSans.value.map(s => ({ id: s.id, label: s.label })),
+      },
+    })
+    await refreshAll()
+  } catch {
+    // dismissed
   }
 }
 

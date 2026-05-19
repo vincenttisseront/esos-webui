@@ -9,6 +9,7 @@ export const useClusterStore = defineStore('cluster', {
     error:          null as string | null,
     pollInterval:   null as ReturnType<typeof setInterval> | null,
     activeNodeIds:  null as string[] | null,
+    activeClusterId: null as string | null,
   }),
 
   getters: {
@@ -30,22 +31,29 @@ export const useClusterStore = defineStore('cluster', {
   },
 
   actions: {
-    async fetch(nodeIds?: string[]) {
-      if (nodeIds?.length) {
+    async fetch(nodeIds?: string[], clusterId?: string) {
+      if (clusterId) {
+        this.activeClusterId = clusterId
+        this.activeNodeIds = nodeIds?.length ? nodeIds : null
+      } else if (nodeIds?.length) {
         this.activeNodeIds = nodeIds
-      }
-
-      const ids = this.activeNodeIds
-      if (!ids?.length) {
-        this.error = 'Impossible de charger le statut cluster sans identifiants de nœuds (nodeIds).'
-        return
+        this.activeClusterId = null
       }
 
       this.loading = true
       try {
-        const query = { nodeIds: ids.join(',') }
+        const query = this.activeClusterId
+          ? { clusterId: this.activeClusterId }
+          : this.activeNodeIds?.length
+            ? { nodeIds: this.activeNodeIds.join(',') }
+            : null
+        if (!query) {
+          this.error = 'Impossible de charger le statut cluster (clusterId ou nodeIds requis).'
+          return
+        }
         this.overview = await $fetch<ClusterOverview>('/api/cluster/status', { query })
-        this.error    = null
+        if (this.overview.clusterId) this.activeClusterId = this.overview.clusterId
+        this.error = null
       } catch (err: any) {
         this.error = err?.data?.message ?? 'Erreur lors du chargement du statut cluster'
       } finally {
@@ -53,25 +61,32 @@ export const useClusterStore = defineStore('cluster', {
       }
     },
 
-    /** @param explicitNodeIds Si fourni, utilisé pour la sync ; sinon `activeNodeIds` du store. */
-    async sync(explicitNodeIds?: string[]) {
+    async fetchByClusterId(clusterId: string, nodeIds?: string[]) {
+      await this.fetch(nodeIds, clusterId)
+    },
+
+    /** Sync via clusterId when known, else nodeIds. */
+    async sync(explicitNodeIds?: string[], explicitClusterId?: string) {
+      const clusterId = explicitClusterId ?? this.activeClusterId ?? this.overview?.clusterId ?? null
       const nodeIds = explicitNodeIds?.length ? explicitNodeIds : this.activeNodeIds ?? []
-      if (!nodeIds.length) {
+
+      if (!clusterId && !nodeIds.length) {
         useAppToast().error(
           'Synchronisation impossible',
-          'Aucun nœud cible connu. Chargez d’abord le statut du cluster ou sélectionnez un groupe de nœuds.',
+          'Aucun cluster ou nœud cible connu.',
         )
         return
       }
 
       this.syncing = true
       try {
+        const body = clusterId ? { clusterId } : { nodeIds }
         const result = await $fetch<{ output: string }>('/api/cluster/sync', {
           method: 'POST',
-          body:   { nodeIds },
+          body,
         })
         useAppToast().success('Synchronisation réussie', result.output.slice(0, 120))
-        await this.fetch(nodeIds)
+        await this.fetch(nodeIds.length ? nodeIds : undefined, clusterId ?? undefined)
       } catch (err: any) {
         useAppToast().error('Erreur de synchronisation', err?.data?.message ?? 'Erreur inconnue')
       } finally {
@@ -101,12 +116,15 @@ export const useClusterStore = defineStore('cluster', {
 
     startPolling(intervalMs = 15_000) {
       this.stopPolling()
-      if (!this.activeNodeIds?.length) {
-        this.error = 'Polling cluster impossible sans nodeIds. Appelez fetch(nodeIds) d’abord.'
+      if (!this.activeClusterId && !this.activeNodeIds?.length) {
+        this.error = 'Polling cluster impossible. Appelez fetch() d’abord.'
         return
       }
-      this.fetch()
-      this.pollInterval = setInterval(() => this.fetch(), intervalMs)
+      this.fetch(this.activeNodeIds ?? undefined, this.activeClusterId ?? undefined)
+      this.pollInterval = setInterval(
+        () => this.fetch(this.activeNodeIds ?? undefined, this.activeClusterId ?? undefined),
+        intervalMs,
+      )
     },
 
     stopPolling() {
