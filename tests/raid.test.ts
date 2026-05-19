@@ -613,6 +613,45 @@ describe('RAID17 – validation création MD stricte', () => {
     expect(result.blockers).toContain('RAID10 requiert un nombre pair de partitions')
   })
 
+  it('expose blockerRefs pour collision md0 block device', () => {
+    const result = validateMdCreateRequest({
+      name: 'md0',
+      level: '1',
+      chunkKb: 64,
+      devices: ['/dev/sda1', '/dev/sdb1'],
+    }, [
+      baseDevice,
+      { ...baseDevice, name: 'sdb1', path: '/dev/sdb1' },
+    ], [], { sanId: 'san-esos2' })
+
+    const withMdDevice = validateMdCreateRequest({
+      name: 'md0',
+      level: '1',
+      chunkKb: 64,
+      devices: ['/dev/sda1', '/dev/sdb1'],
+    }, [
+      baseDevice,
+      { ...baseDevice, name: 'sdb1', path: '/dev/sdb1' },
+      {
+        name: 'md0',
+        path: '/dev/md0',
+        sizeBytes: 1,
+        type: 'raid' as const,
+        usedBy: [],
+        eligibleForMd: false,
+        eligibleForHardwareRaid: false,
+        mdEligibilityReasons: [],
+        eligibleForMdPartitionPrep: false,
+        mdPartitionPrepReasons: [],
+        warnings: [],
+      },
+    ], [], { sanId: 'san-esos2' })
+
+    expect(result.blockerRefs).toEqual([])
+    expect(withMdDevice.blockers.some(b => b.includes('/dev/md0'))).toBe(true)
+    expect(withMdDevice.blockerRefs?.some(r => r.code === 'md_block_device_exists' && r.sanId === 'san-esos2')).toBe(true)
+  })
+
   it('rejette devices absent ou non-liste avant génération de commande', () => {
     expect(() => normalizeAndAssertMdCreateRequest({
       name: 'md0',

@@ -243,6 +243,20 @@
       "step_create": "Create an MD array from those member partitions.",
       "step_use": "Use the MD array as a storage volume later."
     },
+    "md_detection": {
+      "overview_count_label": "Software MD state (detected)",
+      "empty_title": "No MD array detected",
+      "empty_hint": "Use Create MD array to create one, or check Block Devices if metadata is reported.",
+      "peer_banner_title": "MD metadata on peer node {label}",
+      "view_peer_raid": "View RAID on {label}",
+      "inactive_device_title": "MD device present without active kernel array",
+      "partition_metadata_title": "MD metadata on partitions",
+      "partition_metadata_description": "RAID signatures on partitions not listed in stopped arrays (this node only).",
+      "current_node_only": "Actions on this node only.",
+      "view_in_devices": "View in Block Devices",
+      "filter_md_metadata": "MD / metadata detected",
+      "view_in_raid_ui": "View in Software RAID"
+    },
     "create_md": {
       "title": "Create MD array (software)",
       "action": "Create MD array",

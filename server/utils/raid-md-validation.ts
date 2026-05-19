@@ -3,8 +3,10 @@ import type {
   CreateMdArrayRequest,
   MdArray,
   MdCandidateCheck,
+  PreflightBlockerRef,
   RaidBlockDevice,
 } from './raid-types'
+import { buildCreateMdBlockerRefs, getMdEligibilityReasonsForDevice } from './raid-md-detection'
 
 export const MD_RAID_LEVELS = ['0', '1', '5', '6', '10'] as const
 export const MD_CHUNK_KB_ALLOWLIST = [16, 32, 64, 128, 256, 512, 1024] as const
@@ -20,6 +22,7 @@ const MIN_DEVICES: Record<CreateMdArrayRequest['level'], number> = {
 
 export interface MdCreateValidationResult {
   blockers: string[]
+  blockerRefs: PreflightBlockerRef[]
   warnings: string[]
   impactedDevices: string[]
   detectedUsage: Record<string, string[]>
@@ -39,12 +42,14 @@ export function validateMdCreateRequest(
   req: Partial<CreateMdArrayRequest> & { name?: string; level?: string; devices?: string[]; chunkKb?: number },
   blockDevices: RaidBlockDevice[] = [],
   mdArrays: MdArray[] = [],
+  options?: { sanId?: string },
 ): MdCreateValidationResult {
   const blockers: string[] = []
   const warnings: string[] = []
   const impactedDevices: string[] = []
   const detectedUsage: Record<string, string[]> = {}
   const candidateChecks: MdCandidateCheck[] = []
+  const deviceBlockersForRefs: Array<{ path: string; reasons: string[] }> = []
 
   const name = String(req.name ?? '')
   const level = String(req.level ?? '') as CreateMdArrayRequest['level']
@@ -103,11 +108,9 @@ export function validateMdCreateRequest(
     uniqueDevices.add(dev)
 
     const info = blockDevices.find(b => b.path === dev || `/dev/${b.name}` === dev)
-    const reasons = info?.mdEligibilityReasons?.length
-      ? [...info.mdEligibilityReasons]
-      : info
-        ? deriveMdEligibilityReasons(info)
-        : ['Device introuvable dans le scan actuel']
+    const reasons = info
+      ? getMdEligibilityReasonsForDevice(info)
+      : ['Device introuvable dans le scan actuel']
 
     if (info?.usedBy?.length) detectedUsage[dev] = [...info.usedBy]
     candidateChecks.push({
@@ -120,6 +123,7 @@ export function validateMdCreateRequest(
       signatures: info?.wipefsSignatures,
     })
 
+    if (reasons.length) deviceBlockersForRefs.push({ path: dev, reasons })
     for (const reason of reasons) blockers.push(`${dev} : ${reason}`)
   }
 
@@ -149,7 +153,23 @@ export function validateMdCreateRequest(
     warnings.push('Un superblock MD existant nécessite une intervention manuelle hors WebUI; aucun zero-superblock automatique ne sera exécuté')
   }
 
-  return { blockers: [...new Set(blockers)], warnings, impactedDevices, detectedUsage, candidateChecks, commandPreview }
+  const blockerRefs = buildCreateMdBlockerRefs({
+    sanId: options?.sanId ?? '',
+    name,
+    mdArrays,
+    blockDevices,
+    deviceBlockers: deviceBlockersForRefs,
+  })
+
+  return {
+    blockers: [...new Set(blockers)],
+    blockerRefs,
+    warnings,
+    impactedDevices,
+    detectedUsage,
+    candidateChecks,
+    commandPreview,
+  }
 }
 
 export function assertValidMdCreateRequest(
@@ -284,15 +304,3 @@ function isSafeDevicePath(dev: string): boolean {
   return /^\/dev\/[a-z0-9_./-]{1,64}$/i.test(dev)
 }
 
-function deriveMdEligibilityReasons(info: RaidBlockDevice): string[] {
-  const reasons: string[] = []
-  if (info.type !== 'part') reasons.push('Seules les partitions existantes sont éligibles')
-  if (!info.partitionTypeCode && !info.partitionTypeName) reasons.push('Type de partition Linux RAID Autodetect requis')
-  if (info.usedBy.includes('mounted')) reasons.push(`Monté${info.mountpoint ? ` sur ${info.mountpoint}` : ''}`)
-  if (info.usedBy.includes('filesystem')) reasons.push('Système de fichiers détecté')
-  if (info.usedBy.includes('lvm')) reasons.push('PV LVM détecté')
-  if (info.usedBy.includes('scst')) reasons.push('Utilisé par SCST')
-  if (info.usedBy.includes('md')) reasons.push(info.hasMdSuperblock ? 'Superblock MD existant détecté' : 'Déjà membre MD')
-  if (info.usedBy.includes('unknown_signature')) reasons.push('Signature existante non autorisée')
-  return [...new Set(reasons)]
-}

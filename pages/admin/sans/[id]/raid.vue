@@ -110,8 +110,8 @@
         </UCard>
         <UCard>
           <div class="text-center py-2">
-            <div class="text-3xl font-bold text-gray-900 dark:text-gray-100">{{ raid.mdArrays.length }}</div>
-            <div class="text-sm text-gray-500 mt-1">Tableaux MD (logiciel)</div>
+            <div class="text-3xl font-bold text-gray-900 dark:text-gray-100">{{ raid.mdSoftwareCount }}</div>
+            <div class="text-sm text-gray-500 mt-1">{{ t('raid.md_detection.overview_count_label') }}</div>
           </div>
         </UCard>
         <UCard>
@@ -208,13 +208,39 @@
           {{ t('raid.create_md.action') }}
         </UButton>
       </div>
+      <UAlert
+        v-for="peer in peersWithMd"
+        :key="peer.nodeSanId"
+        :title="t('raid.md_detection.peer_banner_title', { label: peer.nodeLabel })"
+        color="amber"
+        icon="i-heroicons-exclamation-triangle"
+        variant="soft"
+      >
+        <template #description>
+          <ul class="list-disc pl-4 text-sm space-y-0.5 mt-1">
+            <li v-for="item in peer.items.slice(0, 5)" :key="item.path + item.kind">
+              {{ item.summary }}
+            </li>
+          </ul>
+          <UButton
+            class="mt-2"
+            size="xs"
+            color="amber"
+            variant="soft"
+            :to="peerRaidLink(peer.nodeSanId)"
+          >
+            {{ t('raid.md_detection.view_peer_raid', { label: peer.nodeLabel }) }}
+          </UButton>
+        </template>
+      </UAlert>
+
       <div
-        v-if="!raid.mdArrays.length && !raid.stoppedMdArrays.length"
+        v-if="showSoftwareEmpty"
         class="text-center py-8 text-gray-500"
       >
         <UIcon name="i-heroicons-server-stack" class="w-10 h-10 mx-auto mb-2 opacity-30" />
-        <p>Aucun tableau MD détecté</p>
-        <p class="text-xs mt-1">Utilisez le bouton "Créer tableau MD" pour en créer un</p>
+        <p>{{ t('raid.md_detection.empty_title') }}</p>
+        <p class="text-xs mt-1">{{ t('raid.md_detection.empty_hint') }}</p>
       </div>
       <div v-if="raid.mdArrays.length" class="space-y-3">
         <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Tableaux MD actifs</h3>
@@ -260,6 +286,50 @@
           />
         </UCard>
       </div>
+
+      <div
+        v-if="inactiveMdDevices.length"
+        class="space-y-3 pt-2 border-t border-gray-200 dark:border-gray-700"
+      >
+        <div>
+          <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('raid.md_detection.inactive_device_title') }}</h3>
+          <p class="text-xs text-gray-500 mt-1">{{ t('raid.md_detection.current_node_only') }}</p>
+        </div>
+        <UCard v-for="item in inactiveMdDevices" :key="item.path">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="font-mono text-sm font-medium">{{ item.path }}</p>
+              <p class="text-xs text-gray-500 mt-1">{{ item.summary }}</p>
+            </div>
+            <UButton size="xs" color="gray" variant="soft" @click="goToDevicesForPath(item.path)">
+              {{ t('raid.md_detection.view_in_devices') }}
+            </UButton>
+          </div>
+        </UCard>
+      </div>
+
+      <div
+        v-if="metadataHoldouts.length"
+        class="space-y-3 pt-2 border-t border-gray-200 dark:border-gray-700"
+      >
+        <div>
+          <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('raid.md_detection.partition_metadata_title') }}</h3>
+          <p class="text-xs text-gray-500 mt-1">{{ t('raid.md_detection.partition_metadata_description') }}</p>
+        </div>
+        <UCard v-for="item in metadataHoldouts" :key="item.path">
+          <div class="space-y-2">
+            <div class="flex items-start justify-between gap-3">
+              <p class="font-mono text-sm font-medium">{{ item.path }}</p>
+              <UButton size="xs" color="amber" variant="soft" @click="goToDevicesForPath(item.path)">
+                {{ t('raid.md_detection.view_in_devices') }}
+              </UButton>
+            </div>
+            <ul v-if="item.reasons.length" class="text-xs text-amber-800 dark:text-amber-300 list-disc pl-4">
+              <li v-for="reason in item.reasons" :key="reason">{{ reason }}</li>
+            </ul>
+          </div>
+        </UCard>
+      </div>
     </div>
 
     <!-- Onglet Block Devices -->
@@ -269,6 +339,10 @@
         <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
           <input v-model="showOnlyEligible" type="checkbox" class="accent-blue-500" />
           Éligibles seulement
+        </label>
+        <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+          <input v-model="showMdMetadataOnly" type="checkbox" class="accent-blue-500" />
+          {{ t('raid.md_detection.filter_md_metadata') }}
         </label>
       </div>
       <UCard>
@@ -419,6 +493,15 @@ import {
   stoppedMemberPaths,
   suggestDefaultMdName,
 } from '~/utils/stopped-md'
+import {
+  blockDeviceRaidItems,
+  hasAnyMdStateVisible,
+  mdDetectionPathSet,
+  partitionMetadataItems,
+  peerNodesWithMdState,
+} from '~/utils/raid-md-detection'
+import type { PreflightBlockerRef } from '~/types/raid'
+import { raidDetectionNavigateKey } from '~/composables/useRaidDetectionNavigate'
 
 definePageMeta({ layout: 'default', ssr: false })
 
@@ -443,6 +526,12 @@ const tabs = [
 ]
 const activeTab = ref('overview')
 const highlightedArrayPath = ref<string | null>(null)
+const highlightedDevicePath = ref<string | null>(null)
+
+const showSoftwareEmpty = computed(() => !hasAnyMdStateVisible(raid.overview))
+const metadataHoldouts = computed(() => partitionMetadataItems(raid.overview))
+const inactiveMdDevices = computed(() => blockDeviceRaidItems(raid.overview))
+const peersWithMd = computed(() => peerNodesWithMdState(raid.overview, sanId))
 
 // Wizards & modals
 const { open: openModal } = useAppModal()
@@ -455,6 +544,39 @@ async function scrollToHighlightedArray(arrayPath: string) {
   await nextTick()
   const name = arrayPath.replace(/^\/dev\//, '')
   document.getElementById(`md-array-${name}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+}
+
+function navigateRaidDetection(ref: PreflightBlockerRef) {
+  const targetSan = ref.sanId && ref.sanId !== sanId ? ref.sanId : null
+  if (targetSan) {
+    navigateTo(`/admin/sans/${targetSan}/raid`)
+    return
+  }
+  if (ref.uiAnchor === 'devices' || ref.code === 'md_superblock_on_partition') {
+    activeTab.value = 'devices'
+    if (ref.path) {
+      highlightedDevicePath.value = ref.path
+      deviceFilter.value = ref.path.replace(/^\/dev\//, '')
+    }
+    return
+  }
+  activeTab.value = 'software'
+  if (ref.path) {
+    highlightedArrayPath.value = ref.path.startsWith('/dev/md') ? ref.path : null
+    if (highlightedArrayPath.value) void scrollToHighlightedArray(highlightedArrayPath.value)
+  }
+}
+
+provide(raidDetectionNavigateKey, navigateRaidDetection)
+
+function goToDevicesForPath(path: string) {
+  activeTab.value = 'devices'
+  highlightedDevicePath.value = path
+  deviceFilter.value = path.replace(/^\/dev\//, '')
+}
+
+function peerRaidLink(peerSanId: string): string {
+  return `/admin/sans/${peerSanId}/raid`
 }
 
 function isMdCreateConfirmPayload(value: unknown): value is CreateMdArrayWizardConfirmPayload {
@@ -472,7 +594,13 @@ async function openMdWizard() {
   try {
     const result = await openModal({
       component: Wizard,
-      props: { blockDevices: raid.blockDevices, sourceSanId: sanId, clusterId: san.value?.clusterId, persistent: true },
+      props: {
+        blockDevices: raid.blockDevices,
+        sourceSanId: sanId,
+        clusterId: san.value?.clusterId,
+        persistent: true,
+        onNavigateDetection: navigateRaidDetection,
+      },
     })
     if (!isMdCreateConfirmPayload(result)) return
     if (!result.overviewRefreshed) {
@@ -489,7 +617,16 @@ async function openMdWizard() {
 async function openPrepareMdPartitionsWizard() {
   const { default: Wizard } = await import('~/components/raid/PrepareMdPartitionsWizard.vue')
   try {
-    const continueToMd = await openModal({ component: Wizard, props: { blockDevices: raid.blockDevices, sourceSanId: sanId, clusterId: san.value?.clusterId, persistent: true } })
+    const continueToMd = await openModal({
+      component: Wizard,
+      props: {
+        blockDevices: raid.blockDevices,
+        sourceSanId: sanId,
+        clusterId: san.value?.clusterId,
+        persistent: true,
+        onNavigateDetection: navigateRaidDetection,
+      },
+    })
     await raid.fetchOverview(true)
     if (continueToMd) await openMdWizard()
   } catch { /* annulé */ }
@@ -506,6 +643,7 @@ async function openHwWizard(ctrl?: HardwareRaidController) {
 // Block device filter
 const deviceFilter = ref('')
 const showOnlyEligible = ref(false)
+const showMdMetadataOnly = ref(false)
 
 // Diagnostic matériel
 const diagnosticData = ref<null | {
@@ -538,6 +676,10 @@ async function openDiagnostic(ctrl?: HardwareRaidController) {
 const filteredDevices = computed(() => {
   let list = raid.blockDevices
   if (deviceFilter.value) list = list.filter(d => d.path.includes(deviceFilter.value))
+  if (showMdMetadataOnly.value) {
+    const mdPaths = mdDetectionPathSet(raid.overview)
+    list = list.filter(d => mdPaths.has(d.path) || d.hasMdSuperblock || d.usedBy.includes('md'))
+  }
   if (showOnlyEligible.value) list = list.filter(d => d.eligibleForMd || d.eligibleForHardwareRaid)
   return list
 })

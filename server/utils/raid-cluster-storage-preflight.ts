@@ -4,6 +4,7 @@ import { getDB } from '../db'
 import { sans } from '../db/schema'
 import { getSSHPool } from './ssh-pool'
 import { collectRaidOverview } from './raid-overview.service'
+import { prefixBlockerRefs } from './raid-md-detection'
 import { runPreflight } from './raid-preflight'
 import { buildMdCreateCommand, MD_CREATE_EMPTY_MEMBERS_MESSAGE } from './raid-md-validation'
 import type {
@@ -63,6 +64,7 @@ export async function runClusterStoragePreflight(
   const inventories = await Promise.all(nodes.map(collectNodeInventory))
   const source = inventories.find(n => n.sanId === req.primarySanId)
   const blockers: string[] = []
+  const blockerRefs: import('./raid-types').PreflightBlockerRef[] = []
   const warnings = [...SYNC_LIMITATIONS]
   const perNodePreflights: Record<string, Awaited<ReturnType<typeof runPreflight>>> = {}
   const mappings: ClusterDiskMapping[] = []
@@ -78,6 +80,7 @@ export async function runClusterStoragePreflight(
     const sourcePreflight = await runNodePreflight(req.action, req.payload, source)
     perNodePreflights[source.sanId] = sourcePreflight
     blockers.push(...sourcePreflight.blockers.map(b => `${source.label} : ${b}`))
+    blockerRefs.push(...prefixBlockerRefs(sourcePreflight.blockerRefs ?? [], source.label, source.sanId))
     warnings.push(...sourcePreflight.warnings.map(w => `${source.label} : ${w}`))
 
     const selectedPaths = selectedStoragePaths(req.action, req.payload)
@@ -103,6 +106,7 @@ export async function runClusterStoragePreflight(
         const peerPreflight = await runNodePreflight(req.action, peerPayload, peer)
         perNodePreflights[peer.sanId] = peerPreflight
         blockers.push(...peerPreflight.blockers.map(b => `${peer.label} : ${b}`))
+        blockerRefs.push(...prefixBlockerRefs(peerPreflight.blockerRefs ?? [], peer.label, peer.sanId))
         warnings.push(...peerPreflight.warnings.map(w => `${peer.label} : ${w}`))
       }
     }
@@ -121,6 +125,7 @@ export async function runClusterStoragePreflight(
     action: req.action,
     sourceSanId: req.primarySanId,
     blockers: uniqueBlockers,
+    blockerRefs,
     warnings: uniqueWarnings,
     syncLimitations: SYNC_LIMITATIONS,
     nodes: inventories,
@@ -433,6 +438,7 @@ export async function runNodePreflight(
     node.mdArrays,
     node.tools,
     node.stoppedMdArrays ?? [],
+    { sanId: node.sanId },
   )
 }
 

@@ -15,7 +15,26 @@
         class="flex items-start gap-2 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded px-3 py-2 text-sm text-red-700 dark:text-red-300"
       >
         <UIcon name="i-heroicons-x-circle" class="w-4 h-4 shrink-0 mt-0.5 text-red-500 dark:text-red-400" />
-        {{ b }}
+        <span class="flex-1">{{ b }}</span>
+      </div>
+    </div>
+
+    <div v-if="preflight.blockerRefs?.length" class="space-y-1.5">
+      <div
+        v-for="ref in preflight.blockerRefs"
+        :key="`${ref.code}-${ref.path ?? ''}-${ref.sanId ?? ''}-${ref.message}`"
+        class="flex flex-wrap items-center justify-between gap-2 bg-red-50/80 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded px-3 py-2 text-sm text-red-700 dark:text-red-300"
+      >
+        <span class="flex-1 min-w-0">{{ ref.message }}</span>
+        <UButton
+          v-if="canNavigate(ref)"
+          size="xs"
+          color="red"
+          variant="soft"
+          @click="navigateToDetection(ref)"
+        >
+          {{ t('raid.md_detection.view_in_raid_ui') }}
+        </UButton>
       </div>
     </div>
 
@@ -132,10 +151,28 @@
 </template>
 
 <script setup lang="ts">
-import type { RaidPreflightResult } from '~/types/raid'
+import type { PreflightBlockerRef, RaidPreflightResult } from '~/types/raid'
+import {
+  raidDetectionNavigateKey,
+  type RaidDetectionNavigateFn,
+} from '~/composables/useRaidDetectionNavigate'
 
-defineProps<{ preflight: RaidPreflightResult }>()
+const props = defineProps<{
+  preflight: RaidPreflightResult
+  onNavigateDetection?: RaidDetectionNavigateFn
+}>()
+
 const { t } = useEsosI18n()
+const injectedNavigate = inject(raidDetectionNavigateKey, null)
+
+function canNavigate(_ref: PreflightBlockerRef): boolean {
+  return Boolean(props.onNavigateDetection ?? injectedNavigate)
+}
+
+function navigateToDetection(ref: PreflightBlockerRef) {
+  const fn = props.onNavigateDetection ?? injectedNavigate
+  fn?.(ref)
+}
 
 function formatSize(bytes: number): string {
   if (!bytes) return '—'

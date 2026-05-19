@@ -32,7 +32,15 @@ export default defineEventHandler(async (event) => {
     }
     const cacheKey = `raid-overview-${sanId}`
     const overview = await withCache(cacheKey, 60_000, () => collectRaidOverview(manager))
-    return runPreflight(manager, body, overview.blockDevices, overview.mdArrays, overview.tools, overview.stoppedMdArrays ?? [])
+    return runPreflight(
+      manager,
+      body,
+      overview.blockDevices,
+      overview.mdArrays,
+      overview.tools,
+      overview.stoppedMdArrays ?? [],
+      { sanId },
+    )
   }
 
   try {

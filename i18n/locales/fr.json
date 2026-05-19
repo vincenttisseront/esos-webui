@@ -243,6 +243,20 @@
       "step_create": "Créer un tableau MD à partir de ces partitions membres.",
       "step_use": "Utiliser ensuite le tableau MD comme volume de stockage."
     },
+    "md_detection": {
+      "overview_count_label": "État MD logiciel (détecté)",
+      "empty_title": "Aucun tableau MD détecté",
+      "empty_hint": "Utilisez « Créer tableau MD » pour en créer un, ou consultez l'onglet Block Devices si des métadonnées sont signalées.",
+      "peer_banner_title": "Métadonnées MD sur le nœud pair {label}",
+      "view_peer_raid": "Voir le RAID sur {label}",
+      "inactive_device_title": "Périphérique MD sans tableau actif dans le noyau",
+      "partition_metadata_title": "Métadonnées MD sur partitions",
+      "partition_metadata_description": "Signatures RAID détectées sur des partitions non listées dans les tableaux arrêtés (ce nœud uniquement).",
+      "current_node_only": "Actions sur ce nœud uniquement.",
+      "view_in_devices": "Voir dans Block Devices",
+      "filter_md_metadata": "MD / métadonnées détectées",
+      "view_in_raid_ui": "Voir dans RAID Logiciel"
+    },
     "create_md": {
       "title": "Créer un tableau MD (logiciel)",
       "action": "Créer tableau MD",
