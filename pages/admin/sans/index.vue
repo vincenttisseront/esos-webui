@@ -163,6 +163,16 @@
     </div>
 
     <template v-else>
+      <p
+        v-if="clusterGroups.length"
+        class="text-sm text-gray-600 dark:text-gray-400"
+      >
+        {{ t('cluster.fleet_summary', {
+          clusters: clusterGroups.length,
+          standalone: standaloneSans.length,
+          attention: fleetNeedsAttention,
+        }) }}
+      </p>
       <!-- ── Clusters ── -->
       <template v-if="clusterGroups.length">
         <div class="flex items-center justify-between">
@@ -180,6 +190,7 @@
           :cluster-name="group.clusterName"
           :nodes="group.sans"
           :overview="groupOverview(group)"
+          :attention="groupAttention(group)"
           :live-statuses="liveStatuses"
           :is-viewer="isViewer"
           :testing="testing"
@@ -196,7 +207,7 @@
           @storage="onClusterStorage"
           @test-node="onTest"
           @reconnect-node="onReconnect"
-          @delete-node="onDelete"
+          @remove-node="onRemoveClusterNode"
           @toggle-read-only="onToggleReadOnly"
         />
       </template>
@@ -274,6 +285,7 @@
 <script setup lang="ts">
 import { useNetworkPendingRestart } from '~/composables/useNetworkPendingRestart'
 import type { ClusterWithNodes } from '~/server/api/admin/clusters/index.get'
+import type { ClusterAttentionResponse } from '~/types/cluster-admin'
 import type { ClusterOverview } from '~/server/utils/types'
 
 const { isPending } = useNetworkPendingRestart()
@@ -325,11 +337,26 @@ const clusterGroups = computed<ClusterGroup[]>(() => {
 })
 
 const groupOverviewMap = reactive<Record<string, ClusterOverview>>({})
+const groupAttentionMap = reactive<Record<string, ClusterAttentionResponse>>({})
 const groupLoadingMap = reactive<Record<string, boolean>>({})
+
+const { t } = useEsosI18n()
+const { open: openModal } = useAppModal()
 
 function groupOverview(group: ClusterGroup): ClusterOverview | undefined {
   return groupOverviewMap[group.clusterId]
 }
+
+function groupAttention(group: ClusterGroup): ClusterAttentionResponse | undefined {
+  return groupAttentionMap[group.clusterId]
+}
+
+const fleetNeedsAttention = computed(() =>
+  clusterGroups.value.filter(g => {
+    const h = groupAttentionMap[g.clusterId]?.health
+    return h === 'warning' || h === 'critical'
+  }).length,
+)
 
 async function fetchGroupOverview(group: ClusterGroup) {
   if (!group.clusterId || groupLoadingMap[group.clusterId]) return
@@ -344,10 +371,23 @@ async function fetchGroupOverview(group: ClusterGroup) {
   }
 }
 
+async function fetchGroupAttention(group: ClusterGroup) {
+  if (!group.clusterId) return
+  try {
+    groupAttentionMap[group.clusterId] = await $fetch<ClusterAttentionResponse>('/api/cluster/attention', {
+      query: { clusterId: group.clusterId, includeMd: 'true' },
+    })
+  } catch { /* non bloquant */ }
+}
+
+async function refreshClusterGroup(group: ClusterGroup) {
+  await Promise.all([fetchGroupOverview(group), fetchGroupAttention(group)])
+}
+
 async function refreshAll() {
   await Promise.all([refresh(), refreshClusters()])
   await refreshLiveStatuses()
-  await Promise.all(clusterGroups.value.map(group => fetchGroupOverview(group)))
+  await Promise.all(clusterGroups.value.map(group => refreshClusterGroup(group)))
 }
 
 const standaloneSans = computed(() =>
@@ -371,7 +411,7 @@ onMounted(() => {
     await refreshLiveStatuses()
   }, 10_000)
   for (const group of clusterGroups.value) {
-    fetchGroupOverview(group)
+    void refreshClusterGroup(group)
   }
 })
 onUnmounted(() => {
@@ -520,15 +560,40 @@ async function onToggleReadOnly(san: SanRow) {
   }
 }
 
+async function onRemoveClusterNode(nodeId: string) {
+  const san = sans.value?.find(s => s.id === nodeId)
+  if (!san?.clusterId || isViewer.value) return
+  const group = groupById(san.clusterId)
+  if (!group) return
+  const primary = group.sans.find(n => n.clusterRole === 'primary')
+  try {
+    const { default: ClusterRemoveNodeModal } = await import('~/components/cluster/ClusterRemoveNodeModal.vue')
+    await openModal({
+      component: ClusterRemoveNodeModal,
+      props: {
+        nodeId,
+        nodeLabel: san.label,
+        clusterId: san.clusterId,
+        clusterName: group.clusterName,
+        primaryNodeId: primary?.id ?? null,
+        isPrimary: san.clusterRole === 'primary',
+      },
+    })
+    await refreshAll()
+  } catch {
+    // modal dismissed
+  }
+}
+
 async function onDelete(id: string) {
   const san = sans.value?.find(s => s.id === id)
-  const cluster = san?.clusterId ? clusterGroups.value.find(g => g.clusterId === san.clusterId) : null
-  const role = san?.clusterRole === 'primary' ? 'primaire' : san?.clusterRole === 'secondary' ? 'secondaire' : 'membre'
+  if (san?.clusterId) {
+    await onRemoveClusterNode(id)
+    return
+  }
   const confirmed = await modalConfirm({
-    title:   san?.clusterId ? 'Supprimer ce nœud du cluster ?' : 'Supprimer ce SAN ?',
-    message: san?.clusterId
-      ? `Le SAN ${san.label} est un nœud ${role} du cluster ${cluster?.clusterName ?? san.clusterId}. La suppression peut laisser le cluster incomplet ; utilisez la configuration cluster si vous voulez reconfigurer l'ensemble. La connexion SSH sera fermée.`
-      : 'La connexion SSH sera fermée.',
+    title:   'Supprimer ce SAN ?',
+    message: 'La connexion SSH sera fermée.',
     intent:  'danger',
   })
   if (!confirmed) return
@@ -680,7 +745,7 @@ async function onClusterSync(clusterId: string) {
       method: 'POST',
       body: { clusterId },
     })
-    await fetchGroupOverview(group)
+    await refreshClusterGroup(group)
     await modalAlert({
       title: 'Synchronisation réussie',
       message: result.output?.slice(0, 300) || 'conf_sync.sh exécuté sur le nœud primaire.',
@@ -712,6 +777,7 @@ async function onClusterProbe(clusterId: string) {
       }),
     ])
     groupOverviewMap[clusterId] = overview
+    await fetchGroupAttention(group)
     lines.push({ ts: ts(), level: overview.healthy ? 'ok' : 'err', text: `Mode : ${overview.mode}, santé : ${overview.healthy ? 'saine' : 'dégradée'}` })
     for (const nodeResult of prereq) {
       const node = group.sans.find(n => n.id === nodeResult.sanId)

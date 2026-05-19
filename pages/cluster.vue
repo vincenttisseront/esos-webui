@@ -128,7 +128,31 @@
       </div>
 
       <template v-else-if="overview">
+        <div class="flex flex-wrap items-center gap-2">
+          <ClusterHealthBadge :health="attention?.health" />
+          <UBadge v-if="attention?.attentionCount" color="gray" variant="subtle" size="xs">
+            {{ attention.attentionCount }} {{ t('cluster.attention.title').toLowerCase() }}
+          </UBadge>
+        </div>
+
         <ClusterStatusBanner :overview="overview" />
+
+        <ClusterAttentionPanel
+          v-if="attention?.attentionPoints?.length"
+          :points="attention.attentionPoints"
+          @action="handleAttentionAction"
+        />
+
+        <ClusterStorageConsistencyPanel :data="storageConsistency" />
+
+        <details class="rounded-lg border border-gray-200 bg-white px-3 py-2">
+          <summary class="cursor-pointer text-sm font-medium text-gray-700 select-none list-none">
+            {{ t('cluster.sync.help_title') }}
+          </summary>
+          <ul class="mt-2 text-xs text-gray-600 list-disc pl-4 space-y-0.5">
+            <li v-for="line in syncLimitationLines" :key="line">{{ line }}</li>
+          </ul>
+        </details>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <ClusterNodeCard
@@ -157,16 +181,23 @@
 </template>
 
 <script setup lang="ts">
+import { CLUSTER_SYNC_LIMITATION_LINES } from '~/utils/cluster-sync-limitations'
+import { useClusterAttentionAction } from '~/composables/useClusterAttentionAction'
 import type { ClusterWithNodes } from '~/server/api/admin/clusters/index.get'
 import type { ClusterSelectionDto } from '~/server/utils/selection-context'
+import type { ClusterAttentionResponse, ClusterStorageConsistencyResult } from '~/types/cluster-admin'
 import type { ClusterOverview } from '~/server/utils/types'
 
 type ClusterListEntry = ClusterWithNodes | ClusterSelectionDto
 
 const auth = useAuthStore()
 const isViewer = computed(() => auth.user?.role === 'viewer')
+const route = useRoute()
+const { t } = useEsosI18n()
+const { handleAttentionAction } = useClusterAttentionAction()
 
 const sanSelector = useSelectedSan()
+const syncLimitationLines = CLUSTER_SYNC_LIMITATION_LINES
 
 // ── Liste ────────────────────────────────────────────────────────────────────
 const clusters    = ref<ClusterListEntry[]>([])
@@ -194,17 +225,37 @@ async function loadList() {
 // ── Sélection / détail ───────────────────────────────────────────────────────
 const selected     = ref<ClusterListEntry | null>(null)
 const overview     = ref<ClusterOverview | null>(null)
+const attention    = ref<ClusterAttentionResponse | null>(null)
+const storageConsistency = ref<ClusterStorageConsistencyResult | null>(null)
 const detailLoading = ref(false)
 const detailError   = ref<string | null>(null)
 let   pollTimer: ReturnType<typeof setInterval> | null = null
+
+function clusterIdFor(entry: ClusterListEntry): string {
+  return entry.id
+}
 
 async function loadDetail() {
   if (!selected.value) return
   detailLoading.value = true
   detailError.value   = null
+  const cid = clusterIdFor(selected.value)
   try {
-    const ids = selected.value.nodes.map(n => n.id).join(',')
-    overview.value = await $fetch<ClusterOverview>('/api/cluster/status', { query: { nodeIds: ids } })
+    if (cid) {
+      const [statusRes, attentionRes, storageRes] = await Promise.all([
+        $fetch<ClusterOverview>('/api/cluster/status', { query: { clusterId: cid } }),
+        $fetch<ClusterAttentionResponse>('/api/cluster/attention', { query: { clusterId: cid, includeMd: 'true' } }),
+        $fetch<ClusterStorageConsistencyResult>('/api/cluster/storage-consistency', { query: { clusterId: cid } }),
+      ])
+      overview.value = statusRes
+      attention.value = attentionRes
+      storageConsistency.value = storageRes
+    } else {
+      const ids = selected.value.nodes.map(n => n.id).join(',')
+      overview.value = await $fetch<ClusterOverview>('/api/cluster/status', { query: { nodeIds: ids } })
+      attention.value = null
+      storageConsistency.value = null
+    }
   } catch (err: any) {
     detailError.value = err?.data?.message ?? 'Erreur de chargement'
   } finally {
@@ -215,8 +266,19 @@ async function loadDetail() {
 function select(c: ClusterListEntry) {
   selected.value = c
   overview.value = null
+  attention.value = null
+  storageConsistency.value = null
   loadDetail()
+  if (pollTimer) clearInterval(pollTimer)
   pollTimer = setInterval(loadDetail, 30_000)
+}
+
+function trySelectFromQuery() {
+  const q = route.query.clusterId
+  const clusterId = typeof q === 'string' ? q : null
+  if (!clusterId || !clusters.value.length) return
+  const match = clusters.value.find(c => clusterIdFor(c) === clusterId)
+  if (match) select(match)
 }
 
 // Pause le polling si l'onglet est en arrière-plan
@@ -246,8 +308,11 @@ async function syncCluster() {
   if (isViewer.value || !selected.value) return
   syncing.value = true
   try {
-    const nodeIds = selected.value.nodes.map(n => n.id)
-    const result  = await $fetch<{ output: string }>('/api/cluster/sync', { method: 'POST', body: { nodeIds } })
+    const cid = clusterIdFor(selected.value)
+    const body = cid
+      ? { clusterId: cid }
+      : { nodeIds: selected.value.nodes.map(n => n.id) }
+    const result  = await $fetch<{ output: string }>('/api/cluster/sync', { method: 'POST', body })
     useAppToast().success('Synchronisation réussie', result.output.slice(0, 120))
     await loadDetail()
   } catch (err: any) {
@@ -257,6 +322,14 @@ async function syncCluster() {
   }
 }
 
-onMounted(loadList)
+onMounted(async () => {
+  await loadList()
+  trySelectFromQuery()
+})
+
+watch(() => route.query.clusterId, () => {
+  if (!selected.value) trySelectFromQuery()
+})
+
 onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
 </script>

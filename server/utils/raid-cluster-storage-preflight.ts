@@ -25,11 +25,9 @@ import type {
   RaidPreflightRequest,
 } from './raid-types'
 
-export const SYNC_LIMITATIONS = [
-  'Sync config exécute conf_sync.sh et synchronise des fichiers/configuration uniquement.',
-  'Sync config ne crée pas de partitions physiques, superblocks MD, métadonnées LVM ni block devices sur les autres nœuds.',
-  'Sync config n\'arrête ni ne démarre pas les tableaux MD (mdadm stop/assemble) sur les nœuds pairs.',
-]
+import { CLUSTER_SYNC_LIMITATION_LINES } from '../../utils/cluster-sync-limitations'
+
+export const SYNC_LIMITATIONS = CLUSTER_SYNC_LIMITATION_LINES
 
 export const CLUSTER_MD_ACTIONS: ClusterStorageAction[] = [
   'prepare_md_partitions',
@@ -91,7 +89,7 @@ export async function runClusterStoragePreflight(
   const source = inventories.find(n => n.sanId === req.primarySanId)
   const blockers: string[] = []
   const blockerRefs: import('./raid-types').PreflightBlockerRef[] = []
-  const warnings = [...SYNC_LIMITATIONS]
+  const warnings: string[] = []
   const perNodePreflights: Record<string, Awaited<ReturnType<typeof runPreflight>>> = {}
   const mappings: ClusterDiskMapping[] = []
   blockers.push(...duplicateManualMappingBlockers(req.diskMappings ?? []))

@@ -1,7 +1,9 @@
 import { eq } from 'drizzle-orm'
 import { getDB } from '../../../db'
 import { sans, clusters } from '../../../db/schema'
+import { readClusterNodeStatus } from '../../../utils/cluster-reader'
 import { getSSHPool } from '../../../utils/ssh-pool'
+import type { ClusterNodeRole } from '../../../utils/types'
 
 /**
  * POST /api/admin/cluster/remove-node
@@ -47,10 +49,21 @@ export default defineEventHandler(async (event) => {
     const primaryMgr = pool.get(body.primaryNodeId)
     if (primaryMgr && primaryMgr.getStatus() === 'connected') {
       try {
-        // Le nom crm correspond au hostname du nœud dans le CIB
-        const hostname = node.label
-        await primaryMgr.exec(`crm node standby "${hostname}" 2>&1; true`, 15_000)
-        await primaryMgr.exec(`crm node delete "${hostname}" 2>&1; true`, 15_000)
+        let crmNodeName = node.label
+        try {
+          const status = await readClusterNodeStatus(
+            body.nodeId,
+            node.host,
+            (node.clusterRole ?? 'secondary') as ClusterNodeRole,
+          )
+          if (status.hostname && status.hostname !== 'localhost' && status.hostname !== '127.0.0.1') {
+            crmNodeName = status.hostname
+          }
+        } catch {
+          // fallback label
+        }
+        await primaryMgr.exec(`crm node standby "${crmNodeName}" 2>&1; true`, 15_000)
+        await primaryMgr.exec(`crm node delete "${crmNodeName}" 2>&1; true`, 15_000)
       } catch (err: any) {
         warnings.push(`crm node delete sur primaire : ${err?.message ?? 'erreur'}`)
       }
