@@ -497,8 +497,15 @@ export interface PartitionMetadataDiagnostics {
   mdadmExamine: CommandProbeResult & { detected: boolean }
   wipefsProbe: CommandProbeResult & { signatures: string[] }
   blkidProbe: CommandProbeResult & { types: string[]; available: boolean }
+  /** MD RAID metadata removed (examine + RAID signatures); alias verifiedRemoved */
+  mdMetadataRemoved: boolean
   verifiedRemoved: boolean
+  /** RAID-related types still present (mdadm_examine, linux_raid_member, …) */
   remainingSignatureTypes: string[]
+  remainingRaidSignatureTypes: string[]
+  /** Non-RAID signatures (vfat, ext4, …) — informational only */
+  remainingNonMdSignatures: string[]
+  nonMdSignaturesDetected: boolean
   detectionSources: { mdadmExamine: boolean; wipefs: boolean; blkid: boolean }
   recommendedAction: PartitionMetadataRecommendedAction
 }
@@ -535,6 +542,8 @@ export interface ZeroMdSuperblockPartitionResult {
   stderr: string
   exitCode: number
   verifiedRemoved: boolean | null
+  mdMetadataRemoved?: boolean
+  remainingNonMdSignatures?: string[]
   verificationStdout?: string
   diagnostics?: PartitionMetadataDiagnostics
 }

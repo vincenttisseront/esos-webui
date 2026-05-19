@@ -36,17 +36,25 @@ describe('raid-md-metadata-diagnostics', () => {
     it('recommends advanced_wipe when zero ok but signatures remain', () => {
       expect(computeRecommendedAction({
         zeroSuccess: true,
-        verifiedRemoved: false,
-        remainingSignatureTypes: ['linux_raid_member'],
+        mdMetadataRemoved: false,
+        remainingRaidSignatureTypes: ['linux_raid_member'],
       })).toBe('advanced_wipe_signatures')
     })
 
     it('recommends manual_investigation when zero failed', () => {
       expect(computeRecommendedAction({
         zeroSuccess: false,
-        verifiedRemoved: false,
-        remainingSignatureTypes: ['linux_raid_member'],
+        mdMetadataRemoved: false,
+        remainingRaidSignatureTypes: ['linux_raid_member'],
       })).toBe('manual_investigation')
+    })
+
+    it('recommends none when md metadata removed', () => {
+      expect(computeRecommendedAction({
+        zeroSuccess: true,
+        mdMetadataRemoved: true,
+        remainingRaidSignatureTypes: [],
+      })).toBe('none')
     })
   })
 
@@ -98,7 +106,7 @@ describe('raid-md-metadata-diagnostics', () => {
   })
 
   describe('zeroSuperblockWithDiagnostics', () => {
-    it('verifiedRemoved false when examine still has Magic after zero exit 0', async () => {
+    it('md metadata removed when examine shows Magic only (no RAID fields)', async () => {
       const manager = {
         exec: vi.fn(async (cmd: string) => {
           if (cmd.includes('--zero-superblock')) {
@@ -119,10 +127,76 @@ describe('raid-md-metadata-diagnostics', () => {
 
       const result = await zeroSuperblockWithDiagnostics(manager as any, '/dev/sda1')
       expect(result.success).toBe(true)
+      expect(result.verifiedRemoved).toBe(true)
+      expect(result.mdMetadataRemoved).toBe(true)
+      expect(result.diagnostics?.detectionSources.mdadmExamine).toBe(false)
+      expect(result.diagnostics?.recommendedAction).toBe('none')
+    })
+
+    it('verifiedRemoved false when examine still has valid MD superblock', async () => {
+      const manager = {
+        exec: vi.fn(async (cmd: string) => {
+          if (cmd.includes('--zero-superblock')) {
+            return { stdout: 'ok\n__MD_ZERO_EXIT__=0\n', stderr: '' }
+          }
+          if (cmd.includes('--examine')) {
+            return {
+              stdout: [
+                '          Magic : a92b4efc',
+                '     Raid Level : raid1',
+                '     Array UUID : aaa:bbb',
+                '__PROBE_EXIT__=0',
+              ].join('\n'),
+              stderr: '',
+            }
+          }
+          if (cmd.includes('wipefs -n')) {
+            return { stdout: '', stderr: '' }
+          }
+          if (cmd.includes('blkid')) {
+            return { stdout: '', stderr: '' }
+          }
+          return { stdout: '', stderr: '' }
+        }),
+      }
+
+      const result = await zeroSuperblockWithDiagnostics(manager as any, '/dev/sda1')
+      expect(result.success).toBe(true)
       expect(result.verifiedRemoved).toBe(false)
+      expect(result.mdMetadataRemoved).toBe(false)
       expect(result.diagnostics?.detectionSources.mdadmExamine).toBe(true)
       expect(result.diagnostics?.remainingSignatureTypes).toContain('mdadm_examine')
       expect(result.diagnostics?.recommendedAction).toBe('advanced_wipe_signatures')
+    })
+
+    it('md metadata removed with vfat on wipefs and blkid only', async () => {
+      const manager = {
+        exec: vi.fn(async (cmd: string) => {
+          if (cmd.includes('--zero-superblock')) {
+            return { stdout: '__MD_ZERO_EXIT__=0\n', stderr: '' }
+          }
+          if (cmd.includes('--examine')) {
+            return { stdout: 'No md superblock detected.\n__PROBE_EXIT__=0\n', stderr: '' }
+          }
+          if (cmd.includes('wipefs -n')) {
+            return {
+              stdout: 'OFFSET       TYPE\n0x00000000   vfat\n__PROBE_EXIT__=0\n',
+              stderr: '',
+            }
+          }
+          if (cmd.includes('blkid')) {
+            return { stdout: 'TYPE="vfat"\n__PROBE_EXIT__=0\n', stderr: '' }
+          }
+          return { stdout: '', stderr: '' }
+        }),
+      }
+
+      const result = await zeroSuperblockWithDiagnostics(manager as any, '/dev/sda1')
+      expect(result.mdMetadataRemoved).toBe(true)
+      expect(result.verifiedRemoved).toBe(true)
+      expect(result.diagnostics?.remainingNonMdSignatures).toEqual(['vfat'])
+      expect(result.diagnostics?.remainingSignatureTypes).toEqual([])
+      expect(result.diagnostics?.recommendedAction).toBe('none')
     })
 
     it('recommendedAction advanced_wipe when wipefs shows linux_raid_member', async () => {
@@ -237,11 +311,16 @@ describe('raid-md-metadata-diagnostics', () => {
             mdadmExamine: { command: 'e', exitCode: 0, stdout: 'Magic', stderr: '', detected: true },
             wipefsProbe: { command: 'w', exitCode: 0, stdout: '', stderr: '', signatures: [] },
             blkidProbe: { command: 'b', exitCode: 0, stdout: '', stderr: '', types: [], available: true },
+            mdMetadataRemoved: false,
             verifiedRemoved: false,
             remainingSignatureTypes: ['mdadm_examine'],
+            remainingRaidSignatureTypes: ['mdadm_examine'],
+            remainingNonMdSignatures: [],
+            nonMdSignaturesDetected: false,
             detectionSources: { mdadmExamine: true, wipefs: false, blkid: false },
             recommendedAction: 'advanced_wipe_signatures',
           },
+          mdMetadataRemoved: false,
         }],
         [],
       )

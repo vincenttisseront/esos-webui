@@ -2,7 +2,12 @@
  * Tests détection tableaux MD arrêtés / parsers examine & scan
  */
 import { describe, expect, it } from 'vitest'
-import { parseMdadmExamineOutput, parseMdadmExamineBulk } from '../server/utils/parsers/mdadm-examine.parser'
+import {
+  isMdSuperblockDetected,
+  isValidMdSuperblockInfo,
+  parseMdadmExamineOutput,
+  parseMdadmExamineBulk,
+} from '../server/utils/parsers/mdadm-examine.parser'
 import { parseMdadmScanLines } from '../server/utils/parsers/mdadm-scan.parser'
 import { detectStoppedMdArrays } from '../server/utils/stopped-md-arrays'
 import type { MdArray, RaidBlockDevice } from '../server/utils/raid-types'
@@ -41,6 +46,18 @@ describe('mdadm-examine parser', () => {
 
   it('ignore l\'absence de superblock', () => {
     expect(parseMdadmExamineOutput('No md superblock detected on /dev/sda1.')).toBeUndefined()
+  })
+
+  it('ignore Magic-only output without RAID fields', () => {
+    expect(parseMdadmExamineOutput('          Magic : a92b4efc\n')).toBeUndefined()
+    expect(isMdSuperblockDetected('          Magic : a92b4efc\n')).toBe(false)
+  })
+
+  it('isValidMdSuperblockInfo requires UUID or raid fields', () => {
+    expect(isValidMdSuperblockInfo({ uuid: 'aaa:bbb', raw: '' })).toBe(true)
+    expect(isValidMdSuperblockInfo({ name: 'esos:md0', raw: '' })).toBe(true)
+    expect(isValidMdSuperblockInfo({ raidDevices: 2, raw: '' })).toBe(true)
+    expect(isValidMdSuperblockInfo({ raw: 'Magic only' })).toBe(false)
   })
 
   it('parse le format bulk overview', () => {
@@ -141,6 +158,30 @@ describe('detectStoppedMdArrays', () => {
     expect(stopped[0]?.stoppedState).toBe('incomplete')
     expect(stopped[0]?.members.some(m => m.memberStatus === 'incomplete')).toBe(true)
     expect(stopped[0]?.members.some(m => m.memberStatus === 'member_missing')).toBe(true)
+  })
+
+  it('exclut les partitions avec examine Magic-only (vfat residual)', () => {
+    const stopped = detectStoppedMdArrays({
+      mdadmScan: '',
+      blockDevices: [{
+        name: 'sda1',
+        path: '/dev/sda1',
+        sizeBytes: 1,
+        type: 'part',
+        hasMdSuperblock: true,
+        mdExamine: { raw: '          Magic : deadbeef\n' },
+        mdEligibilityReasons: [],
+        eligibleForMdPartitionPrep: false,
+        mdPartitionPrepReasons: [],
+        usedBy: ['unknown_signature'],
+        eligibleForMd: false,
+        eligibleForHardwareRaid: false,
+        warnings: [],
+        wipefsSignatures: ['vfat'],
+      }],
+      activeMdArrays: [],
+    })
+    expect(stopped).toHaveLength(0)
   })
 
   it('assigne md_superblock_detected aux membres assemblables', () => {

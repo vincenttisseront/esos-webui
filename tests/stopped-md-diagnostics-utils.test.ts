@@ -89,8 +89,12 @@ describe('stopped-md diagnostics helpers', () => {
       mdadmExamine: { command: 'e', exitCode: 0, stdout: '', stderr: '', detected: false },
       wipefsProbe: { command: 'w', exitCode: 0, stdout: '', stderr: '', signatures: ['linux_raid_member'] },
       blkidProbe: { command: 'b', exitCode: 0, stdout: '', stderr: '', types: [], available: true },
+      mdMetadataRemoved: false,
       verifiedRemoved: false,
       remainingSignatureTypes: ['linux_raid_member'],
+      remainingRaidSignatureTypes: ['linux_raid_member'],
+      remainingNonMdSignatures: [],
+      nonMdSignaturesDetected: false,
       detectionSources: { mdadmExamine: false, wipefs: true, blkid: false },
       recommendedAction: 'advanced_wipe_signatures',
     }
@@ -98,5 +102,25 @@ describe('stopped-md diagnostics helpers', () => {
     expect(summary).toContain('/dev/sda1')
     expect(summary).toContain('wipefs')
     expect(summary).toContain('linux_raid_member')
+  })
+
+  it('formatDiagnosticsSummary notes non-MD signatures when MD removed', () => {
+    const d: PartitionMetadataDiagnostics = {
+      partition: '/dev/sda1',
+      zeroSuperblock: { command: 'z', exitCode: 0, stdout: '', stderr: '', success: true },
+      mdadmExamine: { command: 'e', exitCode: 0, stdout: 'No md superblock', stderr: '', detected: false },
+      wipefsProbe: { command: 'w', exitCode: 0, stdout: '', stderr: '', signatures: ['vfat'] },
+      blkidProbe: { command: 'b', exitCode: 0, stdout: '', stderr: '', types: ['vfat'], available: true },
+      mdMetadataRemoved: true,
+      verifiedRemoved: true,
+      remainingSignatureTypes: [],
+      remainingRaidSignatureTypes: [],
+      remainingNonMdSignatures: ['vfat'],
+      nonMdSignaturesDetected: true,
+      detectionSources: { mdadmExamine: false, wipefs: false, blkid: false },
+      recommendedAction: 'none',
+    }
+    expect(formatDiagnosticsSummary(d)).toContain('non-RAID')
+    expect(formatDiagnosticsSummary(d)).toContain('vfat')
   })
 })

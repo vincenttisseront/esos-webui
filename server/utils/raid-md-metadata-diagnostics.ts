@@ -9,7 +9,7 @@ import type {
   PartitionMetadataRecommendedAction,
   ZeroMdSuperblockPartitionResult,
 } from './raid-types'
-import { parseMdadmExamineOutput } from './parsers/mdadm-examine.parser'
+import { isMdSuperblockDetected } from './parsers/mdadm-examine.parser'
 import { parseBlkidTypes, parseWipefsProbeOutput } from './parsers/wipefs-output.parser'
 
 export const MD_ADVANCED_CLEANUP_CONFIRMATION = 'FORCE CLEAN MD METADATA'
@@ -32,8 +32,10 @@ function logCleanupResult(
     success: result.success,
     exitCode: result.exitCode,
     verifiedRemoved: result.verifiedRemoved,
+    mdMetadataRemoved: diagnostics?.mdMetadataRemoved,
     detectionSources: diagnostics?.detectionSources,
     remainingSignatureTypes: diagnostics?.remainingSignatureTypes,
+    remainingNonMdSignatures: diagnostics?.remainingNonMdSignatures,
     recommendedAction: diagnostics?.recommendedAction,
   })
 }
@@ -110,10 +112,7 @@ export async function probeMdadmExamine(
   const devPath = sanitizeMdDevicePath(partition)
   const command = `mdadm --examine ${devPath}`
   const probe = await execProbe(manager, command)
-  const detected = (() => {
-    if (/No md superblock detected/i.test(probe.stdout)) return false
-    return !!parseMdadmExamineOutput(probe.stdout)
-  })()
+  const detected = isMdSuperblockDetected(probe.stdout)
   return { ...probe, detected }
 }
 
@@ -164,31 +163,54 @@ export function buildRemainingSignatureTypes(input: {
   return [...types].filter(t => isRaidRelatedSignature(t) || t === 'mdadm_examine')
 }
 
+export function buildRemainingNonMdSignatures(input: {
+  wipefsSignatures: string[]
+  blkidTypes: string[]
+}): string[] {
+  const types = new Set<string>()
+  for (const s of input.wipefsSignatures) {
+    if (!isRaidRelatedSignature(s)) types.add(s)
+  }
+  for (const t of input.blkidTypes) {
+    if (!isRaidRelatedSignature(t)) types.add(t)
+  }
+  return [...types]
+}
+
 export function computeRecommendedAction(input: {
   zeroSuccess: boolean
-  verifiedRemoved: boolean
-  remainingSignatureTypes: string[]
+  mdMetadataRemoved: boolean
+  remainingRaidSignatureTypes: string[]
 }): PartitionMetadataRecommendedAction {
-  if (input.verifiedRemoved) return 'none'
+  if (input.mdMetadataRemoved) return 'none'
   if (!input.zeroSuccess) return 'manual_investigation'
-  const hasRaidSig = input.remainingSignatureTypes.some(isRaidRelatedSignature)
+  const hasRaidSig = input.remainingRaidSignatureTypes.some(isRaidRelatedSignature)
   if (hasRaidSig) return 'advanced_wipe_signatures'
   return 'manual_investigation'
 }
 
 export function buildDiagnosticsSummary(d: PartitionMetadataDiagnostics): string {
+  if (d.mdMetadataRemoved && d.remainingNonMdSignatures.length) {
+    return [
+      `Partition ${d.partition} : métadonnées MD supprimées.`,
+      `Signature(s) non-RAID encore détectée(s) : ${d.remainingNonMdSignatures.join(', ')}`,
+    ].join('\n')
+  }
   const lines = [`Partition ${d.partition} : métadonnées MD encore détectées.`]
   if (d.detectionSources.mdadmExamine) {
     lines.push(`- mdadm --examine : superblock détecté`)
   }
-  if (d.detectionSources.wipefs && d.wipefsProbe.signatures.length) {
-    lines.push(`- wipefs -n : ${d.wipefsProbe.signatures.join(', ')}`)
+  const raidWipefs = d.wipefsProbe.signatures.filter(isRaidRelatedSignature)
+  if (d.detectionSources.wipefs && raidWipefs.length) {
+    lines.push(`- wipefs -n : ${raidWipefs.join(', ')}`)
   }
-  if (d.detectionSources.blkid && d.blkidProbe.types.length) {
-    lines.push(`- blkid : ${d.blkidProbe.types.join(', ')}`)
+  const raidBlkid = d.blkidProbe.types.filter(isRaidRelatedSignature)
+  if (d.detectionSources.blkid && raidBlkid.length) {
+    lines.push(`- blkid : ${raidBlkid.join(', ')}`)
   }
-  if (d.remainingSignatureTypes.length) {
-    lines.push(`Signatures restantes : ${d.remainingSignatureTypes.join(', ')}`)
+  const raidTypes = d.remainingRaidSignatureTypes ?? d.remainingSignatureTypes ?? []
+  if (raidTypes.length) {
+    lines.push(`Signatures RAID restantes : ${raidTypes.join(', ')}`)
   }
   if (d.recommendedAction === 'advanced_wipe_signatures') {
     lines.push('Action recommandée : Nettoyer les signatures restantes (destructif).')
@@ -213,16 +235,22 @@ export async function collectPartitionMetadataDiagnostics(
     blkid: blkidProbe.types.some(isRaidRelatedSignature),
   }
 
-  const remainingSignatureTypes = buildRemainingSignatureTypes({
+  const remainingRaidSignatureTypes = buildRemainingSignatureTypes({
     examineDetected: mdadmExamine.detected,
     wipefsSignatures: wipefsProbe.signatures,
     blkidTypes: blkidProbe.types,
   })
+  const remainingNonMdSignatures = buildRemainingNonMdSignatures({
+    wipefsSignatures: wipefsProbe.signatures,
+    blkidTypes: blkidProbe.types,
+  })
 
-  const verifiedRemoved = !detectionSources.mdadmExamine
+  const mdMetadataRemoved = !detectionSources.mdadmExamine
     && !detectionSources.wipefs
     && !detectionSources.blkid
-    && remainingSignatureTypes.length === 0
+    && remainingRaidSignatureTypes.length === 0
+  const verifiedRemoved = mdMetadataRemoved
+  const nonMdSignaturesDetected = remainingNonMdSignatures.length > 0
 
   const zero = zeroSuperblock ?? {
     command: '(non exécuté)',
@@ -238,13 +266,17 @@ export async function collectPartitionMetadataDiagnostics(
     mdadmExamine,
     wipefsProbe,
     blkidProbe,
+    mdMetadataRemoved,
     verifiedRemoved,
-    remainingSignatureTypes,
+    remainingSignatureTypes: remainingRaidSignatureTypes,
+    remainingRaidSignatureTypes,
+    remainingNonMdSignatures,
+    nonMdSignaturesDetected,
     detectionSources,
     recommendedAction: computeRecommendedAction({
       zeroSuccess: zero.success,
-      verifiedRemoved,
-      remainingSignatureTypes,
+      mdMetadataRemoved,
+      remainingRaidSignatureTypes,
     }),
   }
 }
@@ -355,7 +387,8 @@ export async function zeroSuperblockWithDiagnostics(
   await runPostCleanupSync(manager, devPath)
   const diagnostics = await collectPartitionMetadataDiagnostics(manager, devPath, zeroSuperblock)
 
-  const verifiedRemoved: boolean | null = diagnostics.verifiedRemoved
+  const mdRemoved = diagnostics.mdMetadataRemoved
+  const verifiedRemoved: boolean | null = mdRemoved
     ? true
     : (diagnostics.mdadmExamine.exitCode >= 0 ? false : null)
 
@@ -367,6 +400,8 @@ export async function zeroSuperblockWithDiagnostics(
     stderr: zeroSuperblock.stderr,
     exitCode: zeroSuperblock.exitCode,
     verifiedRemoved,
+    mdMetadataRemoved: mdRemoved,
+    remainingNonMdSignatures: diagnostics.remainingNonMdSignatures,
     verificationStdout: diagnostics.mdadmExamine.stdout.slice(0, 1000),
     diagnostics,
   }
@@ -406,6 +441,7 @@ export async function advancedCleanupWithDiagnostics(
   await runPostCleanupSync(manager, devPath)
   const diagnostics = await collectPartitionMetadataDiagnostics(manager, devPath, combinedStep)
 
+  const mdRemoved = diagnostics.mdMetadataRemoved
   const result: ZeroMdSuperblockPartitionResult = {
     partition: devPath,
     command: combinedStep.command,
@@ -413,7 +449,9 @@ export async function advancedCleanupWithDiagnostics(
     stdout: combinedStep.stdout,
     stderr: combinedStep.stderr,
     exitCode: combinedStep.exitCode,
-    verifiedRemoved: diagnostics.verifiedRemoved ? true : false,
+    verifiedRemoved: mdRemoved ? true : false,
+    mdMetadataRemoved: mdRemoved,
+    remainingNonMdSignatures: diagnostics.remainingNonMdSignatures,
     verificationStdout: diagnostics.mdadmExamine.stdout.slice(0, 1000),
     diagnostics,
   }
@@ -444,7 +482,11 @@ export function buildZeroCleanupFailureError(
   results: ZeroMdSuperblockPartitionResult[],
   warnings: string[],
 ): ReturnType<typeof createError> {
-  const first = results.find(r => !r.success || r.verifiedRemoved === false || r.diagnostics?.verifiedRemoved === false)
+  const first = results.find((r) => {
+    if (!r.success) return true
+    const mdRemoved = r.mdMetadataRemoved ?? r.diagnostics?.mdMetadataRemoved ?? r.verifiedRemoved
+    return mdRemoved === false
+  })
   const diag = first?.diagnostics
   const message = diag
     ? buildDiagnosticsSummary(diag)

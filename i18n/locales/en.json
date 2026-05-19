@@ -359,6 +359,8 @@
       "advanced_cleanup_confirm_phrase": "FORCE CLEAN MD METADATA",
       "toast_advanced_cleanup_available": "Metadata still present — use « Advanced cleanup » on the card.",
       "toast_advanced_cleanup_ok": "Advanced cleanup succeeded and verified on {partitions}",
+      "toast_md_removed_non_md_signature": "MD metadata removed. A non-RAID signature is still detected: {types}.",
+      "diagnostics_non_md_signatures": "Non-RAID signatures (informational): {types}",
       "wipe_signatures": "Clean remaining signatures",
       "wipe_signatures_help": "Advanced cleanup: targeted wipefs when needed, then mdadm --zero-superblock --force if examine still detects metadata (destructive).",
       "wipe_signatures_confirm_phrase": "FORCE CLEAN MD METADATA",

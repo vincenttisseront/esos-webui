@@ -72,21 +72,21 @@ describe('stopped-md zero UI helpers', () => {
     expect(membersStillInStoppedArrays(['/dev/sda1'], [])).toEqual([])
   })
 
-  it('isZeroCleanupFullyVerified requires all partitions verified', () => {
+  it('isZeroCleanupFullyVerified requires MD metadata removed per partition', () => {
     expect(isZeroCleanupFullyVerified({
       ok: true,
       warnings: [],
-      results: [{ success: true, verifiedRemoved: true }],
+      results: [{ success: true, verifiedRemoved: true, mdMetadataRemoved: true }],
     })).toBe(true)
     expect(isZeroCleanupFullyVerified({
       ok: true,
-      warnings: ['x'],
-      results: [{ success: true, verifiedRemoved: true }],
-    })).toBe(false)
+      warnings: ['signature non-RAID vfat'],
+      results: [{ success: true, verifiedRemoved: true, mdMetadataRemoved: true }],
+    })).toBe(true)
     expect(isZeroCleanupFullyVerified({
       ok: true,
       warnings: [],
-      results: [{ success: true, verifiedRemoved: false }],
+      results: [{ success: true, verifiedRemoved: false, mdMetadataRemoved: false }],
     })).toBe(false)
   })
 })

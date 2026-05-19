@@ -4,7 +4,7 @@
 import { createError } from 'h3'
 import type { SSHSessionManager } from './ssh-session-manager'
 import type { AssembleMdArrayRequest, CreateMdArrayRequest, ZeroMdSuperblockPartitionResult } from './raid-types'
-import { parseMdadmExamineOutput } from './parsers/mdadm-examine.parser'
+import { isMdSuperblockDetected } from './parsers/mdadm-examine.parser'
 import {
   buildZeroCleanupFailureError,
   collectPartitionMetadataDiagnostics,
@@ -403,11 +403,10 @@ export async function verifyMdSuperblockRemoved(
   try {
     const { stdout } = await manager.exec(`mdadm --examine ${devPath} 2>&1`, 30_000)
     const trimmed = stdout.trim()
-    if (/No md superblock detected/i.test(trimmed)) {
-      return { verifiedRemoved: true, verificationStdout: trimmed.slice(0, 1000) }
+    return {
+      verifiedRemoved: !isMdSuperblockDetected(trimmed),
+      verificationStdout: trimmed.slice(0, 1000),
     }
-    const parsed = parseMdadmExamineOutput(trimmed)
-    return { verifiedRemoved: !parsed, verificationStdout: trimmed.slice(0, 1000) }
   } catch (err: any) {
     const msg = err?.statusMessage ?? err?.message ?? String(err)
     return { verifiedRemoved: null, verificationStdout: msg.slice(0, 500) }
@@ -438,18 +437,26 @@ export async function zeroMdSuperblocks(
   }
 
   for (const r of results) {
+    const mdRemoved = r.mdMetadataRemoved ?? r.diagnostics?.mdMetadataRemoved
+    const nonMd = r.remainingNonMdSignatures ?? r.diagnostics?.remainingNonMdSignatures ?? []
     if (!r.success) {
       warnings.push(`${r.partition} : mdadm --zero-superblock a échoué (code ${r.exitCode})`)
-    } else if (r.verifiedRemoved === false) {
+    } else if (mdRemoved === false || r.verifiedRemoved === false) {
       warnings.push(`${r.partition} : superblock MD encore détecté après nettoyage`)
     } else if (r.verifiedRemoved === null) {
       warnings.push(`${r.partition} : vérification mdadm --examine non concluante`)
+    } else if (mdRemoved && nonMd.length) {
+      warnings.push(`${r.partition} : signature non-RAID ${nonMd.join(', ')}`)
     }
   }
 
   const commands = results.map(r => r.command)
   const stdout = results.map(r => r.stdout).filter(Boolean).join('\n---\n').slice(0, 4000)
-  const failed = results.some(r => !r.success || r.verifiedRemoved === false)
+  const failed = results.some((r) => {
+    if (!r.success) return true
+    const mdRemoved = r.mdMetadataRemoved ?? r.diagnostics?.mdMetadataRemoved
+    return mdRemoved === false || r.verifiedRemoved === false
+  })
   const ok = !failed
   const advancedCleanupAvailable = results.some(
     r => r.diagnostics?.recommendedAction === 'advanced_wipe_signatures',
@@ -484,7 +491,7 @@ export async function wipeMdSignatures(
     if (!remainingTypes?.length) {
       const baseline = await collectPartitionMetadataDiagnostics(manager, devPath)
       remainingTypes = baseline.remainingSignatureTypes
-      if (baseline.verifiedRemoved) {
+      if (baseline.mdMetadataRemoved) {
         warnings.push(`${devPath} : aucune signature RAID détectée avant nettoyage`)
       }
     }
@@ -505,16 +512,24 @@ export async function wipeMdSignatures(
   }
 
   for (const r of results) {
+    const mdRemoved = r.mdMetadataRemoved ?? r.diagnostics?.mdMetadataRemoved
+    const nonMd = r.remainingNonMdSignatures ?? r.diagnostics?.remainingNonMdSignatures ?? []
     if (!r.success) {
       warnings.push(`${r.partition} : wipefs a échoué (code ${r.exitCode})`)
-    } else if (r.verifiedRemoved === false) {
+    } else if (mdRemoved === false || r.verifiedRemoved === false) {
       warnings.push(`${r.partition} : métadonnées RAID encore détectées après nettoyage des signatures`)
+    } else if (mdRemoved && nonMd.length) {
+      warnings.push(`${r.partition} : signature non-RAID ${nonMd.join(', ')}`)
     }
   }
 
   const commands = results.map(r => r.command)
   const stdout = results.map(r => r.stdout).filter(Boolean).join('\n---\n').slice(0, 4000)
-  const failed = results.some(r => !r.success || r.verifiedRemoved === false)
+  const failed = results.some((r) => {
+    if (!r.success) return true
+    const mdRemoved = r.mdMetadataRemoved ?? r.diagnostics?.mdMetadataRemoved
+    return mdRemoved === false || r.verifiedRemoved === false
+  })
 
   if (failed) {
     throw buildZeroCleanupFailureError(results, warnings)

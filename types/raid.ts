@@ -471,8 +471,12 @@ export interface PartitionMetadataDiagnostics {
   mdadmExamine: CommandProbeResult & { detected: boolean }
   wipefsProbe: CommandProbeResult & { signatures: string[] }
   blkidProbe: CommandProbeResult & { types: string[]; available: boolean }
+  mdMetadataRemoved: boolean
   verifiedRemoved: boolean
   remainingSignatureTypes: string[]
+  remainingRaidSignatureTypes: string[]
+  remainingNonMdSignatures: string[]
+  nonMdSignaturesDetected: boolean
   detectionSources: { mdadmExamine: boolean; wipefs: boolean; blkid: boolean }
   recommendedAction: PartitionMetadataRecommendedAction
 }
@@ -509,6 +513,8 @@ export interface ZeroMdSuperblockPartitionResult {
   stderr: string
   exitCode: number
   verifiedRemoved: boolean | null
+  mdMetadataRemoved?: boolean
+  remainingNonMdSignatures?: string[]
   verificationStdout?: string
   diagnostics?: PartitionMetadataDiagnostics
 }
