@@ -242,13 +242,22 @@
       "auto_refresh_failed": "RAID progress auto-refresh was stopped"
     },
     "software": {
+      "layout": {
+        "actions_row": "Software RAID actions"
+      },
       "summary": {
         "title": "Software RAID status",
         "active": "{count} active array(s)",
         "rebuilding": "{count} resync / recovery",
         "stopped": "{count} assemblable stopped",
         "orphan": "{count} orphan metadata",
-        "peer_md": "{count} peer node alert(s)"
+        "peer_md": "{count} peer node alert(s)",
+        "resync_line": "{path} {action} {percent}% · {speed} · ETA {eta}",
+        "no_resync": "No resync in progress"
+      },
+      "section": {
+        "inactive_devices": "Inactive MD devices ({count})",
+        "metadata_holdouts": "Partition metadata ({count})"
       },
       "help": {
         "workflow_title": "Software RAID workflow",
@@ -256,6 +265,21 @@
         "toggle_show": "Show help",
         "toggle_hide": "Hide help"
       }
+    },
+    "attention": {
+      "title": "Attention points",
+      "local_group": "This node ({count})",
+      "peer_group": "Peer nodes ({count})",
+      "peer_items": "{count} MD item(s)",
+      "show_all": "View all ({count})",
+      "show_all_details": "All attention points",
+      "empty": "No MD attention points"
+    },
+    "peer_section": {
+      "summary": "MD metadata on peer nodes ({count})"
+    },
+    "details": {
+      "toggle": "Details"
     },
     "detection": {
       "blockers_title": "MD attention points",
