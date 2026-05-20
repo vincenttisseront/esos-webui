@@ -135,24 +135,18 @@
                 :color="lvmSummaryBadgeColor"
                 variant="soft"
                 size="xs"
-                :label="t(lvmRaidSummary.statusKey)"
+                :label="t(lvmRaidSummary.stateKey)"
               />
             </div>
-            <p class="text-xs text-gray-500">{{ t('lvm.overview.raid_summary.chain_hint') }}</p>
-            <div class="grid grid-cols-3 gap-2 text-center text-xs">
-              <div>
-                <div class="text-lg font-bold">{{ lvmRaidSummary.pvCount }}</div>
-                <div class="text-gray-500">PV</div>
-              </div>
-              <div>
-                <div class="text-lg font-bold">{{ lvmRaidSummary.vgCount }}</div>
-                <div class="text-gray-500">VG</div>
-              </div>
-              <div>
-                <div class="text-lg font-bold">{{ lvmRaidSummary.lvCount }}</div>
-                <div class="text-gray-500">LV</div>
-              </div>
-            </div>
+            <p class="text-sm font-medium text-gray-800 dark:text-gray-200">
+              {{ t(lvmRaidSummary.detailKey, lvmRaidSummary.detailParams ?? {}) }}
+            </p>
+            <p class="text-xs text-primary-700 dark:text-primary-300">
+              {{ t(lvmRaidSummary.nextStepKey, lvmRaidSummary.nextStepParams ?? {}) }}
+            </p>
+            <p class="text-[11px] text-gray-500">
+              {{ t(lvmRaidSummary.countsLabelKey, lvmRaidSummary.countsParams) }}
+            </p>
             <UAlert
               v-if="lvmRaidSummary.status === 'unavailable'"
               color="amber"
@@ -166,8 +160,8 @@
             >
               {{ lvmRaidSummary.issueMessages.slice(0, 2).join(' · ') }}
             </p>
-            <UButton size="xs" color="primary" variant="soft" block @click="activeTab = 'lvm'">
-              {{ t('lvm.overview.raid_summary.open_tab') }}
+            <UButton size="xs" color="primary" variant="soft" block @click="openLvmFromRaidSummary">
+              {{ t(lvmRaidSummary.primaryActionLabelKey) }}
             </UButton>
           </div>
         </UCard>
@@ -1359,9 +1353,14 @@ const lvmRaidSummary = computed(() =>
 const lvmSummaryBadgeColor = computed(() => {
   const s = lvmRaidSummary.value.status
   if (s === 'ok') return 'green'
-  if (s === 'empty' || s === 'unavailable') return 'gray'
+  if (s === 'unavailable') return 'gray'
+  if (s === 'empty' || s === 'incomplete') return 'amber'
   return 'amber'
 })
+
+function openLvmFromRaidSummary() {
+  activeTab.value = 'lvm'
+}
 
 async function manualRefreshRaid() {
   await Promise.all([
