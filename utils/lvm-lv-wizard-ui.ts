@@ -15,3 +15,12 @@ export function formatLvSizeGibLabel(sizeGib: number): string {
   const rounded = Number.isInteger(sizeGib) ? String(sizeGib) : sizeGib.toFixed(1)
   return `${rounded} GiB`
 }
+
+export function formatLvmBytes(n: number): string {
+  if (!n) return '0 B'
+  const u = ['B', 'KiB', 'MiB', 'GiB', 'TiB']
+  let i = 0
+  let v = n
+  while (v >= 1024 && i < u.length - 1) { v /= 1024; i++ }
+  return `${v.toFixed(1)} ${u[i]}`
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatLvSizeGibLabel, validateLvCreateSizeGib } from '../utils/lvm-lv-wizard-ui'
+import { formatLvmBytes, formatLvSizeGibLabel, validateLvCreateSizeGib } from '../utils/lvm-lv-wizard-ui'
 
 describe('lvm-lv-wizard-ui', () => {
   it('validateLvCreateSizeGib rejects zero', () => {
@@ -16,5 +16,9 @@ describe('lvm-lv-wizard-ui', () => {
 
   it('formatLvSizeGibLabel shows GiB', () => {
     expect(formatLvSizeGibLabel(10)).toBe('10 GiB')
+  })
+
+  it('formatLvmBytes formats gibibytes', () => {
+    expect(formatLvmBytes(50 * 1024 ** 3)).toBe('50.0 GiB')
   })
 })

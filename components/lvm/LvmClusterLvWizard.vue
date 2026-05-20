@@ -7,51 +7,16 @@
   >
     <div class="space-y-4">
       <template v-if="step === 1">
-        <UFormGroup
-          :label="t('lvm.wizard.lv_create.vg_label')"
-          :hint="t('lvm.wizard.lv_create.vg_help')"
-        >
-          <LvmNativeSelect v-model="selectedVg" :options="vgOptions" />
-        </UFormGroup>
-        <p v-if="selectedVgSummary" class="text-sm text-gray-700 dark:text-gray-300 -mt-2">
-          {{ selectedVgSummary }}
-        </p>
-
-        <UFormGroup :label="t('lvm.wizard.lv_create.lv_name_label')">
-          <UInput v-model="lvName" placeholder="lv0" />
-        </UFormGroup>
-
-        <UFormGroup
-          :label="t('lvm.wizard.lv_create.lv_size_label')"
-          :hint="t('lvm.wizard.lv_create.unit_hint')"
-          :error="sizeValidationError ?? undefined"
-        >
-          <div class="flex flex-wrap items-center gap-2">
-            <UInput
-              v-model.number="sizeGib"
-              type="number"
-              min="0"
-              step="0.1"
-              class="flex-1 min-w-[8rem]"
-            />
-            <span class="text-sm font-medium text-gray-600 dark:text-gray-400 shrink-0">
-              {{ t('lvm.wizard.lv_create.unit_gib') }}
-            </span>
-          </div>
-        </UFormGroup>
-        <p v-if="sizePreview" class="text-xs text-gray-500 -mt-2">
-          {{ sizePreview }}
-        </p>
-
-        <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-900/40 px-3 py-2 space-y-1">
-          <p class="text-sm font-medium text-gray-800 dark:text-gray-200">
-            {{ t('lvm.wizard.lv_create.max_size_cluster_label') }} :
-            <span class="font-mono">{{ formatBytes(maxFreeAcrossCluster) }}</span>
-          </p>
-          <p class="text-xs text-gray-500">
-            {{ t('lvm.wizard.lv_create.max_size_cluster_help') }}
-          </p>
-        </div>
+        <LvmCreateLvFormStep
+          v-model:vg-name="selectedVg"
+          v-model:lv-name="lvName"
+          v-model:size-gib="sizeGib"
+          :vg-options="vgOptions"
+          :max-free-bytes="maxFreeAcrossCluster"
+          cluster-mode
+          :target-node-labels="targetNodeLabels"
+          :size-error="sizeValidationError"
+        />
       </template>
       <template v-else-if="step === 2">
         <LvmClusterPlanReview v-if="plan" :plan="plan" />
@@ -99,7 +64,7 @@
 <script setup lang="ts">
 import type { ClusterLvmExecutionResult } from '~/types/lvm'
 import { minVgFreeBytesAcrossCluster } from '~/utils/lvm-cluster-ui'
-import { formatLvSizeGibLabel, validateLvCreateSizeGib } from '~/utils/lvm-lv-wizard-ui'
+import { formatLvmBytes, validateLvCreateSizeGib } from '~/utils/lvm-lv-wizard-ui'
 
 const props = defineProps<{ sanId: string; clusterId: string }>()
 const emit = defineEmits<{ cancel: []; close: [] }>()
@@ -123,10 +88,7 @@ const sizeBytes = computed(() => Math.floor(Number(sizeGib.value) * 1024 ** 3))
 const vgOptions = computed(() =>
   lvm.vgs
     .filter(v => !v.clustered)
-    .map(v => ({
-      value: v.name,
-      label: t('lvm.wizard.lv_create.vg_option', { name: v.name, size: formatBytes(v.freeBytes) }),
-    })),
+    .map(v => ({ value: v.name, label: v.name })),
 )
 
 const maxFreeAcrossCluster = computed(() => {
@@ -134,13 +96,11 @@ const maxFreeAcrossCluster = computed(() => {
   return minVgFreeBytesAcrossCluster(selectedVg.value, props.sanId, local, lvm.clusterInventory)
 })
 
-const selectedVgSummary = computed(() => {
-  if (!selectedVg.value) return ''
-  return t('lvm.wizard.lv_create.vg_free_summary', {
-    name: selectedVg.value,
-    size: formatBytes(maxFreeAcrossCluster.value),
-  })
-})
+const targetNodeLabels = computed(() =>
+  (lvm.clusterInventory ?? [])
+    .filter(n => n.sshReady)
+    .map(n => n.label),
+)
 
 const sizeValidationKey = computed(() =>
   validateLvCreateSizeGib(Number(sizeGib.value), maxFreeAcrossCluster.value),
@@ -151,16 +111,10 @@ const sizeValidationError = computed(() => {
     case 'zero':
       return t('lvm.wizard.lv_create.error_size_zero')
     case 'exceeds':
-      return t('lvm.wizard.lv_create.error_size_exceeds', { max: formatBytes(maxFreeAcrossCluster.value) })
+      return t('lvm.wizard.lv_create.error_size_exceeds', { max: formatLvmBytes(maxFreeAcrossCluster.value) })
     default:
       return null
   }
-})
-
-const sizePreview = computed(() => {
-  const label = formatLvSizeGibLabel(Number(sizeGib.value))
-  if (!label || sizeValidationKey.value) return ''
-  return label
 })
 
 const formValid = computed(() =>
@@ -176,15 +130,6 @@ onMounted(async () => {
   await lvm.fetchClusterInventory(props.clusterId)
   selectedVg.value = vgOptions.value[0]?.value ?? ''
 })
-
-function formatBytes(n: number) {
-  if (!n) return '0 B'
-  const u = ['B', 'KiB', 'MiB', 'GiB']
-  let i = 0
-  let v = n
-  while (v >= 1024 && i < u.length - 1) { v /= 1024; i++ }
-  return `${v.toFixed(1)} ${u[i]}`
-}
 
 function onCancel() {
   if (step.value === 4) emit('close')
