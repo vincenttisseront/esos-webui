@@ -159,6 +159,19 @@ export const useLvmStore = defineStore('lvm', {
       await this.fetchOverview(true)
     },
 
+    async bindScstCluster(
+      payload: BindScstPayload & { clusterId: string; primarySanId: string },
+    ) {
+      const result = await $fetch<{ refreshedSanIds?: string[] }>('/api/lvm/lv/bind-scst/cluster', {
+        method: 'POST',
+        query: this.query(),
+        body: payload,
+      })
+      await this.fetchOverview(true)
+      if (payload.clusterId) await this.fetchClusterInventory(payload.clusterId)
+      return result
+    },
+
     clusterExecBody<T extends Record<string, unknown>>(payload: T, clusterExecution: ClusterLvmExecutionRequest) {
       return { ...payload, clusterExecution: { ...clusterExecution, clusterId: clusterExecution.clusterId ?? this.clusterId ?? undefined } }
     },

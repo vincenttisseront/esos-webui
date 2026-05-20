@@ -38,7 +38,7 @@ const RISK: Record<LvmPreflightRequest['action'], LvmRiskLevel> = {
 }
 
 export async function runLvmPreflight(
-  _manager: SSHSessionManager,
+  manager: SSHSessionManager,
   req: LvmPreflightRequest,
   overview: LvmOverviewResponse,
 ): Promise<LvmPreflightResult> {

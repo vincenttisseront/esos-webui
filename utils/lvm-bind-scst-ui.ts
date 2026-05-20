@@ -1,4 +1,8 @@
-import type { ClusterLvmPreflightPerNode, ClusterLvmPreflightResult } from '~/types/lvm'
+import type {
+  ClusterLvmNodeResult,
+  ClusterLvmPreflightPerNode,
+  ClusterLvmPreflightResult,
+} from '~/types/lvm'
 import { BIND_SCST_BLOCKER_TAG, parseBindScstBlocker } from '~/utils/lvm-bind-scst-blockers'
 
 const CLUSTER_LVM_BLOCKED_SNIPPET = 'clusterExecution'
@@ -16,6 +20,7 @@ type ApiErrorLike = {
     context?: string
     detail?: string
     preflight?: ClusterLvmPreflightResult
+    nodeResults?: ClusterLvmNodeResult[]
   }
 } | null | undefined
 
@@ -112,10 +117,23 @@ export function formatBindScstPreflightBlockers(blockers: string[], t: Translate
     .join(' · ')
 }
 
+export function formatBindScstNodeResults(nodeResults: ClusterLvmNodeResult[] | undefined): string[] {
+  if (!nodeResults?.length) return []
+  return nodeResults
+    .filter(n => n.participation !== 'execute' || n.error)
+    .map(n => {
+      const detail = n.error ?? n.stderr?.trim() ?? (n.exitCode != null ? `exit ${n.exitCode}` : 'échec')
+      return `${n.label}: ${detail}`
+    })
+}
+
 export function resolveBindScstExecuteError(err: ApiErrorLike, t: TranslateFn): string {
   const detail = extractApiErrorDetail(err)
   const status = extractApiStatusCode(err)
   const code = err?.data?.code
+  const nodeLines = formatBindScstNodeResults(err?.data?.nodeResults)
+
+  if (nodeLines.length) return nodeLines.join('\n')
 
   if (status === 409) {
     if (code === 'lvm.scst_device_conflict' || /existe déjà/i.test(detail)) {

@@ -331,12 +331,21 @@ async function execute() {
   busy.value = true
   executeError.value = null
   try {
-    await lvm.bindScst({
+    const payload = {
       vgName: lv.value.vgName,
       lvName: lv.value.name,
       deviceName: deviceName.value.trim(),
       confirmation: confirmation.value.trim(),
-    })
+    }
+    if (isClustered.value && props.clusterId) {
+      await lvm.bindScstCluster({
+        ...payload,
+        clusterId: props.clusterId,
+        primarySanId: props.sanId,
+      })
+    } else {
+      await lvm.bindScst(payload)
+    }
     toast.success(t('lvm.wizard.scst_device.success'))
     emit('close')
   } catch (e: unknown) {
