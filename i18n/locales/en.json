@@ -1154,7 +1154,7 @@
             "bullet_metadata": "LVM metadata will be written to the device; existing data may be destroyed.",
             "commands_title": "Commands per node",
             "checks_title": "Preflight checks",
-            "phrase_help": "Type the confirmation phrase exactly as shown to enable execution:",
+            "phrase_help": "Type exactly {phrase} to confirm.",
             "pv_exists_title": "A physical volume already exists on one or more nodes",
             "force_acknowledged": "Force enabled — signatures may be overwritten",
             "check_device_exists": "Device exists on each node",
@@ -1181,7 +1181,7 @@
             "pvs_title": "Selected physical volumes",
             "commands_title": "Commands per node",
             "checks_title": "Preflight checks",
-            "phrase_help": "Type the confirmation phrase exactly as shown to enable execution:",
+            "phrase_help": "Type exactly {phrase} to confirm.",
             "vg_exists_title": "Volume group already exists on one or more nodes",
             "check_vg_not_exists": "VG name does not already exist on each node",
             "check_pv_exists_each_node": "Selected PV exists on each node",
@@ -1194,7 +1194,24 @@
         "lv_create": {
           "title": "Create LV (cluster)",
           "execute": "Execute on all nodes",
-          "success": "Cluster LV created"
+          "success": "Cluster LV created",
+          "confirm": {
+            "title": "Create logical volume {lvName}",
+            "summary": "The logical volume will be created in volume group {vgName} on every cluster node.",
+            "param_vg": "Volume group",
+            "param_lv": "Logical volume",
+            "param_size": "Size",
+            "param_nodes": "Target nodes",
+            "commands_title": "Commands per node",
+            "checks_title": "Preflight checks",
+            "phrase_help": "Type exactly {phrase} to confirm.",
+            "lv_exists_title": "Logical volume already exists on one or more nodes",
+            "check_vg_exists_each_node": "Volume group exists on every node",
+            "check_lv_not_exists": "Logical volume name is not already in use",
+            "check_free_space_each_node": "Sufficient free space on every node",
+            "check_tools_lvcreate": "lvcreate available on each node",
+            "check_plan_execute": "Cluster plan is valid — all nodes scheduled"
+          }
         }
       },
       "symmetry": {

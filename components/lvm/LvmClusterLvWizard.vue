@@ -23,9 +23,16 @@
         <UAlert v-if="planError" color="red" variant="soft" :title="planError" />
       </template>
       <template v-else-if="step === 3">
-        <UFormGroup :label="t('lvm.confirm.label')">
-          <UInput v-model="confirmation" :placeholder="plan?.confirmationPhrase" />
-        </UFormGroup>
+        <LvmClusterLvConfirmStep
+          ref="confirmStepRef"
+          v-model:confirmation="confirmation"
+          :vg-name="selectedVg"
+          :lv-name="lvName"
+          :size-gib="sizeGib"
+          :target-node-labels="targetNodeLabels"
+          :preflight="clusterPreflight"
+          :plan="plan"
+        />
       </template>
       <template v-else>
         <LvmClusterExecutionResults v-if="executionResult" :result="executionResult" />
@@ -50,7 +57,7 @@
             v-else-if="step === 3"
             color="primary"
             :loading="busy"
-            :disabled="!plan?.okSymmetric || confirmation !== plan?.confirmationPhrase"
+            :disabled="!confirmStepRef?.canExecute"
             @click="execute"
           >
             {{ t('lvm.cluster.wizard.lv_create.execute') }}
@@ -62,7 +69,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ClusterLvmExecutionResult } from '~/types/lvm'
+import type { ClusterLvmExecutionResult, ClusterLvmPreflightResult } from '~/types/lvm'
 import { minVgFreeBytesAcrossCluster } from '~/utils/lvm-cluster-ui'
 import { formatLvmBytes, validateLvCreateSizeGib } from '~/utils/lvm-lv-wizard-ui'
 
@@ -82,6 +89,8 @@ const planLoading = ref(false)
 const planError = ref<string | null>(null)
 const busy = ref(false)
 const executionResult = ref<ClusterLvmExecutionResult | null>(null)
+const clusterPreflight = ref<ClusterLvmPreflightResult | null>(null)
+const confirmStepRef = ref<{ canExecute: boolean } | null>(null)
 
 const sizeBytes = computed(() => Math.floor(Number(sizeGib.value) * 1024 ** 3))
 
@@ -139,7 +148,19 @@ function onCancel() {
 async function loadPlan() {
   planLoading.value = true
   planError.value = null
+  clusterPreflight.value = null
   try {
+    clusterPreflight.value = await lvm.clusterPreflight({
+      action: 'lvcreate',
+      payload: {
+        vgName: selectedVg.value,
+        name: lvName.value,
+        sizeBytes: sizeBytes.value,
+        confirmation: '',
+      },
+      clusterId: props.clusterId,
+      primarySanId: props.sanId,
+    })
     plan.value = await lvm.planClusterLvCreate({
       vgName: selectedVg.value,
       name: lvName.value,

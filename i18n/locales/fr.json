@@ -1154,7 +1154,7 @@
             "bullet_metadata": "Des métadonnées LVM seront écrites sur le périphérique ; les données existantes peuvent être détruites.",
             "commands_title": "Commandes par nœud",
             "checks_title": "Contrôles de préflight",
-            "phrase_help": "Saisissez la phrase de confirmation exactement comme indiqué pour activer l'exécution :",
+            "phrase_help": "Saisissez exactement {phrase} pour confirmer.",
             "pv_exists_title": "Un volume physique existe déjà sur un ou plusieurs nœuds",
             "force_acknowledged": "Force activé — les signatures peuvent être écrasées",
             "check_device_exists": "Périphérique présent sur chaque nœud",
@@ -1181,7 +1181,7 @@
             "pvs_title": "Volumes physiques sélectionnés",
             "commands_title": "Commandes par nœud",
             "checks_title": "Contrôles de préflight",
-            "phrase_help": "Saisissez la phrase de confirmation exactement comme indiqué pour activer l'exécution :",
+            "phrase_help": "Saisissez exactement {phrase} pour confirmer.",
             "vg_exists_title": "Le groupe de volumes existe déjà sur un ou plusieurs nœuds",
             "check_vg_not_exists": "Le nom de VG n'existe pas déjà sur chaque nœud",
             "check_pv_exists_each_node": "Le PV sélectionné existe sur chaque nœud",
@@ -1194,7 +1194,24 @@
         "lv_create": {
           "title": "Créer un LV (cluster)",
           "execute": "Exécuter sur tous les nœuds",
-          "success": "LV cluster créé"
+          "success": "LV cluster créé",
+          "confirm": {
+            "title": "Créer le volume logique {lvName}",
+            "summary": "Le volume logique sera créé dans le groupe de volumes {vgName} sur chaque nœud du cluster.",
+            "param_vg": "Groupe de volumes",
+            "param_lv": "Volume logique",
+            "param_size": "Taille",
+            "param_nodes": "Nœuds cibles",
+            "commands_title": "Commandes par nœud",
+            "checks_title": "Contrôles de préflight",
+            "phrase_help": "Saisissez exactement {phrase} pour confirmer.",
+            "lv_exists_title": "Le volume logique existe déjà sur un ou plusieurs nœuds",
+            "check_vg_exists_each_node": "Le groupe de volumes existe sur chaque nœud",
+            "check_lv_not_exists": "Le nom du volume logique n'est pas déjà utilisé",
+            "check_free_space_each_node": "Espace libre suffisant sur chaque nœud",
+            "check_tools_lvcreate": "lvcreate disponible sur chaque nœud",
+            "check_plan_execute": "Plan cluster valide — tous les nœuds planifiés"
+          }
         }
       },
       "symmetry": {

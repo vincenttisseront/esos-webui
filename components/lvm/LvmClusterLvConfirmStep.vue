@@ -1,17 +1,44 @@
 <template>
   <div class="space-y-4">
-    <div class="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/80 dark:bg-amber-950/30 px-3 py-3 space-y-2 text-sm text-amber-950 dark:text-amber-100">
-      <p>{{ t('lvm.cluster.wizard.pv_create.confirm.intro') }}</p>
-      <ul class="list-disc list-inside space-y-1 text-xs">
-        <li>{{ t('lvm.cluster.wizard.pv_create.confirm.bullet_init') }}</li>
-        <li>{{ t('lvm.cluster.wizard.pv_create.confirm.bullet_cluster') }}</li>
-        <li>{{ t('lvm.cluster.wizard.pv_create.confirm.bullet_metadata') }}</li>
-      </ul>
+    <div>
+      <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">
+        {{ t('lvm.cluster.wizard.lv_create.confirm.title', { lvName }) }}
+      </h3>
+      <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+        {{ t('lvm.cluster.wizard.lv_create.confirm.summary', { vgName }) }}
+      </p>
     </div>
+
+    <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-900/50 px-3 py-3">
+      <div>
+        <dt class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          {{ t('lvm.cluster.wizard.lv_create.confirm.param_vg') }}
+        </dt>
+        <dd class="font-mono font-medium text-gray-900 dark:text-gray-100">{{ vgName }}</dd>
+      </div>
+      <div>
+        <dt class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          {{ t('lvm.cluster.wizard.lv_create.confirm.param_lv') }}
+        </dt>
+        <dd class="font-mono font-medium text-gray-900 dark:text-gray-100">{{ lvName }}</dd>
+      </div>
+      <div>
+        <dt class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          {{ t('lvm.cluster.wizard.lv_create.confirm.param_size') }}
+        </dt>
+        <dd class="font-mono font-medium text-gray-900 dark:text-gray-100">{{ sizeLabel }}</dd>
+      </div>
+      <div class="sm:col-span-2">
+        <dt class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          {{ t('lvm.cluster.wizard.lv_create.confirm.param_nodes') }}
+        </dt>
+        <dd class="text-gray-900 dark:text-gray-100">{{ targetNodesLabel }}</dd>
+      </div>
+    </dl>
 
     <div>
       <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">
-        {{ t('lvm.cluster.wizard.pv_create.confirm.commands_title') }}
+        {{ t('lvm.cluster.wizard.lv_create.confirm.commands_title') }}
       </p>
       <div class="space-y-1 rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
         <div
@@ -28,7 +55,7 @@
 
     <div>
       <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">
-        {{ t('lvm.cluster.wizard.pv_create.confirm.checks_title') }}
+        {{ t('lvm.cluster.wizard.lv_create.confirm.checks_title') }}
       </p>
       <ul class="space-y-1.5 text-sm">
         <li
@@ -43,7 +70,7 @@
           />
           <div>
             <span :class="check.ok ? 'text-gray-800 dark:text-gray-200' : 'text-red-700 dark:text-red-300'">
-              {{ t(`lvm.cluster.wizard.pv_create.confirm.check_${check.id}`) }}
+              {{ t(`lvm.cluster.wizard.lv_create.confirm.check_${check.id}`) }}
             </span>
             <p v-if="check.detail" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-mono break-all">
               {{ check.detail }}
@@ -54,12 +81,12 @@
     </div>
 
     <UAlert
-      v-if="existingPvBlockers.length"
+      v-if="lvExistsBlockers.length"
       color="red"
       variant="soft"
       icon="i-heroicons-exclamation-triangle"
-      :title="t('lvm.cluster.wizard.pv_create.confirm.pv_exists_title')"
-      :description="existingPvBlockers.join(' · ')"
+      :title="t('lvm.cluster.wizard.lv_create.confirm.lv_exists_title')"
+      :description="lvExistsBlockers.join(' · ')"
     />
 
     <UAlert
@@ -71,7 +98,7 @@
 
     <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2">
       <p class="text-xs text-gray-600 dark:text-gray-400">
-        {{ t('lvm.cluster.wizard.pv_create.confirm.phrase_help', { phrase: confirmationPhrase }) }}
+        {{ t('lvm.cluster.wizard.lv_create.confirm.phrase_help', { phrase: confirmationPhrase }) }}
       </p>
       <p class="font-mono text-sm font-semibold text-primary-700 dark:text-primary-300 select-all">
         {{ confirmationPhrase }}
@@ -88,21 +115,19 @@
 </template>
 
 <script setup lang="ts">
-import type {
-  ClusterLvmDiskMapping,
-  ClusterLvmExecutionPlan,
-  ClusterLvmPreflightResult,
-} from '~/types/lvm'
+import type { ClusterLvmExecutionPlan, ClusterLvmPreflightResult } from '~/types/lvm'
 import {
-  buildClusterPvConfirmChecks,
-  clusterPvConfirmBlocked,
-} from '~/utils/lvm-cluster-pv-confirm'
+  buildClusterLvConfirmChecks,
+  clusterLvConfirmBlocked,
+  extractLvExistsBlockers,
+} from '~/utils/lvm-cluster-lv-confirm'
+import { formatLvSizeGibLabel } from '~/utils/lvm-lv-wizard-ui'
 
 const props = defineProps<{
-  primarySanId: string
-  sourcePath: string
-  force: boolean
-  mappings: ClusterLvmDiskMapping[]
+  vgName: string
+  lvName: string
+  sizeGib: number
+  targetNodeLabels: string[]
   preflight: ClusterLvmPreflightResult | null
   plan: ClusterLvmExecutionPlan | null
   confirmation: string
@@ -119,6 +144,12 @@ const confirmationModel = computed({
 
 const confirmationPhrase = computed(() => props.plan?.confirmationPhrase ?? '')
 
+const sizeLabel = computed(() => formatLvSizeGibLabel(props.sizeGib) || '—')
+
+const targetNodesLabel = computed(() =>
+  props.targetNodeLabels.length ? props.targetNodeLabels.join(', ') : '—',
+)
+
 const commandRows = computed(() =>
   (props.plan?.nodeResults ?? [])
     .filter(n => n.command)
@@ -126,28 +157,26 @@ const commandRows = computed(() =>
 )
 
 const checks = computed(() =>
-  buildClusterPvConfirmChecks({
-    primarySanId: props.primarySanId,
-    sourcePath: props.sourcePath,
-    force: props.force,
-    mappings: props.mappings,
+  buildClusterLvConfirmChecks({
+    vgName: props.vgName,
+    lvName: props.lvName,
+    sizeBytes: Math.floor(Number(props.sizeGib) * 1024 ** 3),
     preflight: props.preflight,
     plan: props.plan,
-    labels: { force_acknowledged: t('lvm.cluster.wizard.pv_create.confirm.force_acknowledged') },
   }),
 )
 
-const existingPvBlockers = computed(() =>
-  [
+const lvExistsBlockers = computed(() =>
+  extractLvExistsBlockers([
     ...(props.preflight?.blockers ?? []),
     ...(props.plan?.blockers ?? []),
-  ].filter(b => /PV déjà présent|Déjà volume physique/i.test(b)),
+  ]),
 )
 
 const canExecute = computed(() =>
   confirmationPhrase.value
   && confirmationModel.value === confirmationPhrase.value
-  && !clusterPvConfirmBlocked(checks.value, props.plan),
+  && !clusterLvConfirmBlocked(checks.value, props.plan),
 )
 
 defineExpose({ canExecute })

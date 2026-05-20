@@ -87,7 +87,7 @@
 
     <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2">
       <p class="text-xs text-gray-600 dark:text-gray-400">
-        {{ t('lvm.cluster.wizard.vg_create.confirm.phrase_help') }}
+        {{ t('lvm.cluster.wizard.vg_create.confirm.phrase_help', { phrase: confirmationPhrase }) }}
       </p>
       <p class="font-mono text-sm font-semibold text-primary-700 dark:text-primary-300 select-all">
         {{ confirmationPhrase }}
