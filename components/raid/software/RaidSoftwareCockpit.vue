@@ -67,6 +67,7 @@
           :highlighted="arr.path === highlightedArrayPath"
           :is-clustered="isClustered"
           @stop="$emit('stop-md', $event)"
+          @add-member="(a, intent) => $emit('add-md-member', a, intent)"
           @set-faulty="(a, m) => $emit('set-faulty', a, m)"
           @remove-device="(a, m) => $emit('remove-md-device', a, m)"
         />
@@ -189,6 +190,7 @@ defineEmits<{
   'create-md': []
   refresh: []
   'stop-md': [arr: MdArray]
+  'add-md-member': [arr: MdArray, intent: import('~/types/raid').MdAddMemberIntent]
   'set-faulty': [arr: MdArray, member: MdMemberDevice]
   'remove-md-device': [arr: MdArray, member: MdMemberDevice]
   'assemble-stopped': [arr: StoppedMdArray]

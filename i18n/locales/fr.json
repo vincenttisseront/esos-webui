@@ -399,7 +399,7 @@
             "spare": "Ajouter un disque de secours",
             "unavailable_tooltip": "Disponible uniquement pour remplacer un membre manquant ou ajouter un spare.",
             "not_implemented": "Assistant non disponible pour le moment.",
-            "cluster_required": "En cluster HA, l'ajout de membre doit être planifié sur tous les nœuds concernés (à venir)."
+            "cluster_required": "En cluster HA, l'ajout de membre doit être planifié sur tous les nœuds concernés."
           }
         }
       },
@@ -425,6 +425,35 @@
         "cluster_title": "Rappel cluster HA",
         "toggle_show": "Afficher l'aide",
         "toggle_hide": "Masquer l'aide"
+      }
+    },
+    "add_member": {
+      "wizard": {
+        "title": "{intent}",
+        "step_intent": "Contexte",
+        "step_partition": "Partition",
+        "step_mapping": "Mapping cluster",
+        "step_confirm": "Confirmation",
+        "step_done": "Terminé",
+        "help_spare": "Ajout d'un disque de secours sur un tableau sain et complet. La partition doit être préparée (type Linux RAID) et libre.",
+        "help_replacement": "Remplacement d'un membre manquant ou défaillant. La reconstruction démarre après l'ajout.",
+        "failed_members": "{count} membre(s) en échec",
+        "partition_help": "Sélectionnez une partition membre RAID éligible (pas de disque entier).",
+        "no_candidates": "Aucune partition éligible. Préparez d'abord des partitions sur l'onglet Block Devices.",
+        "cluster_title": "Cluster HA",
+        "cluster_description": "La même opération mdadm --add sera planifiée sur chaque nœud avec la partition mappée.",
+        "mapping_manual": "Mapping manuel requis",
+        "rerun_cluster_preflight": "Relancer le préflight cluster",
+        "per_node_commands": "Commandes par nœud",
+        "confirm_hint": "Saisissez exactement :",
+        "understood": "Je comprends que cette action modifie la composition du tableau MD sur le ou les nœuds concernés.",
+        "done_title": "Membre ajouté",
+        "done_description": "L'opération s'est terminée. Vérifiez l'état de resync ou du spare dans l'aperçu RAID.",
+        "cancel": "Annuler",
+        "back": "Retour",
+        "next": "Suivant",
+        "submit": "Exécuter",
+        "close": "Fermer"
       }
     },
     "attention": {

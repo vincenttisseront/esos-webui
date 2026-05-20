@@ -399,7 +399,7 @@
             "spare": "Add hot spare disk",
             "unavailable_tooltip": "Only available to replace a missing member or add a hot spare.",
             "not_implemented": "Wizard not available yet.",
-            "cluster_required": "In an HA cluster, adding a member must be planned on all concerned nodes (coming soon)."
+            "cluster_required": "In an HA cluster, adding a member must be planned on all concerned nodes."
           }
         }
       },
@@ -425,6 +425,35 @@
         "cluster_title": "HA cluster reminder",
         "toggle_show": "Show help",
         "toggle_hide": "Hide help"
+      }
+    },
+    "add_member": {
+      "wizard": {
+        "title": "{intent}",
+        "step_intent": "Context",
+        "step_partition": "Partition",
+        "step_mapping": "Cluster mapping",
+        "step_confirm": "Confirmation",
+        "step_done": "Done",
+        "help_spare": "Add a hot spare to a healthy, full array. The partition must be prepared (Linux RAID type) and unused.",
+        "help_replacement": "Replace a missing or failed member. Rebuild starts after the add.",
+        "failed_members": "{count} failed member(s)",
+        "partition_help": "Select one eligible RAID member partition (not a whole disk).",
+        "no_candidates": "No eligible partition. Prepare partitions on the Block Devices tab first.",
+        "cluster_title": "HA cluster",
+        "cluster_description": "The same mdadm --add operation will be planned on each node with the mapped partition.",
+        "mapping_manual": "Manual mapping required",
+        "rerun_cluster_preflight": "Re-run cluster preflight",
+        "per_node_commands": "Commands per node",
+        "confirm_hint": "Type exactly:",
+        "understood": "I understand this changes MD array membership on the affected node(s).",
+        "done_title": "Member added",
+        "done_description": "Operation finished. Check resync or spare status in the RAID overview.",
+        "cancel": "Cancel",
+        "back": "Back",
+        "next": "Next",
+        "submit": "Execute",
+        "close": "Close"
       }
     },
     "attention": {

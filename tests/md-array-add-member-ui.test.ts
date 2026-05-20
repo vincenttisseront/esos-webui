@@ -79,14 +79,14 @@ describe('resolveMdAddMemberUi', () => {
     const ui = resolveMdAddMemberUi(baseArray({ state: 'degraded', activeDevices: 1 }))
     expect(ui.primary).toBe('replacement')
     expect(ui.showSpare).toBe(false)
-    expect(ui.enabled).toBe(false)
+    expect(ui.enabled).toBe(true)
   })
 
   it('shows spare for healthy RAID1 full array', () => {
     const ui = resolveMdAddMemberUi(baseArray())
     expect(ui.primary).toBe('spare')
     expect(ui.showSpare).toBe(true)
-    expect(ui.enabled).toBe(false)
+    expect(ui.enabled).toBe(true)
   })
 
   it('shows none for healthy RAID0 without spare support', () => {

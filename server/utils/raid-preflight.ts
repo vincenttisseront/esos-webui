@@ -7,6 +7,13 @@ import type {
   RaidBlockDevice, MdArray, RaidToolsInfo, StoppedMdArray,
 } from './raid-types'
 import { expectedMdCreateConfirmation, validateMdCreateRequest } from './raid-md-validation'
+import {
+  expectedClusterAddMdMemberConfirmation,
+  expectedMdAddReplacementConfirmation,
+  expectedMdAddSpareConfirmation,
+  validateMdAddDeviceRequest,
+  type MdAddMemberIntent,
+} from './raid-md-add-member-validation'
 import { PREPARE_MD_PARTITIONS_CONFIRMATION, validatePrepareMdPartitionsRequest } from './raid-md-partition-actions'
 import {
   buildMdAssembleCommand,
@@ -207,6 +214,29 @@ export async function runPreflight(
         commandPreview,
       }
     }
+    case 'md_add_device': {
+      const validation = validateMdAddDeviceRequest({
+        name: String(payload.name ?? ''),
+        device: String(payload.device ?? ''),
+        intent: payload.intent as MdAddMemberIntent | undefined,
+        blockDevices,
+        mdArrays,
+        tools,
+      })
+      blockers.push(...validation.blockers)
+      warnings.push(...validation.warnings)
+      impactedDevices.push(...validation.impactedDevices)
+      return {
+        ok: validation.ok,
+        riskLevel,
+        blockers,
+        warnings,
+        requiredConfirmation: buildConfirmationPhrase(req),
+        impactedDevices: [...new Set(impactedDevices)],
+        detectedUsage,
+        commandPreview: validation.commandPreview,
+      }
+    }
     case 'md_remove_device': {
       const member = String(payload.device ?? '')
       impactedDevices.push(member)
@@ -270,6 +300,14 @@ function buildConfirmationPhrase(req: RaidPreflightRequest): string {
       return `REMOVE ${String(payload.device ?? '')}`
     case 'md_set_faulty':
       return `FAULTY ${String(payload.device ?? '')}`
+    case 'md_add_device': {
+      const intent = payload.intent as MdAddMemberIntent | undefined
+      const name = String(payload.name ?? 'md0')
+      const device = String(payload.device ?? '')
+      if (intent === 'replacement') return expectedMdAddReplacementConfirmation(name, device)
+      if (intent === 'spare') return expectedMdAddSpareConfirmation(name, device)
+      return expectedClusterAddMdMemberConfirmation(name, 'spare')
+    }
     default:
       return 'CONFIRM'
   }

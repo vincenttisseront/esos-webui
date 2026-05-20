@@ -11,6 +11,7 @@ import type {
   WipeMdSignaturesRequest, WipeMdSignaturesResponse,
   ClusterMdExecutionPlan, ClusterMdExecutionRequest, StopMdArrayResponse,
   ClusterStoragePreflightRequest, ClusterStoragePreflightResult, RaidClusterPreparedMappingHint,
+  AddMdMemberRequest, AddMdMemberResponse, AddMdMemberExecutionPlan,
   PartitionMetadataDiagnostics, ZeroMdSuperblockPartitionResult,
 } from '~/types/raid'
 import {
@@ -392,12 +393,18 @@ export const useRaidStore = defineStore('raid', {
       return result
     },
 
-    async addMdDevice(name: string, device: string) {
-      const result = await $fetch(`/api/raid/software/arrays/${encodeURIComponent(name)}/devices`, {
-        method: 'POST',
-        body: { device },
-        params: this.query(),
-      })
+    async planAddMdMember(name: string, req: Omit<AddMdMemberRequest, 'confirmation'>) {
+      return await $fetch<AddMdMemberExecutionPlan>(
+        `/api/raid/software/arrays/${encodeURIComponent(name)}/devices/plan`,
+        { method: 'POST', body: req, params: this.query() },
+      )
+    },
+
+    async addMdMember(name: string, req: AddMdMemberRequest) {
+      const result = await $fetch<AddMdMemberResponse>(
+        `/api/raid/software/arrays/${encodeURIComponent(name)}/devices`,
+        { method: 'POST', body: req, params: this.query() },
+      )
       await this.fetchOverview(true)
       return result
     },

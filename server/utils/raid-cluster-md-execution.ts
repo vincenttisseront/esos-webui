@@ -5,6 +5,7 @@ import { createError } from 'h3'
 import { getSanSummary } from '../db/repositories/san.repository'
 import { invalidateCacheKey } from './cache'
 import {
+  addMdDevice,
   assembleMdArray,
   buildMdAssembleCommand,
   expectedCurrentNodeOnlyStopConfirmation,
@@ -17,7 +18,19 @@ import {
   wipeMdSignatures,
   zeroMdSuperblocks,
 } from './raid-md-actions'
-import { runClusterStoragePreflight } from './raid-cluster-storage-preflight'
+import {
+  buildAddMdMemberClusterExecutionPlan,
+  runClusterStoragePreflight,
+  type AddMdMemberClusterNodeResult,
+} from './raid-cluster-storage-preflight'
+import {
+  computeAddMdMemberPlanToken,
+  expectedClusterAddMdMemberConfirmation,
+  expectedMdAddReplacementConfirmation,
+  expectedMdAddSpareConfirmation,
+  validateMdAddDeviceRequest,
+  type MdAddMemberIntent,
+} from './raid-md-add-member-validation'
 import {
   buildCleanupNodeResults,
   computeCleanupMdPlanToken,
@@ -66,6 +79,9 @@ import type {
   StopMdArrayRequest,
   WipeMdSignaturesRequest,
   ZeroMdSuperblocksRequest,
+  AddMdMemberRequest,
+  AddMdMemberResponse,
+  AddMdMemberExecutionPlan,
 } from './raid-types'
 
 export const CLUSTER_MD_BLOCKED_MESSAGE =
@@ -1038,6 +1054,155 @@ export async function runClusterWipeMdSignatures(
     stdout: clusterResult.nodeResults.map(n => `[${n.label}]\n${n.stdout ?? ''}`).join('\n'),
     commands: nodeResults.flatMap(n => (n.command ?? '').split('\n')).filter(Boolean),
     clusterExecution: clusterResult,
+  }
+}
+
+export async function buildAddMdMemberExecutionPlanForCluster(
+  sanId: string,
+  arrayName: string,
+  body: AddMdMemberRequest,
+): Promise<AddMdMemberExecutionPlan> {
+  const clusterExecution = body.clusterExecution!
+  const name = normalizeMdArrayName(arrayName)
+  const plan = await buildAddMdMemberClusterExecutionPlan({
+    clusterId: clusterExecution.clusterId,
+    primarySanId: clusterExecution.primarySanId,
+    arrayName: name,
+    device: body.device,
+    intent: body.intent,
+    diskMappings: clusterExecution.diskMappings,
+  })
+  const planToken = computeAddMdMemberPlanToken({
+    arrayName: name,
+    intent: body.intent,
+    primarySanId: clusterExecution.primarySanId,
+    device: body.device,
+    nodeSanIds: plan.nodeResults.map(n => n.sanId),
+  })
+  return {
+    mode: 'cluster',
+    intent: body.intent,
+    sourceSanId: clusterExecution.primarySanId,
+    clusterId: clusterExecution.clusterId,
+    planToken,
+    confirmationPhrase: expectedClusterAddMdMemberConfirmation(name, body.intent),
+    nodeResults: plan.nodeResults.map(n => ({
+      ...n,
+      status: n.status,
+    })),
+    preflightOk: plan.preflight.ok,
+  }
+}
+
+export async function runAddMdMember(
+  sanId: string,
+  arrayName: string,
+  body: AddMdMemberRequest,
+): Promise<AddMdMemberResponse> {
+  const name = normalizeMdArrayName(arrayName)
+  const clusterCtx = assertClusteredSanAllowsMutation(sanId, body.clusterExecution)
+
+  if (!clusterCtx) {
+    const overview = await withSanContext(sanId, async () => {
+      const manager = getActiveSSHManager()
+      if (!manager?.isReady()) throw createError({ statusCode: 503, statusMessage: 'SSH non connecté' })
+      return await collectRaidOverview(manager)
+    })
+    const validation = validateMdAddDeviceRequest({
+      name,
+      device: body.device,
+      intent: body.intent,
+      blockDevices: overview.blockDevices,
+      mdArrays: overview.mdArrays,
+      tools: overview.tools,
+    })
+    if (!validation.ok) {
+      throw createError({ statusCode: 409, statusMessage: validation.blockers.join('; ') })
+    }
+    const expected = body.intent === 'replacement'
+      ? expectedMdAddReplacementConfirmation(name, body.device)
+      : expectedMdAddSpareConfirmation(name, body.device)
+    if (body.confirmation !== expected) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: `Confirmation invalide (attendu : "${expected}")`,
+      })
+    }
+    const result = await withSanContext(sanId, async () => {
+      const manager = getActiveSSHManager()
+      if (!manager?.isReady()) throw createError({ statusCode: 503, statusMessage: 'SSH non connecté' })
+      return await addMdDevice(manager, name, body.device)
+    })
+    invalidateCacheKey(`raid-overview-${sanId}`)
+    return {
+      ok: true,
+      intent: body.intent,
+      mode: 'standalone',
+      nodeResults: [{
+        sanId,
+        label: getSanSummary(sanId)?.label ?? sanId,
+        role: getSanSummary(sanId)?.clusterRole ?? null,
+        source: 'primary',
+        arrayPath: validation.arrayPath ?? `/dev/${name}`,
+        device: body.device,
+        command: validation.commandPreview ?? `mdadm /dev/${name} --add ${body.device}`,
+        status: 'success',
+        stdout: result.stdout,
+      }],
+      refreshedSanIds: [sanId],
+      stdout: result.stdout,
+    }
+  }
+
+  if (clusterCtx.mode === 'local') {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Récupération locale pour ajout de membre MD non implémentée — utilisez le flux cluster avec mapping',
+    })
+  }
+
+  const plan = await buildAddMdMemberExecutionPlanForCluster(sanId, name, body)
+  validateClusterMdPlanToken(body.clusterExecution!.planToken, plan.planToken)
+  if (body.confirmation !== plan.confirmationPhrase) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: `Confirmation invalide (attendu : "${plan.confirmationPhrase}")`,
+    })
+  }
+
+  const refreshedSanIds = new Set<string>()
+  const nodeResults: AddMdMemberNodeResult[] = plan.nodeResults.map(n => ({ ...n }))
+
+  for (const node of nodeResults) {
+    node.status = 'running'
+    try {
+      const result = await withSanContext(node.sanId, async () => {
+        const manager = getActiveSSHManager()
+        if (!manager?.isReady()) throw createError({ statusCode: 503, statusMessage: 'SSH non connecté' })
+        return await addMdDevice(manager, name, node.device)
+      })
+      node.status = 'success'
+      node.stdout = result.stdout
+      refreshedSanIds.add(node.sanId)
+      invalidateCacheKey(`raid-overview-${node.sanId}`)
+    } catch (err: any) {
+      node.status = 'failed'
+      node.error = err?.statusMessage ?? err?.message ?? 'Erreur ajout membre MD'
+      throw createError({
+        statusCode: err?.statusCode ?? 500,
+        statusMessage: `${node.label} : ${node.error}`,
+        data: { nodeResults, refreshedSanIds: [...refreshedSanIds] },
+      })
+    }
+  }
+
+  return {
+    ok: nodeResults.every(n => n.status === 'success'),
+    intent: body.intent,
+    mode: 'cluster',
+    nodeResults,
+    refreshedSanIds: [...refreshedSanIds],
+    stdout: nodeResults.map(n => `[${n.label}]\n${n.stdout ?? ''}`).join('\n'),
   }
 }
 

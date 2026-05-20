@@ -10,6 +10,10 @@ import { buildClusterMdRecoveryAssessment } from './raid-cluster-md-node-state'
 import { buildLocalRecoveryOffered } from './raid-local-recovery'
 import { runPreflight } from './raid-preflight'
 import { buildMdCreateCommand, MD_CREATE_EMPTY_MEMBERS_MESSAGE } from './raid-md-validation'
+import {
+  buildMdAddDeviceCommand,
+  type MdAddMemberIntent,
+} from './raid-md-add-member-validation'
 import type {
   ClusterDiskMapping,
   ClusterDiskMappingCandidate,
@@ -33,6 +37,7 @@ export const SYNC_LIMITATIONS = CLUSTER_SYNC_LIMITATION_LINES
 export const CLUSTER_MD_ACTIONS: ClusterStorageAction[] = [
   'prepare_md_partitions',
   'create_md',
+  'md_add_device',
   'stop_md',
   'assemble_md',
   'zero_md_superblocks',
@@ -195,7 +200,7 @@ export async function runClusterStoragePreflight(
     warnings.push(...recoveryAssessment.warnings)
   }
 
-  if (req.action === 'create_md') {
+  if (req.action === 'create_md' || req.action === 'md_add_device') {
     for (const node of inventories) {
       if (node.tools && !node.tools.mdadm) blockers.push(`${node.label} : mdadm indisponible`)
     }
@@ -451,6 +456,119 @@ export function buildCreateMdArrayNodeResults(
   return nodeResults
 }
 
+export interface AddMdMemberClusterNodeResult {
+  sanId: string
+  label: string
+  role: string | null
+  source: 'primary' | 'peer'
+  arrayPath: string
+  device: string
+  command: string
+  status: 'pending' | 'running' | 'success' | 'failed'
+  participation: 'execute' | 'blocked'
+  error?: string
+  stdout?: string
+}
+
+export async function buildAddMdMemberClusterExecutionPlan(input: {
+  clusterId?: string
+  primarySanId: string
+  arrayName: string
+  device: string
+  intent: MdAddMemberIntent
+  diskMappings?: ClusterDiskMappingInput[]
+}): Promise<{
+  preflight: ClusterStoragePreflightResult
+  nodeResults: AddMdMemberClusterNodeResult[]
+}> {
+  const name = input.arrayName.trim()
+  const payload = { name, device: input.device, intent: input.intent }
+  const preflight = await runClusterStoragePreflight({
+    clusterId: input.clusterId,
+    primarySanId: input.primarySanId,
+    action: 'md_add_device',
+    payload,
+    diskMappings: input.diskMappings ?? [],
+  })
+  if (!preflight.ok) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: `Préflight stockage cluster non validé : ${preflight.blockers.join('; ')}`,
+    })
+  }
+  return { preflight, nodeResults: buildAddMdMemberNodeResults(preflight, input) }
+}
+
+export function buildAddMdMemberNodeResults(
+  preflight: ClusterStoragePreflightResult,
+  input: {
+    primarySanId: string
+    arrayName: string
+    device: string
+    intent: MdAddMemberIntent
+  },
+): AddMdMemberClusterNodeResult[] {
+  const selectedPaths = selectedStoragePaths('md_add_device', {
+    name: input.arrayName,
+    device: input.device,
+    intent: input.intent,
+  })
+  if (selectedPaths.length === 0) {
+    throw createError({ statusCode: 400, statusMessage: 'Partition membre requise' })
+  }
+  const blockers: string[] = []
+  const nodeResults: AddMdMemberClusterNodeResult[] = []
+  const arrayPath = `/dev/${input.arrayName.replace(/^\/dev\//, '')}`
+  const nodes = [
+    ...preflight.nodes.filter(n => n.sanId === input.primarySanId),
+    ...preflight.nodes.filter(n => n.sanId !== input.primarySanId),
+  ]
+
+  for (const node of nodes) {
+    const device = node.sanId === input.primarySanId
+      ? input.device
+      : (() => {
+          const mapping = preflight.mappings.find(m =>
+            m.sourcePath === input.device && m.targetSanId === node.sanId,
+          )
+          if (!mapping?.targetPath) {
+            blockers.push(`${node.label} : mapping manquant pour ${input.device}`)
+            return ''
+          }
+          if (mapping.confidence === 'none' || mapping.blockers.length > 0) {
+            blockers.push(`${node.label} : mapping invalide pour ${input.device}`)
+          }
+          return mapping.targetPath
+        })()
+
+    if (!device) continue
+    const nodePreflight = preflight.perNodePreflights[node.sanId]
+    if (!nodePreflight?.ok) {
+      blockers.push(`${node.label} : préflight nœud indisponible ou bloquant`)
+      continue
+    }
+    nodeResults.push({
+      sanId: node.sanId,
+      label: node.label,
+      role: node.role,
+      source: node.sanId === input.primarySanId ? 'primary' : 'peer',
+      arrayPath,
+      device,
+      command: buildMdAddDeviceCommand(arrayPath, device),
+      status: 'pending',
+      participation: 'execute',
+    })
+  }
+
+  if (nodeResults.length !== preflight.nodes.length) {
+    blockers.push('Plan ajout membre MD incomplet : tous les nœuds du cluster doivent être planifiés')
+  }
+  if (blockers.length > 0) {
+    throw createError({ statusCode: 409, statusMessage: blockers.join('; ') })
+  }
+  return nodeResults
+}
+
 function resolveClusterNodes(input: { clusterId?: string; nodeIds?: string[] }): ClusterSanRow[] {
   const db = getDB()
   if (input.nodeIds?.length) {
@@ -549,6 +667,10 @@ function selectedStoragePaths(action: ClusterStorageAction, payload: unknown): s
   if (action === 'create_md') {
     return Array.isArray(p.devices) ? p.devices.filter(v => typeof v === 'string') as string[] : []
   }
+  if (action === 'md_add_device') {
+    const device = typeof p.device === 'string' ? p.device : ''
+    return device ? [device] : []
+  }
   if (action === 'stop_md') return []
   if (action === 'assemble_md' || action === 'zero_md_superblocks' || action === 'wipe_md_signatures') {
     return Array.isArray(p.members) ? p.members.filter(v => typeof v === 'string') as string[] : []
@@ -560,6 +682,7 @@ function remapPayload(action: ClusterStorageAction, payload: unknown, mappedPath
   const p = { ...(payload as Record<string, unknown>) }
   if (action === 'prepare_md_partitions') p.disks = mappedPaths
   else if (action === 'create_md') p.devices = mappedPaths
+  else if (action === 'md_add_device') p.device = mappedPaths[0]
   else if (action === 'assemble_md' || action === 'zero_md_superblocks' || action === 'wipe_md_signatures') {
     p.members = mappedPaths
   }

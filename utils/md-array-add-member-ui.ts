@@ -5,8 +5,7 @@ export type MdAddMemberAction = 'none' | 'replacement' | 'spare'
 export interface MdAddMemberUiState {
   primary: MdAddMemberAction
   showSpare: boolean
-  /** Wizard not implemented yet — buttons stay disabled. */
-  enabled: false
+  enabled: boolean
 }
 
 const SPARE_SUPPORTED_LEVELS = new Set<MdArray['raidLevel']>(['1', '4', '5', '6', '10'])
@@ -36,12 +35,12 @@ export function isHealthyFullArray(arr: MdArray): boolean {
 
 export function resolveMdAddMemberUi(arr: MdArray): MdAddMemberUiState {
   if (arrayNeedsReplacementMember(arr)) {
-    return { primary: 'replacement', showSpare: false, enabled: false }
+    return { primary: 'replacement', showSpare: false, enabled: true }
   }
   const showSpare = isHealthyFullArray(arr) && arraySupportsSpareAdd(arr)
   return {
     primary: showSpare ? 'spare' : 'none',
     showSpare,
-    enabled: false,
+    enabled: showSpare,
   }
 }

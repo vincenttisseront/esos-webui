@@ -1,35 +1,27 @@
 /**
- * POST /api/raid/software/arrays/[name]/devices — Ajouter un device à un MD array (SDD v3.12 §8.4).
+ * POST /api/raid/software/arrays/[name]/devices — Ajouter un membre à un MD array (SDD v3.12 §8.4).
  */
-import { getActiveSSHManager, withSanContext } from '../../../../../utils/ssh-runtime'
-import { addMdDevice } from '../../../../../utils/raid-md-actions'
-import { invalidateCacheKey } from '../../../../../utils/cache'
 import { requireSanIdQuery } from '../../../../../utils/san-query'
+import { runAddMdMember } from '../../../../../utils/raid-cluster-md-execution'
+import type { AddMdMemberRequest } from '../../../../../utils/raid-types'
 
 export default defineEventHandler(async (event) => {
   const sanId = requireSanIdQuery(event)
   const name = getRouterParam(event, 'name')
-  const body = await readBody<{ device: string }>(event)
+  const body = await readBody<AddMdMemberRequest>(event)
 
   if (!name) throw createError({ statusCode: 400, statusMessage: 'name requis' })
   if (!body?.device) throw createError({ statusCode: 400, statusMessage: 'device requis' })
-
-  const run = async () => {
-    const manager = getActiveSSHManager()
-    if (!manager?.isReady()) {
-      throw createError({ statusCode: 503, statusMessage: 'SSH non connecté' })
-    }
-    const result = await addMdDevice(manager, name, body.device)
-    invalidateCacheKey(`raid-overview-${sanId}`)
-    return result
-  }
+  if (!body.intent) throw createError({ statusCode: 400, statusMessage: 'intent requis' })
+  if (!body.confirmation) throw createError({ statusCode: 400, statusMessage: 'confirmation requise' })
 
   try {
-    return await withSanContext(sanId, run)
+    return await runAddMdMember(sanId, name, body)
   } catch (err: any) {
     throw createError({
       statusCode: err.statusCode ?? 500,
       statusMessage: err.statusMessage ?? err.message ?? 'Erreur add device MD',
+      data: err.data,
     })
   }
 })

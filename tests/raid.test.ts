@@ -24,7 +24,20 @@ import {
 import { runPreflight } from '../server/utils/raid-preflight'
 import type { StoppedMdArray } from '../server/utils/raid-types'
 import { validatePrepareMdPartitionsRequest } from '../server/utils/raid-md-partition-actions'
-import { buildCreateMdArrayNodeResults, buildPrepareMdPartitionsNodePlans, duplicateManualMappingBlockers, mapDeviceToPeer, runNodePreflight } from '../server/utils/raid-cluster-storage-preflight'
+import {
+  buildAddMdMemberNodeResults,
+  buildCreateMdArrayNodeResults,
+  buildPrepareMdPartitionsNodePlans,
+  duplicateManualMappingBlockers,
+  mapDeviceToPeer,
+  runClusterStoragePreflight,
+  runNodePreflight,
+} from '../server/utils/raid-cluster-storage-preflight'
+import {
+  buildMdAddDeviceCommand,
+  expectedMdAddSpareConfirmation,
+  validateMdAddDeviceRequest,
+} from '../server/utils/raid-md-add-member-validation'
 import { detectStoppedMdArrays } from '../server/utils/stopped-md-arrays'
 import { derivePartitionMappingsFromDiskMappings, expectedFirstPartitionPath, filterPartitionMappingsForDevices } from '../utils/raid-cluster-mapping'
 
@@ -1769,5 +1782,99 @@ describe('Stopped MD — preflight assemble_md / zero_md_superblocks', () => {
     expect(result.ok).toBe(true)
     expect(result.commandPreview).toContain('mdadm --zero-superblock --force /dev/sda1')
     expect(result.commandPreview).not.toContain('wipefs -a')
+  })
+})
+
+describe('md_add_device validation', () => {
+  const md0: import('../server/utils/raid-types').MdArray = {
+    name: 'md0',
+    path: '/dev/md0',
+    raidLevel: '1',
+    state: 'clean',
+    raidDevices: 2,
+    activeDevices: 2,
+    workingDevices: 2,
+    failedDevices: 0,
+    spareDevices: 0,
+    members: [
+      { path: '/dev/sdb1', state: ['active', 'sync'] },
+      { path: '/dev/sdc1', state: ['active', 'sync'] },
+    ],
+    usedBy: [],
+    warnings: [],
+  }
+
+  function eligiblePart(path: string) {
+    return {
+      name: path.replace('/dev/', ''),
+      path,
+      sizeBytes: 1_000_000,
+      type: 'part' as const,
+      usedBy: [] as const,
+      eligibleForMd: true,
+      eligibleForHardwareRaid: false,
+      mdEligibilityReasons: [] as string[],
+      eligibleForMdPartitionPrep: false,
+      mdPartitionPrepReasons: [] as string[],
+      warnings: [] as string[],
+      partitionTypeCode: '0xfd',
+    }
+  }
+
+  it('buildMdAddDeviceCommand formats mdadm --add', () => {
+    expect(buildMdAddDeviceCommand('/dev/md0', '/dev/sdd1')).toBe('mdadm /dev/md0 --add /dev/sdd1')
+  })
+
+  it('allows spare on healthy RAID1', () => {
+    const v = validateMdAddDeviceRequest({
+      name: 'md0',
+      device: '/dev/sdd1',
+      intent: 'spare',
+      mdArrays: [md0],
+      blockDevices: [eligiblePart('/dev/sdd1')],
+      tools: { mdadm: true } as any,
+    })
+    expect(v.ok).toBe(true)
+    expect(v.commandPreview).toContain('mdadm /dev/md0 --add /dev/sdd1')
+  })
+
+  it('blocks spare on degraded array', () => {
+    const v = validateMdAddDeviceRequest({
+      name: 'md0',
+      device: '/dev/sdd1',
+      intent: 'spare',
+      mdArrays: [{ ...md0, state: 'degraded', activeDevices: 1 }],
+      blockDevices: [eligiblePart('/dev/sdd1')],
+      tools: { mdadm: true } as any,
+    })
+    expect(v.ok).toBe(false)
+  })
+
+  it('allows replacement on degraded array', () => {
+    const v = validateMdAddDeviceRequest({
+      name: 'md0',
+      device: '/dev/sdd1',
+      intent: 'replacement',
+      mdArrays: [{ ...md0, state: 'degraded', activeDevices: 1 }],
+      blockDevices: [eligiblePart('/dev/sdd1')],
+      tools: { mdadm: true } as any,
+    })
+    expect(v.ok).toBe(true)
+  })
+
+  it('runPreflight md_add_device uses spare confirmation phrase', async () => {
+    const result = await runPreflight(
+      {} as any,
+      {
+        backend: 'software_md',
+        action: 'md_add_device',
+        payload: { name: 'md0', device: '/dev/sdd1', intent: 'spare' },
+      },
+      [eligiblePart('/dev/sdd1')],
+      [md0],
+      { mdadm: true } as any,
+    )
+    expect(result.ok).toBe(true)
+    expect(result.requiredConfirmation).toBe(expectedMdAddSpareConfirmation('md0', '/dev/sdd1'))
   })
 })

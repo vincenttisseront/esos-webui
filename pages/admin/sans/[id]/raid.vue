@@ -201,6 +201,7 @@
       @create-md="openMdWizard()"
       @refresh="manualRefreshRaid()"
       @stop-md="handleStopMd"
+      @add-md-member="(arr, intent) => openAddMdMemberWizard(arr, intent)"
       @set-faulty="(arr, m) => handleSetFaulty(arr, m)"
       @remove-md-device="(arr, m) => handleRemoveMdDevice(arr, m)"
       @assemble-stopped="handleAssembleStoppedMd"
@@ -356,7 +357,7 @@
 </template>
 
 <script setup lang="ts">
-import type { CreateMdArrayWizardConfirmPayload, MdArray, MdMemberDevice, HardwareRaidController, HardwareRaidLogicalDrive, RaidPreflightResult, StoppedMdArray, ZeroMdSuperblockPartitionResult } from '~/types/raid'
+import type { CreateMdArrayWizardConfirmPayload, MdAddMemberIntent, MdArray, MdMemberDevice, HardwareRaidController, HardwareRaidLogicalDrive, RaidPreflightResult, StoppedMdArray, ZeroMdSuperblockPartitionResult } from '~/types/raid'
 import type { SanSummary } from '~/server/db/repositories/san.repository'
 import {
   advancedCleanupMembersForArray,
@@ -557,6 +558,25 @@ function isMdCreateConfirmPayload(value: unknown): value is CreateMdArrayWizardC
     && 'arrayPath' in value
     && ((value as CreateMdArrayWizardConfirmPayload).action === 'view-array'
       || (value as CreateMdArrayWizardConfirmPayload).action === 'close')
+}
+
+async function openAddMdMemberWizard(arr: MdArray, intent: MdAddMemberIntent) {
+  if (!raid.overview) return
+  const { default: Wizard } = await import('~/components/raid/AddMdMemberWizard.vue')
+  try {
+    await openModal({
+      component: Wizard,
+      props: {
+        array: arr,
+        intent,
+        blockDevices: raid.blockDevices,
+        sourceSanId: sanId,
+        clusterId: san.value?.clusterId ?? null,
+        onNavigateDetection: navigateMdDetectionItem,
+        persistent: true,
+      },
+    })
+  } catch { /* dismissed */ }
 }
 
 async function openMdWizard() {

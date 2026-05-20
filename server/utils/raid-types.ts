@@ -327,8 +327,8 @@ export interface PreparedMdPartitionPreview {
   expectedPartitionPath: string
 }
 
-export type ClusterMdPreflightAction = 'stop_md' | 'assemble_md' | 'zero_md_superblocks' | 'wipe_md_signatures'
-export type ClusterStorageAction = 'prepare_md_partitions' | 'create_md' | ClusterMdPreflightAction
+export type ClusterMdPreflightAction = 'stop_md' | 'assemble_md' | 'zero_md_superblocks' | 'wipe_md_signatures' | 'md_add_device'
+export type ClusterStorageAction = 'prepare_md_partitions' | 'create_md' | 'md_add_device' | ClusterMdPreflightAction
 export type ClusterDiskMappingConfidence = 'high' | 'medium' | 'low' | 'none'
 
 export interface ClusterDiskMappingInput {
@@ -680,6 +680,50 @@ export interface AssembleMdArrayResponse {
   stdout?: string
   command?: string
   clusterExecution?: ClusterMdExecutionResult
+}
+
+export type MdAddMemberIntent = 'spare' | 'replacement'
+
+export interface AddMdMemberRequest {
+  device: string
+  intent: MdAddMemberIntent
+  confirmation: string
+  clusterExecution?: ClusterMdExecutionRequest
+}
+
+export interface AddMdMemberNodeResult {
+  sanId: string
+  label: string
+  role: string | null
+  source: 'primary' | 'peer'
+  arrayPath: string
+  device: string
+  command: string
+  status: 'pending' | 'running' | 'success' | 'failed' | 'skipped'
+  participation?: ClusterMdNodeParticipation
+  stdout?: string
+  stderr?: string
+  error?: string
+}
+
+export interface AddMdMemberExecutionPlan {
+  mode: 'standalone' | 'cluster'
+  intent: MdAddMemberIntent
+  sourceSanId: string
+  clusterId?: string
+  planToken: string
+  confirmationPhrase: string
+  nodeResults: AddMdMemberNodeResult[]
+  preflightOk: boolean
+}
+
+export interface AddMdMemberResponse {
+  ok: boolean
+  intent: MdAddMemberIntent
+  mode: 'standalone' | 'cluster'
+  nodeResults: AddMdMemberNodeResult[]
+  refreshedSanIds?: string[]
+  stdout?: string
 }
 
 export interface CommandProbeResult {
