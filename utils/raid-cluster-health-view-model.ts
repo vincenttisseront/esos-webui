@@ -15,12 +15,24 @@ import type {
   RaidTechnicalDetail,
 } from '~/types/raid'
 import {
+  mapClusterStorageAttentionToRaidItems,
+  mergeAttentionWithoutDuplicates,
+} from '~/utils/raid-cluster-attention-mapper'
+import { findClusterUuidMismatches } from '~/utils/cluster-md-symmetry'
+import type { ClusterAttentionPoint } from '~/types/cluster-admin'
+import {
   collectActiveMdMemberPaths,
   isAttentionItem,
   isOrphanMetadataDetectionItem,
   sortAttentionItems,
 } from '~/utils/raid-md-detection'
 import { hasActiveMdArrayProgress, primaryResyncSummary } from '~/utils/raid-md-progress'
+
+const CLUSTER_ACTION_CATEGORIES = new Set<RaidActionableCategory>([
+  'cluster_asymmetry',
+  'cluster_uuid_mismatch',
+  'metadata_peer',
+])
 
 export type RaidCockpitTranslate = (
   key: string,
@@ -42,36 +54,37 @@ function activeKernelNames(summary: MdDetectionSummary | undefined): Set<string>
   return names
 }
 
+function activeArrayNamesOnNode(
+  mdArrays: MdArray[],
+  summary?: MdDetectionSummary,
+): Set<string> {
+  const names = new Set(mdArrays.map(a => a.name))
+  if (summary) {
+    for (const name of activeKernelNames(summary)) names.add(name)
+    for (const a of summary.activeMdArrays ?? []) names.add(a.name)
+  }
+  return names
+}
+
+function peerActiveArrayNames(peer: MdDetectionSummary): Set<string> {
+  const names = activeKernelNames(peer)
+  for (const a of peer.activeMdArrays ?? []) names.add(a.name)
+  return names
+}
+
 function detectClusterAsymmetry(
   localArrays: MdArray[],
   clusterPeers: MdDetectionSummary[],
   currentSanId: string,
+  localDetection?: MdDetectionSummary,
 ): { critical: boolean; details: string[] } {
   const details: string[] = []
-  const localActive = new Set(localArrays.map(a => a.name))
-  const localDetection: MdDetectionSummary = {
-    nodeSanId: currentSanId,
-    nodeLabel: '',
-    hasAnyMdState: true,
-    items: localArrays.map(arr => ({
-      kind: 'active_kernel' as const,
-      path: arr.path,
-      nodeSanId: currentSanId,
-      nodeLabel: '',
-      severity: 'info' as const,
-      summary: '',
-      reasons: [],
-      uiAnchor: 'software-active' as const,
-      relatedArrayPath: arr.path,
-    })),
-  }
-  const localNames = activeKernelNames(localDetection)
-  for (const name of localActive) localNames.add(name)
+  const localNames = activeArrayNamesOnNode(localArrays, localDetection)
 
   let critical = false
   for (const peer of clusterPeers) {
     if (peer.nodeSanId === currentSanId) continue
-    const peerActive = activeKernelNames(peer)
+    const peerActive = peerActiveArrayNames(peer)
     for (const name of localNames) {
       if (!peerActive.has(name)) {
         critical = true
@@ -272,6 +285,65 @@ function deriveHealth(actionable: RaidActionableItem[]): RaidCockpitHealth {
   return 'healthy'
 }
 
+function mergeWorstHealth(a: RaidCockpitHealth, b: RaidCockpitHealth): RaidCockpitHealth {
+  const rank: Record<RaidCockpitHealth, number> = { healthy: 0, warning: 1, critical: 2, unknown: 3 }
+  return rank[a] >= rank[b] ? a : b
+}
+
+function buildClusterUuidMismatchItems(
+  mdArrays: MdArray[],
+  clusterPeers: import('~/types/raid').MdDetectionSummary[],
+  currentSanId: string,
+  currentLabel: string,
+  t: RaidCockpitTranslate,
+): RaidActionableItem[] {
+  const mismatches = findClusterUuidMismatches({
+    currentSanId,
+    currentLabel,
+    localArrays: mdArrays.map(a => ({
+      name: a.name,
+      path: a.path,
+      uuid: a.uuid,
+      state: a.state,
+    })),
+    peerSnapshots: clusterPeers.map(p => ({
+      nodeSanId: p.nodeSanId,
+      nodeLabel: p.nodeLabel,
+      activeMdArrays: p.activeMdArrays,
+    })),
+  })
+  const items: RaidActionableItem[] = []
+  for (const m of mismatches) {
+    const localArr = mdArrays.find(a => a.name === m.arrayName)
+    const localHealthy = localArr
+      && (localArr.state === 'clean' || localArr.state === 'active')
+      && localArr.failedDevices === 0
+    if (!localHealthy) continue
+    const peerNode = m.conflict.nodes.find(n => n.sanId !== currentSanId)
+    items.push({
+      id: `cluster_uuid_mismatch:${m.arrayName}`,
+      severity: 'warning',
+      category: 'cluster_uuid_mismatch',
+      title: t('raid.cockpit.item.cluster_uuid_mismatch.title'),
+      impact: t('raid.cockpit.item.cluster_uuid_mismatch.impact'),
+      recommendation: t('raid.cockpit.item.cluster_uuid_mismatch.recommendation', {
+        uuids: m.uniqueUuids.join(', '),
+      }),
+      primaryActionLabel: peerNode
+        ? t('raid.cockpit.item.cluster_uuid_mismatch.action_peer', { label: peerNode.label })
+        : t('raid.cockpit.item.cluster_uuid_mismatch.action'),
+      primaryActionTarget: peerNode
+        ? { type: 'navigate', tab: 'software', sanId: peerNode.sanId }
+        : { type: 'scroll', tab: 'software', anchor: 'raid-software-active', modal: 'cluster_recovery', arrayName: m.arrayName },
+      details: [
+        `${m.arrayName}: ${m.uniqueUuids.join(' ≠ ')}`,
+        ...m.conflict.nodes.map(n => `${n.label} (${n.sanId}): ${n.uuid}`),
+      ],
+    })
+  }
+  return items
+}
+
 function deriveProductionImpact(
   health: RaidCockpitHealth,
   mdArrays: MdArray[],
@@ -285,10 +357,15 @@ function deriveProductionImpact(
 
 function buildHeadline(
   health: RaidCockpitHealth,
+  localHealth: RaidCockpitHealth,
+  clusterHealth: RaidCockpitHealth,
   actionableCount: number,
   t: RaidCockpitTranslate,
 ): string {
   if (health === 'healthy') return t('raid.cockpit.headline.no_attention')
+  if (localHealth === 'healthy' && clusterHealth !== 'healthy') {
+    return t('raid.cockpit.headline.cluster_attention')
+  }
   if (health === 'critical') return t('raid.cockpit.headline.critical')
   return t('raid.cockpit.headline.actions', { count: actionableCount })
 }
@@ -393,12 +470,16 @@ export function buildRaidClusterHealthViewModel(input: {
   currentSanId: string
   isClustered: boolean
   t: RaidCockpitTranslate
+  /** Cluster-wide storage_md points from /api/cluster/attention (fallback when peer overview is incomplete). */
+  clusterStorageAttention?: ClusterAttentionPoint[]
 }): RaidClusterHealthViewModel {
-  const { overview, currentSanId, isClustered, t } = input
+  const { overview, currentSanId, isClustered, t, clusterStorageAttention } = input
 
   if (!overview) {
     return {
       health: 'unknown',
+      localHealth: 'unknown',
+      clusterHealth: 'unknown',
       productionImpact: 'unknown',
       headline: t('raid.cockpit.headline.unknown'),
       summary: {
@@ -430,7 +511,7 @@ export function buildRaidClusterHealthViewModel(input: {
   }
 
   if (isClustered && clusterPeers.length) {
-    const asym = detectClusterAsymmetry(mdArrays, clusterPeers, currentSanId)
+    const asym = detectClusterAsymmetry(mdArrays, clusterPeers, currentSanId, overview.mdDetection)
     if (asym.critical) {
       push({
         id: 'cluster_asymmetry',
@@ -476,6 +557,10 @@ export function buildRaidClusterHealthViewModel(input: {
     for (const peerItem of buildPeerMetadataItems(clusterPeers, currentSanId, t)) {
       push(peerItem)
     }
+    const currentLabel = overview.mdDetection?.nodeLabel ?? currentSanId
+    for (const item of buildClusterUuidMismatchItems(mdArrays, clusterPeers, currentSanId, currentLabel, t)) {
+      push(item)
+    }
   }
 
   const resyncItem = buildResyncItem(mdArrays, t)
@@ -484,15 +569,29 @@ export function buildRaidClusterHealthViewModel(input: {
     push(resyncItem)
   }
 
+  if (isClustered && clusterStorageAttention?.length) {
+    const fromAttention = mapClusterStorageAttentionToRaidItems(
+      clusterStorageAttention,
+      currentSanId,
+      t,
+    )
+    for (const item of mergeAttentionWithoutDuplicates(actionableItems, fromAttention)) {
+      if (!seenIds.has(item.id)) push(item)
+    }
+  }
+
   const totalNodes = isClustered ? 1 + clusterPeers.length : 1
   const connectedNodes = isClustered
     ? 1 + clusterPeers.filter(p => p.hasAnyMdState || p.items.length > 0).length
     : 1
 
-  const asym = isClustered ? detectClusterAsymmetry(mdArrays, clusterPeers, currentSanId) : { critical: false, details: [] }
+  const asym = isClustered
+    ? detectClusterAsymmetry(mdArrays, clusterPeers, currentSanId, overview.mdDetection)
+    : { critical: false, details: [] }
+  const hasUuidMismatch = actionableItems.some(a => a.category === 'cluster_uuid_mismatch')
   const peerConsistencyStatus: RaidClusterHealthSummary['peerConsistencyStatus'] =
     !isClustered ? 'unknown'
-      : asym.critical ? 'critical'
+      : asym.critical || hasUuidMismatch ? 'critical'
         : actionableItems.some(a => a.category === 'metadata_peer') ? 'warning'
           : 'ok'
 
@@ -508,14 +607,25 @@ export function buildRaidClusterHealthViewModel(input: {
     peerConsistencyStatus,
   }
 
-  const health = deriveHealth(actionableItems)
+  const localActionableItems = actionableItems.filter(a => !CLUSTER_ACTION_CATEGORIES.has(a.category))
+  const clusterActionableItems = actionableItems.filter(a => CLUSTER_ACTION_CATEGORIES.has(a.category))
+  const localHealth = deriveHealth(localActionableItems)
+  const clusterHealth = isClustered ? deriveHealth(clusterActionableItems) : 'healthy'
+  const health = mergeWorstHealth(localHealth, clusterHealth)
   const productionImpact = deriveProductionImpact(health, mdArrays, summary)
-  const headline = buildHeadline(health, actionableItems.filter(a => a.severity !== 'info').length || actionableItems.length, t)
+  const actionableCount = actionableItems.filter(a => a.severity !== 'info').length || actionableItems.length
+  const headline = buildHeadline(health, localHealth, clusterHealth, actionableCount, t)
+  const storageFactsHint = isClustered && clusterHealth !== 'healthy'
+    ? t('raid.cockpit.facts_line_storage_hint')
+    : undefined
 
   return {
     health,
+    localHealth,
+    clusterHealth,
     productionImpact,
     headline,
+    storageFactsHint,
     summary,
     actionableItems,
     technicalDetails: buildTechnicalDetails(overview, clusterPeers),

@@ -15,7 +15,7 @@
           <h1 class="text-xl font-semibold text-gray-900 dark:text-gray-100">Gestion RAID</h1>
           <p class="text-sm text-gray-500">{{ san?.label ?? sanId }}</p>
         </div>
-        <RaidHealthBadge :health="raid.globalHealth" />
+        <RaidHealthBadge :health="pageRaidHealth" />
       </div>
       <div class="flex items-center gap-2">
         <span v-if="raid.overview" class="text-xs text-gray-600 dark:text-gray-400">
@@ -397,6 +397,27 @@ const { data: san } = await useFetch<SanSummary>(`/api/admin/sans/${sanId}`)
 const isReadOnly = computed(() => san.value?.readOnly ?? false)
 const isClusteredSan = computed(() => Boolean(san.value?.clusterId))
 
+const clusterStorageAttention = ref<import('~/types/cluster-admin').ClusterAttentionPoint[]>([])
+
+async function fetchClusterStorageAttention() {
+  const clusterId = san.value?.clusterId
+  if (!clusterId) {
+    clusterStorageAttention.value = []
+    return
+  }
+  try {
+    const res = await $fetch<import('~/types/cluster-admin').ClusterAttentionResponse>(
+      '/api/cluster/attention',
+      { query: { clusterId, includeMd: 'true' } },
+    )
+    clusterStorageAttention.value = (res.attentionPoints ?? []).filter(
+      p => p.category === 'storage_md' && p.severity !== 'info',
+    )
+  } catch {
+    clusterStorageAttention.value = []
+  }
+}
+
 const raid = useRaidStore()
 const { t } = useEsosI18n()
 const toast = useAppToast()
@@ -424,9 +445,26 @@ const softwareCockpit = computed(() =>
     stoppedAssemblable: partitionedStopped.value.assemblable,
     stoppedOrphan: partitionedStopped.value.orphanOrIncomplete,
     showEmptyMdState: showSoftwareEmpty.value,
+    clusterStorageAttention: isClusteredSan.value ? clusterStorageAttention.value : undefined,
     t: (key, params) => t(key, params ?? {}),
   }),
 )
+
+function cockpitHealthToRaidHealth(h: import('~/types/raid').RaidCockpitHealth): import('~/types/raid').RaidHealth {
+  switch (h) {
+    case 'healthy': return 'ok'
+    case 'warning': return 'warning'
+    case 'critical': return 'critical'
+    default: return 'unknown'
+  }
+}
+
+const pageRaidHealth = computed((): import('~/types/raid').RaidHealth => {
+  if (isClusteredSan.value && raid.overview) {
+    return cockpitHealthToRaidHealth(softwareCockpit.value.status.health)
+  }
+  return raid.globalHealth
+})
 
 function advancedCleanupMembersForStopped(paths: string[]) {
   return advancedCleanupMembersForArray(paths, raid.pendingAdvancedCleanup)
@@ -1241,7 +1279,10 @@ const canCreateHwRaid = computed(() =>
 )
 
 async function manualRefreshRaid() {
-  await raid.fetchOverview(true)
+  await Promise.all([
+    raid.fetchOverview(true),
+    fetchClusterStorageAttention(),
+  ])
   await raid.fetchOperations()
 }
 
@@ -1280,10 +1321,16 @@ function onVisibilityChange() {
 
 onMounted(() => {
   bindRaidPage(sanId)
+  void fetchClusterStorageAttention()
   if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', onVisibilityChange)
   }
 })
+
+watch(
+  () => san.value?.clusterId,
+  () => { void fetchClusterStorageAttention() },
+)
 
 onUnmounted(() => {
   if (typeof document !== 'undefined') {

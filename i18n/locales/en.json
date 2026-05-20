@@ -255,11 +255,17 @@
       "headline": {
         "healthy": "Cluster RAID is operating normally.",
         "no_attention": "No issues require attention.",
+        "cluster_attention": "Local node healthy — cluster attention required.",
         "actions": "The cluster is running, but {count} recommended action(s).",
         "critical": "Cluster RAID requires attention.",
         "unknown": "RAID status unavailable — refresh the scan."
       },
+      "status": {
+        "local_label": "Local node",
+        "cluster_label": "Cluster"
+      },
       "facts_line": "Active arrays: {arrays} · Nodes: {nodes} · Redundancy: {redundancy} · Resync: {resync}",
+      "facts_line_storage_hint": "Node connectivity does not guarantee MD storage symmetry across peers.",
       "redundancy": {
         "ok": "OK",
         "warning": "Needs review",
@@ -366,6 +372,13 @@
           "impact": "Risk of HA asymmetry or blocked operations.",
           "recommendation": "Align MD state on all nodes before changes.",
           "action": "Repair cluster RAID"
+        },
+        "cluster_uuid_mismatch": {
+          "title": "RAID inconsistency across nodes",
+          "impact": "The current node is healthy, but the MD array does not match the peer node.",
+          "recommendation": "Different MD UUIDs ({uuids}) — not the same array on all nodes.",
+          "action": "Repair cluster RAID",
+          "action_peer": "Open RAID on {label}"
         }
       }
     },

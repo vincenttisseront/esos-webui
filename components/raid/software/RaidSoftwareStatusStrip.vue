@@ -10,8 +10,18 @@
       <p class="text-sm font-medium text-gray-900 dark:text-gray-100">
         {{ viewModel.headline }}
       </p>
+      <p v-if="showSplitHealth" class="text-xs text-gray-600 dark:text-gray-400 flex flex-wrap gap-x-3 gap-y-0.5">
+        <span>{{ t('raid.cockpit.status.local_label') }} : {{ localHealthLabel }}</span>
+        <span>{{ t('raid.cockpit.status.cluster_label') }} : {{ clusterHealthLabel }}</span>
+      </p>
       <p class="text-xs text-gray-500 dark:text-gray-400">
         {{ factsLine }}
+      </p>
+      <p
+        v-if="viewModel.storageFactsHint"
+        class="text-xs text-amber-700 dark:text-amber-400"
+      >
+        {{ viewModel.storageFactsHint }}
       </p>
     </div>
     <span
@@ -25,29 +35,43 @@
 </template>
 
 <script setup lang="ts">
-import type { RaidClusterHealthViewModel } from '~/types/raid'
+import type { RaidClusterHealthViewModel, RaidCockpitHealth } from '~/types/raid'
 
 const props = defineProps<{
   viewModel: RaidClusterHealthViewModel
+  isClustered?: boolean
   autoRefreshActive?: boolean
 }>()
 
 const { t } = useEsosI18n()
 
-const healthColor = computed(() => {
-  switch (props.viewModel.health) {
+const showSplitHealth = computed(() =>
+  props.isClustered
+  && (props.viewModel.localHealth !== props.viewModel.clusterHealth
+    || props.viewModel.clusterHealth !== 'healthy'),
+)
+
+function healthColorFor(h: RaidCockpitHealth) {
+  switch (h) {
     case 'healthy': return 'green'
     case 'warning': return 'amber'
     case 'critical': return 'red'
     default: return 'gray'
   }
-})
+}
 
-const healthLabel = computed(() => {
-  const h = props.viewModel.health
+function healthLabelFor(h: RaidCockpitHealth) {
   if (h === 'warning') return t('raid.cockpit.health.warning_long')
   return t(`raid.cockpit.health.${h}`)
-})
+}
+
+const healthColor = computed(() => healthColorFor(props.viewModel.health))
+
+const healthLabel = computed(() => healthLabelFor(props.viewModel.health))
+
+const localHealthLabel = computed(() => healthLabelFor(props.viewModel.localHealth))
+
+const clusterHealthLabel = computed(() => healthLabelFor(props.viewModel.clusterHealth))
 
 const factsLine = computed(() => {
   const s = props.viewModel.summary

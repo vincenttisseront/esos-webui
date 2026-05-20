@@ -262,11 +262,19 @@ export interface MdDetectionItem {
   relatedArrayPath?: string
 }
 
+export interface MdDetectionActiveArraySnapshot {
+  name: string
+  path: string
+  uuid?: string
+  state: string
+}
+
 export interface MdDetectionSummary {
   nodeSanId: string
   nodeLabel: string
   hasAnyMdState: boolean
   items: MdDetectionItem[]
+  activeMdArrays?: MdDetectionActiveArraySnapshot[]
 }
 
 export type PreflightBlockerCode =

@@ -98,13 +98,22 @@ async function loadClusterPeerMdDetection(currentSanId: string): Promise<import(
     }
     try {
       const peerOverview = await collectRaidOverview(manager)
-      summaries.push(buildMdDetectionSummary({
+      const summary = buildMdDetectionSummary({
         nodeSanId: peer.id,
         nodeLabel: peer.label,
         mdArrays: peerOverview.mdArrays,
         stoppedMdArrays: peerOverview.stoppedMdArrays,
         blockDevices: peerOverview.blockDevices,
-      }))
+      })
+      summaries.push({
+        ...summary,
+        activeMdArrays: peerOverview.mdArrays.map(a => ({
+          name: a.name,
+          path: a.path,
+          uuid: a.uuid,
+          state: a.state,
+        })),
+      })
     } catch {
       summaries.push({
         nodeSanId: peer.id,

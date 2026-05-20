@@ -1,3 +1,4 @@
+import type { ClusterAttentionPoint } from '~/types/cluster-admin'
 import type {
   MdArray,
   RaidGroupedActionableItem,
@@ -20,6 +21,7 @@ const COCKPIT_ACTION_CATEGORIES = new Set([
   'array_degraded',
   'array_inactive',
   'cluster_asymmetry',
+  'cluster_uuid_mismatch',
 ])
 
 export function filterCockpitRecommendedActions(
@@ -36,6 +38,7 @@ export function buildRaidSoftwareCockpitViewModel(input: {
   stoppedOrphan: StoppedMdArray[]
   showEmptyMdState: boolean
   t: RaidCockpitTranslate
+  clusterStorageAttention?: ClusterAttentionPoint[]
 }): RaidSoftwareCockpitViewModel {
   const {
     overview,
@@ -45,6 +48,7 @@ export function buildRaidSoftwareCockpitViewModel(input: {
     stoppedOrphan,
     showEmptyMdState,
     t,
+    clusterStorageAttention,
   } = input
 
   const status = buildRaidClusterHealthViewModel({
@@ -52,6 +56,7 @@ export function buildRaidSoftwareCockpitViewModel(input: {
     currentSanId,
     isClustered,
     t,
+    clusterStorageAttention,
   })
 
   const activeArrays: MdArray[] = overview?.mdArrays ?? []

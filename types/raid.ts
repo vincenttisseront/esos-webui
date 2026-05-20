@@ -252,11 +252,20 @@ export interface MdDetectionItem {
   relatedArrayPath?: string
 }
 
+export interface MdDetectionActiveArraySnapshot {
+  name: string
+  path: string
+  uuid?: string
+  state: string
+}
+
 export interface MdDetectionSummary {
   nodeSanId: string
   nodeLabel: string
   hasAnyMdState: boolean
   items: MdDetectionItem[]
+  /** Active MD arrays on this node (cluster peer scans) for cross-node UUID symmetry. */
+  activeMdArrays?: MdDetectionActiveArraySnapshot[]
 }
 
 export type RaidCockpitHealth = 'healthy' | 'warning' | 'critical' | 'unknown'
@@ -288,6 +297,7 @@ export type RaidActionableCategory =
   | 'array_inactive'
   | 'resync'
   | 'cluster_asymmetry'
+  | 'cluster_uuid_mismatch'
 
 export interface RaidActionTarget {
   type: 'scroll' | 'navigate' | 'devices' | 'modal'
@@ -330,9 +340,14 @@ export interface RaidTechnicalDetail {
 }
 
 export interface RaidClusterHealthViewModel {
+  /** Worst of localHealth and clusterHealth. */
   health: RaidCockpitHealth
+  localHealth: RaidCockpitHealth
+  clusterHealth: RaidCockpitHealth
   productionImpact: RaidProductionImpact
   headline: string
+  /** Optional suffix clarifying storage symmetry vs node connectivity. */
+  storageFactsHint?: string
   summary: RaidClusterHealthSummary
   actionableItems: RaidActionableItem[]
   technicalDetails: RaidTechnicalDetail[]

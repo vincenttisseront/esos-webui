@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto'
 import { createError } from 'h3'
 const MD_ARRAY_PATH_RE = /^\/dev\/md[a-z0-9_-]{0,15}$/
 import { runNodePreflight } from './raid-cluster-storage-preflight'
+import { getActiveUuidConflict as getActiveUuidConflictShared } from '../../utils/cluster-md-symmetry'
 import type {
   ClusterMdPreflightAction,
   ClusterMdRecoveryMode,
@@ -235,18 +236,16 @@ export function getActiveUuidConflict(
   nodes: ClusterMdUuidConflict['nodes']
   uniqueUuids: string[]
 } {
-  const activeWithUuid = nodeReports.filter(r => r.state === 'active' && r.uuid)
-  const uniqueUuids = [...new Set(activeWithUuid.map(r => r.uuid!))]
-  return {
-    conflict: uniqueUuids.length > 1,
-    nodes: activeWithUuid.map(r => ({
+  return getActiveUuidConflictShared(
+    nodeReports.map(r => ({
       sanId: r.sanId,
       label: r.label,
-      uuid: r.uuid!,
-      arrayPath: r.arrayPath ?? `/dev/${arrayName}`,
+      state: r.state === 'active' ? 'active' as const : 'other' as const,
+      uuid: r.uuid,
+      arrayPath: r.arrayPath,
     })),
-    uniqueUuids,
-  }
+    arrayName,
+  )
 }
 
 type StopRecoveryAssessmentResult = Pick<

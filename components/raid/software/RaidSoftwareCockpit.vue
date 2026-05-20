@@ -35,6 +35,7 @@
     <!-- Statut compact (répond à « le RAID est-il OK ? ») -->
     <RaidSoftwareStatusStrip
       :view-model="cockpit.status"
+      :is-clustered="isClustered"
       :auto-refresh-active="autoRefreshActive"
     />
 
