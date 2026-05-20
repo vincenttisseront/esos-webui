@@ -7,6 +7,7 @@ import type {
 import type { MdadmScanEntry } from './parsers/mdadm-scan.parser'
 import { isValidMdSuperblockInfo } from './parsers/mdadm-examine.parser'
 import { parseMdadmScanLines } from './parsers/mdadm-scan.parser'
+import { collectActiveMdMemberPaths } from './raid-md-detection'
 
 type MdRaidLevel = StoppedMdArray['raidLevel']
 
@@ -40,7 +41,8 @@ export function detectStoppedMdArrays(input: {
     !activePaths.has(entry.path) && !activeNames.has(entry.name),
   )
 
-  const candidates = collectMemberCandidates(input.blockDevices, activePaths)
+  const activeMemberPaths = collectActiveMdMemberPaths(input.activeMdArrays)
+  const candidates = collectMemberCandidates(input.blockDevices, activePaths, activeMemberPaths)
   const groups = buildGroups(candidates, orphanScanEntries, activeUuids)
 
   return groups
@@ -52,11 +54,13 @@ export function detectStoppedMdArrays(input: {
 function collectMemberCandidates(
   blockDevices: RaidBlockDevice[],
   activePaths: Set<string>,
+  activeMemberPaths: Set<string>,
 ): MemberCandidate[] {
   const result: MemberCandidate[] = []
   for (const dev of blockDevices) {
     if (dev.type !== 'part') continue
     if (activePaths.has(dev.path)) continue
+    if (activeMemberPaths.has(dev.path)) continue
     // Stopped/orphan arrays are driven by mdadm --examine, not blkid alone (blkid may
     // still report linux_raid_member after zero-superblock until partition type changes).
     if (!isValidMdSuperblockInfo(dev.mdExamine)) continue

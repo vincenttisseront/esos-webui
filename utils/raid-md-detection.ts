@@ -1,4 +1,24 @@
-import type { MdDetectionItem, MdDetectionSummary, RaidOverviewResponse } from '~/types/raid'
+import type { MdArray, MdDetectionItem, MdDetectionSummary, RaidOverviewResponse } from '~/types/raid'
+
+export function collectActiveMdMemberPaths(mdArrays: MdArray[]): Set<string> {
+  const paths = new Set<string>()
+  for (const arr of mdArrays) {
+    for (const member of arr.members) {
+      const path = member.path?.trim()
+      if (path && path !== '—') paths.add(path)
+    }
+  }
+  return paths
+}
+
+export function isOrphanMetadataDetectionItem(
+  item: MdDetectionItem,
+  activeMemberPaths: Set<string>,
+): boolean {
+  if (activeMemberPaths.has(item.path)) return false
+  if (item.kind === 'partition_metadata') return true
+  return item.kind === 'stopped_examine' && item.recommendedAction === 'zero_superblock'
+}
 
 export function hasAnyMdStateVisible(overview: RaidOverviewResponse | null | undefined): boolean {
   if (!overview) return false

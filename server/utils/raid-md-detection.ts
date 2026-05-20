@@ -105,6 +105,18 @@ export function getMdEligibilityReasonsForDevice(dev: RaidBlockDevice): string[]
 
 const MD_ARRAY_PATH_RE = /^\/dev\/md[a-z0-9_-]{0,15}$/
 
+/** Partition paths that are sync members of an active kernel MD array (not orphan metadata). */
+export function collectActiveMdMemberPaths(mdArrays: MdArray[]): Set<string> {
+  const paths = new Set<string>()
+  for (const arr of mdArrays) {
+    for (const member of arr.members) {
+      const path = member.path?.trim()
+      if (path && path !== '—') paths.add(path)
+    }
+  }
+  return paths
+}
+
 export function buildMdDetectionSummary(input: {
   nodeSanId: string
   nodeLabel: string
@@ -115,6 +127,7 @@ export function buildMdDetectionSummary(input: {
   const { nodeSanId, nodeLabel, mdArrays, stoppedMdArrays, blockDevices } = input
   const items: MdDetectionItem[] = []
   const activePaths = new Set(mdArrays.map(a => a.path))
+  const activeMemberPaths = collectActiveMdMemberPaths(mdArrays)
   const stoppedMemberPaths = new Set(
     stoppedMdArrays.flatMap(a =>
       a.members.filter(m => m.present && m.path && m.path !== '—').map(m => m.path),
@@ -162,6 +175,7 @@ export function buildMdDetectionSummary(input: {
     }
 
     for (const member of presentMembers) {
+      if (activeMemberPaths.has(member.path)) continue
       coveredPaths.add(member.path)
       items.push({
         kind: 'stopped_examine',
@@ -207,7 +221,7 @@ export function buildMdDetectionSummary(input: {
     if (dev.type !== 'part') continue
     if (!dev.hasMdSuperblock && !dev.usedBy.includes('md')) continue
     if (stoppedMemberPaths.has(dev.path)) continue
-    if (activePaths.has(dev.path)) continue
+    if (activeMemberPaths.has(dev.path)) continue
     const reasons = getMdEligibilityReasonsForDevice(dev)
     items.push({
       kind: 'partition_metadata',

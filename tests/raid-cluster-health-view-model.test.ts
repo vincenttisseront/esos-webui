@@ -73,6 +73,194 @@ describe('buildRaidClusterHealthViewModel', () => {
     expect(vm.summary.activeArrayMainStatus).toBe('clean')
   })
 
+  it('stays healthy when clean md0 has members and detection has no orphan metadata', () => {
+    const vm = buildRaidClusterHealthViewModel({
+      overview: baseOverview({
+        mdArrays: [{
+          name: 'md0',
+          path: '/dev/md0',
+          raidLevel: '1',
+          state: 'clean',
+          raidDevices: 2,
+          activeDevices: 2,
+          workingDevices: 2,
+          failedDevices: 0,
+          spareDevices: 0,
+          members: [
+            { path: '/dev/sdb1', slot: 0, state: ['active', 'sync'] },
+            { path: '/dev/sdc1', slot: 1, state: ['active', 'sync'] },
+          ],
+          usedBy: [],
+          warnings: [],
+        }],
+        mdDetection: {
+          nodeSanId: 'san-a',
+          nodeLabel: 'node-a',
+          hasAnyMdState: true,
+          items: [{
+            kind: 'active_kernel',
+            path: '/dev/md0',
+            nodeSanId: 'san-a',
+            nodeLabel: 'node-a',
+            severity: 'info',
+            summary: 'active',
+            reasons: [],
+            recommendedAction: 'none',
+            uiAnchor: 'software-active',
+          }],
+        },
+      }),
+      currentSanId: 'san-a',
+      isClustered: false,
+      t,
+    })
+    expect(vm.health).toBe('healthy')
+    expect(vm.actionableItems).toHaveLength(0)
+  })
+
+  it('suppresses local metadata actionable for active member paths (defensive)', () => {
+    const vm = buildRaidClusterHealthViewModel({
+      overview: baseOverview({
+        mdArrays: [{
+          name: 'md0',
+          path: '/dev/md0',
+          raidLevel: '1',
+          state: 'clean',
+          raidDevices: 2,
+          activeDevices: 2,
+          workingDevices: 2,
+          failedDevices: 0,
+          spareDevices: 0,
+          members: [{ path: '/dev/sdb1', slot: 0, state: ['active', 'sync'] }],
+          usedBy: [],
+          warnings: [],
+        }],
+        mdDetection: {
+          nodeSanId: 'san-a',
+          nodeLabel: 'node-a',
+          hasAnyMdState: true,
+          items: [
+            {
+              kind: 'active_kernel',
+              path: '/dev/md0',
+              nodeSanId: 'san-a',
+              nodeLabel: 'node-a',
+              severity: 'info',
+              summary: 'active',
+              reasons: [],
+              recommendedAction: 'none',
+              uiAnchor: 'software-active',
+            },
+            {
+              kind: 'partition_metadata',
+              path: '/dev/sdb1',
+              nodeSanId: 'san-a',
+              nodeLabel: 'node-a',
+              severity: 'blocking',
+              summary: 'Métadonnées MD sur partition /dev/sdb1',
+              reasons: ['Superblock'],
+              recommendedAction: 'zero_superblock',
+              uiAnchor: 'devices',
+            },
+          ],
+        },
+      }),
+      currentSanId: 'san-a',
+      isClustered: false,
+      t,
+    })
+    expect(vm.health).toBe('healthy')
+    expect(vm.actionableItems.some(i => i.category === 'metadata_local')).toBe(false)
+  })
+
+  it('does not create metadata_peer when peer detection has only active_kernel', () => {
+    const vm = buildRaidClusterHealthViewModel({
+      overview: baseOverview({
+        mdArrays: [{
+          name: 'md0',
+          path: '/dev/md0',
+          raidLevel: '1',
+          state: 'clean',
+          raidDevices: 2,
+          activeDevices: 2,
+          workingDevices: 2,
+          failedDevices: 0,
+          spareDevices: 0,
+          members: [
+            { path: '/dev/sdb1', slot: 0, state: ['active', 'sync'] },
+            { path: '/dev/sdc1', slot: 1, state: ['active', 'sync'] },
+          ],
+          usedBy: [],
+          warnings: [],
+        }],
+        mdDetection: {
+          nodeSanId: 'san-a',
+          nodeLabel: 'node-a',
+          hasAnyMdState: true,
+          items: [{
+            kind: 'active_kernel',
+            path: '/dev/md0',
+            nodeSanId: 'san-a',
+            nodeLabel: 'node-a',
+            severity: 'info',
+            summary: 'active',
+            reasons: [],
+            recommendedAction: 'none',
+            uiAnchor: 'software-active',
+          }],
+        },
+        clusterMdDetection: [{
+          nodeSanId: 'san-b',
+          nodeLabel: 'node-b',
+          hasAnyMdState: true,
+          items: [{
+            kind: 'active_kernel',
+            path: '/dev/md0',
+            nodeSanId: 'san-b',
+            nodeLabel: 'node-b',
+            severity: 'info',
+            summary: 'active',
+            reasons: [],
+            recommendedAction: 'none',
+            uiAnchor: 'software-active',
+          }],
+        }],
+      }),
+      currentSanId: 'san-a',
+      isClustered: true,
+      t,
+    })
+    expect(vm.actionableItems.some(i => i.category === 'metadata_peer')).toBe(false)
+    expect(vm.health).toBe('healthy')
+  })
+
+  it('creates metadata_peer for peer orphan partition not in active members', () => {
+    const vm = buildRaidClusterHealthViewModel({
+      overview: baseOverview({
+        clusterMdDetection: [{
+          nodeSanId: 'san-b',
+          nodeLabel: 'node-b',
+          hasAnyMdState: true,
+          items: [{
+            kind: 'partition_metadata',
+            path: '/dev/sdc9',
+            nodeSanId: 'san-b',
+            nodeLabel: 'node-b',
+            severity: 'blocking',
+            summary: 'peer orphan',
+            reasons: [],
+            recommendedAction: 'zero_superblock',
+            uiAnchor: 'devices',
+          }],
+        }],
+      }),
+      currentSanId: 'san-a',
+      isClustered: true,
+      t,
+    })
+    expect(vm.actionableItems.some(i => i.category === 'metadata_peer')).toBe(true)
+  })
+
   it('creates local metadata actionable item', () => {
     const vm = buildRaidClusterHealthViewModel({
       overview: baseOverview({

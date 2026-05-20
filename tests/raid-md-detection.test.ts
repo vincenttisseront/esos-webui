@@ -98,6 +98,50 @@ describe('buildMdDetectionSummary', () => {
     expect(summary.hasAnyMdState).toBe(true)
   })
 
+  it('does not emit partition_metadata or orphan stopped_examine for active array members with superblocks', () => {
+    const mdArrays: MdArray[] = [{
+      name: 'md0',
+      path: '/dev/md0',
+      raidLevel: '1',
+      state: 'clean',
+      raidDevices: 2,
+      members: [
+        { path: '/dev/sdb1', slot: 0, state: ['active', 'sync'] },
+        { path: '/dev/sdc1', slot: 1, state: ['active', 'sync'] },
+      ],
+    }]
+    const blockDevices = [
+      partDevice({ path: '/dev/sdb1', hasMdSuperblock: true, usedBy: ['md'] }),
+      partDevice({ path: '/dev/sdc1', hasMdSuperblock: true, usedBy: ['md'] }),
+    ]
+    const summary = buildMdDetectionSummary({ ...ctx, mdArrays, stoppedMdArrays: [], blockDevices })
+    expect(summary.items.filter(i => i.kind === 'partition_metadata')).toHaveLength(0)
+    expect(summary.items.filter(i => i.kind === 'stopped_examine' && i.recommendedAction === 'zero_superblock')).toHaveLength(0)
+    expect(summary.items.some(i => i.kind === 'active_kernel' && i.path === '/dev/md0')).toBe(true)
+  })
+
+  it('skips stopped_examine for member path that is also in active mdArrays', () => {
+    const mdArrays: MdArray[] = [{
+      name: 'md0',
+      path: '/dev/md0',
+      raidLevel: '1',
+      state: 'active',
+      raidDevices: 2,
+      members: [{ path: '/dev/sdb1', slot: 0, state: ['active', 'sync'] }],
+    }]
+    const stoppedMdArrays: StoppedMdArray[] = [{
+      name: 'md0',
+      raidLevel: '1',
+      raidDevices: 2,
+      stoppedState: 'incomplete',
+      warnings: [],
+      detectedOn: 'both',
+      members: [{ path: '/dev/sdb1', present: true, memberStatus: 'orphan_metadata' }],
+    }]
+    const summary = buildMdDetectionSummary({ ...ctx, mdArrays, stoppedMdArrays, blockDevices: [] })
+    expect(summary.items.filter(i => i.path === '/dev/sdb1' && i.kind === 'stopped_examine')).toHaveLength(0)
+  })
+
   it('skips partition_metadata when path is already a stopped examine member', () => {
     const stoppedMdArrays: StoppedMdArray[] = [{
       name: 'md0',

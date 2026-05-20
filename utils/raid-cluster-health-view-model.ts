@@ -14,7 +14,12 @@ import type {
   RaidProductionImpact,
   RaidTechnicalDetail,
 } from '~/types/raid'
-import { isAttentionItem, sortAttentionItems } from '~/utils/raid-md-detection'
+import {
+  collectActiveMdMemberPaths,
+  isAttentionItem,
+  isOrphanMetadataDetectionItem,
+  sortAttentionItems,
+} from '~/utils/raid-md-detection'
 import { hasActiveMdArrayProgress, primaryResyncSummary } from '~/utils/raid-md-progress'
 
 export type RaidCockpitTranslate = (
@@ -441,8 +446,13 @@ export function buildRaidClusterHealthViewModel(input: {
     }
   }
 
+  const localActiveMemberPaths = collectActiveMdMemberPaths(mdArrays)
   for (const item of localItems.filter(isAttentionItem)) {
     if (item.kind === 'active_kernel') continue
+    const metadataAttention =
+      item.kind === 'partition_metadata'
+      || (item.kind === 'stopped_examine' && item.recommendedAction === 'zero_superblock')
+    if (metadataAttention && !isOrphanMetadataDetectionItem(item, localActiveMemberPaths)) continue
     push(interpretLocalItem({ ...item, nodeSanId: item.nodeSanId || currentSanId, nodeLabel: item.nodeLabel || '' }, t))
   }
 

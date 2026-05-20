@@ -138,6 +138,26 @@ describe('detectStoppedMdArrays', () => {
     expect(stopped[0]?.stoppedState).toBe('assemblable')
   })
 
+  it('does not return member candidates that are active array members', () => {
+    const activeUuid = 'bbbb:1111'
+    const orphanUuid = 'orphan-uuid-2222'
+    const activeWithMember: MdArray = {
+      ...activeMd,
+      name: 'md0',
+      path: '/dev/md0',
+      uuid: activeUuid,
+      members: [{ path: '/dev/sdb1', slot: 0, state: ['active', 'sync'] }],
+    }
+    const stopped = detectStoppedMdArrays({
+      mdadmScan: '',
+      blockDevices: [part('/dev/sdb1', activeUuid), part('/dev/sdc9', orphanUuid)],
+      activeMdArrays: [activeWithMember],
+    })
+    const paths = stopped.flatMap(s => s.members.map(m => m.path))
+    expect(paths).not.toContain('/dev/sdb1')
+    expect(paths).toContain('/dev/sdc9')
+  })
+
   it('exclut les tableaux actifs', () => {
     const uuid = 'bbbb:1111'
     const stopped = detectStoppedMdArrays({
