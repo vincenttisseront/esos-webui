@@ -438,13 +438,20 @@ export async function executeClusterLvmPlan(
         } else if (plan.action === 'lvcreate') {
           const p = payload as LvCreatePayload
           const result = await runLvCreate(manager, p.vgName, p.name, p.sizeBytes)
+          const failed = result.code !== 0
+          if (failed) {
+            const msg = result.stderr.trim() || result.stdout.trim() || `lvcreate exit ${result.code}`
+            errors.push(`${node.label}: ${msg}`)
+          }
           nodeResults.push({
             sanId: node.sanId,
             label: node.label,
-            participation: 'execute',
+            participation: failed ? 'failed' : 'execute',
             command: node.command,
+            exitCode: result.code,
             stdout: result.stdout,
             stderr: result.stderr,
+            error: failed ? (result.stderr.trim() || `exit ${result.code}`) : undefined,
           })
         } else if (plan.action === 'lvremove') {
           const p = payload as LvRemovePayload

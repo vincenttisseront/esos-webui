@@ -189,21 +189,28 @@ async function nextStep() {
 }
 
 async function execute() {
-  if (!plan.value) return
+  if (!plan.value || !confirmStepRef.value?.canExecute) return
   busy.value = true
   try {
     executionResult.value = await lvm.executeClusterLvCreate({
       vgName: selectedVg.value,
-      name: lvName.value,
+      name: lvName.value.trim(),
       sizeBytes: sizeBytes.value,
       confirmation: confirmation.value,
       clusterExecution: { primarySanId: props.sanId, clusterId: props.clusterId },
     })
     step.value = 4
-    if (executionResult.value.success) {
-      toast.success(t('lvm.cluster.wizard.lv_create.success'))
-      emit('close')
+    if (!executionResult.value.success) {
+      toast.error(t('lvm.wizard.execute_failed'), executionResult.value.errors.join(' · ') || undefined)
+      return
     }
+    const detected = lvm.lvExistsAfterRefresh(selectedVg.value, lvName.value.trim())
+    if (!detected) {
+      toast.warning(t('lvm.cluster.wizard.lv_create.not_detected_after_refresh'))
+      return
+    }
+    toast.success(t('lvm.cluster.wizard.lv_create.success'))
+    emit('close')
   } catch (e: any) {
     toast.error(t('lvm.wizard.execute_failed'), e?.statusMessage ?? 'Erreur')
   } finally {

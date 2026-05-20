@@ -11,7 +11,13 @@ export default defineEventHandler(async (event) => {
   await withSanContext(sanId, async () => {
     const manager = getActiveSSHManager()
     if (!manager) throw createError({ statusCode: 503, statusMessage: 'SSH non connecté' })
-    await runLvCreate(manager, body.vgName, body.name, body.sizeBytes)
+    const result = await runLvCreate(manager, body.vgName, body.name, body.sizeBytes)
+    if (result.code !== 0) {
+      throw createError({
+        statusCode: 500,
+        statusMessage: result.stderr.trim() || result.stdout.trim() || `lvcreate a échoué (code ${result.code})`,
+      })
+    }
     invalidateStorageCaches(sanId)
   })
   return { success: true }

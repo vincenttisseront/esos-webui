@@ -12,6 +12,7 @@
             <th class="py-2 px-2">{{ t('lvm.cluster.wizard.node') }}</th>
             <th class="py-2 px-2">{{ t('lvm.cluster.wizard.result_status') }}</th>
             <th class="py-2 px-2">{{ t('lvm.cluster.wizard.command') }}</th>
+            <th class="py-2 px-2">{{ t('lvm.cluster.wizard.exit_code') }}</th>
             <th class="py-2 px-2">{{ t('lvm.cluster.wizard.result_detail') }}</th>
           </tr>
         </thead>
@@ -26,6 +27,7 @@
               />
             </td>
             <td class="py-2 px-2 font-mono text-gray-600 dark:text-gray-400">{{ row.command ?? '—' }}</td>
+            <td class="py-2 px-2 font-mono">{{ row.exitCode ?? '—' }}</td>
             <td class="py-2 px-2 text-gray-600 dark:text-gray-400 max-w-xs truncate" :title="detail(row)">
               {{ detail(row) }}
             </td>
@@ -46,7 +48,9 @@ defineProps<{ result: ClusterLvmExecutionResult }>()
 const { t } = useEsosI18n()
 
 function statusLabel(row: ClusterLvmNodeResult) {
-  if (row.participation === 'failed' || row.error) return t('lvm.cluster.wizard.result_failed')
+  if (row.participation === 'failed' || row.error || (row.exitCode != null && row.exitCode !== 0)) {
+    return t('lvm.cluster.wizard.result_failed')
+  }
   if (row.participation === 'execute') return t('lvm.cluster.wizard.result_success')
   return t('lvm.cluster.wizard.node_skipped')
 }

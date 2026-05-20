@@ -1,4 +1,5 @@
 import { createError } from 'h3'
+import { formatLvCreateSizeArg } from '~/utils/lvm-lv-size'
 import type { SSHSessionManager } from './ssh-session-manager'
 import {
   expectedBindScstConfirmation,
@@ -40,16 +41,18 @@ export async function runLvCreate(
   vgName: string,
   lvName: string,
   sizeBytes: number,
-): Promise<{ stdout: string; stderr: string }> {
+): Promise<{ stdout: string; stderr: string; code: number }> {
+  const sizeArg = formatLvCreateSizeArg(sizeBytes)
   const cmd = [
     'lvcreate',
     '-y',
     '-v',
-    '-L', String(sizeBytes),
+    '-L', sizeArg,
     '-n', lvName,
     vgName,
   ].map(shellQuote).join(' ')
-  return manager.exec(cmd, 120_000)
+  const result = await manager.exec(cmd, 120_000)
+  return { stdout: result.stdout, stderr: result.stderr, code: result.code }
 }
 
 export async function runPvRemove(manager: SSHSessionManager, path: string) {
@@ -73,7 +76,7 @@ export function buildVgCreatePreview(name: string, pvPaths: string[]): string {
 }
 
 export function buildLvCreatePreview(vgName: string, lvName: string, sizeBytes: number): string {
-  return `lvcreate -y -v -L ${sizeBytes} -n ${lvName} ${vgName}`
+  return `lvcreate -y -v -L ${formatLvCreateSizeArg(sizeBytes)} -n ${lvName} ${vgName}`
 }
 
 export function buildPvRemovePreview(path: string): string {

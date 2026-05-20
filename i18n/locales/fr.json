@@ -1119,6 +1119,7 @@
         "node": "Nœud",
         "participation": "Participation",
         "command": "Commande",
+        "exit_code": "Code",
         "next": "Suivant",
         "back": "Retour",
         "plan_loading": "Construction du plan cluster…",
@@ -1195,6 +1196,7 @@
           "title": "Créer un LV (cluster)",
           "execute": "Exécuter sur tous les nœuds",
           "success": "LV cluster créé",
+          "not_detected_after_refresh": "LV créé mais non détecté après actualisation. Vérifiez le nœud et actualisez à nouveau.",
           "confirm": {
             "title": "Créer le volume logique {lvName}",
             "summary": "Le volume logique sera créé dans le groupe de volumes {vgName} sur chaque nœud du cluster.",
@@ -1258,7 +1260,8 @@
         "target_nodes": "Création prévue sur : {nodes}",
         "error_size_zero": "La taille doit être supérieure à 0 GiB.",
         "error_size_exceeds": "La taille ne peut pas dépasser {max}.",
-        "success": "LV créé"
+        "success": "LV créé",
+        "not_detected_after_refresh": "LV créé mais non détecté après actualisation. Vérifiez le nœud et actualisez à nouveau."
       },
       "scst_device": {
         "title": "Créer un device SCST blockio depuis le LV",

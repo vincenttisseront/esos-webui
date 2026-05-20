@@ -53,8 +53,8 @@ describe('lvm-cluster-lv-confirm', () => {
         warnings: [],
         blockers: [],
         nodeResults: [
-          { sanId: 'esos1', label: 'esos1', participation: 'execute', command: 'lvcreate -y -v -L 10G -n photos data' },
-          { sanId: 'esos2', label: 'esos2', participation: 'execute', command: 'lvcreate -y -v -L 10G -n photos data' },
+          { sanId: 'esos1', label: 'esos1', participation: 'execute', command: 'lvcreate -y -v -L 10G -n photos data', exitCode: 0 },
+          { sanId: 'esos2', label: 'esos2', participation: 'execute', command: 'lvcreate -y -v -L 10G -n photos data', exitCode: 0 },
         ],
       },
     })

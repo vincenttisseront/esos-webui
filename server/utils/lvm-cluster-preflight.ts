@@ -403,8 +403,21 @@ export async function runClusterLvmPreflight(
 
   if (req.action === 'lvcreate' && primary) {
     const payload = req.payload as LvCreatePayload
+    const sizeBytes = Number(payload.sizeBytes)
+    if (!Number.isFinite(sizeBytes) || sizeBytes <= 0) {
+      blockers.push('Taille LV invalide (doit être > 0)')
+    }
     for (const node of nodes) {
-      if (!node.sshReady) continue
+      if (!node.sshReady) {
+        blockers.push(`${node.label} : SSH non connecté`)
+        continue
+      }
+      const vg = node.overview.vgs.find(v => v.name === payload.vgName && !v.clustered)
+      if (!vg) {
+        blockers.push(`${node.label} : VG ${payload.vgName} absent`)
+      } else if (Number.isFinite(sizeBytes) && sizeBytes > vg.freeBytes) {
+        blockers.push(`${node.label} : espace insuffisant dans ${payload.vgName}`)
+      }
       if (node.overview.lvs.some(l => l.vgName === payload.vgName && l.name === payload.name)) {
         blockers.push(`${node.label} : LV ${payload.vgName}/${payload.name} existe déjà`)
       }

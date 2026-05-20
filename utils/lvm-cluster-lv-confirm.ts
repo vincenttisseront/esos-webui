@@ -15,7 +15,7 @@ function blockerMatches(blockers: string[], pattern: RegExp): string | undefined
 }
 
 export function extractLvExistsBlockers(blockers: string[]): string[] {
-  return blockers.filter(b => /LV .+ existe déjà|existe déjà/i.test(b))
+  return blockers.filter(b => /LV [\w.-]+\/[\w.-]+ existe déjà|existe déjà/i.test(b))
 }
 
 export function extractVgMissingBlockers(blockers: string[]): string[] {

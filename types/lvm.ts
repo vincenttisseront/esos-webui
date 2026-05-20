@@ -221,6 +221,7 @@ export interface ClusterLvmNodeResult {
   label: string
   participation: 'execute' | 'skip' | 'failed'
   command?: string
+  exitCode?: number
   stdout?: string
   stderr?: string
   error?: string

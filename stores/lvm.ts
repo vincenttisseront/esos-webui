@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { overviewHasLv } from '~/utils/lvm-lv-size'
 import type {
   ClusterLvmDiskMapping,
   ClusterLvmExecutionPlan,
@@ -205,6 +206,15 @@ export const useLvmStore = defineStore('lvm', {
       await this.fetchOverview(true)
       if (this.clusterId) await this.fetchClusterInventory(this.clusterId)
       return result
+    },
+
+    lvExistsAfterRefresh(vgName: string, lvName: string): boolean {
+      if (overviewHasLv(this.lvs, vgName, lvName)) return true
+      const primary = this.clusterInventory?.find(n => n.sanId === this.sanId)
+      if (primary && overviewHasLv(primary.overview.lvs, vgName, lvName)) return true
+      return (this.clusterInventory ?? []).some(n =>
+        overviewHasLv(n.overview.lvs, vgName, lvName),
+      )
     },
 
     async planPvCreate(payload: PvCreatePayload & { clusterExecution: { primarySanId: string; clusterId?: string; diskMappings?: unknown[] } }): Promise<ClusterLvmExecutionPlan> {

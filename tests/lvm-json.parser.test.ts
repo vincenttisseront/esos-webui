@@ -58,6 +58,38 @@ describe('lvm-json.parser', () => {
     expect(rows[0]?.active).toBe(true)
   })
 
+  it('parses lvs when lv_name is vg/lv and vg_name empty', () => {
+    const json = `{
+      "report": [{ "lv": [{
+        "lv_name": "data/photos",
+        "lv_path": "/dev/data/photos",
+        "lv_size": "10737418240",
+        "lv_uuid": "u1",
+        "lv_attr": "-wi-a-----"
+      }]}]
+    }`
+    const rows = parseLvsJson(json)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.vgName).toBe('data')
+    expect(rows[0]?.name).toBe('photos')
+    expect(rows[0]?.path).toBe('/dev/data/photos')
+  })
+
+  it('parses lvs from lv_full_name', () => {
+    const json = `{
+      "report": [{ "lv": [{
+        "lv_full_name": "data/photos",
+        "lv_path": "/dev/data/photos",
+        "lv_size": "10737418240",
+        "lv_uuid": "u1",
+        "lv_attr": "-wi-a-----"
+      }]}]
+    }`
+    const rows = parseLvsJson(json)
+    expect(rows[0]?.vgName).toBe('data')
+    expect(rows[0]?.name).toBe('photos')
+  })
+
   it('returns empty on invalid json', () => {
     expect(parsePvsJson('not json')).toEqual([])
   })

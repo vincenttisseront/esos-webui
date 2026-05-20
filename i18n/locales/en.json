@@ -1119,6 +1119,7 @@
         "node": "Node",
         "participation": "Participation",
         "command": "Command",
+        "exit_code": "Exit",
         "next": "Next",
         "back": "Back",
         "plan_loading": "Building cluster plan…",
@@ -1195,6 +1196,7 @@
           "title": "Create LV (cluster)",
           "execute": "Execute on all nodes",
           "success": "Cluster LV created",
+          "not_detected_after_refresh": "LV created but not detected after refresh. Check the node and refresh again.",
           "confirm": {
             "title": "Create logical volume {lvName}",
             "summary": "The logical volume will be created in volume group {vgName} on every cluster node.",
@@ -1258,7 +1260,8 @@
         "target_nodes": "Will be created on: {nodes}",
         "error_size_zero": "Size must be greater than 0 GiB.",
         "error_size_exceeds": "Size cannot exceed {max}.",
-        "success": "LV created"
+        "success": "LV created",
+        "not_detected_after_refresh": "LV created but not detected after refresh. Check the node and refresh again."
       },
       "scst_device": {
         "title": "Create SCST blockio device from LV",

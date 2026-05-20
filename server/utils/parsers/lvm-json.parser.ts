@@ -74,6 +74,30 @@ export function parseVgsJson(jsonText: string): Array<{
   })).filter(r => r.name)
 }
 
+function normalizeLvNames(row: LvmJsonRow): { vgName: string; lvName: string } {
+  let vgName = str(row, 'vg_name')
+  let lvName = str(row, 'lv_name')
+  const full = str(row, 'lv_full_name')
+  if (!lvName && full) {
+    const slash = full.indexOf('/')
+    if (slash >= 0) {
+      vgName = vgName || full.slice(0, slash)
+      lvName = full.slice(slash + 1)
+    } else {
+      lvName = full
+    }
+  }
+  if (lvName.includes('/') && !vgName) {
+    const parts = lvName.split('/').filter(Boolean)
+    if (parts.length >= 2) {
+      vgName = parts[0]!
+      lvName = parts.slice(1).join('/')
+    }
+  }
+  if (!lvName && vgName && full) lvName = full.replace(new RegExp(`^${vgName}/`), '')
+  return { vgName, lvName }
+}
+
 export function parseLvsJson(jsonText: string): Array<{
   name: string
   path: string
@@ -83,10 +107,11 @@ export function parseLvsJson(jsonText: string): Array<{
   attr: string
   active: boolean
 }> {
-  return rowsFromReport(jsonText, 'lv').map(row => {
-    const vgName = str(row, 'vg_name')
-    const lvName = str(row, 'lv_name')
-    const lvPath = str(row, 'lv_path') || (vgName && lvName ? `/dev/${vgName}/${lvName}` : '')
+  return rowsFromReport(jsonText, 'lv').map((row) => {
+    const { vgName, lvName } = normalizeLvNames(row)
+    const lvPath = str(row, 'lv_path')
+      || str(row, 'lv_dm_path')
+      || (vgName && lvName ? `/dev/${vgName}/${lvName}` : '')
     const attr = str(row, 'lv_attr')
     return {
       name: lvName,

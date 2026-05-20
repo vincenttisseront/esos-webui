@@ -103,13 +103,18 @@ watch([vgName, lvName, sizeGib], async () => {
 async function execute() {
   if (!canExecute.value) return
   busy.value = true
+  const name = lvName.value.trim()
   try {
     await lvm.createLv({
       vgName: vgName.value,
-      name: lvName.value,
+      name,
       sizeBytes: Math.floor(Number(sizeGib.value) * 1024 ** 3),
       confirmation: confirmation.value.trim(),
     })
+    if (!lvm.lvExistsAfterRefresh(vgName.value, name)) {
+      toast.warning(t('lvm.wizard.lv_create.not_detected_after_refresh'))
+      return
+    }
     toast.success(t('lvm.wizard.lv_create.success'))
     emit('close')
   } catch (e: any) {
