@@ -1,9 +1,18 @@
-import type { LvmNodeSnapshot, VolumeGroup } from '~/types/lvm'
+import type { LvmNodeSnapshot, LocalSymmetricLvmIssue, LogicalVolume, VolumeGroup } from '~/types/lvm'
 
 export interface LvmStructuralIssue {
   vgName: string
   message: string
   severity: 'warning' | 'critical'
+}
+
+const SIZE_TOLERANCE_RATIO = 0.01
+const SIZE_TOLERANCE_MIN_BYTES = 4 * 1024 * 1024
+
+function sizeWithinTolerance(a: number, b: number): boolean {
+  const diff = Math.abs(a - b)
+  const max = Math.max(a, b, 1)
+  return diff <= Math.max(SIZE_TOLERANCE_MIN_BYTES, max * SIZE_TOLERANCE_RATIO)
 }
 
 export function findLvmStructuralIssues(
@@ -57,6 +66,64 @@ export function findLvmStructuralIssues(
           severity: 'warning',
           message: `VG ${peerVg.name} sur ${peer.nodeLabel}, absent localement`,
         })
+      }
+    }
+  }
+  return issues
+}
+
+export function assessLocalSymmetricLvm(
+  local: { pvs: { path: string; vgName: string }[]; vgs: VolumeGroup[]; lvs: LogicalVolume[] },
+  peers: LvmNodeSnapshot[],
+): LocalSymmetricLvmIssue[] {
+  const issues: LocalSymmetricLvmIssue[] = []
+  issues.push(...findLvmStructuralIssues(local, peers).map(i => ({
+    vgName: i.vgName,
+    message: i.message,
+    severity: i.severity,
+  })))
+
+  for (const vg of local.vgs) {
+    for (const peer of peers) {
+      const peerVg = peer.vgs.find(v => v.name === vg.name)
+      if (!peerVg) continue
+      if (!sizeWithinTolerance(vg.freeBytes, peerVg.freeBytes)) {
+        issues.push({
+          vgName: vg.name,
+          severity: 'warning',
+          message: `Espace libre différent (${peer.nodeLabel})`,
+        })
+      }
+      const localLvs = local.lvs.filter(lv => lv.vgName === vg.name)
+      for (const lv of localLvs) {
+        const peerLv = peer.lvs.find(l => l.vgName === vg.name && l.name === lv.name)
+        if (!peerLv) {
+          issues.push({
+            vgName: vg.name,
+            lvName: lv.name,
+            severity: 'warning',
+            message: `LV ${lv.name} absent sur ${peer.nodeLabel}`,
+          })
+          continue
+        }
+        if (!sizeWithinTolerance(lv.sizeBytes, peerLv.sizeBytes)) {
+          issues.push({
+            vgName: vg.name,
+            lvName: lv.name,
+            severity: 'warning',
+            message: `Taille LV différente sur ${peer.nodeLabel}`,
+          })
+        }
+      }
+      for (const peerLv of peer.lvs.filter(l => l.vgName === vg.name)) {
+        if (!localLvs.some(l => l.name === peerLv.name)) {
+          issues.push({
+            vgName: vg.name,
+            lvName: peerLv.name,
+            severity: 'warning',
+            message: `LV ${peerLv.name} sur ${peer.nodeLabel}, absent localement`,
+          })
+        }
       }
     }
   }

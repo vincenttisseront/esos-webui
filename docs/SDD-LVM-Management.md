@@ -18,11 +18,17 @@ SAN-scoped LVM management: PV / VG / LV lifecycle, preflight + typed confirmatio
 | DELETE | `/api/lvm/lv` | `lvremove` |
 | POST | `/api/lvm/lv/bind-scst` | Create SCST device from LV path |
 | POST | `/api/lvm/*/create/plan` | Cluster execution plan (no writes) |
+| POST | `/api/lvm/*/create/cluster` | Execute cluster plan on all nodes |
+| GET | `/api/lvm/cluster/inventory?clusterId=` | Per-node LVM + candidates + MD arrays |
+| POST | `/api/lvm/cluster/preflight` | Cluster-wide preflight + disk mappings |
 
 ## Cluster
 
-- **local_symmetric**: per-node VG/LV stacks; structural VG name/count checks in Admin attention (`storage_lvm`).
+- **local_symmetric**: per-node PV/VG/LV on each node; symmetry by name, size, and structure (PV/VG/LV UUIDs may differ).
+- **Mapping**: `/dev/mdN` maps to the same path on peers when MD arrays match structurally (`server/utils/lvm-cluster-preflight.ts`).
+- **Mutations on clustered SAN**: require `clusterExecution` in body; standalone create returns **409**.
 - **clvmd / shared VG**: blocked for mutations; warning in overview.
+- **Wizards**: `LvmClusterPvWizard`, `LvmClusterVgWizard`, `LvmClusterLvWizard` with `LvmClusterPlanReview`.
 
 ## UI
 

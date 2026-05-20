@@ -8,19 +8,20 @@
       variant="soft"
     />
 
-    <div v-if="isClustered" class="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-3 text-sm text-amber-800 dark:text-amber-200">
-      {{ t('lvm.cluster.local_symmetric_hint') }}
+    <div v-if="isClustered" class="rounded-lg border border-primary-200 dark:border-primary-800 bg-primary-50 dark:bg-primary-950/30 p-4 space-y-1">
+      <h3 class="text-sm font-semibold text-primary-900 dark:text-primary-100">{{ t('lvm.cluster.mode_title') }}</h3>
+      <p class="text-sm text-primary-800 dark:text-primary-200">{{ t('lvm.cluster.mode_body') }}</p>
     </div>
 
     <div class="flex flex-wrap gap-2 justify-between items-center">
       <div class="flex flex-wrap gap-2">
-        <UButton size="sm" color="primary" icon="i-heroicons-plus" :disabled="!canMutate" @click="showPvWizard = true">
+        <UButton size="sm" color="primary" icon="i-heroicons-plus" :disabled="!canCreate" @click="openPvWizard">
           {{ t('lvm.pv.create_action') }}
         </UButton>
-        <UButton size="sm" color="primary" variant="soft" icon="i-heroicons-plus" :disabled="!canMutate || !lvm.orphanPvs.length" @click="showVgWizard = true">
+        <UButton size="sm" color="primary" variant="soft" icon="i-heroicons-plus" :disabled="!canCreate || !lvm.orphanPvs.length" @click="openVgWizard">
           {{ t('lvm.vg.create_action') }}
         </UButton>
-        <UButton size="sm" color="primary" variant="soft" icon="i-heroicons-plus" :disabled="!canMutate || !lvm.vgs.length" @click="showLvWizard = true">
+        <UButton size="sm" color="primary" variant="soft" icon="i-heroicons-plus" :disabled="!canCreate || !lvm.vgs.length" @click="openLvWizard">
           {{ t('lvm.lv.create_action') }}
         </UButton>
       </div>
@@ -164,9 +165,12 @@
       </div>
     </UCard>
 
-    <LvmCreatePvWizard v-model="showPvWizard" :san-id="sanId" :is-clustered="isClustered" @done="onDone" />
-    <LvmCreateVgWizard v-model="showVgWizard" :san-id="sanId" @done="onDone" />
-    <LvmCreateLvWizard v-model="showLvWizard" :san-id="sanId" @done="onDone" />
+    <LvmCreatePvWizard v-if="!isClustered" v-model="showPvWizard" :san-id="sanId" @done="onDone" />
+    <LvmClusterPvWizard v-else-if="clusterId" v-model="showPvWizard" :san-id="sanId" :cluster-id="clusterId" @done="onDone" />
+    <LvmCreateVgWizard v-if="!isClustered" v-model="showVgWizard" :san-id="sanId" @done="onDone" />
+    <LvmClusterVgWizard v-else-if="clusterId" v-model="showVgWizard" :san-id="sanId" :cluster-id="clusterId" @done="onDone" />
+    <LvmCreateLvWizard v-if="!isClustered" v-model="showLvWizard" :san-id="sanId" @done="onDone" />
+    <LvmClusterLvWizard v-else-if="clusterId" v-model="showLvWizard" :san-id="sanId" :cluster-id="clusterId" @done="onDone" />
     <LvmBindScstWizard v-model="showScstWizard" :lv="scstLv" @done="onDone" />
   </div>
 </template>
@@ -176,6 +180,7 @@ import type { LogicalVolume } from '~/types/lvm'
 
 const props = defineProps<{
   sanId: string
+  clusterId?: string
   isClustered?: boolean
   readOnly?: boolean
 }>()
@@ -190,14 +195,24 @@ const showLvWizard = ref(false)
 const showScstWizard = ref(false)
 const scstLv = ref<LogicalVolume | null>(null)
 
-const canMutate = computed(() => !props.readOnly && !props.isClustered)
+const canMutate = computed(() => !props.readOnly)
+const canCreate = computed(() => canMutate.value)
+const clusterId = computed(() => props.clusterId ?? '')
 
 watch(() => props.sanId, (id) => {
   if (id) {
     lvm.setSanId(id)
     lvm.fetchOverview()
+    if (props.isClustered && props.clusterId) {
+      lvm.setClusterContext(props.clusterId, id)
+      lvm.fetchClusterInventory(props.clusterId)
+    }
   }
 }, { immediate: true })
+
+function openPvWizard() { showPvWizard.value = true }
+function openVgWizard() { showVgWizard.value = true }
+function openLvWizard() { showLvWizard.value = true }
 
 const eligibleCandidates = computed(() => lvm.candidates.filter(c => c.eligible))
 

@@ -227,6 +227,7 @@
       <LvmStoragePanel
         v-else-if="lvm.overview || !lvm.loading"
         :san-id="sanId"
+        :cluster-id="san?.clusterId ?? undefined"
         :is-clustered="isClusteredSan"
         :read-only="isReadOnly"
       />

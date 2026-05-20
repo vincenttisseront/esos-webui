@@ -1,6 +1,8 @@
 /**
  * LVM management types (client + shared contracts).
  */
+import type { MdArray, RaidBlockDevice } from './raid'
+
 export type LvmRiskLevel = 'safe' | 'risky' | 'destructive'
 export type LvmAction =
   | 'pvcreate'
@@ -88,6 +90,46 @@ export interface LvmNodeSnapshot {
   pvs: PhysicalVolume[]
   vgs: VolumeGroup[]
   lvs: LogicalVolume[]
+  candidates?: LvmCandidateDevice[]
+}
+
+export interface ClusterLvmNodeInventory {
+  sanId: string
+  label: string
+  role: string | null
+  readOnly: boolean
+  sshReady: boolean
+  error?: string
+  overview: LvmOverviewResponse
+  mdArrayNames: string[]
+  mdArrays?: MdArray[]
+  blockDevices?: RaidBlockDevice[]
+}
+
+export interface LocalSymmetricLvmIssue {
+  vgName?: string
+  lvName?: string
+  message: string
+  severity: 'warning' | 'critical'
+}
+
+export interface ClusterLvmPreflightResult {
+  ok: boolean
+  blockers: string[]
+  warnings: string[]
+  mappings: ClusterLvmDiskMapping[]
+  symmetryIssues: Array<{ vgName?: string; message: string; severity: 'warning' | 'critical' }>
+  nodes: ClusterLvmNodeInventory[]
+}
+
+export interface ClusterLvmExecutionResult {
+  success: boolean
+  action: LvmAction
+  clusterId?: string
+  primarySanId: string
+  nodeResults: ClusterLvmNodeResult[]
+  refreshedSanIds: string[]
+  errors: string[]
 }
 
 export interface LvmOverviewResponse {

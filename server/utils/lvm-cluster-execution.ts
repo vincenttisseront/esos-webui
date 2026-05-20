@@ -4,21 +4,36 @@ import { getSanSummary } from '../db/repositories/san.repository'
 import { getDB } from '../db'
 import { sans } from '../db/schema'
 import { getSSHPool } from './ssh-pool'
-import { collectLvmOverview, collectLvmOverviewLite } from './lvm-overview.service'
-import { runLvmPreflight } from './lvm-preflight'
+import { collectLvmOverviewLite } from './lvm-overview.service'
 import {
   buildLvCreatePreview,
   buildPvCreatePreview,
   buildVgCreatePreview,
+  runLvCreate,
+  runPvCreate,
+  runVgCreate,
 } from './lvm-actions'
+import { invalidateCacheKey } from './cache'
+
+function invalidateStorageCaches(sanId: string) {
+  invalidateCacheKey(`lvm-overview-${sanId}`)
+  invalidateCacheKey(`raid-overview-${sanId}`)
+}
+import {
+  collectClusterLvmInventory,
+  resolvePeerPvPaths,
+  runClusterLvmPreflight,
+} from './lvm-cluster-preflight'
+import { withSanContext } from './ssh-runtime'
 import type {
+  ClusterLvmDiskMapping,
   ClusterLvmExecutionPlan,
   ClusterLvmExecutionRequest,
-  LvmAction,
-  LvmPreflightRequest,
+  ClusterLvmExecutionResult,
+  ClusterLvmNodeResult,
+  LvCreatePayload,
   PvCreatePayload,
   VgCreatePayload,
-  LvCreatePayload,
 } from './lvm-types'
 
 export const CLUSTER_LVM_BLOCKED_MESSAGE =
@@ -47,43 +62,50 @@ function resolveClusterNodes(clusterId: string) {
     .all()
 }
 
+function assertPlanExecutable(plan: ClusterLvmExecutionPlan) {
+  if (!plan.okSymmetric) {
+    throw createError({
+      statusCode: 422,
+      statusMessage: plan.blockers.join(' · ') || 'Plan cluster non symétrique',
+    })
+  }
+  const missing = plan.nodeResults.filter(n => n.participation !== 'execute')
+  if (missing.length) {
+    throw createError({
+      statusCode: 422,
+      statusMessage: `Nœuds non exécutables : ${missing.map(n => n.label).join(', ')}`,
+    })
+  }
+}
+
 export async function buildClusterPvCreatePlan(
   primarySanId: string,
   clusterId: string,
   payload: PvCreatePayload,
-  mappings: ClusterLvmExecutionRequest['diskMappings'],
+  mappings: ClusterLvmDiskMapping[] = [],
 ): Promise<ClusterLvmExecutionPlan> {
+  const pre = await runClusterLvmPreflight(clusterId, primarySanId, {
+    action: 'pvcreate',
+    payload,
+    clusterExecution: { primarySanId, clusterId, diskMappings: mappings },
+  })
+  const diskMappings = pre.mappings.length ? pre.mappings : mappings
   const nodes = resolveClusterNodes(clusterId)
-  const nodeResults: ClusterLvmExecutionPlan['nodeResults'] = []
-  const blockers: string[] = []
-  const warnings: string[] = []
+  const nodeResults: ClusterLvmNodeResult[] = []
 
   for (const node of nodes) {
-    const manager = getSSHPool().get(node.id)
-    if (!manager || manager.getStatus() !== 'connected') {
-      nodeResults.push({
-        sanId: node.id,
-        label: node.label,
-        participation: 'skip',
-        error: 'SSH non connecté',
-      })
+    const inv = pre.nodes.find(n => n.sanId === node.id)
+    if (!inv?.sshReady) {
+      nodeResults.push({ sanId: node.id, label: node.label, participation: 'skip', error: inv?.error ?? 'SSH non connecté' })
       continue
     }
     const path = node.id === primarySanId
       ? payload.path
-      : mappings?.find(m => m.sourceSanId === primarySanId && m.peerSanId === node.id)?.peerPath
+      : diskMappings.find(m => m.sourcePath === payload.path && m.peerSanId === node.id)?.peerPath
     if (!path) {
-      blockers.push(`${node.label} : mapping PV manquant`)
       nodeResults.push({ sanId: node.id, label: node.label, participation: 'skip', error: 'Mapping manquant' })
       continue
     }
-    const overview = await collectLvmOverview(manager)
-    const pre = await runLvmPreflight(manager, {
-      action: 'pvcreate',
-      payload: { ...payload, path },
-    }, overview)
-    if (!pre.ok) blockers.push(...pre.blockers.map(b => `${node.label}: ${b}`))
-    warnings.push(...pre.warnings)
     nodeResults.push({
       sanId: node.id,
       label: node.label,
@@ -98,9 +120,9 @@ export async function buildClusterPvCreatePlan(
     primarySanId,
     confirmationPhrase: `PVCREATE CLUSTER ${payload.path}`,
     nodeResults,
-    okSymmetric: blockers.length === 0,
-    warnings,
-    blockers,
+    okSymmetric: pre.ok && nodeResults.every(n => n.participation === 'execute'),
+    warnings: pre.warnings,
+    blockers: pre.blockers,
   }
 }
 
@@ -108,30 +130,31 @@ export async function buildClusterVgCreatePlan(
   primarySanId: string,
   clusterId: string,
   payload: VgCreatePayload,
+  mappings: ClusterLvmDiskMapping[] = [],
 ): Promise<ClusterLvmExecutionPlan> {
-  blockClvmdOnCluster(clusterId)
+  const pre = await runClusterLvmPreflight(clusterId, primarySanId, {
+    action: 'vgcreate',
+    payload,
+    clusterExecution: { primarySanId, clusterId, diskMappings: mappings },
+  })
   const nodes = resolveClusterNodes(clusterId)
-  const nodeResults: ClusterLvmExecutionPlan['nodeResults'] = []
-  const blockers: string[] = []
+  const nodeResults: ClusterLvmNodeResult[] = []
 
   for (const node of nodes) {
-    const manager = getSSHPool().get(node.id)
-    if (!manager || manager.getStatus() !== 'connected') {
+    const inv = pre.nodes.find(n => n.sanId === node.id)
+    if (!inv?.sshReady) {
       nodeResults.push({ sanId: node.id, label: node.label, participation: 'skip', error: 'SSH non connecté' })
       continue
     }
-    const lite = await collectLvmOverviewLite(manager)
-    if (lite.vgs.some(v => v.clustered)) {
-      blockers.push(`${node.label} : VG clusterisé (clvmd) — non supporté`)
-    }
-    const orphanPvs = lite.pvs.filter(p => !p.vgName)
-    if (!orphanPvs.length) blockers.push(`${node.label} : aucun PV libre pour vgcreate`)
-    const pvPaths = orphanPvs.slice(0, payload.pvPaths.length).map(p => p.path)
+    const pvPaths = node.id === primarySanId
+      ? payload.pvPaths
+      : resolvePeerPvPaths(primarySanId, payload.pvPaths, node.id, pre.nodes, pre.mappings)
     nodeResults.push({
       sanId: node.id,
       label: node.label,
-      participation: pvPaths.length ? 'execute' : 'skip',
+      participation: pre.ok && pvPaths.length === payload.pvPaths.length ? 'execute' : 'skip',
       command: buildVgCreatePreview(payload.name, pvPaths),
+      error: pvPaths.length ? undefined : 'PV non mappés',
     })
   }
 
@@ -141,9 +164,9 @@ export async function buildClusterVgCreatePlan(
     primarySanId,
     confirmationPhrase: `VGCREATE CLUSTER ${payload.name}`,
     nodeResults,
-    okSymmetric: blockers.length === 0,
-    warnings: ['Chaque nœud reçoit un VG local du même nom (symétrie locale, pas clvmd).'],
-    blockers,
+    okSymmetric: pre.ok && nodeResults.every(n => n.participation === 'execute'),
+    warnings: [...pre.warnings, 'Chaque nœud reçoit un VG local du même nom (symétrie locale, pas clvmd).'],
+    blockers: pre.blockers,
   }
 }
 
@@ -152,24 +175,27 @@ export async function buildClusterLvCreatePlan(
   clusterId: string,
   payload: LvCreatePayload,
 ): Promise<ClusterLvmExecutionPlan> {
-  blockClvmdOnCluster(clusterId)
+  const pre = await runClusterLvmPreflight(clusterId, primarySanId, {
+    action: 'lvcreate',
+    payload,
+    clusterExecution: { primarySanId, clusterId },
+  })
   const nodes = resolveClusterNodes(clusterId)
-  const nodeResults: ClusterLvmExecutionPlan['nodeResults'] = []
+  const nodeResults: ClusterLvmNodeResult[] = []
 
   for (const node of nodes) {
-    const manager = getSSHPool().get(node.id)
-    if (!manager || manager.getStatus() !== 'connected') {
+    const inv = pre.nodes.find(n => n.sanId === node.id)
+    if (!inv?.sshReady) {
       nodeResults.push({ sanId: node.id, label: node.label, participation: 'skip', error: 'SSH non connecté' })
       continue
     }
-    const lite = await collectLvmOverviewLite(manager)
-    const vg = lite.vgs.find(v => v.name === payload.vgName)
+    const vg = inv.overview.vgs.find(v => v.name === payload.vgName)
     nodeResults.push({
       sanId: node.id,
       label: node.label,
-      participation: vg ? 'execute' : 'skip',
+      participation: pre.ok && vg && vg.freeBytes >= payload.sizeBytes ? 'execute' : 'skip',
       command: buildLvCreatePreview(payload.vgName, payload.name, payload.sizeBytes),
-      error: vg ? undefined : `VG ${payload.vgName} absent`,
+      error: vg ? (vg.freeBytes >= payload.sizeBytes ? undefined : 'Espace insuffisant') : `VG ${payload.vgName} absent`,
     })
   }
 
@@ -179,17 +205,107 @@ export async function buildClusterLvCreatePlan(
     primarySanId,
     confirmationPhrase: `LVCREATE CLUSTER ${payload.vgName}/${payload.name}`,
     nodeResults,
-    okSymmetric: nodeResults.every(n => n.participation === 'execute'),
-    warnings: [],
-    blockers: nodeResults.filter(n => n.participation !== 'execute').map(n => `${n.label}: ${n.error ?? 'skip'}`),
+    okSymmetric: pre.ok && nodeResults.every(n => n.participation === 'execute'),
+    warnings: pre.warnings,
+    blockers: pre.blockers,
   }
 }
 
-function blockClvmdOnCluster(clusterId: string) {
-  const nodes = resolveClusterNodes(clusterId)
-  for (const node of nodes) {
-    const manager = getSSHPool().get(node.id)
-    if (!manager || manager.getStatus() !== 'connected') continue
+export async function executeClusterLvmPlan(
+  plan: ClusterLvmExecutionPlan,
+  clusterExecution: ClusterLvmExecutionRequest,
+  payload: PvCreatePayload | VgCreatePayload | LvCreatePayload,
+  diskMappings: ClusterLvmDiskMapping[] = [],
+): Promise<ClusterLvmExecutionResult> {
+  assertPlanExecutable(plan)
+  const confirmation = String((payload as { confirmation?: string }).confirmation ?? '').trim()
+  if (confirmation !== plan.confirmationPhrase) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: `Confirmation requise : ${plan.confirmationPhrase}`,
+    })
+  }
+
+  const clusterId = plan.clusterId ?? clusterExecution.clusterId
+  if (!clusterId) {
+    throw createError({ statusCode: 400, statusMessage: 'clusterId requis' })
+  }
+
+  const nodeResults: ClusterLvmNodeResult[] = []
+  const errors: string[] = []
+  const refreshedSanIds = new Set<string>()
+
+  for (const node of plan.nodeResults.filter(n => n.participation === 'execute')) {
+    try {
+      await withSanContext(node.sanId, async () => {
+        const manager = getSSHPool().get(node.sanId)
+        if (!manager || manager.getStatus() !== 'connected') {
+          throw new Error('SSH non connecté')
+        }
+        if (plan.action === 'pvcreate') {
+          const p = payload as PvCreatePayload
+          const path = node.sanId === clusterExecution.primarySanId
+            ? p.path
+            : diskMappings.find(m => m.sourcePath === p.path && m.peerSanId === node.sanId)?.peerPath ?? p.path
+          const result = await runPvCreate(manager, path, !!p.force)
+          nodeResults.push({
+            sanId: node.sanId,
+            label: node.label,
+            participation: 'execute',
+            command: node.command,
+            stdout: result.stdout,
+            stderr: result.stderr,
+          })
+        } else if (plan.action === 'vgcreate') {
+          const p = payload as VgCreatePayload
+          const pvPaths = node.sanId === clusterExecution.primarySanId
+            ? p.pvPaths
+            : resolvePeerPvPaths(clusterExecution.primarySanId, p.pvPaths, node.sanId, inventories, diskMappings)
+          const result = await runVgCreate(manager, p.name, pvPaths)
+          nodeResults.push({
+            sanId: node.sanId,
+            label: node.label,
+            participation: 'execute',
+            command: node.command,
+            stdout: result.stdout,
+            stderr: result.stderr,
+          })
+        } else if (plan.action === 'lvcreate') {
+          const p = payload as LvCreatePayload
+          const result = await runLvCreate(manager, p.vgName, p.name, p.sizeBytes)
+          nodeResults.push({
+            sanId: node.sanId,
+            label: node.label,
+            participation: 'execute',
+            command: node.command,
+            stdout: result.stdout,
+            stderr: result.stderr,
+          })
+        }
+        invalidateStorageCaches(node.sanId)
+        refreshedSanIds.add(node.sanId)
+      })
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      errors.push(`${node.label}: ${msg}`)
+      nodeResults.push({
+        sanId: node.sanId,
+        label: node.label,
+        participation: 'failed',
+        command: node.command,
+        error: msg,
+      })
+    }
+  }
+
+  return {
+    success: errors.length === 0,
+    action: plan.action,
+    clusterId,
+    primarySanId: clusterExecution.primarySanId,
+    nodeResults,
+    refreshedSanIds: [...refreshedSanIds],
+    errors,
   }
 }
 
@@ -235,4 +351,3 @@ export async function loadClusterPeerLvmDetection(currentSanId: string) {
   }))
   return snapshots
 }
-

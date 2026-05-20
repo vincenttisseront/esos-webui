@@ -945,7 +945,42 @@
     "candidate": { "table_title": "Candidate devices for pvcreate" },
     "confirm": { "label": "Confirmation phrase" },
     "cluster": {
-      "local_symmetric_hint": "This SAN is in a cluster. LVM changes on this node only are allowed; use cluster plans for symmetric provisioning. Shared VG (clvmd) is not supported."
+      "mode_title": "Local symmetric LVM mode",
+      "mode_body": "Each cluster node has its own PV/VG/LV (UUIDs may differ). Symmetry is enforced by name, size, and structure—not shared clvmd.",
+      "blocked_clvmd": "Clustered VG (clvmd) is not supported by the WebUI.",
+      "local_symmetric_hint": "This SAN is in a cluster. Use cluster wizards for symmetric provisioning on all nodes.",
+      "wizard": {
+        "node": "Node",
+        "participation": "Participation",
+        "command": "Command",
+        "next": "Next",
+        "back": "Back",
+        "plan_loading": "Building cluster plan…",
+        "plan_invalid": "Cluster plan is not symmetric",
+        "execute_all": "Execute",
+        "node_skipped": "Skipped",
+        "plan_review": "Per-node execution plan",
+        "pv_create": {
+          "title": "Create PV (cluster)",
+          "mapping": "Peer device mappings are applied automatically when MD arrays match structurally.",
+          "execute": "Execute on all nodes",
+          "success": "Cluster PV created"
+        },
+        "vg_create": {
+          "title": "Create VG (cluster)",
+          "execute": "Execute on all nodes",
+          "success": "Cluster VG created"
+        },
+        "lv_create": {
+          "title": "Create LV (cluster)",
+          "execute": "Execute on all nodes",
+          "success": "Cluster LV created"
+        }
+      },
+      "symmetry": {
+        "warning_peer_ahead": "Peer node is ahead in LVM provisioning",
+        "warning_peer_behind": "Peer node is behind in LVM provisioning"
+      }
     },
     "wizard": {
       "cancel": "Cancel",

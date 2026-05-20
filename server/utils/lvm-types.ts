@@ -25,4 +25,8 @@ export type {
   ClusterLvmDiskMapping,
   ClusterLvmNodeResult,
   ClusterLvmExecutionPlan,
+  ClusterLvmNodeInventory,
+  ClusterLvmPreflightResult,
+  ClusterLvmExecutionResult,
+  LocalSymmetricLvmIssue,
 } from '../../types/lvm'

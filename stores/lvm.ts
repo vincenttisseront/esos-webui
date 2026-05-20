@@ -1,5 +1,9 @@
 import { defineStore } from 'pinia'
 import type {
+  ClusterLvmDiskMapping,
+  ClusterLvmExecutionPlan,
+  ClusterLvmNodeInventory,
+  ClusterLvmPreflightResult,
   LvmOverviewResponse,
   LvmPreflightRequest,
   LvmPreflightResult,
@@ -10,7 +14,7 @@ import type {
   VgRemovePayload,
   LvRemovePayload,
   BindScstPayload,
-  ClusterLvmExecutionPlan,
+  ClusterLvmExecutionRequest,
 } from '~/types/lvm'
 
 export const useLvmStore = defineStore('lvm', {
@@ -19,6 +23,10 @@ export const useLvmStore = defineStore('lvm', {
     loading: false,
     error: null as string | null,
     sanId: null as string | null,
+    clusterId: null as string | null,
+    lastClusterPlan: null as ClusterLvmExecutionPlan | null,
+    lastDiskMappings: [] as ClusterLvmDiskMapping[],
+    clusterInventory: null as ClusterLvmNodeInventory[] | null,
   }),
 
   getters: {
@@ -41,6 +49,11 @@ export const useLvmStore = defineStore('lvm', {
       this.sanId = sanId
     },
 
+    setClusterContext(clusterId: string, primarySanId: string) {
+      this.clusterId = clusterId
+      this.sanId = primarySanId
+    },
+
     async fetchOverview(refresh = false) {
       if (!this.sanId) return
       this.loading = true
@@ -54,6 +67,42 @@ export const useLvmStore = defineStore('lvm', {
       } finally {
         this.loading = false
       }
+    },
+
+    async fetchClusterInventory(clusterId: string) {
+      const res = await $fetch<{ nodes: ClusterLvmNodeInventory[] }>('/api/lvm/cluster/inventory', {
+        query: { clusterId },
+      })
+      this.clusterInventory = res.nodes
+      const primary = res.nodes.find(n => n.sanId === this.sanId)
+      if (primary?.overview.candidates.length) {
+        const mappings: ClusterLvmDiskMapping[] = []
+        for (const c of primary.overview.candidates.filter(x => x.eligible && x.kind === 'md')) {
+          for (const peer of res.nodes.filter(p => p.sanId !== this.sanId)) {
+            const peerCand = peer.overview.candidates.find(x => x.path === c.path && x.eligible)
+            if (peerCand) {
+              mappings.push({
+                sourceSanId: this.sanId!,
+                peerSanId: peer.sanId,
+                sourcePath: c.path,
+                peerPath: c.path,
+                stableKey: c.path,
+              })
+            }
+          }
+        }
+        this.lastDiskMappings = mappings
+      }
+      return res.nodes
+    },
+
+    async clusterPreflight(req: LvmPreflightRequest & { clusterId: string; primarySanId: string }): Promise<ClusterLvmPreflightResult> {
+      const result = await $fetch<ClusterLvmPreflightResult>('/api/lvm/cluster/preflight', {
+        method: 'POST',
+        body: req,
+      })
+      if (result.mappings.length) this.lastDiskMappings = result.mappings
+      return result
     },
 
     async preflight(req: LvmPreflightRequest): Promise<LvmPreflightResult> {
@@ -99,8 +148,54 @@ export const useLvmStore = defineStore('lvm', {
       await this.fetchOverview(true)
     },
 
-    async planPvCreate(payload: PvCreatePayload & { clusterExecution: { primarySanId: string; clusterId?: string; diskMappings?: unknown[] } }): Promise<ClusterLvmExecutionPlan> {
+    clusterExecBody<T extends Record<string, unknown>>(payload: T, clusterExecution: ClusterLvmExecutionRequest) {
+      return { ...payload, clusterExecution: { ...clusterExecution, clusterId: clusterExecution.clusterId ?? this.clusterId ?? undefined } }
+    },
+
+    async planClusterPvCreate(
+      payload: PvCreatePayload & { clusterExecution: ClusterLvmExecutionRequest },
+    ): Promise<ClusterLvmExecutionPlan> {
       return $fetch('/api/lvm/pv/create/plan', { method: 'POST', query: this.query(), body: payload })
+    },
+
+    async executeClusterPvCreate(
+      payload: PvCreatePayload & { clusterExecution: ClusterLvmExecutionRequest },
+    ) {
+      const result = await $fetch('/api/lvm/pv/create/cluster', { method: 'POST', query: this.query(), body: payload })
+      await this.fetchOverview(true)
+      return result
+    },
+
+    async planClusterVgCreate(
+      payload: VgCreatePayload & { clusterExecution: ClusterLvmExecutionRequest },
+    ): Promise<ClusterLvmExecutionPlan> {
+      return $fetch('/api/lvm/vg/create/plan', { method: 'POST', query: this.query(), body: payload })
+    },
+
+    async executeClusterVgCreate(
+      payload: VgCreatePayload & { clusterExecution: ClusterLvmExecutionRequest },
+    ) {
+      const result = await $fetch('/api/lvm/vg/create/cluster', { method: 'POST', query: this.query(), body: payload })
+      await this.fetchOverview(true)
+      return result
+    },
+
+    async planClusterLvCreate(
+      payload: LvCreatePayload & { clusterExecution: ClusterLvmExecutionRequest },
+    ): Promise<ClusterLvmExecutionPlan> {
+      return $fetch('/api/lvm/lv/create/plan', { method: 'POST', query: this.query(), body: payload })
+    },
+
+    async executeClusterLvCreate(
+      payload: LvCreatePayload & { clusterExecution: ClusterLvmExecutionRequest },
+    ) {
+      const result = await $fetch('/api/lvm/lv/create/cluster', { method: 'POST', query: this.query(), body: payload })
+      await this.fetchOverview(true)
+      return result
+    },
+
+    async planPvCreate(payload: PvCreatePayload & { clusterExecution: { primarySanId: string; clusterId?: string; diskMappings?: unknown[] } }): Promise<ClusterLvmExecutionPlan> {
+      return this.planClusterPvCreate(payload)
     },
   },
 })

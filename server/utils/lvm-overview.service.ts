@@ -4,7 +4,7 @@
 import type { SSHSessionManager } from './ssh-session-manager'
 import { collectRaidOverview } from './raid-overview.service'
 import { parsePvsJson, parseVgsJson, parseLvsJson } from './parsers/lvm-json.parser'
-import { buildLvmCandidates } from './lvm-candidates'
+import { buildLvmCandidatesFromInventory } from './lvm-candidates'
 import { readScstConfig } from './scst-config-reader'
 import type {
   LvmAlert,
@@ -148,7 +148,13 @@ export async function collectLvmOverview(manager: SSHSessionManager): Promise<Lv
     }
   })
 
-  const candidates = buildLvmCandidates(raidOverview.blockDevices, pvs, lvPaths)
+  const candidates = buildLvmCandidatesFromInventory({
+    blockDevices: raidOverview.blockDevices,
+    mdArrays: raidOverview.mdArrays,
+    hardwareControllers: raidOverview.hardwareControllers,
+    pvs,
+    lvPaths,
+  })
   const alerts = buildAlerts(tools, vgs.some(v => v.clustered))
 
   return {

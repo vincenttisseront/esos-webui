@@ -945,7 +945,42 @@
     "candidate": { "table_title": "Périphériques candidats pour pvcreate" },
     "confirm": { "label": "Phrase de confirmation" },
     "cluster": {
-      "local_symmetric_hint": "Ce SAN est en cluster. Les modifications LVM sur ce nœud seulement sont autorisées ; utilisez les plans cluster pour un provisionnement symétrique. VG partagé (clvmd) non supporté."
+      "mode_title": "Mode LVM local symétrique",
+      "mode_body": "Chaque nœud du cluster possède ses propres PV/VG/LV (les UUID peuvent différer). La symétrie repose sur le nom, la taille et la structure — pas de clvmd partagé.",
+      "blocked_clvmd": "VG clusterisé (clvmd) non géré par la WebUI.",
+      "local_symmetric_hint": "Ce SAN est en cluster. Utilisez les assistants cluster pour un provisionnement symétrique sur tous les nœuds.",
+      "wizard": {
+        "node": "Nœud",
+        "participation": "Participation",
+        "command": "Commande",
+        "next": "Suivant",
+        "back": "Retour",
+        "plan_loading": "Construction du plan cluster…",
+        "plan_invalid": "Plan cluster non symétrique",
+        "execute_all": "Exécuter",
+        "node_skipped": "Ignoré",
+        "plan_review": "Plan d'exécution par nœud",
+        "pv_create": {
+          "title": "Créer un PV (cluster)",
+          "mapping": "Les correspondances entre nœuds sont appliquées automatiquement lorsque les tableaux MD sont structurellement identiques.",
+          "execute": "Exécuter sur tous les nœuds",
+          "success": "PV cluster créé"
+        },
+        "vg_create": {
+          "title": "Créer un VG (cluster)",
+          "execute": "Exécuter sur tous les nœuds",
+          "success": "VG cluster créé"
+        },
+        "lv_create": {
+          "title": "Créer un LV (cluster)",
+          "execute": "Exécuter sur tous les nœuds",
+          "success": "LV cluster créé"
+        }
+      },
+      "symmetry": {
+        "warning_peer_ahead": "Nœud pair en avance sur le provisionnement LVM",
+        "warning_peer_behind": "Nœud pair en retard sur le provisionnement LVM"
+      }
     },
     "wizard": {
       "cancel": "Annuler",

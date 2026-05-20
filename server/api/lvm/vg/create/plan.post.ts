@@ -15,5 +15,6 @@ export default defineEventHandler(async (event) => {
     body.clusterExecution!.primarySanId,
     body.clusterExecution!.clusterId ?? san.clusterId,
     body,
+    body.clusterExecution!.diskMappings,
   )
 })
