@@ -56,7 +56,12 @@ export interface VolumeGroup {
 
 export interface LogicalVolume {
   name: string
+  /** Block device path used for SCST / validation (resolved backing path). */
   path: string
+  /** Human-readable LV id (vg/lv). */
+  displayName: string
+  /** Alternate paths (mapper, legacy, LVM report) for SCST matching and preflight. */
+  pathCandidates?: string[]
   vgName: string
   sizeBytes: number
   uuid: string

@@ -1,4 +1,5 @@
 import { bindScstBlocker } from '~/utils/lvm-bind-scst-blockers'
+import { buildLvPathCandidates } from '~/utils/lvm-lv-path'
 import type { ScstDeviceIndex } from './scst-device-index'
 import type {
   BindScstPayload,
@@ -151,7 +152,7 @@ export function validateBindScst(
   payload: Partial<BindScstPayload>,
   overview: LvmOverviewResponse,
   index: ScstDeviceIndex,
-  ctx: { nodeLabel: string; lvPathPresent?: boolean },
+  ctx: { nodeLabel: string; lvPathPresent?: boolean; resolvedBackingPath?: string },
 ): { blockers: string[]; warnings: string[]; lvPath?: string } {
   const blockers: string[] = []
   const warnings: string[] = []
@@ -160,13 +161,16 @@ export function validateBindScst(
   const deviceName = String(payload.deviceName ?? '').trim()
   const nodeLabel = ctx.nodeLabel
   const lv = overview.lvs.find(l => l.vgName === vgName && l.name === lvName)
-  const lvPath = lv?.path ?? (vgName && lvName ? `/dev/${vgName}/${lvName}` : undefined)
+  const pathCandidates = lv?.pathCandidates
+    ?? (lv ? buildLvPathCandidates(lv.vgName, lv.name) : buildLvPathCandidates(vgName, lvName))
+  const lvPath = ctx.resolvedBackingPath ?? lv?.path
 
   if (!lv) {
-    blockers.push(bindScstBlocker('lv_not_found', lvPath ?? `${vgName}/${lvName}`))
+    blockers.push(bindScstBlocker('lv_not_found', `${vgName}/${lvName}`))
   }
-  if (lvPath && ctx.lvPathPresent === false) {
-    blockers.push(bindScstBlocker('lv_path_missing', lvPath, nodeLabel))
+  if (lv && ctx.lvPathPresent === false) {
+    const missingPath = lvPath ?? pathCandidates[0] ?? `${vgName}/${lvName}`
+    blockers.push(bindScstBlocker('lv_path_missing', missingPath, nodeLabel))
   }
   if (!deviceName) blockers.push('Nom de device SCST requis')
   else if (deviceName.length > 32) blockers.push('Nom de device SCST : maximum 32 caractères')
@@ -174,15 +178,16 @@ export function validateBindScst(
   if (deviceName && index.names.has(deviceName)) {
     blockers.push(bindScstBlocker('device_exists', deviceName, nodeLabel))
   }
-  if (lvPath) {
-    const bound = index.pathToDevices.get(lvPath) ?? []
+  for (const candidate of pathCandidates) {
+    const bound = index.pathToDevices.get(candidate) ?? []
     const other = bound.find(n => n !== deviceName)
     if (other) {
-      blockers.push(bindScstBlocker('lv_path_in_use', lvPath, other, nodeLabel))
+      blockers.push(bindScstBlocker('lv_path_in_use', candidate, other, nodeLabel))
+      break
     }
   }
   if (lv?.scstDeviceNames?.length) {
-    blockers.push(bindScstBlocker('lv_path_in_use', lv.path, lv.scstDeviceNames[0]!, nodeLabel))
+    blockers.push(bindScstBlocker('lv_path_in_use', lvPath ?? lv.path, lv.scstDeviceNames[0]!, nodeLabel))
   }
-  return { blockers, warnings, lvPath: lv?.path }
+  return { blockers, warnings, lvPath: lvPath ?? lv?.path }
 }

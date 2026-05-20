@@ -1058,6 +1058,7 @@
     },
     "lv": {
       "table_title": "Logical volumes (LV)",
+      "col_backing_path": "Block path",
       "create_action": "Create LV",
       "remove": "Remove LV",
       "removed": "LV removed",
@@ -1265,8 +1266,9 @@
       },
       "scst_device": {
         "title": "Create SCST blockio device from LV",
-        "explanation": "This step exposes the logical volume {lvPath} as a SCSI device in SCST. The device will be available in SCST under the name you provide, and must then be assigned to a target and a LUN to be visible to iSCSI or FC clients.",
-        "backing_label": "Backing device",
+        "explanation": "This step exposes logical volume {lvDisplay} (block device {lvPath}) as a SCSI device in SCST. The device will be available in SCST under the name you provide, and must then be assigned to a target and a LUN to be visible to iSCSI or FC clients.",
+        "lv_label": "Logical volume",
+        "backing_label": "Block device (SCST)",
         "name": "SCST device name",
         "name_help": "Letters, digits, hyphens, underscores. Maximum 32 characters.",
         "cluster_note": "This device will be created on each node in the cluster.",

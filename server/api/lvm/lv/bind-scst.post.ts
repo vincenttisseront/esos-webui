@@ -9,14 +9,15 @@ export default defineEventHandler(async (event) => {
   const body = await readBody<BindScstPayload>(event)
   await requirePreflightOk(sanId, { action: 'bind_scst', payload: body })
 
+  let backingPath = ''
   await withSanContext(sanId, async () => {
-    const lvPath = await withLvmOverview(sanId, false, async (overview) => {
+    backingPath = await withLvmOverview(sanId, false, async (overview) => {
       const lv = overview.lvs.find(l => l.vgName === body.vgName && l.name === body.lvName)
       if (!lv) throw createError({ statusCode: 422, statusMessage: 'LV introuvable' })
       return lv.path
     })
     try {
-      await createDevice('vdisk_blockio', body.deviceName, lvPath)
+      await createDevice('vdisk_blockio', body.deviceName, backingPath)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur SCST'
       if (/existe déjà/i.test(msg)) {
@@ -30,5 +31,5 @@ export default defineEventHandler(async (event) => {
     }
     invalidateStorageCaches(sanId)
   })
-  return { success: true, deviceName: body.deviceName, filename: body.vgName ? `/dev/${body.vgName}/${body.lvName}` : undefined }
+  return { success: true, deviceName: body.deviceName, filename: backingPath }
 })

@@ -4,6 +4,7 @@
 import type { SSHSessionManager } from './ssh-session-manager'
 import { collectRaidOverview } from './raid-overview.service'
 import { parsePvsJson, parseVgsJson, parseLvsJson } from './parsers/lvm-json.parser'
+import { allLvPathCandidates, mapParsedLvToLogicalVolume } from './lvm-lv-mapper'
 import { buildLvmCandidatesFromInventory } from './lvm-candidates'
 import { readScstConfig } from './scst-config-reader'
 import type {
@@ -23,7 +24,7 @@ const LVM_OVERVIEW_CMD = [
   'echo "===VGS_JSON==="',
   'vgs --reportformat json --units b --nosuffix 2>/dev/null || echo "{}"',
   'echo "===LVS_JSON==="',
-  'lvs --reportformat json --units b --nosuffix 2>/dev/null || echo "{}"',
+  'lvs --reportformat json --units b --nosuffix -o lv_name,vg_name,lv_full_name,lv_path,lv_dm_path,lv_size,lv_uuid,lv_attr 2>/dev/null || echo "{}"',
   'echo "===END==="',
 ].join('\n')
 
@@ -128,25 +129,10 @@ export async function collectLvmOverview(manager: SSHSessionManager): Promise<Lv
     clustered: vg.clustered,
   }))
 
-  const lvPaths = new Set(lvsRaw.map(lv => lv.path))
-  const lvs: LogicalVolume[] = lvsRaw.map(lv => {
-    const usedBy: LogicalVolume['usedBy'] = []
-    const scstNames = scstMap.get(lv.path) ?? []
-    if (scstNames.length) usedBy.push('scst')
-    const dev = blockByPath.get(lv.path)
-    if (dev?.mountpoint) usedBy.push('mounted')
-    return {
-      name: lv.name,
-      path: lv.path,
-      vgName: lv.vgName,
-      sizeBytes: lv.sizeBytes,
-      uuid: lv.uuid,
-      attr: lv.attr,
-      active: lv.active,
-      usedBy,
-      scstDeviceNames: scstNames.length ? scstNames : undefined,
-    }
-  })
+  const lvs: LogicalVolume[] = lvsRaw.map(raw =>
+    mapParsedLvToLogicalVolume(raw, scstMap, blockByPath),
+  )
+  const lvPaths = allLvPathCandidates(lvs)
 
   const candidates = buildLvmCandidatesFromInventory({
     blockDevices: raidOverview.blockDevices,
@@ -188,19 +174,8 @@ export async function collectLvmOverviewLite(manager: SSHSessionManager): Promis
       attr: vg.attr,
       clustered: vg.clustered,
     })),
-    lvs: parseLvsJson(sections.LVS_JSON ?? '{}').map(lv => {
-      const scstNames = scstMap.get(lv.path) ?? []
-      return {
-        name: lv.name,
-        path: lv.path,
-        vgName: lv.vgName,
-        sizeBytes: lv.sizeBytes,
-        uuid: lv.uuid,
-        attr: lv.attr,
-        active: lv.active,
-        usedBy: scstNames.length ? ['scst' as const] : [],
-        scstDeviceNames: scstNames.length ? scstNames : undefined,
-      }
-    }),
+    lvs: parseLvsJson(sections.LVS_JSON ?? '{}').map(raw =>
+      mapParsedLvToLogicalVolume(raw, scstMap, new Map()),
+    ),
   }
 }

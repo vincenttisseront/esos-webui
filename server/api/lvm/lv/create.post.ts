@@ -1,6 +1,7 @@
 import { requireSanIdQuery } from '../../../utils/san-query'
 import { requirePreflightOk, invalidateStorageCaches } from '../../../utils/lvm-api-helpers'
 import { runLvCreate } from '../../../utils/lvm-actions'
+import { activateLogicalVolume } from '../../../utils/lvm-lv-device-path'
 import { collectLvmOverviewLite } from '../../../utils/lvm-overview.service'
 import { getActiveSSHManager, withSanContext } from '../../../utils/ssh-runtime'
 import { overviewHasLv } from '../../../../utils/lvm-lv-size'
@@ -20,6 +21,7 @@ export default defineEventHandler(async (event) => {
         statusMessage: result.stderr.trim() || result.stdout.trim() || `lvcreate a échoué (code ${result.code})`,
       })
     }
+    await activateLogicalVolume(manager, body.vgName, body.name)
     const lite = await collectLvmOverviewLite(manager)
     if (!overviewHasLv(lite.lvs, body.vgName, body.name)) {
       throw createError({

@@ -1058,6 +1058,7 @@
     },
     "lv": {
       "table_title": "Volumes logiques (LV)",
+      "col_backing_path": "Chemin bloc",
       "create_action": "Créer un LV",
       "remove": "Supprimer le LV",
       "removed": "LV supprimé",
@@ -1265,8 +1266,9 @@
       },
       "scst_device": {
         "title": "Créer un device SCST blockio depuis le LV",
-        "explanation": "Cette étape expose le volume logique {lvPath} comme un device SCSI dans SCST. Le device sera disponible dans SCST sous le nom fourni, et devra ensuite être assigné à un target et un LUN pour être visible par les clients iSCSI ou FC.",
-        "backing_label": "Périphérique source",
+        "explanation": "Cette étape expose le volume logique {lvDisplay} (périphérique {lvPath}) comme device SCSI dans SCST. Le device sera disponible dans SCST sous le nom fourni, et devra ensuite être assigné à un target et un LUN pour être visible par les clients iSCSI ou FC.",
+        "lv_label": "Volume logique",
+        "backing_label": "Périphérique bloc (SCST)",
         "name": "Nom du device SCST",
         "name_help": "Lettres, chiffres, tirets, underscores. Maximum 32 caractères.",
         "cluster_note": "Ce device sera créé sur chaque nœud du cluster.",

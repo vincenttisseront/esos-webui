@@ -23,6 +23,8 @@ import {
 } from './lvm-actions'
 import { getSanSummary } from '../db/repositories/san.repository'
 import { getCurrentSanId } from './ssh-runtime'
+import { buildLvPathCandidates } from '~/utils/lvm-lv-path'
+import { resolveBlockDevicePathFromCandidates } from './lvm-lv-device-path'
 import { readScstDeviceIndex } from './scst-device-index'
 
 const RISK: Record<LvmPreflightRequest['action'], LvmRiskLevel> = {
@@ -124,20 +126,24 @@ export async function runLvmPreflight(
       try {
         index = await readScstDeviceIndex(manager)
       } catch { /* empty */ }
-      const lvGuess = overview.lvs.find(
-        l => l.vgName === String(p.vgName ?? '').trim() && l.name === String(p.lvName ?? '').trim(),
-      )?.path
+      const vgName = String(p.vgName ?? '').trim()
+      const lvName = String(p.lvName ?? '').trim()
+      const lvRow = overview.lvs.find(l => l.vgName === vgName && l.name === lvName)
+      let resolvedBackingPath: string | undefined
       let lvPathPresent: boolean | undefined
-      if (lvGuess) {
-        try {
-          const quoted = lvGuess.replace(/'/g, `'\\''`)
-          const test = await manager.exec(`test -b '${quoted}' && echo ok || echo missing`, 10_000)
-          lvPathPresent = test.stdout.trim().includes('ok')
-        } catch {
-          lvPathPresent = false
-        }
+      if (lvRow) {
+        const candidates = lvRow.pathCandidates?.length
+          ? lvRow.pathCandidates
+          : buildLvPathCandidates(vgName, lvName)
+        const resolved = await resolveBlockDevicePathFromCandidates(manager, candidates)
+        resolvedBackingPath = resolved.path
+        lvPathPresent = !!resolved.path
       }
-      const v = validateBindScst(p as any, overview, index, { nodeLabel, lvPathPresent })
+      const v = validateBindScst(p as any, overview, index, {
+        nodeLabel,
+        lvPathPresent,
+        resolvedBackingPath,
+      })
       blockers.push(...v.blockers)
       warnings.push(...v.warnings)
       const deviceName = String(p.deviceName ?? '')

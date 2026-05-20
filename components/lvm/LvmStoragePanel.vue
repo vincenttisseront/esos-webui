@@ -256,6 +256,7 @@
           <thead>
             <tr class="text-left text-gray-500 border-b">
               <th class="py-1.5 pr-3">LV</th>
+              <th class="py-1.5 pr-3">{{ t('lvm.lv.col_backing_path') }}</th>
               <th class="py-1.5 pr-3">VG</th>
               <th class="py-1.5 pr-3">{{ t('lvm.col.size') }}</th>
               <th class="py-1.5 pr-3">SCST</th>
@@ -263,8 +264,9 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in lvm.lvs" :key="row.path" class="border-b border-gray-100 dark:border-gray-800">
-              <td class="py-1.5 font-mono">{{ row.path }}</td>
+            <tr v-for="row in lvm.lvs" :key="`${row.vgName}/${row.name}`" class="border-b border-gray-100 dark:border-gray-800">
+              <td class="py-1.5 font-mono">{{ row.displayName || `${row.vgName}/${row.name}` }}</td>
+              <td class="py-1.5 font-mono text-gray-600 dark:text-gray-400 break-all">{{ row.path }}</td>
               <td class="py-1.5">{{ row.vgName }}</td>
               <td class="py-1.5">{{ formatBytes(row.sizeBytes) }}</td>
               <td class="py-1.5">

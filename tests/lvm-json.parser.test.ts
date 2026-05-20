@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseLvsJson, parsePvsJson, parseVgsJson } from '../server/utils/parsers/lvm-json.parser'
+import { pickLvBackingPathFromReport } from '../utils/lvm-lv-path'
 
 const PVS_SAMPLE = `{
   "report": [{ "pv": [{
@@ -52,17 +53,22 @@ describe('lvm-json.parser', () => {
     expect(rows[0]?.clustered).toBe(false)
   })
 
-  it('parses lvs json with active attr', () => {
+  it('parses lvs json with lv_path and active attr', () => {
     const rows = parseLvsJson(LVS_SAMPLE)
-    expect(rows[0]?.path).toBe('/dev/vg0/lv_data')
+    expect(rows[0]?.lvPath).toBe('/dev/vg0/lv_data')
     expect(rows[0]?.active).toBe(true)
+    const backing = pickLvBackingPathFromReport(rows[0]!.vgName, rows[0]!.name, {
+      lvPath: rows[0]!.lvPath,
+      lvDmPath: rows[0]!.lvDmPath,
+    })
+    expect(backing.backingPath).toBe('/dev/vg0/lv_data')
   })
 
   it('parses lvs when lv_name is vg/lv and vg_name empty', () => {
     const json = `{
       "report": [{ "lv": [{
         "lv_name": "data/photos",
-        "lv_path": "/dev/data/photos",
+        "lv_path": "/dev/mapper/data-photos",
         "lv_size": "10737418240",
         "lv_uuid": "u1",
         "lv_attr": "-wi-a-----"
@@ -72,14 +78,15 @@ describe('lvm-json.parser', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0]?.vgName).toBe('data')
     expect(rows[0]?.name).toBe('photos')
-    expect(rows[0]?.path).toBe('/dev/data/photos')
+    expect(rows[0]?.lvPath).toBe('/dev/mapper/data-photos')
   })
 
-  it('parses lvs from lv_full_name', () => {
+  it('parses lvs from lv_full_name with lv_dm_path', () => {
     const json = `{
       "report": [{ "lv": [{
         "lv_full_name": "data/photos",
         "lv_path": "/dev/data/photos",
+        "lv_dm_path": "/dev/mapper/data-photos",
         "lv_size": "10737418240",
         "lv_uuid": "u1",
         "lv_attr": "-wi-a-----"
@@ -88,6 +95,12 @@ describe('lvm-json.parser', () => {
     const rows = parseLvsJson(json)
     expect(rows[0]?.vgName).toBe('data')
     expect(rows[0]?.name).toBe('photos')
+    expect(rows[0]?.lvDmPath).toBe('/dev/mapper/data-photos')
+    const backing = pickLvBackingPathFromReport('data', 'photos', {
+      lvPath: rows[0]!.lvPath,
+      lvDmPath: rows[0]!.lvDmPath,
+    })
+    expect(backing.backingPath).toBe('/dev/mapper/data-photos')
   })
 
   it('returns empty on invalid json', () => {

@@ -4,6 +4,7 @@ import { getSanSummary } from '../db/repositories/san.repository'
 import { getDB } from '../db'
 import { sans } from '../db/schema'
 import { getSSHPool } from './ssh-pool'
+import { activateLogicalVolume } from './lvm-lv-device-path'
 import { collectLvmOverviewLite } from './lvm-overview.service'
 import { overviewHasLv } from '../../utils/lvm-lv-size'
 import {
@@ -442,6 +443,7 @@ export async function executeClusterLvmPlan(
           let failed = result.code !== 0
           let verifyDetail = ''
           if (!failed) {
+            await activateLogicalVolume(manager, p.vgName, p.name)
             const lite = await collectLvmOverviewLite(manager)
             if (!overviewHasLv(lite.lvs, p.vgName, p.name)) {
               failed = true

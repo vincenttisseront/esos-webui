@@ -7,10 +7,19 @@
   >
     <div v-if="lv" class="space-y-4">
       <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-        {{ t('lvm.wizard.scst_device.explanation', { lvPath: lv.path }) }}
+        {{ t('lvm.wizard.scst_device.explanation', {
+          lvDisplay: lv.displayName || `${lv.vgName}/${lv.name}`,
+          lvPath: lv.path,
+        }) }}
       </p>
 
       <dl class="text-sm space-y-2 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/40 px-3 py-2.5">
+        <div class="flex flex-col gap-0.5 sm:flex-row sm:gap-2">
+          <dt class="text-gray-500 dark:text-gray-400 shrink-0 font-medium">
+            {{ t('lvm.wizard.scst_device.lv_label') }}
+          </dt>
+          <dd class="font-mono text-gray-900 dark:text-gray-100">{{ lv.displayName || `${lv.vgName}/${lv.name}` }}</dd>
+        </div>
         <div class="flex flex-col gap-0.5 sm:flex-row sm:gap-2">
           <dt class="text-gray-500 dark:text-gray-400 shrink-0 font-medium">
             {{ t('lvm.wizard.scst_device.backing_label') }}

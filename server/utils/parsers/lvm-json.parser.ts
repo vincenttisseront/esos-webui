@@ -100,8 +100,9 @@ function normalizeLvNames(row: LvmJsonRow): { vgName: string; lvName: string } {
 
 export function parseLvsJson(jsonText: string): Array<{
   name: string
-  path: string
   vgName: string
+  lvPath: string
+  lvDmPath: string
   sizeBytes: number
   uuid: string
   attr: string
@@ -109,14 +110,12 @@ export function parseLvsJson(jsonText: string): Array<{
 }> {
   return rowsFromReport(jsonText, 'lv').map((row) => {
     const { vgName, lvName } = normalizeLvNames(row)
-    const lvPath = str(row, 'lv_path')
-      || str(row, 'lv_dm_path')
-      || (vgName && lvName ? `/dev/${vgName}/${lvName}` : '')
     const attr = str(row, 'lv_attr')
     return {
       name: lvName,
-      path: lvPath,
       vgName,
+      lvPath: str(row, 'lv_path'),
+      lvDmPath: str(row, 'lv_dm_path'),
       sizeBytes: num(row, 'lv_size'),
       uuid: str(row, 'lv_uuid'),
       attr,

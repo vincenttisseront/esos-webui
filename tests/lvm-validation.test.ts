@@ -66,6 +66,7 @@ describe('lvm-validation', () => {
     overview.lvs = [{
       name: 'lv1',
       path: '/dev/vg0/lv1',
+      displayName: 'vg0/lv1',
       vgName: 'vg0',
       sizeBytes: 1e9,
       uuid: 'l',
@@ -85,7 +86,9 @@ describe('lvm-validation', () => {
     const overview = emptyOverview()
     overview.lvs = [{
       name: 'photos',
-      path: '/dev/data/photos',
+      path: '/dev/mapper/data-photos',
+      displayName: 'data/photos',
+      pathCandidates: ['/dev/mapper/data-photos', '/dev/data/photos'],
       vgName: 'data',
       sizeBytes: 1e9,
       uuid: 'l',
