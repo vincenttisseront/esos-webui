@@ -1,7 +1,12 @@
 <template>
   <UModal v-model="open">
     <UCard class="max-w-2xl">
-      <template #header>{{ t('lvm.cluster.wizard.vg_create.title') }}</template>
+      <template #header>
+        <div class="flex items-center justify-between gap-2">
+          <span>{{ t('lvm.cluster.wizard.vg_create.title') }}</span>
+          <span class="text-xs text-gray-500">{{ t('lvm.cluster.wizard.step', { current: step, total: 4 }) }}</span>
+        </div>
+      </template>
       <div class="space-y-4">
         <template v-if="step === 1">
           <UFormGroup :label="t('lvm.wizard.vg_create.name')">
@@ -19,18 +24,21 @@
           <LvmClusterPlanReview v-if="plan" :plan="plan" />
           <UAlert v-if="planError" color="red" variant="soft" :title="planError" />
         </template>
-        <template v-else>
+        <template v-else-if="step === 3">
           <UFormGroup :label="t('lvm.confirm.label')">
             <UInput v-model="confirmation" :placeholder="plan?.confirmationPhrase" />
           </UFormGroup>
         </template>
+        <template v-else>
+          <LvmClusterExecutionResults v-if="executionResult" :result="executionResult" />
+        </template>
       </div>
       <template #footer>
         <div class="flex justify-between">
-          <UButton v-if="step > 1" color="gray" variant="ghost" @click="step--">{{ t('lvm.cluster.wizard.back') }}</UButton>
+          <UButton v-if="step > 1 && step < 4" color="gray" variant="ghost" @click="step--">{{ t('lvm.cluster.wizard.back') }}</UButton>
           <span v-else />
           <div class="flex gap-2">
-            <UButton color="gray" variant="ghost" @click="open = false">{{ t('lvm.wizard.cancel') }}</UButton>
+            <UButton color="gray" variant="ghost" @click="open = false">{{ step === 4 ? t('lvm.cluster.wizard.close') : t('lvm.wizard.cancel') }}</UButton>
             <UButton
               v-if="step < 3"
               color="primary"
@@ -41,7 +49,7 @@
               {{ t('lvm.cluster.wizard.next') }}
             </UButton>
             <UButton
-              v-else
+              v-else-if="step === 3"
               color="primary"
               :loading="busy"
               :disabled="!plan?.okSymmetric || confirmation !== plan?.confirmationPhrase"
@@ -57,6 +65,8 @@
 </template>
 
 <script setup lang="ts">
+import type { ClusterLvmExecutionResult } from '~/types/lvm'
+
 const props = defineProps<{ modelValue: boolean; sanId: string; clusterId: string }>()
 const emit = defineEmits<{ 'update:modelValue': [boolean]; done: [] }>()
 const { t } = useEsosI18n()
@@ -75,11 +85,13 @@ const plan = ref<Awaited<ReturnType<typeof lvm.planClusterVgCreate>> | null>(nul
 const planLoading = ref(false)
 const planError = ref<string | null>(null)
 const busy = ref(false)
+const executionResult = ref<ClusterLvmExecutionResult | null>(null)
 
 watch(open, (v) => {
   if (v) {
     step.value = 1
     plan.value = null
+    executionResult.value = null
     vgName.value = ''
     selectedPvs.value = lvm.orphanPvs.map(p => p.path)
     lvm.setClusterContext(props.clusterId, props.sanId)
@@ -116,14 +128,14 @@ async function nextStep() {
     step.value = 2
     return
   }
-  step.value = 3
+  if (step.value === 2) step.value = 3
 }
 
 async function execute() {
   if (!plan.value) return
   busy.value = true
   try {
-    await lvm.executeClusterVgCreate({
+    executionResult.value = await lvm.executeClusterVgCreate({
       name: vgName.value,
       pvPaths: selectedPvs.value,
       confirmation: confirmation.value,
@@ -133,9 +145,11 @@ async function execute() {
         diskMappings: lvm.lastDiskMappings,
       },
     })
-    toast.add({ title: t('lvm.cluster.wizard.vg_create.success'), color: 'green' })
-    open.value = false
-    emit('done')
+    step.value = 4
+    if (executionResult.value.success) {
+      toast.add({ title: t('lvm.cluster.wizard.vg_create.success'), color: 'green' })
+      emit('done')
+    }
   } catch (e: any) {
     toast.add({ title: e?.statusMessage ?? 'Erreur', color: 'red' })
   } finally {

@@ -15,6 +15,7 @@ import type {
   LvRemovePayload,
   BindScstPayload,
   ClusterLvmExecutionRequest,
+  ClusterLvmExecutionResult,
 } from '~/types/lvm'
 
 export const useLvmStore = defineStore('lvm', {
@@ -160,9 +161,10 @@ export const useLvmStore = defineStore('lvm', {
 
     async executeClusterPvCreate(
       payload: PvCreatePayload & { clusterExecution: ClusterLvmExecutionRequest },
-    ) {
-      const result = await $fetch('/api/lvm/pv/create/cluster', { method: 'POST', query: this.query(), body: payload })
+    ): Promise<ClusterLvmExecutionResult> {
+      const result = await $fetch<ClusterLvmExecutionResult>('/api/lvm/pv/create/cluster', { method: 'POST', query: this.query(), body: payload })
       await this.fetchOverview(true)
+      if (this.clusterId) await this.fetchClusterInventory(this.clusterId)
       return result
     },
 
@@ -174,9 +176,10 @@ export const useLvmStore = defineStore('lvm', {
 
     async executeClusterVgCreate(
       payload: VgCreatePayload & { clusterExecution: ClusterLvmExecutionRequest },
-    ) {
-      const result = await $fetch('/api/lvm/vg/create/cluster', { method: 'POST', query: this.query(), body: payload })
+    ): Promise<ClusterLvmExecutionResult> {
+      const result = await $fetch<ClusterLvmExecutionResult>('/api/lvm/vg/create/cluster', { method: 'POST', query: this.query(), body: payload })
       await this.fetchOverview(true)
+      if (this.clusterId) await this.fetchClusterInventory(this.clusterId)
       return result
     },
 
@@ -188,9 +191,10 @@ export const useLvmStore = defineStore('lvm', {
 
     async executeClusterLvCreate(
       payload: LvCreatePayload & { clusterExecution: ClusterLvmExecutionRequest },
-    ) {
-      const result = await $fetch('/api/lvm/lv/create/cluster', { method: 'POST', query: this.query(), body: payload })
+    ): Promise<ClusterLvmExecutionResult> {
+      const result = await $fetch<ClusterLvmExecutionResult>('/api/lvm/lv/create/cluster', { method: 'POST', query: this.query(), body: payload })
       await this.fetchOverview(true)
+      if (this.clusterId) await this.fetchClusterInventory(this.clusterId)
       return result
     },
 

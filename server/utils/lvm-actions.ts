@@ -20,7 +20,7 @@ export async function runPvCreate(
   path: string,
   force: boolean,
 ): Promise<{ stdout: string; stderr: string }> {
-  const args = ['pvcreate', '-y']
+  const args = ['pvcreate', '-y', '-v']
   if (force) args.push('--force')
   args.push(path)
   return manager.exec(args.map(shellQuote).join(' '), 60_000)
@@ -31,7 +31,7 @@ export async function runVgCreate(
   name: string,
   pvPaths: string[],
 ): Promise<{ stdout: string; stderr: string }> {
-  const cmd = ['vgcreate', name, ...pvPaths].map(shellQuote).join(' ')
+  const cmd = ['vgcreate', '-v', name, ...pvPaths].map(shellQuote).join(' ')
   return manager.exec(cmd, 60_000)
 }
 
@@ -44,6 +44,7 @@ export async function runLvCreate(
   const cmd = [
     'lvcreate',
     '-y',
+    '-v',
     '-L', String(sizeBytes),
     '-n', lvName,
     vgName,
@@ -64,15 +65,15 @@ export async function runLvRemove(manager: SSHSessionManager, vgName: string, lv
 }
 
 export function buildPvCreatePreview(path: string, force: boolean): string {
-  return force ? `pvcreate -y --force ${path}` : `pvcreate -y ${path}`
+  return force ? `pvcreate -y -v --force ${path}` : `pvcreate -y -v ${path}`
 }
 
 export function buildVgCreatePreview(name: string, pvPaths: string[]): string {
-  return `vgcreate ${name} ${pvPaths.join(' ')}`
+  return `vgcreate -v ${name} ${pvPaths.join(' ')}`
 }
 
 export function buildLvCreatePreview(vgName: string, lvName: string, sizeBytes: number): string {
-  return `lvcreate -y -L ${sizeBytes} -n ${lvName} ${vgName}`
+  return `lvcreate -y -v -L ${sizeBytes} -n ${lvName} ${vgName}`
 }
 
 export function assertConfirmation(expected: string, actual: string): void {

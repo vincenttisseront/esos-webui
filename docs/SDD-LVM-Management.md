@@ -28,7 +28,9 @@ SAN-scoped LVM management: PV / VG / LV lifecycle, preflight + typed confirmatio
 - **Mapping**: `/dev/mdN` maps to the same path on peers when MD arrays match structurally (`server/utils/lvm-cluster-preflight.ts`).
 - **Mutations on clustered SAN**: require `clusterExecution` in body; standalone create returns **409**.
 - **clvmd / shared VG**: blocked for mutations; warning in overview.
-- **Wizards**: `LvmClusterPvWizard`, `LvmClusterVgWizard`, `LvmClusterLvWizard` with `LvmClusterPlanReview`.
+- **Wizards**: `LvmClusterPvWizard`, `LvmClusterVgWizard`, `LvmClusterLvWizard` with `LvmClusterPlanReview`, mapping/preflight panels, and per-node execution results.
+- **Sync config**: does not create PV/VG/LV on peers; operators must use cluster wizards.
+- **Commands**: `pvcreate -y -v`, `vgcreate -v`, `lvcreate -y -v` (non-interactive + verbose).
 
 ## UI
 

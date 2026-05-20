@@ -51,8 +51,25 @@
       </UCard>
     </div>
 
+    <div v-if="isClustered && symmetryIssues.length" class="space-y-1">
+      <UAlert
+        v-for="(issue, i) in symmetryIssues"
+        :key="i"
+        :title="symmetryIssueTitle(issue)"
+        :description="issue.message"
+        :color="issue.severity === 'critical' ? 'red' : 'amber'"
+        variant="soft"
+        size="sm"
+      />
+    </div>
+
     <UCard>
-      <template #header><h3 class="text-sm font-medium">{{ t('lvm.pv.table_title') }}</h3></template>
+      <template #header>
+        <h3 class="text-sm font-medium">
+          {{ isClustered ? t('lvm.cluster.this_node') : '' }}
+          {{ isClustered ? ' — ' : '' }}{{ t('lvm.pv.table_title') }}
+        </h3>
+      </template>
       <div class="overflow-x-auto">
         <table class="w-full text-xs">
           <thead>
@@ -143,7 +160,37 @@
       </div>
     </UCard>
 
-    <UCard v-if="eligibleCandidates.length">
+    <template v-if="isClustered && lvm.clusterPeers.length">
+      <UCard v-for="peer in lvm.clusterPeers" :key="peer.nodeSanId">
+        <template #header>
+          <h3 class="text-sm font-medium">{{ t('lvm.cluster.peer_node', { label: peer.nodeLabel }) }}</h3>
+        </template>
+        <div class="grid grid-cols-3 gap-2 text-xs mb-3">
+          <div><span class="text-gray-500">PV</span> {{ peer.pvs.length }}</div>
+          <div><span class="text-gray-500">VG</span> {{ peer.vgs.length }}</div>
+          <div><span class="text-gray-500">LV</span> {{ peer.lvs.length }}</div>
+        </div>
+        <div v-if="peer.vgs.length" class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead>
+              <tr class="text-left text-gray-500 border-b">
+                <th class="py-1 pr-2">VG</th>
+                <th class="py-1">{{ t('lvm.col.size_free') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="vg in peer.vgs" :key="vg.name" class="border-b border-gray-100 dark:border-gray-800">
+                <td class="py-1 font-mono">{{ vg.name }}</td>
+                <td class="py-1">{{ formatBytes(vg.freeBytes) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p v-else class="text-xs text-gray-500">{{ t('lvm.cluster.peer_empty') }}</p>
+      </UCard>
+    </template>
+
+    <UCard v-if="displayCandidates.length">
       <template #header><h3 class="text-sm font-medium">{{ t('lvm.candidate.table_title') }}</h3></template>
       <div class="overflow-x-auto">
         <table class="w-full text-xs">
@@ -155,7 +202,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in eligibleCandidates" :key="row.path" class="border-b border-gray-100 dark:border-gray-800">
+            <tr v-for="row in displayCandidates" :key="row.path" class="border-b border-gray-100 dark:border-gray-800">
               <td class="py-2 font-mono">{{ row.path }}</td>
               <td class="py-2">{{ row.kind }}</td>
               <td class="py-2">{{ formatBytes(row.sizeBytes) }}</td>
@@ -176,7 +223,8 @@
 </template>
 
 <script setup lang="ts">
-import type { LogicalVolume } from '~/types/lvm'
+import type { LogicalVolume, LocalSymmetricLvmIssue } from '~/types/lvm'
+import { listClusterEligiblePaths, symmetryIssuesForOverview } from '~/utils/lvm-cluster-ui'
 
 const props = defineProps<{
   sanId: string
@@ -215,6 +263,27 @@ function openVgWizard() { showVgWizard.value = true }
 function openLvWizard() { showLvWizard.value = true }
 
 const eligibleCandidates = computed(() => lvm.candidates.filter(c => c.eligible))
+
+const displayCandidates = computed(() => {
+  if (props.isClustered && props.clusterId && lvm.clusterInventory) {
+    return listClusterEligiblePaths(props.sanId, lvm.candidates, lvm.clusterInventory)
+  }
+  return eligibleCandidates.value
+})
+
+const symmetryIssues = computed((): LocalSymmetricLvmIssue[] => {
+  if (!props.isClustered || !lvm.overview) return []
+  return symmetryIssuesForOverview(
+    { pvs: lvm.pvs, vgs: lvm.vgs, lvs: lvm.lvs },
+    lvm.clusterPeers,
+  )
+})
+
+function symmetryIssueTitle(issue: LocalSymmetricLvmIssue) {
+  if (issue.lvName) return `LV ${issue.vgName}/${issue.lvName}`
+  if (issue.vgName) return `VG ${issue.vgName}`
+  return t('lvm.cluster.symmetry_title')
+}
 
 function formatBytes(n: number) {
   if (!n) return '0 B'
