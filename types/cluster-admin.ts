@@ -11,6 +11,7 @@ export type ClusterAttentionCategory =
   | 'storage_replication'
   | 'config_sync'
   | 'storage_md'
+  | 'storage_lvm'
   | 'scst'
   | 'config'
   | 'version'

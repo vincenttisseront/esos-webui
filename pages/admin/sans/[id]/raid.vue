@@ -212,6 +212,26 @@
       @navigate-md-detection="navigateMdDetectionItem"
     />
 
+    <!-- Onglet LVM -->
+    <div v-else-if="activeTab === 'lvm'" class="space-y-3">
+      <UAlert
+        v-if="lvm.error"
+        :title="lvm.error"
+        color="red"
+        variant="soft"
+      />
+      <div v-if="lvm.loading && !lvm.overview" class="text-center py-12 text-gray-500">
+        <UIcon name="i-heroicons-arrow-path" class="animate-spin w-8 h-8 mx-auto mb-2" />
+        <p>{{ t('lvm.overview.refresh') }}…</p>
+      </div>
+      <LvmStoragePanel
+        v-else-if="lvm.overview || !lvm.loading"
+        :san-id="sanId"
+        :is-clustered="isClusteredSan"
+        :read-only="isReadOnly"
+      />
+    </div>
+
     <!-- Onglet Block Devices -->
     <div v-else-if="activeTab === 'devices' && raid.overview" class="space-y-3">
       <div class="flex items-center gap-3">
@@ -419,6 +439,7 @@ async function fetchClusterStorageAttention() {
 }
 
 const raid = useRaidStore()
+const lvm = useLvmStore()
 const { t } = useEsosI18n()
 const toast = useAppToast()
 
@@ -426,6 +447,7 @@ const tabs = [
   { key: 'overview', label: 'Aperçu',           icon: 'i-heroicons-chart-bar' },
   { key: 'hardware', label: 'RAID Matériel',     icon: 'i-heroicons-cpu-chip' },
   { key: 'software', label: 'RAID Logiciel (MD)', icon: 'i-heroicons-server-stack' },
+  { key: 'lvm',      label: t('lvm.tab.title'),  icon: 'i-heroicons-square-3-stack-3d' },
   { key: 'devices',  label: 'Block Devices',     icon: 'i-heroicons-circle-stack' },
   { key: 'ops',      label: 'Opérations',        icon: 'i-heroicons-queue-list' },
 ]

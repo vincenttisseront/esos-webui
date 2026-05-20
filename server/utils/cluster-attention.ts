@@ -296,6 +296,52 @@ export async function appendMdAttentionPoints(
   return dedupeAttention(merged)
 }
 
+export async function appendLvmAttentionPoints(
+  _clusterId: string,
+  points: ClusterAttentionPoint[],
+  primarySanId?: string,
+): Promise<ClusterAttentionPoint[]> {
+  const merged = [...points]
+  try {
+    const { loadClusterPeerLvmDetection } = await import('./lvm-cluster-execution')
+    const { collectLvmOverview } = await import('./lvm-overview.service')
+    const { getSSHPool } = await import('./ssh-pool')
+    const { findLvmStructuralIssues } = await import('../../utils/lvm-cluster-symmetry')
+    const { getSanSummary } = await import('../db/repositories/san.repository')
+
+    const primary = primarySanId
+    if (!primary) return merged
+    const manager = getSSHPool().get(primary)
+    if (!manager || manager.getStatus() !== 'connected') return merged
+
+    const local = await collectLvmOverview(manager)
+    const peers = await loadClusterPeerLvmDetection(primary)
+    const issues = findLvmStructuralIssues({ vgs: local.vgs, pvs: local.pvs }, peers)
+    const primaryLabel = getSanSummary(primary)?.label ?? primary
+
+    for (const issue of issues) {
+      merged.push({
+        id: `lvm_struct:${issue.vgName}:${issue.message.slice(0, 40)}`,
+        severity: issue.severity === 'critical' ? 'critical' : 'warning',
+        category: 'storage_lvm',
+        title: `LVM ${issue.vgName}`,
+        summary: issue.message,
+        affectedNodeIds: [primary, ...peers.map(p => p.nodeSanId)],
+        affectedNodeLabels: [primaryLabel, ...peers.map(p => p.nodeLabel)],
+        recommendedAction: 'open_raid',
+        actionRoute: `/admin/sans/${primary}/raid`,
+        actionPayload: { tab: 'lvm' },
+        dismissible: false,
+        source: 'md_detection',
+        detectedAt: Date.now(),
+      })
+    }
+  } catch {
+    // optional
+  }
+  return dedupeAttention(merged)
+}
+
 function dedupeAttention(points: ClusterAttentionPoint[]): ClusterAttentionPoint[] {
   const map = new Map<string, ClusterAttentionPoint>()
   for (const p of points) {

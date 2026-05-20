@@ -1,0 +1,194 @@
+/**
+ * LVM overview collection via SSH (pvs/vgs/lvs JSON + raid block inventory).
+ */
+import type { SSHSessionManager } from './ssh-session-manager'
+import { collectRaidOverview } from './raid-overview.service'
+import { parsePvsJson, parseVgsJson, parseLvsJson } from './parsers/lvm-json.parser'
+import { buildLvmCandidates } from './lvm-candidates'
+import { readScstConfig } from './scst-config-reader'
+import type {
+  LvmAlert,
+  LvmOverviewResponse,
+  LvmToolsInfo,
+  LogicalVolume,
+  PhysicalVolume,
+} from './lvm-types'
+
+const LVM_OVERVIEW_CMD = [
+  'echo "===TOOLS==="',
+  'for t in pvs vgs lvs pvcreate vgcreate lvcreate vgremove lvremove pvremove wipefs blkid; do command -v "$t" >/dev/null 2>&1 && echo "$t"; done',
+  'command -v clvmd >/dev/null 2>&1 && echo clvmd || true',
+  'echo "===PVS_JSON==="',
+  'pvs --reportformat json --units b --nosuffix 2>/dev/null || echo "{}"',
+  'echo "===VGS_JSON==="',
+  'vgs --reportformat json --units b --nosuffix 2>/dev/null || echo "{}"',
+  'echo "===LVS_JSON==="',
+  'lvs --reportformat json --units b --nosuffix 2>/dev/null || echo "{}"',
+  'echo "===END==="',
+].join('\n')
+
+function splitSections(stdout: string): Record<string, string> {
+  const sections: Record<string, string> = {}
+  let current = ''
+  for (const line of stdout.split('\n')) {
+    const m = line.match(/^===(\w+)===$/)
+    if (m) {
+      current = m[1]!
+      sections[current] = ''
+    } else if (current) {
+      sections[current] += (sections[current] ? '\n' : '') + line
+    }
+  }
+  return sections
+}
+
+function parseTools(raw: string): LvmToolsInfo {
+  const found = new Set(raw.split('\n').map(l => l.trim()).filter(Boolean))
+  return {
+    pvs: found.has('pvs'),
+    vgs: found.has('vgs'),
+    lvs: found.has('lvs'),
+    pvcreate: found.has('pvcreate'),
+    vgcreate: found.has('vgcreate'),
+    lvcreate: found.has('lvcreate'),
+    vgremove: found.has('vgremove'),
+    lvremove: found.has('lvremove'),
+    pvremove: found.has('pvremove'),
+    wipefs: found.has('wipefs'),
+    blkid: found.has('blkid'),
+    clvmd: found.has('clvmd'),
+  }
+}
+
+async function scstFilenamesByPath(): Promise<Map<string, string[]>> {
+  const map = new Map<string, string[]>()
+  try {
+    const config = await readScstConfig()
+    for (const h of config.handlers) {
+      for (const d of h.devices) {
+        if (!d.filename) continue
+        const list = map.get(d.filename) ?? []
+        list.push(d.name)
+        map.set(d.filename, list)
+      }
+    }
+  } catch { /* no scst */ }
+  return map
+}
+
+function buildAlerts(tools: LvmToolsInfo, clusteredVg: boolean): LvmAlert[] {
+  const alerts: LvmAlert[] = []
+  if (!tools.pvs || !tools.vgs || !tools.lvs) {
+    alerts.push({ severity: 'warning', message: 'Outils LVM incomplets sur ce nœud (pvs/vgs/lvs)' })
+  }
+  if (clusteredVg) {
+    alerts.push({
+      severity: 'warning',
+      message: 'Volume group clusterisé (clvmd) détecté — gestion partagée non supportée par la WebUI',
+    })
+  }
+  return alerts
+}
+
+export async function collectLvmOverview(manager: SSHSessionManager): Promise<LvmOverviewResponse> {
+  const [raidOverview, lvmResult, scstMap] = await Promise.all([
+    collectRaidOverview(manager),
+    manager.exec(LVM_OVERVIEW_CMD, 30_000),
+    scstFilenamesByPath(),
+  ])
+
+  const sections = splitSections(lvmResult.stdout)
+  const tools = parseTools(sections.TOOLS ?? '')
+
+  const pvsRaw = parsePvsJson(sections.PVS_JSON ?? '{}')
+  const vgsRaw = parseVgsJson(sections.VGS_JSON ?? '{}')
+  const lvsRaw = parseLvsJson(sections.LVS_JSON ?? '{}')
+
+  const blockByPath = new Map(raidOverview.blockDevices.map(d => [d.path, d]))
+
+  const pvs: PhysicalVolume[] = pvsRaw.map(pv => {
+    const dev = blockByPath.get(pv.path)
+    const usedBy: PhysicalVolume['usedBy'] = []
+    if (dev) {
+      for (const u of dev.usedBy) {
+        if (u !== 'hardware_raid') usedBy.push(u as PhysicalVolume['usedBy'][number])
+      }
+    }
+    return { ...pv, usedBy }
+  })
+
+  const vgs = vgsRaw.map(vg => ({
+    name: vg.name,
+    uuid: vg.uuid,
+    sizeBytes: vg.sizeBytes,
+    freeBytes: vg.freeBytes,
+    pvCount: vg.pvCount,
+    lvCount: vg.lvCount,
+    attr: vg.attr,
+    clustered: vg.clustered,
+  }))
+
+  const lvPaths = new Set(lvsRaw.map(lv => lv.path))
+  const lvs: LogicalVolume[] = lvsRaw.map(lv => {
+    const usedBy: LogicalVolume['usedBy'] = []
+    const scstNames = scstMap.get(lv.path) ?? []
+    if (scstNames.length) usedBy.push('scst')
+    const dev = blockByPath.get(lv.path)
+    if (dev?.mountpoint) usedBy.push('mounted')
+    return {
+      name: lv.name,
+      path: lv.path,
+      vgName: lv.vgName,
+      sizeBytes: lv.sizeBytes,
+      uuid: lv.uuid,
+      attr: lv.attr,
+      active: lv.active,
+      usedBy,
+      scstDeviceNames: scstNames.length ? scstNames : undefined,
+    }
+  })
+
+  const candidates = buildLvmCandidates(raidOverview.blockDevices, pvs, lvPaths)
+  const alerts = buildAlerts(tools, vgs.some(v => v.clustered))
+
+  return {
+    scannedAt: Date.now(),
+    tools,
+    pvs,
+    vgs,
+    lvs,
+    candidates,
+    alerts,
+  }
+}
+
+export function collectLvmOverviewLite(manager: SSHSessionManager): Promise<Pick<LvmOverviewResponse, 'pvs' | 'vgs' | 'lvs' | 'tools'>> {
+  return manager.exec(LVM_OVERVIEW_CMD, 30_000).then((r) => {
+    const sections = splitSections(r.stdout)
+    const tools = parseTools(sections.TOOLS ?? '')
+    return {
+      tools,
+      pvs: parsePvsJson(sections.PVS_JSON ?? '{}').map(pv => ({ ...pv, usedBy: [] })),
+      vgs: parseVgsJson(sections.VGS_JSON ?? '{}').map(vg => ({
+        name: vg.name,
+        uuid: vg.uuid,
+        sizeBytes: vg.sizeBytes,
+        freeBytes: vg.freeBytes,
+        pvCount: vg.pvCount,
+        lvCount: vg.lvCount,
+        attr: vg.attr,
+        clustered: vg.clustered,
+      })),
+      lvs: parseLvsJson(sections.LVS_JSON ?? '{}').map(lv => ({
+        name: lv.name,
+        path: lv.path,
+        vgName: lv.vgName,
+        sizeBytes: lv.sizeBytes,
+        uuid: lv.uuid,
+        attr: lv.attr,
+        active: lv.active,
+        usedBy: [],
+      })),
+    }
+  })
+}

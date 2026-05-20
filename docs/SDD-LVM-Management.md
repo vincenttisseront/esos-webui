@@ -1,0 +1,33 @@
+# SDD — LVM Management (ESOS WebUI)
+
+## Scope
+
+SAN-scoped LVM management: PV / VG / LV lifecycle, preflight + typed confirmation, SCST `vdisk_blockio` binding, cluster read-only symmetry hints.
+
+## APIs
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/lvm/overview?sanId=` | Scan PV/VG/LV, candidates, peer `clusterLvmDetection` |
+| POST | `/api/lvm/preflight` | Validate action |
+| POST | `/api/lvm/pv/create` | `pvcreate` |
+| POST | `/api/lvm/vg/create` | `vgcreate` |
+| POST | `/api/lvm/lv/create` | `lvcreate` |
+| DELETE | `/api/lvm/pv` | `pvremove` |
+| DELETE | `/api/lvm/vg` | `vgremove` |
+| DELETE | `/api/lvm/lv` | `lvremove` |
+| POST | `/api/lvm/lv/bind-scst` | Create SCST device from LV path |
+| POST | `/api/lvm/*/create/plan` | Cluster execution plan (no writes) |
+
+## Cluster
+
+- **local_symmetric**: per-node VG/LV stacks; structural VG name/count checks in Admin attention (`storage_lvm`).
+- **clvmd / shared VG**: blocked for mutations; warning in overview.
+
+## UI
+
+RAID page tab **LVM** (`pages/admin/sans/[id]/raid.vue`), store `stores/lvm.ts`, wizards under `components/lvm/`.
+
+## Reference
+
+[ESOS wiki — LVM Configuration](https://github.com/quantum/esos/wiki/33_LVM_Configuration)

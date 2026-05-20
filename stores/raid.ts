@@ -27,7 +27,7 @@ const MD_PROGRESS_POLL_MAX_FAILURES = 3
 export const useRaidStore = defineStore('raid', {
   state: () => ({
     overview: null as RaidOverviewResponse | null,
-    selectedTab: 'overview' as 'overview' | 'hardware' | 'software' | 'devices' | 'operations',
+    selectedTab: 'overview' as 'overview' | 'hardware' | 'software' | 'lvm' | 'devices' | 'operations',
     operations: [] as RaidOperation[],
     loading: false,
     error: null as string | null,

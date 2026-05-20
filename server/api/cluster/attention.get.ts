@@ -5,6 +5,7 @@ import { readClusterNodeStatus } from '../../utils/cluster-reader'
 import type { ClusterAttentionResponse } from '../../utils/cluster-admin-types'
 import {
   appendMdAttentionPoints,
+  appendLvmAttentionPoints,
   appendRegistryAttentionPoints,
   appendScstAttentionPoints,
   buildClusterAttentionFromStatus,
@@ -83,6 +84,7 @@ export default defineEventHandler(async (event): Promise<ClusterAttentionRespons
 
   if (includeMd && !probeError) {
     attentionPoints = await appendMdAttentionPoints(clusterId, attentionPoints, primaryId)
+    attentionPoints = await appendLvmAttentionPoints(clusterId, attentionPoints, primaryId)
   }
 
   if (!probeError && members.length > 0) {

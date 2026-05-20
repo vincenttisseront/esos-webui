@@ -907,6 +907,76 @@
       }
     }
   },
+  "lvm": {
+    "tab": { "title": "LVM" },
+    "overview": {
+      "refresh": "Rafraîchir",
+      "pv_count": "Volumes physiques",
+      "vg_count": "Groupes de volumes",
+      "lv_count": "Volumes logiques"
+    },
+    "col": {
+      "size": "Taille",
+      "size_free": "Taille / libre",
+      "device": "Périphérique",
+      "kind": "Type"
+    },
+    "pv": {
+      "table_title": "Volumes physiques (PV)",
+      "create_action": "Créer un PV",
+      "remove": "Supprimer le PV",
+      "removed": "PV supprimé"
+    },
+    "vg": {
+      "table_title": "Groupes de volumes (VG)",
+      "create_action": "Créer un VG",
+      "remove": "Supprimer le VG",
+      "removed": "VG supprimé",
+      "free": "libre",
+      "clustered": "clvmd"
+    },
+    "lv": {
+      "table_title": "Volumes logiques (LV)",
+      "create_action": "Créer un LV",
+      "remove": "Supprimer le LV",
+      "removed": "LV supprimé",
+      "bind_scst": "Device SCST"
+    },
+    "candidate": { "table_title": "Périphériques candidats pour pvcreate" },
+    "confirm": { "label": "Phrase de confirmation" },
+    "cluster": {
+      "local_symmetric_hint": "Ce SAN est en cluster. Les modifications LVM sur ce nœud seulement sont autorisées ; utilisez les plans cluster pour un provisionnement symétrique. VG partagé (clvmd) non supporté."
+    },
+    "wizard": {
+      "cancel": "Annuler",
+      "execute": "Exécuter",
+      "pv_create": {
+        "title": "Créer un volume physique",
+        "device": "Périphérique bloc",
+        "force": "Forcer (--force) si signatures présentes",
+        "success": "PV créé"
+      },
+      "vg_create": {
+        "title": "Créer un groupe de volumes",
+        "name": "Nom du VG",
+        "pv_hint": "Sélectionnez les PV libres (hors VG) :",
+        "success": "VG créé"
+      },
+      "lv_create": {
+        "title": "Créer un volume logique",
+        "vg": "Groupe de volumes",
+        "name": "Nom du LV",
+        "size_gib": "Taille (GiB)",
+        "free": "Espace libre VG : {size}",
+        "success": "LV créé"
+      },
+      "scst_device": {
+        "title": "Créer un device SCST blockio depuis le LV",
+        "name": "Nom du device SCST",
+        "success": "Device SCST créé"
+      }
+    }
+  },
   "cluster": {
     "health": {
       "healthy": "OK",

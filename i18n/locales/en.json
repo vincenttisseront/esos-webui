@@ -907,6 +907,76 @@
       }
     }
   },
+  "lvm": {
+    "tab": { "title": "LVM" },
+    "overview": {
+      "refresh": "Refresh",
+      "pv_count": "Physical volumes",
+      "vg_count": "Volume groups",
+      "lv_count": "Logical volumes"
+    },
+    "col": {
+      "size": "Size",
+      "size_free": "Size / free",
+      "device": "Device",
+      "kind": "Kind"
+    },
+    "pv": {
+      "table_title": "Physical volumes (PV)",
+      "create_action": "Create PV",
+      "remove": "Remove PV",
+      "removed": "PV removed"
+    },
+    "vg": {
+      "table_title": "Volume groups (VG)",
+      "create_action": "Create VG",
+      "remove": "Remove VG",
+      "removed": "VG removed",
+      "free": "free",
+      "clustered": "clvmd"
+    },
+    "lv": {
+      "table_title": "Logical volumes (LV)",
+      "create_action": "Create LV",
+      "remove": "Remove LV",
+      "removed": "LV removed",
+      "bind_scst": "SCST device"
+    },
+    "candidate": { "table_title": "Candidate devices for pvcreate" },
+    "confirm": { "label": "Confirmation phrase" },
+    "cluster": {
+      "local_symmetric_hint": "This SAN is in a cluster. LVM changes on this node only are allowed; use cluster plans for symmetric provisioning. Shared VG (clvmd) is not supported."
+    },
+    "wizard": {
+      "cancel": "Cancel",
+      "execute": "Execute",
+      "pv_create": {
+        "title": "Create physical volume",
+        "device": "Block device",
+        "force": "Force (--force) if signatures present",
+        "success": "PV created"
+      },
+      "vg_create": {
+        "title": "Create volume group",
+        "name": "VG name",
+        "pv_hint": "Select free PVs (not in a VG):",
+        "success": "VG created"
+      },
+      "lv_create": {
+        "title": "Create logical volume",
+        "vg": "Volume group",
+        "name": "LV name",
+        "size_gib": "Size (GiB)",
+        "free": "VG free space: {size}",
+        "success": "LV created"
+      },
+      "scst_device": {
+        "title": "Create SCST blockio device from LV",
+        "name": "SCST device name",
+        "success": "SCST device created"
+      }
+    }
+  },
   "cluster": {
     "health": {
       "healthy": "OK",
