@@ -8,20 +8,50 @@
     <div class="space-y-4">
       <template v-if="step === 1">
         <UFormGroup
-          :label="t('lvm.wizard.lv_create.vg')"
+          :label="t('lvm.wizard.lv_create.vg_label')"
           :hint="t('lvm.wizard.lv_create.vg_help')"
         >
           <LvmNativeSelect v-model="selectedVg" :options="vgOptions" />
         </UFormGroup>
-        <UFormGroup :label="t('lvm.wizard.lv_create.name')">
+        <p v-if="selectedVgSummary" class="text-sm text-gray-700 dark:text-gray-300 -mt-2">
+          {{ selectedVgSummary }}
+        </p>
+
+        <UFormGroup :label="t('lvm.wizard.lv_create.lv_name_label')">
           <UInput v-model="lvName" placeholder="lv0" />
         </UFormGroup>
-        <UFormGroup :label="t('lvm.wizard.lv_create.size_gib')">
-          <UInput v-model.number="sizeGib" type="number" min="1" step="1" />
+
+        <UFormGroup
+          :label="t('lvm.wizard.lv_create.lv_size_label')"
+          :hint="t('lvm.wizard.lv_create.unit_hint')"
+          :error="sizeValidationError ?? undefined"
+        >
+          <div class="flex flex-wrap items-center gap-2">
+            <UInput
+              v-model.number="sizeGib"
+              type="number"
+              min="0"
+              step="0.1"
+              class="flex-1 min-w-[8rem]"
+            />
+            <span class="text-sm font-medium text-gray-600 dark:text-gray-400 shrink-0">
+              {{ t('lvm.wizard.lv_create.unit_gib') }}
+            </span>
+          </div>
         </UFormGroup>
-        <p class="text-xs text-gray-500">
-          {{ t('lvm.cluster.wizard.lv_min_free', { size: formatBytes(minFreeAcrossCluster) }) }}
+        <p v-if="sizePreview" class="text-xs text-gray-500 -mt-2">
+          {{ sizePreview }}
         </p>
+
+        <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-900/40 px-3 py-2 space-y-1">
+          <p class="text-sm font-medium text-gray-800 dark:text-gray-200">
+            {{ t('lvm.wizard.lv_create.max_size_cluster_label') }} :
+            <span class="font-mono">{{ formatBytes(maxFreeAcrossCluster) }}</span>
+          </p>
+          <p class="text-xs text-gray-500">
+            {{ t('lvm.wizard.lv_create.max_size_cluster_help') }}
+          </p>
+        </div>
       </template>
       <template v-else-if="step === 2">
         <LvmClusterPlanReview v-if="plan" :plan="plan" />
@@ -45,7 +75,7 @@
           <UButton
             v-if="step < 3"
             color="primary"
-            :disabled="step === 1 && (!selectedVg || !lvName || sizeGib < 1 || sizeBytes > minFreeAcrossCluster)"
+            :disabled="step === 1 && !formValid"
             :loading="planLoading"
             @click="nextStep"
           >
@@ -69,6 +99,7 @@
 <script setup lang="ts">
 import type { ClusterLvmExecutionResult } from '~/types/lvm'
 import { minVgFreeBytesAcrossCluster } from '~/utils/lvm-cluster-ui'
+import { formatLvSizeGibLabel, validateLvCreateSizeGib } from '~/utils/lvm-lv-wizard-ui'
 
 const props = defineProps<{ sanId: string; clusterId: string }>()
 const emit = defineEmits<{ cancel: []; close: [] }>()
@@ -87,16 +118,57 @@ const planError = ref<string | null>(null)
 const busy = ref(false)
 const executionResult = ref<ClusterLvmExecutionResult | null>(null)
 
-const sizeBytes = computed(() => Math.floor(sizeGib.value * 1024 ** 3))
+const sizeBytes = computed(() => Math.floor(Number(sizeGib.value) * 1024 ** 3))
 
 const vgOptions = computed(() =>
-  lvm.vgs.filter(v => !v.clustered).map(v => ({ value: v.name, label: `${v.name} (${formatBytes(v.freeBytes)} free)` })),
+  lvm.vgs
+    .filter(v => !v.clustered)
+    .map(v => ({
+      value: v.name,
+      label: t('lvm.wizard.lv_create.vg_option', { name: v.name, size: formatBytes(v.freeBytes) }),
+    })),
 )
 
-const minFreeAcrossCluster = computed(() => {
+const maxFreeAcrossCluster = computed(() => {
   const local = lvm.vgs.find(v => v.name === selectedVg.value)?.freeBytes ?? 0
   return minVgFreeBytesAcrossCluster(selectedVg.value, props.sanId, local, lvm.clusterInventory)
 })
+
+const selectedVgSummary = computed(() => {
+  if (!selectedVg.value) return ''
+  return t('lvm.wizard.lv_create.vg_free_summary', {
+    name: selectedVg.value,
+    size: formatBytes(maxFreeAcrossCluster.value),
+  })
+})
+
+const sizeValidationKey = computed(() =>
+  validateLvCreateSizeGib(Number(sizeGib.value), maxFreeAcrossCluster.value),
+)
+
+const sizeValidationError = computed(() => {
+  switch (sizeValidationKey.value) {
+    case 'zero':
+      return t('lvm.wizard.lv_create.error_size_zero')
+    case 'exceeds':
+      return t('lvm.wizard.lv_create.error_size_exceeds', { max: formatBytes(maxFreeAcrossCluster.value) })
+    default:
+      return null
+  }
+})
+
+const sizePreview = computed(() => {
+  const label = formatLvSizeGibLabel(Number(sizeGib.value))
+  if (!label || sizeValidationKey.value) return ''
+  return label
+})
+
+const formValid = computed(() =>
+  !!selectedVg.value
+  && !!lvName.value.trim()
+  && !sizeValidationKey.value
+  && maxFreeAcrossCluster.value > 0,
+)
 
 onMounted(async () => {
   lvm.setSanId(props.sanId)
@@ -141,6 +213,7 @@ async function loadPlan() {
 
 async function nextStep() {
   if (step.value === 1) {
+    if (!formValid.value) return
     await loadPlan()
     if (!plan.value?.okSymmetric) return
     step.value = 2
