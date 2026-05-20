@@ -1,5 +1,6 @@
 import { getSSHPool } from './ssh-pool'
-import { assertAllowedRemoteConfigPath } from './remote-config-paths'
+import { assertAllowedRemoteConfigPath, shellSingleQuoteForRemote } from './remote-config-paths'
+import { buildAtomicBase64FileWriteScript } from './remote-file-writer'
 
 /**
  * Writes a config file on the remote SAN, taking a backup first.
@@ -17,15 +18,14 @@ export async function writeConfigFile(
   const manager = await pool.getOrCreate(sanId)
   if (!manager) throw new Error(`No SSH manager for SAN: ${sanId}`)
 
-  // Encode content as base64 to avoid heredoc quoting issues
-  const b64   = Buffer.from(content).toString('base64')
-  const cmds  = [
-    `cp -f "${path}" "${path}.bak" 2>/dev/null || true`,
-    `echo "${b64}" | base64 -d > "${path}"`,
+  const qPath = shellSingleQuoteForRemote(path)
+  const cmds = [
+    `cp -f ${qPath} ${shellSingleQuoteForRemote(`${path}.bak`)} 2>/dev/null || true`,
+    buildAtomicBase64FileWriteScript(path, content),
   ]
   if (sync) cmds.push('conf_sync.sh 2>/dev/null || true')
 
-  const script = cmds.join(' && ')
+  const script = cmds.join('\n')
   const { stderr } = await manager.exec(script, 30_000)
 
   if (stderr && !/No such file or directory/.test(stderr)) {

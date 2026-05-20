@@ -1,4 +1,6 @@
 import { getActiveSSHManager } from './ssh-runtime'
+import { writeRemoteFileAtomicOrThrow } from './remote-file-writer'
+import { shellSingleQuoteForRemote } from './remote-config-paths'
 import { readScstConfig } from './scst-config-reader'
 import type { ScstConfig, Target, Group } from '~/types/esos'
 import { invalidateCacheKey } from './cache'
@@ -101,35 +103,38 @@ export function serializeScstConfig(config: ScstConfig): string {
 // ─── SSH write + SCST reload ──────────────────────────────────────────────────
 
 /**
- * Write `content` to `path` on the remote server atomically (write to a temp
- * file then move) and reload SCST so the new configuration takes effect.
- * Uses base64 to avoid any shell-quoting issues in the heredoc payload.
+ * Write `content` to scst.conf atomically (temp + mv) and reload SCST.
+ * Payload is sent as base64 inside a quoted heredoc — never interpolated via printf.
  */
 export async function writeAndReloadScst(content: string): Promise<void> {
   const ssh = getActiveSSHManager()
   const path = scstConfPath()
+  const qPath = shellSingleQuoteForRemote(path)
 
-  // Encode the config so no special characters can break the shell command
-  const b64 = Buffer.from(content, 'utf-8').toString('base64')
-  const tmpPath = `${path}.tmp.$$`
+  await writeRemoteFileAtomicOrThrow(ssh, path, content, {
+    logTag: 'scst-config',
+    errorPrefix: 'Écriture scst.conf',
+  })
 
-  // Write atomically then reload SCST
-  const cmd = [
-    `printf '%s' '${b64}' | base64 -d > '${tmpPath}'`,
-    `mv '${tmpPath}' '${path}'`,
+  const reloadCmd = [
     `if command -v scstadmin >/dev/null 2>&1; then`,
-    `  scstadmin -force -noprompt -config '${path}' 2>&1 || true`,
+    `  scstadmin -force -noprompt -config ${qPath} 2>&1 || true`,
     `elif [ -x /etc/init.d/scst ]; then`,
     `  /etc/init.d/scst reload 2>&1 || true`,
     `fi`,
-  ].join(' && ')
+  ].join('\n')
 
-  const result = await ssh.exec(cmd)
-  if (result.code !== 0 && result.stderr?.trim()) {
-    throw new Error(`Erreur lors du rechargement SCST : ${result.stderr.trim()}`)
+  const result = await ssh.exec(reloadCmd, 60_000)
+  if (result.stderr?.trim()) {
+    console.warn('[scst-config] reload stderr', result.stderr.slice(0, 500))
   }
+  if (result.code !== 0) {
+    const detail = result.stderr.trim() || result.stdout.trim() || `exit ${result.code}`
+    console.error('[scst-config] reload failed', detail)
+    throw new Error(`Erreur lors du rechargement SCST : ${detail}`)
+  }
+  console.log('[scst-config] reload ok', path)
 
-  // Invalidate the cached overview so the UI reflects the new state immediately
   invalidateCacheKey('overview')
 }
 

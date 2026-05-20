@@ -2,6 +2,8 @@
  * Lecture, parsing et écriture de /etc/perf-agent.con (SDD v3.10 §5.1).
  */
 import { createError } from 'h3'
+import { shellSingleQuoteForRemote } from './remote-config-paths'
+import { buildAtomicBase64FileWriteScript } from './remote-file-writer'
 import type { SSHSessionManager } from './ssh-session-manager'
 import type { PerfAgentConfig, PerfAgentConfigUpdate } from './perf-agent-types'
 
@@ -55,12 +57,11 @@ export async function writePerfAgentConfig(
     `BlockDevices = ${blockDevices}`,
   ].join('\n') + '\n'
 
-  const b64 = Buffer.from(lines).toString('base64')
   const cmd = [
-    `cp -f "${PERF_AGENT_CONF}" "${PERF_AGENT_CONF}.bak" 2>/dev/null || true`,
-    `echo "${b64}" | base64 -d > "${PERF_AGENT_CONF}"`,
+    `cp -f ${shellSingleQuoteForRemote(PERF_AGENT_CONF)} ${shellSingleQuoteForRemote(`${PERF_AGENT_CONF}.bak`)} 2>/dev/null || true`,
+    buildAtomicBase64FileWriteScript(PERF_AGENT_CONF, lines),
     'conf_sync.sh 2>/dev/null || true',
-  ].join(' && ')
+  ].join('\n')
 
   await manager.exec(cmd, 20_000)
 }
