@@ -175,6 +175,17 @@ export function getSanLabelForLocalRecovery(sanId: string): string {
   return getSanSummary(sanId)?.label ?? sanId
 }
 
+function assertPeerSuperblockCreateRecovery(querySanId: string, localRecovery: MdLocalRecoveryRequest): void {
+  if (localRecovery.reason !== 'peer_superblock_blocks_create') return
+  const san = getSanSummary(querySanId)
+  if (!san?.clusterId) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Recovery superblock pair réservée aux SAN clusterisés',
+    })
+  }
+}
+
 export function validateLocalRecoveryForCleanup(input: {
   querySanId: string
   action: 'zero_md_superblocks' | 'wipe_md_signatures'
@@ -187,6 +198,14 @@ export function validateLocalRecoveryForCleanup(input: {
   assertLocalRecoveryShape(input.localRecovery)
   assertLocalRecoverySanMatchesQuery(input.querySanId, input.localRecovery)
   assertMembersMatchLocalPayload(input.localRecovery.members, input.requestMembers)
+  assertPeerSuperblockCreateRecovery(input.querySanId, input.localRecovery)
+
+  if (input.localRecovery.reason === 'peer_superblock_blocks_create') {
+    const label = getSanLabelForLocalRecovery(input.querySanId)
+    const expected = expectedLocalRecoveryConfirmation(input.action, label)
+    assertLocalRecoveryConfirmation(input.localRecovery, expected)
+    return expected
+  }
 
   if (input.preflight) {
     if (isMappingAmbiguityClusterBlock(input.preflight)) {

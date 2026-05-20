@@ -493,6 +493,21 @@
         "ready": "Mappings complets. Relancez le préflight cluster.",
         "rerun": "Relancer le préflight cluster"
       },
+      "peer_cleanup": {
+        "section_title": "Superblocks MD sur nœud pair",
+        "section_description": "Des superblocks MD sur un nœud pair bloquent la création. Nettoyez explicitement ce nœud — aucun nettoyage automatique sur l'ensemble du cluster.",
+        "affected_partitions": "Partitions concernées",
+        "action": "Nettoyer les superblocks sur {label}",
+        "ssh_ready": "SSH connecté",
+        "ssh_unavailable": "SSH indisponible",
+        "risk_single_node": "Cette action modifie uniquement {label}. Les autres nœuds ne seront pas touchés.",
+        "no_sync": "Sync config n'est pas utilisé pour ce nettoyage.",
+        "mode_basic": "Zero superblock (basique)",
+        "mode_advanced": "Nettoyage avancé (wipe)",
+        "confirm_execute": "Nettoyer {label}",
+        "toast_success": "Superblocks nettoyés sur {label}",
+        "toast_failed": "Échec du nettoyage sur {label}"
+      },
       "form": {
         "step_title": "Paramètres du tableau MD",
         "step_description": "Définissez le nom /dev/mdX, le niveau RAID et la taille de chunk avant la pré-vérification. Le tableau MD pourra ensuite être utilisé comme volume de stockage.",

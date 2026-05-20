@@ -139,6 +139,14 @@
           Préflight stockage cluster en cours…
         </div>
         <ClusterStoragePreflightPanel v-else-if="clusterPreflightResult" :preflight="clusterPreflightResult" :on-navigate-detection="props.onNavigateDetection" />
+        <CreateMdPeerCleanupPanel
+          v-if="isClustered && clusterPreflightResult && peerSuperblockCleanupGroups.length"
+          :preflight="clusterPreflightResult"
+          :primary-san-id="props.sourceSanId!"
+          :source-devices="form.devices"
+          :disabled="clusterPreflightLoading || preflightLoading"
+          @cleaned="onPeerSuperblockCleanupDone"
+        />
         <div v-if="executionPlanRows.length" class="space-y-2">
           <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">{{ t('raid.create_md.execution_plan.title') }}</p>
           <div
@@ -437,6 +445,7 @@
 <script setup lang="ts">
 import type { ClusterDiskMapping, ClusterDiskMappingInput, ClusterStoragePreflightResult, CreateMdArrayExecutionPlan, CreateMdArrayNodeResult, CreateMdArrayResponse, CreateMdArrayWizardConfirmPayload, RaidBlockDevice, RaidPreflightResult } from '~/types/raid'
 import { filterPartitionMappingsForDevices } from '~/utils/raid-cluster-mapping'
+import { groupPeerSuperblockBlockers } from '~/utils/create-md-peer-cleanup'
 import type { RaidDetectionNavigateFn } from '~/composables/useRaidDetectionNavigate'
 
 const props = defineProps<{
@@ -551,6 +560,11 @@ const mdEmptyMembersMessage = 'Commande MD invalide : aucune partition membre tr
 const mdadmInteractiveConfirmPrompt = 'Continue creating array?'
 const mdadmInteractiveConfirmMessage = 'mdadm is waiting for interactive confirmation; non-interactive mode is required.'
 const executionPlanRows = computed(() => executionPlan.value?.nodeResults ?? [])
+const peerSuperblockCleanupGroups = computed(() =>
+  clusterPreflightResult.value && props.sourceSanId
+    ? groupPeerSuperblockBlockers(clusterPreflightResult.value, props.sourceSanId, form.devices)
+    : [],
+)
 const executionPlanValid = computed(() =>
   executionPlanRows.value.length > 0
   && executionPlanRows.value.every(node =>
@@ -712,6 +726,14 @@ async function rerunClusterPreflightWithMappings() {
   const payload = { name: form.name, level: form.level, chunkKb: form.chunkKb, devices: form.devices }
   resetExecutionState()
   await runClusterPreflight(payload, [...suggestedPartitionMappings.value, ...manualMappingInputs.value])
+}
+
+async function onPeerSuperblockCleanupDone() {
+  const payload = { name: form.name, level: form.level, chunkKb: form.chunkKb, devices: form.devices }
+  const diskMappings = lastClusterDiskMappings.value.length
+    ? lastClusterDiskMappings.value
+    : [...suggestedPartitionMappings.value, ...manualMappingInputs.value]
+  await runClusterPreflight(payload, diskMappings)
 }
 
 async function runClusterPreflight(payload: Record<string, unknown>, diskMappings: ClusterDiskMappingInput[]) {

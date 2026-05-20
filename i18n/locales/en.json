@@ -493,6 +493,21 @@
         "ready": "Mappings are complete. Re-run cluster preflight.",
         "rerun": "Re-run cluster preflight"
       },
+      "peer_cleanup": {
+        "section_title": "MD superblocks on peer node",
+        "section_description": "MD superblocks on a peer node block array creation. Clean that node explicitly — no automatic cluster-wide cleanup.",
+        "affected_partitions": "Affected partitions",
+        "action": "Clean superblocks on {label}",
+        "ssh_ready": "SSH connected",
+        "ssh_unavailable": "SSH unavailable",
+        "risk_single_node": "This action modifies {label} only. Other nodes will not be changed.",
+        "no_sync": "Sync config is not used for this cleanup.",
+        "mode_basic": "Zero superblock (basic)",
+        "mode_advanced": "Advanced cleanup (wipe)",
+        "confirm_execute": "Clean {label}",
+        "toast_success": "Superblocks cleaned on {label}",
+        "toast_failed": "Cleanup failed on {label}"
+      },
       "form": {
         "step_title": "MD array settings",
         "step_description": "Set the /dev/mdX name, RAID level, and chunk size before preflight. The MD array can later be used as a storage volume.",

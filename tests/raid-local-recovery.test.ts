@@ -1,10 +1,20 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+vi.mock('../server/db/repositories/san.repository', () => ({
+  getSanSummary: (sanId: string) => ({
+    id: sanId,
+    label: sanId === 'san-2' ? 'esos2' : 'esos1',
+    clusterId: 'cluster-1',
+  }),
+}))
+
 import {
   assertLocalRecoveryConfirmation,
   assertMutualExclusiveClusterAndLocal,
   buildLocalRecoveryOffered,
   expectedLocalCleanupConfirmation,
   isMappingAmbiguityClusterBlock,
+  validateLocalRecoveryForCleanup,
 } from '../server/utils/raid-local-recovery'
 import type { ClusterStoragePreflightResult } from '../server/utils/raid-types'
 
@@ -113,5 +123,23 @@ describe('buildLocalRecoveryOffered', () => {
     }))
     expect(offered?.skippedPeers).toHaveLength(1)
     expect(offered?.skippedPeers[0].label).toBe('esos2')
+  })
+})
+
+describe('peer superblock create recovery', () => {
+  it('accepts peer_superblock_blocks_create with matching confirmation on clustered san', () => {
+    const expected = validateLocalRecoveryForCleanup({
+      querySanId: 'san-2',
+      action: 'zero_md_superblocks',
+      localRecovery: {
+        scope: 'local',
+        sanId: 'san-2',
+        members: ['/dev/sdb1'],
+        confirmation: 'CLEAN LOCAL NODE esos2',
+        reason: 'peer_superblock_blocks_create',
+      },
+      requestMembers: ['/dev/sdb1'],
+    })
+    expect(expected).toBe('CLEAN LOCAL NODE esos2')
   })
 })

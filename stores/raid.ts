@@ -298,16 +298,26 @@ export const useRaidStore = defineStore('raid', {
     },
 
     async zeroMdSuperblocks(req: ZeroMdSuperblocksRequest) {
+      return await this.zeroMdSuperblocksOnSan(this.sanId!, req)
+    },
+
+    async zeroMdSuperblocksOnSan(targetSanId: string, req: ZeroMdSuperblocksRequest) {
       const mode = req.mode ?? 'basic'
       const members = req.members.map(normalizePartitionPath)
-      console.info('[raid-md:cleanup-ui]', { mode, members })
+      console.info('[raid-md:cleanup-ui]', { mode, members, targetSanId })
       const result = await $fetch<ZeroMdSuperblocksResponse>('/api/raid/software/arrays/zero-superblocks', {
         method: 'POST',
         body: { ...req, mode, members },
-        params: this.query(),
+        params: { sanId: targetSanId },
       })
       this.recordCleanupResults(result.results)
-      await this.fetchOverview(true)
+      if (targetSanId === this.sanId) {
+        await this.fetchOverview(true)
+      } else {
+        await $fetch<RaidOverviewResponse>('/api/raid/overview', {
+          params: { sanId: targetSanId, refresh: '1' },
+        })
+      }
       return result
     },
 
@@ -359,15 +369,25 @@ export const useRaidStore = defineStore('raid', {
     },
 
     async wipeMdSignatures(req: WipeMdSignaturesRequest) {
+      return await this.wipeMdSignaturesOnSan(this.sanId!, req)
+    },
+
+    async wipeMdSignaturesOnSan(targetSanId: string, req: WipeMdSignaturesRequest) {
       const members = req.members.map(normalizePartitionPath)
-      console.info('[raid-md:cleanup-ui]', { mode: 'advanced', members })
+      console.info('[raid-md:cleanup-ui]', { mode: 'advanced', members, targetSanId })
       const result = await $fetch<WipeMdSignaturesResponse>('/api/raid/software/arrays/wipe-signatures', {
         method: 'POST',
         body: { ...req, mode: 'advanced' as const, members },
-        params: this.query(),
+        params: { sanId: targetSanId },
       })
       this.recordCleanupResults(result.results)
-      await this.fetchOverview(true)
+      if (targetSanId === this.sanId) {
+        await this.fetchOverview(true)
+      } else {
+        await $fetch<RaidOverviewResponse>('/api/raid/overview', {
+          params: { sanId: targetSanId, refresh: '1' },
+        })
+      }
       this.clearPendingAdvancedCleanup(members)
       return result
     },

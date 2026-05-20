@@ -383,6 +383,7 @@ export type MdLocalRecoveryReason =
   | 'mapping_ambiguous'
   | 'peer_unreachable'
   | 'operator_declared_degraded'
+  | 'peer_superblock_blocks_create'
 
 export interface MdLocalRecoveryRequest {
   scope: 'local'
