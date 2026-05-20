@@ -19,6 +19,14 @@ import {
 } from './raid-md-actions'
 import { runClusterStoragePreflight } from './raid-cluster-storage-preflight'
 import {
+  buildCleanupNodeResults,
+  computeCleanupMdPlanToken,
+  expectedClusterCleanupConfirmation,
+  expectedClusterWipeCleanupConfirmation,
+  isCleanupSymmetricExecution,
+  resolveCleanupRecoveryMode,
+} from './raid-cluster-md-cleanup-recovery'
+import {
   computeClusterMdPlanToken,
   expectedClusterAssembleConfirmation,
   expectedClusterStopConfirmation,
@@ -126,32 +134,6 @@ function orderClusterNodes(
     ...preflight.nodes.filter(n => n.sanId === primarySanId),
     ...preflight.nodes.filter(n => n.sanId !== primarySanId),
   ]
-}
-
-function buildClusterMdNodeResultsFromPreflight(
-  preflight: ClusterStoragePreflightResult,
-  primarySanId: string,
-  buildNode: (node: ClusterStoragePreflightResult['nodes'][number]) => ClusterMdNodeResult | null,
-): ClusterMdNodeResult[] {
-  const blockers: string[] = []
-  const nodeResults: ClusterMdNodeResult[] = []
-  for (const node of orderClusterNodes(preflight, primarySanId)) {
-    const built = buildNode(node)
-    if (!built) {
-      blockers.push(`${node.label} : plan nœud incomplet`)
-      continue
-    }
-    const nodePreflight = preflight.perNodePreflights[node.sanId]
-    if (!nodePreflight?.ok) {
-      blockers.push(`${node.label} : préflight nœud bloquant`)
-      continue
-    }
-    nodeResults.push(built)
-  }
-  if (nodeResults.length !== preflight.nodes.length) {
-    throw createError({ statusCode: 409, statusMessage: blockers.join('; ') })
-  }
-  return nodeResults
 }
 
 function resolveRecoveryMode(
@@ -462,113 +444,127 @@ export async function buildAssembleMdClusterExecutionPlan(
   }
 }
 
-function buildMemberMappedNodeResults(
-  action: 'zero_md_superblocks' | 'wipe_md_signatures',
-  preflight: ClusterStoragePreflightResult,
-  primarySanId: string,
-  sourceMembers: string[],
-  commandBuilder: (members: string[]) => string,
-): ClusterMdNodeResult[] {
-  return buildClusterMdNodeResultsFromPreflight(preflight, primarySanId, (node) => {
-    const members = node.sanId === primarySanId
-      ? sourceMembers
-      : sourceMembers.map((sourcePath) => {
-          const mapping = preflight.mappings.find(m => m.sourcePath === sourcePath && m.targetSanId === node.sanId)
-          return mapping?.targetPath ?? ''
-        })
-    if (members.some(m => !m)) return null
-    return {
-      sanId: node.sanId,
-      label: node.label,
-      role: node.role,
-      source: node.sanId === primarySanId ? 'primary' : 'peer',
-      members,
-      devices: members,
-      command: commandBuilder(members),
-      status: 'pending',
-    }
+async function buildCleanupClusterExecutionPlan(input: {
+  action: 'zero_md_superblocks' | 'wipe_md_signatures'
+  clusterExecution: ClusterMdExecutionRequest
+  sourceMembers: string[]
+  payload: Record<string, unknown>
+  commandBuilder: (members: string[]) => string
+  confirmationForMode: (recoveryMode: ClusterMdRecoveryMode | null) => string
+  recoveryModeInput?: ClusterMdRecoveryMode
+}): Promise<{
+  preflight: ClusterStoragePreflightResult
+  nodeResults: ClusterMdNodeResult[]
+  recoveryAssessment: NonNullable<ClusterStoragePreflightResult['recoveryAssessment']>
+  recoveryMode: ClusterMdRecoveryMode | null
+  planToken: string
+  confirmationPhrase: string
+}> {
+  const { clusterExecution, sourceMembers, action } = input
+  const preflight = await runClusterStoragePreflight({
+    clusterId: clusterExecution.clusterId,
+    primarySanId: clusterExecution.primarySanId,
+    action,
+    payload: input.payload,
+    diskMappings: clusterExecution.diskMappings ?? [],
   })
+  const assessment = preflight.recoveryAssessment
+  if (!assessment) {
+    throw createError({ statusCode: 500, statusMessage: 'Évaluation recovery nettoyage MD manquante' })
+  }
+  if (!preflight.okDegraded && !preflight.ok) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: assessment.hardBlockers.join('; ') || preflight.blockers.join('; '),
+    })
+  }
+
+  const recoveryMode = resolveCleanupRecoveryMode(assessment, input.recoveryModeInput ?? clusterExecution.recoveryMode)
+  const nodeResults = buildCleanupNodeResults({
+    preflight,
+    primarySanId: clusterExecution.primarySanId,
+    sourceMembers,
+    action,
+    commandBuilder: input.commandBuilder,
+  })
+
+  const executeCount = nodeResults.filter(n => n.participation === 'execute').length
+  if (executeCount === 0) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: 'Aucun nœud nettoyable pour ce cluster',
+    })
+  }
+
+  const planToken = computeCleanupMdPlanToken({
+    action,
+    recoveryMode,
+    primarySanId: clusterExecution.primarySanId,
+    nodeResults,
+  })
+
+  return {
+    preflight,
+    nodeResults,
+    recoveryAssessment: assessment,
+    recoveryMode,
+    planToken,
+    confirmationPhrase: input.confirmationForMode(recoveryMode),
+  }
 }
 
 export async function buildZeroMdClusterExecutionPlan(
   req: ZeroMdSuperblocksRequest,
-): Promise<{ preflight: ClusterStoragePreflightResult; nodeResults: ClusterMdNodeResult[] }> {
+): Promise<{
+  preflight: ClusterStoragePreflightResult
+  nodeResults: ClusterMdNodeResult[]
+  recoveryAssessment: NonNullable<ClusterStoragePreflightResult['recoveryAssessment']>
+  recoveryMode: ClusterMdRecoveryMode | null
+  planToken: string
+  confirmationPhrase: string
+}> {
   const clusterExecution = req.clusterExecution!
   const sourceMembers = req.members.map(String)
   if (sourceMembers.length === 0) {
     throw createError({ statusCode: 400, statusMessage: 'members requis' })
   }
-  const preflight = await runClusterStoragePreflight({
-    clusterId: clusterExecution.clusterId,
-    primarySanId: clusterExecution.primarySanId,
+  return buildCleanupClusterExecutionPlan({
     action: 'zero_md_superblocks',
-    payload: { members: sourceMembers, name: req.name, uuid: req.uuid },
-    diskMappings: clusterExecution.diskMappings ?? [],
-  })
-  if (!preflight.ok) {
-    throw createError({
-      statusCode: 409,
-      statusMessage: `Préflight cluster zero MD non validé : ${preflight.blockers.join('; ')}`,
-    })
-  }
-  for (const node of preflight.nodes) {
-    const nodeMembers = node.sanId === clusterExecution.primarySanId
-      ? sourceMembers
-      : sourceMembers.map((sourcePath) => {
-          const mapping = preflight.mappings.find(m => m.sourcePath === sourcePath && m.targetSanId === node.sanId)
-          return mapping?.targetPath ?? ''
-        })
-    const activeOnMember = node.mdArrays.some(arr =>
-      arr.members.some(m => nodeMembers.includes(m.path)),
-    )
-    if (activeOnMember) {
-      throw createError({
-        statusCode: 409,
-        statusMessage: `${node.label} : tableau MD encore actif sur un membre — arrêtez le tableau sur tous les nœuds avant le nettoyage`,
-      })
-    }
-  }
-  const nodeResults = buildMemberMappedNodeResults(
-    'zero_md_superblocks',
-    preflight,
-    clusterExecution.primarySanId,
+    clusterExecution,
     sourceMembers,
-    members => members.map(m => `mdadm --zero-superblock ${m}`).join('\n'),
-  )
-  return { preflight, nodeResults }
+    payload: { members: sourceMembers, name: req.name, uuid: req.uuid },
+    commandBuilder: members => members.map(m => `mdadm --zero-superblock ${m}`).join('\n'),
+    confirmationForMode: expectedClusterCleanupConfirmation,
+    recoveryModeInput: clusterExecution.recoveryMode,
+  })
 }
 
 export async function buildWipeMdClusterExecutionPlan(
   req: WipeMdSignaturesRequest,
-): Promise<{ preflight: ClusterStoragePreflightResult; nodeResults: ClusterMdNodeResult[] }> {
+): Promise<{
+  preflight: ClusterStoragePreflightResult
+  nodeResults: ClusterMdNodeResult[]
+  recoveryAssessment: NonNullable<ClusterStoragePreflightResult['recoveryAssessment']>
+  recoveryMode: ClusterMdRecoveryMode | null
+  planToken: string
+  confirmationPhrase: string
+}> {
   const clusterExecution = req.clusterExecution!
   const sourceMembers = req.members.map(String)
-  const preflight = await runClusterStoragePreflight({
-    clusterId: clusterExecution.clusterId,
-    primarySanId: clusterExecution.primarySanId,
+  return buildCleanupClusterExecutionPlan({
     action: 'wipe_md_signatures',
+    clusterExecution,
+    sourceMembers,
     payload: {
       mode: 'advanced',
       members: sourceMembers,
       remainingSignatureTypes: req.remainingSignatureTypes,
       detectionSourcesByMember: req.detectionSourcesByMember,
     },
-    diskMappings: clusterExecution.diskMappings ?? [],
+    commandBuilder: members => members.map(m => `wipefs -a ${m}; mdadm --zero-superblock --force ${m}`).join('\n'),
+    confirmationForMode: expectedClusterWipeCleanupConfirmation,
+    recoveryModeInput: clusterExecution.recoveryMode,
   })
-  if (!preflight.ok) {
-    throw createError({
-      statusCode: 409,
-      statusMessage: `Préflight cluster wipe MD non validé : ${preflight.blockers.join('; ')}`,
-    })
-  }
-  const nodeResults = buildMemberMappedNodeResults(
-    'wipe_md_signatures',
-    preflight,
-    clusterExecution.primarySanId,
-    sourceMembers,
-    members => members.map(m => `wipefs -a ${m}; mdadm --zero-superblock --force ${m}`).join('\n'),
-  )
-  return { preflight, nodeResults }
 }
 
 function markSkippedNodes(nodeResults: ClusterMdNodeResult[]): ClusterMdNodeResult[] {
@@ -808,20 +804,34 @@ export async function runClusterZeroMdSuperblocks(
   if (body.mode === 'advanced') {
     throw createError({ statusCode: 400, statusMessage: 'Utilisez wipe-signatures pour le nettoyage avancé cluster' })
   }
-  const expectedConfirm = expectedMdZeroMetadataConfirmation()
-  if (body.confirmation !== expectedConfirm) {
-    throw createError({ statusCode: 400, statusMessage: `Confirmation invalide (attendu : "${expectedConfirm}")` })
+
+  const plan = await buildZeroMdClusterExecutionPlan(body)
+  if (!isCleanupSymmetricExecution(plan.recoveryMode)) {
+    validateDegradedClusterExecution(
+      clusterExecution,
+      plan.recoveryMode!,
+      plan.recoveryAssessment,
+      plan.planToken,
+    )
+  } else if (clusterExecution.planToken) {
+    validateClusterMdPlanToken(clusterExecution.planToken, plan.planToken)
+  }
+  if (body.confirmation !== plan.confirmationPhrase) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: `Confirmation invalide (attendu : "${plan.confirmationPhrase}")`,
+    })
   }
 
-  const { nodeResults } = await buildZeroMdClusterExecutionPlan(body)
+  const { nodeResults } = plan
   const allResults: import('./raid-types').ZeroMdSuperblockPartitionResult[] = []
-  const warnings: string[] = []
+  const warnings: string[] = [...plan.recoveryAssessment.warnings]
 
   const clusterResult = await executeClusterMdNodes({
     action: 'zero_md_superblocks',
     clusterExecution,
     nodeResults,
-    nodesToRun: nodeResults,
+    nodesToRun: nodesToExecute(nodeResults),
     runOnNode: async (node) => {
       const manager = getActiveSSHManager()
       const overview = await collectRaidOverview(manager)
@@ -972,20 +982,34 @@ export async function runClusterWipeMdSignatures(
   body: WipeMdSignaturesRequest,
 ): Promise<WipeMdSignaturesRequest & { mode: 'cluster'; ok: boolean; clusterExecution: ClusterMdExecutionResult }> {
   const clusterExecution = body.clusterExecution!
-  const expectedConfirm = expectedMdAdvancedCleanupConfirmation()
-  if (body.confirmation !== expectedConfirm) {
-    throw createError({ statusCode: 400, statusMessage: `Confirmation invalide (attendu : "${expectedConfirm}")` })
+
+  const plan = await buildWipeMdClusterExecutionPlan(body)
+  if (!isCleanupSymmetricExecution(plan.recoveryMode)) {
+    validateDegradedClusterExecution(
+      clusterExecution,
+      plan.recoveryMode!,
+      plan.recoveryAssessment,
+      plan.planToken,
+    )
+  } else if (clusterExecution.planToken) {
+    validateClusterMdPlanToken(clusterExecution.planToken, plan.planToken)
+  }
+  if (body.confirmation !== plan.confirmationPhrase) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: `Confirmation invalide (attendu : "${plan.confirmationPhrase}")`,
+    })
   }
 
-  const { nodeResults } = await buildWipeMdClusterExecutionPlan(body)
+  const { nodeResults } = plan
   const allResults: import('./raid-types').ZeroMdSuperblockPartitionResult[] = []
-  const warnings: string[] = []
+  const warnings: string[] = [...plan.recoveryAssessment.warnings]
 
   const clusterResult = await executeClusterMdNodes({
     action: 'wipe_md_signatures',
     clusterExecution,
     nodeResults,
-    nodesToRun: nodeResults,
+    nodesToRun: nodesToExecute(nodeResults),
     runOnNode: async (node) => {
       const manager = getActiveSSHManager()
       const overview = await collectRaidOverview(manager)

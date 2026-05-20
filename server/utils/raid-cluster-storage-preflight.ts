@@ -5,6 +5,7 @@ import { sans } from '../db/schema'
 import { getSSHPool } from './ssh-pool'
 import { collectRaidOverview } from './raid-overview.service'
 import { prefixBlockerRefs } from './raid-md-detection'
+import { buildCleanupRecoveryAssessment, isCleanupClusterAction } from './raid-cluster-md-cleanup-recovery'
 import { buildClusterMdRecoveryAssessment } from './raid-cluster-md-node-state'
 import { buildLocalRecoveryOffered } from './raid-local-recovery'
 import { runPreflight } from './raid-preflight'
@@ -43,7 +44,10 @@ function isPathlessClusterAction(action: ClusterStorageAction): boolean {
 }
 
 function isDegradedRecoveryAction(action: ClusterStorageAction): boolean {
-  return action === 'stop_md' || action === 'assemble_md'
+  return action === 'stop_md'
+    || action === 'assemble_md'
+    || action === 'zero_md_superblocks'
+    || action === 'wipe_md_signatures'
 }
 
 function isMissingArrayBlocker(message: string, arrayName: string): boolean {
@@ -168,12 +172,25 @@ export async function runClusterStoragePreflight(
   if (isDegradedRecoveryAction(req.action)) {
     const arrayName = String((req.payload as Record<string, unknown>)?.name ?? '')
     const uuid = (req.payload as Record<string, unknown>)?.uuid as string | undefined
-    recoveryAssessment = buildClusterMdRecoveryAssessment({
-      action: req.action,
-      arrayName,
-      uuid,
-      nodes: inventories,
-    })
+    if (isCleanupClusterAction(req.action)) {
+      const sourceMembers = selectedStoragePaths(req.action, req.payload)
+      recoveryAssessment = buildCleanupRecoveryAssessment({
+        action: req.action,
+        arrayName,
+        primarySanId: req.primarySanId,
+        sourceMembers,
+        nodes: inventories,
+        mappings,
+        perNodePreflights,
+      })
+    } else {
+      recoveryAssessment = buildClusterMdRecoveryAssessment({
+        action: req.action,
+        arrayName,
+        uuid,
+        nodes: inventories,
+      })
+    }
     blockers.push(...recoveryAssessment.hardBlockers)
     warnings.push(...recoveryAssessment.warnings)
   }

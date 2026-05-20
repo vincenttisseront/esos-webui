@@ -44,6 +44,14 @@
         <li>{{ t('raid.cluster_md.recovery.stop_inconsistent_risk_stop_only') }}</li>
         <li>{{ t('raid.cluster_md.recovery.stop_inconsistent_risk_followup') }}</li>
       </ul>
+      <ul
+        v-if="isCleanupReachableMode"
+        class="text-sm text-amber-800 dark:text-amber-200 list-disc pl-5 space-y-1 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/80 dark:bg-amber-950/30 px-4 py-3"
+      >
+        <li>{{ t('raid.cluster_md.recovery.cleanup_reachable_risk_peers') }}</li>
+        <li>{{ t('raid.cluster_md.recovery.cleanup_reachable_risk_asymmetric') }}</li>
+        <li>{{ t('raid.cluster_md.recovery.cleanup_reachable_risk_followup') }}</li>
+      </ul>
 
       <RaidPreflightPanel v-if="localPreflight" :preflight="localPreflight" />
 
@@ -138,7 +146,16 @@
           <UButton size="sm" color="amber" variant="soft" @click="showMappingResolver = true">
             {{ t('raid.cluster_md.local_recovery.resolve_mapping') }}
           </UButton>
-          <UButton size="sm" color="red" variant="solid" @click="enterLocalRecoveryMode">
+          <UButton
+            v-if="clusterPreflight?.okDegraded"
+            size="sm"
+            color="amber"
+            variant="solid"
+            @click="enterReachableCleanupMode"
+          >
+            {{ t('raid.cluster_md.recovery.confirm_clean_reachable') }}
+          </UButton>
+          <UButton size="sm" color="red" variant="outline" @click="enterLocalRecoveryMode">
             {{ t('raid.cluster_md.local_recovery.run_local_only') }}
           </UButton>
         </motion.div>
@@ -298,7 +315,18 @@ const showMappingFork = computed(() =>
   isCleanupAction.value
   && Boolean(localRecoveryOffered.value?.allowed)
   && !clusterPreflight.value?.ok
+  && !clusterPreflight.value?.okDegraded
+  && !executionPlan.value
   && !showLocalRecoveryMode.value,
+)
+
+const isCleanupReachableMode = computed(() =>
+  isCleanupAction.value
+  && (
+    selectedRecoveryMode.value === 'cleanup_mapped_only'
+    || executionPlan.value?.recoveryAssessment?.recommendedRecoveryMode === 'cleanup_mapped_only'
+  )
+  && executionPlan.value?.okSymmetric !== true,
 )
 
 const localRecoveryConfirmationPhrase = computed(() => {
@@ -389,13 +417,17 @@ const isInconsistentStopMode = computed(
   () => props.action === 'stop_md' && effectiveStopRecoveryMode.value === 'stop_inconsistent_active',
 )
 
-const isDegradedMode = computed(() =>
-  effectiveStopRecoveryMode.value != null
-  && effectiveStopRecoveryMode.value !== 'stop_all_active'
-  && effectiveStopRecoveryMode.value !== 'assemble_stopped_nodes',
-)
+const isDegradedMode = computed(() => {
+  if (isCleanupReachableMode.value) return true
+  return effectiveStopRecoveryMode.value != null
+    && effectiveStopRecoveryMode.value !== 'stop_all_active'
+    && effectiveStopRecoveryMode.value !== 'assemble_stopped_nodes'
+})
 
 const degradedAlertTitle = computed(() => {
+  if (isCleanupReachableMode.value) {
+    return t('raid.cluster_md.recovery.cleanup_reachable_title')
+  }
   if (props.action === 'stop_md' && isInconsistentStopMode.value) {
     return t('raid.cluster_md.recovery.stop_inconsistent_title')
   }
@@ -405,6 +437,9 @@ const degradedAlertTitle = computed(() => {
 })
 
 const degradedAlertDescription = computed(() => {
+  if (isCleanupReachableMode.value) {
+    return t('raid.cluster_md.recovery.cleanup_reachable_description')
+  }
   if (props.action === 'stop_md' && isInconsistentStopMode.value) {
     return t('raid.cluster_md.recovery.stop_inconsistent_description')
   }
@@ -419,7 +454,9 @@ const effectiveConfirmationPhrase = computed(() =>
 
 function clusterExecutionPayload(): import('~/types/raid').ClusterMdExecutionRequest {
   const mode = selectedRecoveryMode.value ?? recoveryAssessment.value?.recommendedRecoveryMode
-  const degraded = mode != null && mode !== 'stop_all_active' && mode !== 'assemble_stopped_nodes'
+  const degraded = mode != null
+    && mode !== 'stop_all_active'
+    && mode !== 'assemble_stopped_nodes'
   return {
     clusterId: props.clusterId,
     primarySanId: props.sourceSanId,
@@ -461,6 +498,37 @@ function enterLocalRecoveryMode() {
   localRecoveryPhrase.value = ''
 }
 
+async function enterReachableCleanupMode() {
+  showLocalRecoveryMode.value = false
+  showMappingResolver.value = false
+  planError.value = null
+  inputPhrase.value = ''
+  selectedRecoveryMode.value = 'cleanup_mapped_only'
+  await loadCleanupExecutionPlan()
+}
+
+async function loadCleanupExecutionPlan() {
+  const clusterExecution = clusterExecutionPayload()
+  if (props.action === 'zero_md_superblocks') {
+    executionPlan.value = await raid.planZeroMdSuperblocks({
+      ...(props.payload as Omit<ZeroMdSuperblocksRequest, 'confirmation' | 'clusterExecution'>),
+      confirmation: effectiveConfirmationPhrase.value || props.confirmationPhrase,
+      mode: 'basic',
+      clusterExecution,
+    })
+  } else {
+    executionPlan.value = await raid.planWipeMdSignatures({
+      ...(props.payload as Omit<WipeMdSignaturesRequest, 'confirmation' | 'clusterExecution'>),
+      confirmation: effectiveConfirmationPhrase.value || props.confirmationPhrase,
+      mode: 'advanced',
+      clusterExecution,
+    })
+  }
+  if (executionPlan.value?.recoveryAssessment?.recommendedRecoveryMode && !selectedRecoveryMode.value) {
+    selectedRecoveryMode.value = executionPlan.value.recoveryAssessment.recommendedRecoveryMode
+  }
+}
+
 async function retryClusterCleanupAfterMapping() {
   showMappingResolver.value = false
   showLocalRecoveryMode.value = false
@@ -470,6 +538,9 @@ async function retryClusterCleanupAfterMapping() {
 const confirmLabel = computed(() => {
   if (showLocalRecoveryMode.value) {
     return t('raid.cluster_md.local_recovery.confirm_run_local')
+  }
+  if (isCleanupReachableMode.value) {
+    return t('raid.cluster_md.recovery.confirm_clean_reachable')
   }
   if (isInconsistentStopMode.value) {
     return t('raid.cluster_md.recovery.confirm_stop_inconsistent')
@@ -667,6 +738,7 @@ onMounted(() => {
 async function loadCleanupPlan() {
   clusterLoading.value = true
   planError.value = null
+  executionPlan.value = null
   showLocalRecoveryMode.value = false
   try {
     clusterPreflight.value = await raid.clusterStoragePreflight({
@@ -676,28 +748,24 @@ async function loadCleanupPlan() {
       payload: props.payload,
       diskMappings: diskMappings.value,
     })
+
+    const assessment = clusterPreflight.value.recoveryAssessment
+    if (assessment && (clusterPreflight.value.ok || clusterPreflight.value.okDegraded)) {
+      selectedRecoveryMode.value = assessment.recommendedRecoveryMode ?? null
+      await loadCleanupExecutionPlan()
+      return
+    }
+
     if (!clusterPreflight.value.ok) {
       if (clusterPreflight.value.localRecoveryOffered?.allowed) {
         return
       }
-      planError.value = clusterPreflight.value.blockers.join('; ')
+      planError.value = assessment?.hardBlockers.join('; ')
+        || clusterPreflight.value.blockers.join('; ')
       return
     }
-    if (props.action === 'zero_md_superblocks') {
-      executionPlan.value = await raid.planZeroMdSuperblocks({
-        ...(props.payload as Omit<ZeroMdSuperblocksRequest, 'confirmation' | 'clusterExecution'>),
-        confirmation: props.confirmationPhrase,
-        mode: 'basic',
-        clusterExecution: clusterExecutionPayload(),
-      })
-    } else {
-      executionPlan.value = await raid.planWipeMdSignatures({
-        ...(props.payload as Omit<WipeMdSignaturesRequest, 'confirmation' | 'clusterExecution'>),
-        confirmation: props.confirmationPhrase,
-        mode: 'advanced',
-        clusterExecution: clusterExecutionPayload(),
-      })
-    }
+
+    await loadCleanupExecutionPlan()
   } catch (err: any) {
     planError.value = err?.data?.statusMessage ?? err.message
   } finally {

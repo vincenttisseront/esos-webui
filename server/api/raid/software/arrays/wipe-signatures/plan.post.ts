@@ -18,11 +18,19 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Plan cluster requis uniquement pour un SAN clusterisé' })
   }
   assertClusteredSanAllowsMutation(sanId, body?.clusterExecution)
-  const { nodeResults } = await buildWipeMdClusterExecutionPlan(body)
+  const plan = await buildWipeMdClusterExecutionPlan(body)
   return toClusterMdExecutionPlan(
     'wipe_md_signatures',
     body.clusterExecution!.primarySanId,
     body.clusterExecution!.clusterId ?? san.clusterId,
-    { nodeResults },
+    {
+      nodeResults: plan.nodeResults,
+      recoveryAssessment: plan.recoveryAssessment,
+      recoveryMode: plan.recoveryMode ?? undefined,
+      planToken: plan.planToken,
+      confirmationPhrase: plan.confirmationPhrase,
+      okSymmetric: plan.recoveryAssessment.okSymmetric,
+      okDegraded: plan.recoveryAssessment.okDegraded,
+    },
   )
 })
