@@ -63,16 +63,24 @@
         :title="preflightBlockerText"
       />
 
-      <UFormGroup
+      <div
         v-if="canShowConfirmation"
-        :label="t('lvm.wizard.scst_device.confirm_label')"
-        :hint="t('lvm.wizard.scst_device.confirm_hint')"
+        class="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2"
       >
-        <UInput
-          v-model="confirmation"
-          :placeholder="preflight?.requiredConfirmation"
-        />
-      </UFormGroup>
+        <p class="text-xs text-gray-600 dark:text-gray-400">
+          {{ t('lvm.wizard.scst_device.phrase_help', { phrase: confirmationPhrase }) }}
+        </p>
+        <p class="font-mono text-sm font-semibold text-primary-700 dark:text-primary-300 select-all">
+          {{ confirmationPhrase }}
+        </p>
+        <UFormGroup :label="t('lvm.confirm.label')">
+          <UInput
+            v-model="confirmation"
+            :placeholder="confirmationPhrase"
+            class="font-mono"
+          />
+        </UFormGroup>
+      </div>
     </div>
 
     <template #footer>
@@ -166,13 +174,15 @@ const clusterCommandRows = computed(() => {
   return rows
 })
 
+const confirmationPhrase = computed(() => preflight.value?.requiredConfirmation ?? '')
+
 const canShowConfirmation = computed(() =>
-  !nameValidationKey.value && !!preflight.value?.ok,
+  !nameValidationKey.value && !!preflight.value?.ok && !!confirmationPhrase.value,
 )
 
 const canExecute = computed(() =>
   canShowConfirmation.value
-  && confirmation.value.trim() === (preflight.value?.requiredConfirmation ?? ''),
+  && confirmation.value.trim() === confirmationPhrase.value,
 )
 
 onMounted(async () => {
