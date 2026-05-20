@@ -32,3 +32,23 @@ export function toPvCreateDeviceOptions(candidates: LvmCandidateDevice[]): LvmSe
 export function pickDefaultPvCreatePath(candidates: LvmCandidateDevice[]): string {
   return candidates[0]?.path ?? ''
 }
+
+type ApiErrorLike = {
+  statusCode?: number
+  status?: number
+  data?: { statusCode?: number; code?: string; message?: string }
+  message?: string
+} | null | undefined
+
+/** Resolve cluster preflight HTTP failures for LVM wizards (403 → dedicated i18n). */
+export function resolveLvmClusterPreflightError(
+  err: ApiErrorLike,
+  t: (key: string) => string,
+  tError: (err: ApiErrorLike, fallback?: string) => string,
+): string {
+  const status = err?.statusCode ?? err?.status ?? err?.data?.statusCode
+  if (status === 403) {
+    return t('lvm.cluster.preflight_forbidden')
+  }
+  return tError(err, t('lvm.cluster.preflight_failed'))
+}

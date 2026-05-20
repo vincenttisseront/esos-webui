@@ -947,6 +947,8 @@
     "cluster": {
       "mode_title": "Local symmetric LVM mode",
       "mode_body": "Commands will run on every cluster node. Sync config does not create PV/VG/LV. UUIDs may differ; symmetry is by name, size, and structure (no shared clvmd).",
+      "preflight_forbidden": "LVM preflight denied: insufficient permissions",
+      "preflight_failed": "LVM cluster preflight could not be completed",
       "this_node": "This node",
       "peer_node": "Peer node: {label}",
       "peer_empty": "No VG on this node",

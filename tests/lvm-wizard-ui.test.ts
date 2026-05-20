@@ -3,6 +3,7 @@ import type { LvmCandidateDevice } from '~/types/lvm'
 import {
   filterLocalPvCreateCandidates,
   pickDefaultPvCreatePath,
+  resolveLvmClusterPreflightError,
   toPvCreateDeviceOptions,
 } from '../utils/lvm-wizard-ui'
 
@@ -36,5 +37,11 @@ describe('lvm-wizard-ui PV create filters', () => {
   it('pickDefaultPvCreatePath returns first eligible or empty', () => {
     expect(pickDefaultPvCreatePath([cand('/dev/md0', true)])).toBe('/dev/md0')
     expect(pickDefaultPvCreatePath([])).toBe('')
+  })
+
+  it('resolveLvmClusterPreflightError maps 403 to forbidden message', () => {
+    const t = (key: string) => (key === 'lvm.cluster.preflight_forbidden' ? 'FORBIDDEN' : key)
+    const tError = () => 'ERR'
+    expect(resolveLvmClusterPreflightError({ statusCode: 403 }, t, tError)).toBe('FORBIDDEN')
   })
 })

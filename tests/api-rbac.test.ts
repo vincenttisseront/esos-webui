@@ -47,6 +47,30 @@ describe('api-rbac (mutations default deny)', () => {
   it('RB08 — unknown mutation path is denied for admin', () => {
     expectForbidden(() => enforceMutationAccess('/api/unknown-mutation', 'POST', 'admin'))
   })
+
+  it('RB09 — admin can POST /api/lvm/cluster/preflight', () => {
+    expect(() => enforceMutationAccess('/api/lvm/cluster/preflight', 'POST', 'admin')).not.toThrow()
+  })
+
+  it('RB09b — operator can POST /api/lvm/cluster/preflight', () => {
+    expect(() => enforceMutationAccess('/api/lvm/cluster/preflight', 'POST', 'operator')).not.toThrow()
+  })
+
+  it('RB09c — viewer cannot POST /api/lvm/cluster/preflight', () => {
+    expectForbidden(() => enforceMutationAccess('/api/lvm/cluster/preflight', 'POST', 'viewer'))
+  })
+
+  it('RB09d — admin can POST /api/lvm/pv/create/cluster', () => {
+    expect(() => enforceMutationAccess('/api/lvm/pv/create/cluster', 'POST', 'admin')).not.toThrow()
+  })
+
+  it('RB09e — viewer cannot POST /api/lvm/pv/create/cluster', () => {
+    expectForbidden(() => enforceMutationAccess('/api/lvm/pv/create/cluster', 'POST', 'viewer'))
+  })
+
+  it('RB09f — viewer cannot POST /api/lvm/preflight', () => {
+    expectForbidden(() => enforceMutationAccess('/api/lvm/preflight', 'POST', 'viewer'))
+  })
 })
 
 describe('api-rbac (auth-providers admin)', () => {
@@ -86,6 +110,14 @@ describe('api-rbac (reads)', () => {
 
   it('RB11 — viewer can GET /api/raid/overview', () => {
     expect(() => enforceReadAccess('/api/raid/overview', 'GET', 'viewer')).not.toThrow()
+  })
+
+  it('RB11b — viewer can GET /api/lvm/overview', () => {
+    expect(() => enforceReadAccess('/api/lvm/overview', 'GET', 'viewer')).not.toThrow()
+  })
+
+  it('RB11c — viewer can GET /api/lvm/cluster/inventory', () => {
+    expect(() => enforceReadAccess('/api/lvm/cluster/inventory', 'GET', 'viewer')).not.toThrow()
   })
 
   it('RB20 — viewer cannot GET /api/admin/settings', () => {

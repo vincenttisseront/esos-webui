@@ -28,6 +28,13 @@
           @update:mappings="diskMappings = $event"
         />
         <div v-if="preflightLoading" class="text-sm text-gray-500">{{ t('lvm.cluster.wizard.preflight_loading') }}</div>
+        <UAlert
+          v-else-if="clusterPreflightError"
+          color="red"
+          variant="soft"
+          icon="i-heroicons-shield-exclamation"
+          :title="clusterPreflightError"
+        />
         <LvmClusterPreflightPanel v-else-if="clusterPreflight" :preflight="clusterPreflight" />
       </template>
       <template v-else-if="step === 3">
@@ -82,6 +89,7 @@ import type {
 import {
   filterClusterPvCreateCandidates,
   pickDefaultPvCreatePath,
+  resolveLvmClusterPreflightError,
 } from '~/utils/lvm-wizard-ui'
 
 const props = defineProps<{
@@ -90,7 +98,7 @@ const props = defineProps<{
   onNavigateBlockDevices?: () => void
 }>()
 const emit = defineEmits<{ cancel: []; close: [] }>()
-const { t } = useEsosI18n()
+const { t, tError } = useEsosI18n()
 const lvm = useLvmStore()
 const toast = useAppToast()
 
@@ -104,6 +112,7 @@ const planError = ref<string | null>(null)
 const busy = ref(false)
 const diskMappings = ref<ClusterLvmDiskMapping[]>([])
 const clusterPreflight = ref<ClusterLvmPreflightResult | null>(null)
+const clusterPreflightError = ref<string | null>(null)
 const preflightLoading = ref(false)
 const executionResult = ref<ClusterLvmExecutionResult | null>(null)
 
@@ -149,8 +158,10 @@ function initMappingsFromInventory() {
   lvm.lastDiskMappings = mappings
 }
 
-async function runPreflight() {
+async function runPreflight(): Promise<boolean> {
   preflightLoading.value = true
+  clusterPreflightError.value = null
+  clusterPreflight.value = null
   try {
     clusterPreflight.value = await lvm.clusterPreflight({
       clusterId: props.clusterId,
@@ -167,6 +178,15 @@ async function runPreflight() {
       diskMappings.value = clusterPreflight.value.mappings
       lvm.lastDiskMappings = clusterPreflight.value.mappings
     }
+    if (!clusterPreflight.value.ok) {
+      clusterPreflightError.value = clusterPreflight.value.blockers.join(' · ')
+        || t('lvm.cluster.preflight_failed')
+      return false
+    }
+    return true
+  } catch (e: unknown) {
+    clusterPreflightError.value = resolveLvmClusterPreflightError(e, t, tError)
+    return false
   } finally {
     preflightLoading.value = false
   }
@@ -202,11 +222,12 @@ async function nextStep() {
   if (step.value === 1) {
     initMappingsFromInventory()
     step.value = 2
-    await runPreflight()
+    const ok = await runPreflight()
+    if (!ok) return
     return
   }
   if (step.value === 2) {
-    if (!clusterPreflight.value?.ok) return
+    if (!clusterPreflight.value?.ok || clusterPreflightError.value) return
     await loadPlan()
     if (!plan.value?.okSymmetric) return
     step.value = 3
