@@ -1008,8 +1008,10 @@
       "select_placeholder": "Sélectionner…",
       "pv_create": {
         "title": "Créer un volume physique",
-        "device": "Périphérique bloc",
-        "device_help": "Choisissez un périphérique bloc. Utilisez le clavier (flèches) pour parcourir la liste.",
+        "device": "Périphérique à initialiser en PV",
+        "device_help": "Seuls les périphériques éligibles sont affichés. Consultez Block Devices pour voir les exclusions.",
+        "no_eligible": "Aucun périphérique éligible pour pvcreate",
+        "open_block_devices": "Ouvrir l'onglet Block Devices",
         "force": "Forcer (--force) si signatures présentes",
         "success": "PV créé"
       },

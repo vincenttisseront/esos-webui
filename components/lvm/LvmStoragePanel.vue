@@ -226,6 +226,8 @@ const props = defineProps<{
   readOnly?: boolean
 }>()
 
+const emit = defineEmits<{ 'navigate-block-devices': [] }>()
+
 const { t } = useEsosI18n()
 const lvm = useLvmStore()
 const toast = useAppToast()
@@ -253,6 +255,10 @@ async function refreshAfterWizard() {
   }
 }
 
+function navigateBlockDevicesFromWizard() {
+  emit('navigate-block-devices')
+}
+
 async function openPvWizard() {
   const Wizard = props.isClustered && clusterId.value
     ? (await import('~/components/lvm/LvmClusterPvWizard.vue')).default
@@ -264,6 +270,7 @@ async function openPvWizard() {
         sanId: props.sanId,
         ...(props.isClustered && clusterId.value ? { clusterId: clusterId.value } : {}),
         persistent: true,
+        onNavigateBlockDevices: navigateBlockDevicesFromWizard,
       },
     })
     await refreshAfterWizard()

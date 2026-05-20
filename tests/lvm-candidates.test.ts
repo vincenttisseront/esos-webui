@@ -35,6 +35,53 @@ describe('buildLvmCandidatesFromInventory', () => {
     expect(md0?.eligible).toBe(true)
   })
 
+  it('marks raw whole disk ineligible for pvcreate', () => {
+    const candidates = buildLvmCandidatesFromInventory({
+      blockDevices: [{
+        name: 'sda',
+        path: '/dev/sda',
+        type: 'disk',
+        sizeBytes: 100 * 1024 ** 3,
+        usedBy: [],
+        mdEligibilityReasons: [],
+        eligibleForMdPartitionPrep: false,
+        mdPartitionPrepReasons: [],
+        eligibleForMd: true,
+        eligibleForHardwareRaid: false,
+        warnings: [],
+      }],
+      pvs: [],
+      lvPaths: new Set(),
+    })
+    const disk = candidates.find(c => c.path === '/dev/sda')
+    expect(disk?.kind).toBe('disk')
+    expect(disk?.eligible).toBe(false)
+    expect(disk?.reasons.some(r => r.includes('Disque brut'))).toBe(true)
+  })
+
+  it('marks partition ineligible for pvcreate', () => {
+    const candidates = buildLvmCandidatesFromInventory({
+      blockDevices: [{
+        name: 'sdb1',
+        path: '/dev/sdb1',
+        type: 'part',
+        sizeBytes: 10 * 1024 ** 3,
+        usedBy: [],
+        mdEligibilityReasons: [],
+        eligibleForMdPartitionPrep: false,
+        mdPartitionPrepReasons: [],
+        eligibleForMd: false,
+        eligibleForHardwareRaid: false,
+        warnings: [],
+      }],
+      pvs: [],
+      lvPaths: new Set(),
+    })
+    const part = candidates.find(c => c.path === '/dev/sdb1')
+    expect(part?.eligible).toBe(false)
+    expect(part?.reasons.some(r => r.includes('partitions'))).toBe(true)
+  })
+
   it('does not offer md member disk as raw PV candidate', () => {
     const candidates = buildLvmCandidatesFromInventory({
       blockDevices: [{

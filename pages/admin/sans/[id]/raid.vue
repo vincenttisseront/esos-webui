@@ -230,6 +230,7 @@
         :cluster-id="san?.clusterId ?? undefined"
         :is-clustered="isClusteredSan"
         :read-only="isReadOnly"
+        @navigate-block-devices="activeTab = 'devices'"
       />
     </div>
 

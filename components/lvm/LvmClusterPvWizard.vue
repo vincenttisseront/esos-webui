@@ -7,14 +7,16 @@
   >
     <div class="space-y-4">
       <template v-if="step === 1">
-        <UFormGroup
-          :label="t('lvm.wizard.pv_create.device')"
-          :hint="t('lvm.wizard.pv_create.device_help')"
-        >
-          <LvmNativeSelect v-model="selectedPath" :options="deviceOptions" />
-        </UFormGroup>
-        <UCheckbox v-model="force" :label="t('lvm.wizard.pv_create.force')" />
-        <p v-if="selectedClusterBlock" class="text-xs text-red-600">{{ selectedClusterBlock }}</p>
+        <LvmPvDeviceField
+          v-model="selectedPath"
+          :candidates="eligiblePvCandidates"
+          :on-navigate-block-devices="goBlockDevices"
+        />
+        <UCheckbox
+          v-if="eligiblePvCandidates.length"
+          v-model="force"
+          :label="t('lvm.wizard.pv_create.force')"
+        />
       </template>
       <template v-else-if="step === 2">
         <LvmClusterMappingPanel
@@ -50,7 +52,7 @@
           <UButton
             v-if="step < 4"
             color="primary"
-            :disabled="step === 1 && (!selectedPath || !!selectedClusterBlock)"
+            :disabled="step === 1 && (!selectedPath || !eligiblePvCandidates.length)"
             :loading="preflightLoading || planLoading"
             @click="nextStep"
           >
@@ -77,11 +79,15 @@ import type {
   ClusterLvmExecutionResult,
   ClusterLvmPreflightResult,
 } from '~/types/lvm'
-import { filterClusterEligibleCandidates } from '~/utils/lvm-cluster-ui'
+import {
+  filterClusterPvCreateCandidates,
+  pickDefaultPvCreatePath,
+} from '~/utils/lvm-wizard-ui'
 
 const props = defineProps<{
   sanId: string
   clusterId: string
+  onNavigateBlockDevices?: () => void
 }>()
 const emit = defineEmits<{ cancel: []; close: [] }>()
 const { t } = useEsosI18n()
@@ -103,33 +109,20 @@ const executionResult = ref<ClusterLvmExecutionResult | null>(null)
 
 const inventory = computed(() => lvm.clusterInventory ?? [])
 
-const clusterCandidates = computed(() =>
-  filterClusterEligibleCandidates(props.sanId, lvm.candidates, inventory.value),
+const eligiblePvCandidates = computed(() =>
+  filterClusterPvCreateCandidates(props.sanId, lvm.candidates, inventory.value),
 )
 
-const deviceOptions = computed(() =>
-  clusterCandidates.value.map(c => ({
-    value: c.path,
-    label: (c as { clusterBlockReason?: string }).clusterBlockReason
-      ? `${c.path} (${(c as { clusterBlockReason?: string }).clusterBlockReason})`
-      : c.path,
-    disabled: !!((c as { clusterBlockReason?: string }).clusterBlockReason) || (!c.eligible && !force.value),
-  })),
-)
-
-const selectedClusterBlock = computed(() => {
-  const c = clusterCandidates.value.find(x => x.path === selectedPath.value)
-  return (c as { clusterBlockReason?: string } | undefined)?.clusterBlockReason
-})
+function goBlockDevices() {
+  emit('cancel')
+  props.onNavigateBlockDevices?.()
+}
 
 onMounted(async () => {
   lvm.setSanId(props.sanId)
   lvm.setClusterContext(props.clusterId, props.sanId)
   await lvm.fetchClusterInventory(props.clusterId)
-  const eligible = clusterCandidates.value.filter(
-    c => c.eligible && !(c as { clusterBlockReason?: string }).clusterBlockReason,
-  )
-  selectedPath.value = eligible[0]?.path ?? ''
+  selectedPath.value = pickDefaultPvCreatePath(eligiblePvCandidates.value)
 })
 
 function onCancel() {

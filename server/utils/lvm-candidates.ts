@@ -76,7 +76,10 @@ function evaluateBlockDevice(
   const usedBy = mapUsedBy(dev)
 
   if (dev.type === 'part') {
-    reasons.push('Seuls les disques entiers ou tableaux MD sont éligibles pour pvcreate')
+    reasons.push('Les partitions ne sont pas proposées pour pvcreate')
+  }
+  if (kind === 'disk') {
+    reasons.push('Disque brut non proposé pour pvcreate — utilisez un tableau MD ou un volume RAID matériel')
   }
   if (dev.mountpoint || usedBy.includes('mounted')) {
     reasons.push(dev.mountpoint ? `Monté sur ${dev.mountpoint}` : 'Périphérique monté')

@@ -1008,8 +1008,10 @@
       "select_placeholder": "Select…",
       "pv_create": {
         "title": "Create physical volume",
-        "device": "Block device",
-        "device_help": "Choose a block device. Use the keyboard (arrows) to move through the list.",
+        "device": "Device to initialize as PV",
+        "device_help": "Only eligible devices are listed. See Block Devices for exclusions and reasons.",
+        "no_eligible": "No device eligible for pvcreate",
+        "open_block_devices": "Open Block Devices tab",
         "force": "Force (--force) if signatures present",
         "success": "PV created"
       },

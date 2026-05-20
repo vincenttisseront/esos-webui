@@ -6,13 +6,16 @@
     icon="i-heroicons-circle-stack"
   >
     <div class="space-y-3">
-      <UFormGroup
-        :label="t('lvm.wizard.pv_create.device')"
-        :hint="t('lvm.wizard.pv_create.device_help')"
-      >
-        <LvmNativeSelect v-model="selectedPath" :options="deviceOptions" />
-      </UFormGroup>
-      <UCheckbox v-model="force" :label="t('lvm.wizard.pv_create.force')" />
+      <LvmPvDeviceField
+        v-model="selectedPath"
+        :candidates="eligibleCandidates"
+        :on-navigate-block-devices="goBlockDevices"
+      />
+      <UCheckbox
+        v-if="eligibleCandidates.length"
+        v-model="force"
+        :label="t('lvm.wizard.pv_create.force')"
+      />
       <UAlert v-if="preflight?.blockers.length" color="red" variant="soft" :title="preflight.blockers.join(' · ')" />
       <p v-if="preflight?.commandPreview" class="text-xs font-mono text-gray-500">{{ preflight.commandPreview }}</p>
       <UFormGroup v-if="preflight?.ok" :label="t('lvm.confirm.label')">
@@ -22,7 +25,12 @@
     <template #footer>
       <div class="flex justify-end gap-2">
         <UButton color="gray" variant="ghost" @click="emit('cancel')">{{ t('lvm.wizard.cancel') }}</UButton>
-        <UButton color="primary" :loading="busy" :disabled="!preflight?.ok" @click="execute">
+        <UButton
+          color="primary"
+          :loading="busy"
+          :disabled="!eligibleCandidates.length || !preflight?.ok"
+          @click="execute"
+        >
           {{ t('lvm.wizard.execute') }}
         </UButton>
       </div>
@@ -31,7 +39,12 @@
 </template>
 
 <script setup lang="ts">
-const props = defineProps<{ sanId: string }>()
+import { filterLocalPvCreateCandidates, pickDefaultPvCreatePath } from '~/utils/lvm-wizard-ui'
+
+const props = defineProps<{
+  sanId: string
+  onNavigateBlockDevices?: () => void
+}>()
 const emit = defineEmits<{ cancel: []; close: [] }>()
 const { t } = useEsosI18n()
 const lvm = useLvmStore()
@@ -43,19 +56,16 @@ const confirmation = ref('')
 const preflight = ref<Awaited<ReturnType<typeof lvm.preflight>> | null>(null)
 const busy = ref(false)
 
-const deviceOptions = computed(() =>
-  lvm.candidates.map(c => ({
-    value: c.path,
-    label: c.eligible ? c.path : `${c.path} (${c.reasons[0] ?? 'ineligible'})`,
-    disabled: !c.eligible && !force.value,
-  })),
-)
+const eligibleCandidates = computed(() => filterLocalPvCreateCandidates(lvm.candidates))
+
+function goBlockDevices() {
+  emit('cancel')
+  props.onNavigateBlockDevices?.()
+}
 
 onMounted(() => {
   lvm.setSanId(props.sanId)
-  if (lvm.candidates.length) {
-    selectedPath.value = lvm.candidates.find(c => c.eligible)?.path ?? ''
-  }
+  selectedPath.value = pickDefaultPvCreatePath(eligibleCandidates.value)
 })
 
 watch([selectedPath, force], async () => {
