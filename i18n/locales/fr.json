@@ -393,7 +393,14 @@
           "stop": "Arrêter",
           "add": "Ajouter",
           "details": "Détails",
-          "resync_aria": "Progression de resynchronisation"
+          "resync_aria": "Progression de resynchronisation",
+          "add_member": {
+            "replacement": "Ajouter un disque de remplacement",
+            "spare": "Ajouter un disque de secours",
+            "unavailable_tooltip": "Disponible uniquement pour remplacer un membre manquant ou ajouter un spare.",
+            "not_implemented": "Assistant non disponible pour le moment.",
+            "cluster_required": "En cluster HA, l'ajout de membre doit être planifié sur tous les nœuds concernés (à venir)."
+          }
         }
       },
       "layout": {

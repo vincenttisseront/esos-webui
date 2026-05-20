@@ -201,7 +201,6 @@
       @create-md="openMdWizard()"
       @refresh="manualRefreshRaid()"
       @stop-md="handleStopMd"
-      @add-md-device="handleAddMdDevice"
       @set-faulty="(arr, m) => handleSetFaulty(arr, m)"
       @remove-md-device="(arr, m) => handleRemoveMdDevice(arr, m)"
       @assemble-stopped="handleAssembleStoppedMd"
@@ -1180,16 +1179,6 @@ async function handleDeleteHwLd(ctrl: HardwareRaidController, ld: HardwareRaidLo
     })
     await raid.deleteHardwareLogicalDrive(ld.id, confirmation as string)
   } catch { /* annulé */ }
-}
-
-async function handleAddMdDevice(arr: MdArray) {
-  const device = window.prompt(`Chemin du device à ajouter à ${arr.path} (ex: /dev/sdb) :`)
-  if (!device?.trim()) return
-  try {
-    await raid.addMdDevice(arr.name, device.trim())
-  } catch (err: any) {
-    alert(err?.data?.statusMessage ?? err.message)
-  }
 }
 
 async function handleSetFaulty(arr: MdArray, member: MdMemberDevice) {

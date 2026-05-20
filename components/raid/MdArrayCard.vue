@@ -78,10 +78,20 @@
           <span v-if="array.failedDevices > 0" class="text-xs text-red-600 dark:text-red-400">{{ array.failedDevices }} en échec</span>
         </div>
       </div>
-      <div class="flex gap-2 shrink-0">
-        <UButton size="xs" color="amber" variant="ghost" icon="i-heroicons-plus" @click="$emit('add-device', array)">
-          Ajouter
-        </UButton>
+      <div class="flex gap-2 shrink-0 items-center">
+        <UTooltip v-if="addMemberUi.primary === 'replacement'" :text="addMemberTooltip">
+          <UButton size="xs" color="primary" variant="soft" icon="i-heroicons-plus" disabled>
+            {{ t('raid.software.cockpit.array.add_member.replacement') }}
+          </UButton>
+        </UTooltip>
+        <UTooltip v-if="addMemberUi.showSpare" :text="addMemberTooltip">
+          <UButton size="xs" color="gray" variant="soft" icon="i-heroicons-plus-circle" disabled>
+            {{ t('raid.software.cockpit.array.add_member.spare') }}
+          </UButton>
+        </UTooltip>
+        <UTooltip v-if="addMemberUi.primary === 'none'" :text="unavailableTooltip">
+          <UButton size="xs" color="gray" variant="ghost" icon="i-heroicons-plus" disabled />
+        </UTooltip>
         <UTooltip :text="t('raid.stopped_md.stop_hint')">
           <UButton size="xs" color="red" variant="ghost" icon="i-heroicons-stop-circle" @click="$emit('stop', array)">
             Arrêter
@@ -132,21 +142,37 @@
 
 <script setup lang="ts">
 import type { MdArray, MdMemberDevice } from '~/types/raid'
+import { resolveMdAddMemberUi } from '~/utils/md-array-add-member-ui'
 
 const props = withDefaults(defineProps<{
   array: MdArray
   compact?: boolean
+  isClustered?: boolean
 }>(), {
   compact: false,
+  isClustered: false,
 })
 
 const { t } = useEsosI18n()
 defineEmits<{
   stop: [arr: MdArray]
-  'add-device': [arr: MdArray]
   'set-faulty': [arr: MdArray, member: MdMemberDevice]
   'remove-device': [arr: MdArray, member: MdMemberDevice]
 }>()
+
+const addMemberUi = computed(() => resolveMdAddMemberUi(props.array))
+
+const unavailableTooltip = computed(() =>
+  t('raid.software.cockpit.array.add_member.unavailable_tooltip'),
+)
+
+const addMemberTooltip = computed(() => {
+  const parts = [t('raid.software.cockpit.array.add_member.not_implemented')]
+  if (props.isClustered) {
+    parts.push(t('raid.software.cockpit.array.add_member.cluster_required'))
+  }
+  return parts.join(' ')
+})
 
 const stateColor = computed(() => {
   const s = props.array.state

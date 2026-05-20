@@ -19,7 +19,7 @@
             {{ sizeLabel }}
           </p>
         </div>
-        <div class="flex flex-wrap gap-2 shrink-0">
+        <div class="flex flex-wrap gap-2 shrink-0 items-center">
           <UButton
             size="sm"
             color="red"
@@ -29,15 +29,38 @@
           >
             {{ t('raid.software.cockpit.array.stop') }}
           </UButton>
-          <UButton
-            size="sm"
-            color="primary"
-            variant="soft"
-            icon="i-heroicons-plus"
-            @click="$emit('add-device', array)"
-          >
-            {{ t('raid.software.cockpit.array.add') }}
-          </UButton>
+          <UTooltip v-if="addMemberUi.primary === 'replacement'" :text="addMemberTooltip">
+            <UButton
+              size="sm"
+              color="primary"
+              variant="soft"
+              icon="i-heroicons-plus"
+              disabled
+            >
+              {{ t('raid.software.cockpit.array.add_member.replacement') }}
+            </UButton>
+          </UTooltip>
+          <UTooltip v-if="addMemberUi.showSpare" :text="addMemberTooltip">
+            <UButton
+              size="sm"
+              color="gray"
+              variant="soft"
+              icon="i-heroicons-plus-circle"
+              disabled
+            >
+              {{ t('raid.software.cockpit.array.add_member.spare') }}
+            </UButton>
+          </UTooltip>
+          <UTooltip v-if="addMemberUi.primary === 'none'" :text="unavailableTooltip">
+            <UButton
+              size="sm"
+              color="gray"
+              variant="ghost"
+              icon="i-heroicons-plus"
+              disabled
+              :aria-label="unavailableTooltip"
+            />
+          </UTooltip>
         </div>
       </div>
 
@@ -100,20 +123,35 @@
 
 <script setup lang="ts">
 import type { MdArray, MdMemberDevice } from '~/types/raid'
+import { resolveMdAddMemberUi } from '~/utils/md-array-add-member-ui'
 
 const props = defineProps<{
   array: MdArray
   highlighted?: boolean
+  isClustered?: boolean
 }>()
 
 defineEmits<{
   stop: [arr: MdArray]
-  'add-device': [arr: MdArray]
   'set-faulty': [arr: MdArray, member: MdMemberDevice]
   'remove-device': [arr: MdArray, member: MdMemberDevice]
 }>()
 
 const { t } = useEsosI18n()
+
+const addMemberUi = computed(() => resolveMdAddMemberUi(props.array))
+
+const unavailableTooltip = computed(() =>
+  t('raid.software.cockpit.array.add_member.unavailable_tooltip'),
+)
+
+const addMemberTooltip = computed(() => {
+  const parts = [t('raid.software.cockpit.array.add_member.not_implemented')]
+  if (props.isClustered) {
+    parts.push(t('raid.software.cockpit.array.add_member.cluster_required'))
+  }
+  return parts.join(' ')
+})
 
 const stateColor = computed(() => {
   const s = props.array.state

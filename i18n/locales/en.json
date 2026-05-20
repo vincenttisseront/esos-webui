@@ -393,7 +393,14 @@
           "stop": "Stop",
           "add": "Add device",
           "details": "Details",
-          "resync_aria": "Resync progress"
+          "resync_aria": "Resync progress",
+          "add_member": {
+            "replacement": "Add replacement disk",
+            "spare": "Add hot spare disk",
+            "unavailable_tooltip": "Only available to replace a missing member or add a hot spare.",
+            "not_implemented": "Wizard not available yet.",
+            "cluster_required": "In an HA cluster, adding a member must be planned on all concerned nodes (coming soon)."
+          }
         }
       },
       "layout": {
