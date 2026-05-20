@@ -18,6 +18,7 @@ import type {
   LvCreatePayload,
 } from './lvm-types'
 import { assessLocalSymmetricLvm } from '../../utils/lvm-cluster-symmetry'
+import { validateClusterPvCreatePaths } from './lvm-cluster-pv-validation'
 
 const MD_PATH_RE = /^\/dev\/md[a-z0-9_-]{0,15}$/i
 const SIZE_TOLERANCE_RATIO = 0.01
@@ -299,6 +300,13 @@ export async function runClusterLvmPreflight(
     if (!mappings.length) {
       mappings = buildClusterLvmDiskMappings(primarySanId, payload.path, nodes)
     }
+    blockers.push(...validateClusterPvCreatePaths(
+      primarySanId,
+      payload.path,
+      nodes,
+      mappings,
+      !!payload.force,
+    ))
     for (const node of nodes) {
       const path = node.sanId === primarySanId
         ? payload.path
@@ -322,6 +330,12 @@ export async function runClusterLvmPreflight(
     const payload = req.payload as VgCreatePayload
     for (const node of nodes) {
       if (!node.sshReady) continue
+      if (node.overview.vgs.some(v => v.name === payload.name)) {
+        blockers.push(`${node.label} : VG ${payload.name} existe déjà`)
+      }
+    }
+    for (const node of nodes) {
+      if (!node.sshReady) continue
       const pvPaths = node.sanId === primarySanId
         ? payload.pvPaths
         : resolvePeerPvPaths(primarySanId, payload.pvPaths, node.sanId, nodes, mappings)
@@ -337,6 +351,12 @@ export async function runClusterLvmPreflight(
 
   if (req.action === 'lvcreate' && primary) {
     const payload = req.payload as LvCreatePayload
+    for (const node of nodes) {
+      if (!node.sshReady) continue
+      if (node.overview.lvs.some(l => l.vgName === payload.vgName && l.name === payload.name)) {
+        blockers.push(`${node.label} : LV ${payload.vgName}/${payload.name} existe déjà`)
+      }
+    }
     for (const node of nodes) {
       if (!node.sshReady) continue
       const manager = getSSHPool().get(node.sanId)!

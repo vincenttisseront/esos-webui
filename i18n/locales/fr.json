@@ -986,7 +986,27 @@
           "title": "Créer un PV (cluster)",
           "mapping": "Les correspondances entre nœuds sont appliquées automatiquement lorsque les tableaux MD sont structurellement identiques.",
           "execute": "Exécuter sur tous les nœuds",
-          "success": "PV cluster créé"
+          "success": "PV cluster créé",
+          "confirm": {
+            "intro": "Vérifiez le plan cluster avant d'initialiser le volume physique.",
+            "bullet_init": "Cette opération initialise le périphérique sélectionné en volume physique LVM (PV).",
+            "bullet_cluster": "En mode cluster symétrique local, pvcreate s'exécute sur chaque nœud avec le chemin mappé.",
+            "bullet_metadata": "Des métadonnées LVM seront écrites sur le périphérique ; les données existantes peuvent être détruites.",
+            "commands_title": "Commandes par nœud",
+            "checks_title": "Contrôles de préflight",
+            "phrase_help": "Saisissez la phrase de confirmation exactement comme indiqué pour activer l'exécution :",
+            "pv_exists_title": "Un volume physique existe déjà sur un ou plusieurs nœuds",
+            "force_acknowledged": "Force activé — les signatures peuvent être écrasées",
+            "check_device_exists": "Périphérique présent sur chaque nœud",
+            "check_size_compatible": "Taille compatible entre nœuds",
+            "check_not_mounted": "Non monté",
+            "check_not_already_pv": "Pas déjà volume physique",
+            "check_not_in_vg": "Non rattaché à un groupe de volumes",
+            "check_not_scst": "Non utilisé par SCST",
+            "check_no_signature": "Pas de signature / système de fichiers bloquant (ou force confirmé)",
+            "check_tools_pvcreate": "pvcreate disponible sur chaque nœud",
+            "check_plan_execute": "Tous les nœuds planifiés pour exécution"
+          }
         },
         "vg_create": {
           "title": "Créer un VG (cluster)",

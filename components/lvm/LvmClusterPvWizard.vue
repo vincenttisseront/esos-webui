@@ -42,9 +42,16 @@
         <UAlert v-if="planError" color="red" variant="soft" :title="planError" />
       </template>
       <template v-else-if="step === 4">
-        <UFormGroup :label="t('lvm.confirm.label')">
-          <UInput v-model="confirmation" :placeholder="plan?.confirmationPhrase" />
-        </UFormGroup>
+        <LvmClusterPvConfirmStep
+          ref="confirmStepRef"
+          v-model:confirmation="confirmation"
+          :primary-san-id="sanId"
+          :source-path="selectedPath"
+          :force="force"
+          :mappings="diskMappings"
+          :preflight="clusterPreflight"
+          :plan="plan"
+        />
       </template>
       <template v-else>
         <LvmClusterExecutionResults v-if="executionResult" :result="executionResult" />
@@ -115,6 +122,7 @@ const clusterPreflight = ref<ClusterLvmPreflightResult | null>(null)
 const clusterPreflightError = ref<string | null>(null)
 const preflightLoading = ref(false)
 const executionResult = ref<ClusterLvmExecutionResult | null>(null)
+const confirmStepRef = ref<{ canExecute: boolean } | null>(null)
 
 const inventory = computed(() => lvm.clusterInventory ?? [])
 
@@ -235,12 +243,13 @@ async function nextStep() {
   }
   if (step.value === 3) {
     if (!plan.value?.okSymmetric) return
+    confirmation.value = ''
     step.value = 4
   }
 }
 
 async function execute() {
-  if (!plan.value || !selectedPath.value) return
+  if (!plan.value || !selectedPath.value || !confirmStepRef.value?.canExecute) return
   busy.value = true
   try {
     executionResult.value = await lvm.executeClusterPvCreate({

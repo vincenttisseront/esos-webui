@@ -986,7 +986,27 @@
           "title": "Create PV (cluster)",
           "mapping": "Peer device mappings are applied automatically when MD arrays match structurally.",
           "execute": "Execute on all nodes",
-          "success": "Cluster PV created"
+          "success": "Cluster PV created",
+          "confirm": {
+            "intro": "Review the cluster plan before initializing the physical volume.",
+            "bullet_init": "This initializes the selected device as an LVM Physical Volume (PV).",
+            "bullet_cluster": "In local-symmetric cluster mode, pvcreate runs on every cluster node with the mapped device path.",
+            "bullet_metadata": "LVM metadata will be written to the device; existing data may be destroyed.",
+            "commands_title": "Commands per node",
+            "checks_title": "Preflight checks",
+            "phrase_help": "Type the confirmation phrase exactly as shown to enable execution:",
+            "pv_exists_title": "A physical volume already exists on one or more nodes",
+            "force_acknowledged": "Force enabled — signatures may be overwritten",
+            "check_device_exists": "Device exists on each node",
+            "check_size_compatible": "Compatible size across nodes",
+            "check_not_mounted": "Not mounted",
+            "check_not_already_pv": "Not already a physical volume",
+            "check_not_in_vg": "Not assigned to a volume group",
+            "check_not_scst": "Not used by SCST",
+            "check_no_signature": "No blocking filesystem/signature (or force acknowledged)",
+            "check_tools_pvcreate": "pvcreate available on each node",
+            "check_plan_execute": "All nodes scheduled for execution"
+          }
         },
         "vg_create": {
           "title": "Create VG (cluster)",
