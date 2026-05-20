@@ -252,11 +252,20 @@ export interface MdDetectionItem {
   relatedArrayPath?: string
 }
 
+export type ClusterMdStorageMode = 'local_symmetric' | 'shared_identity'
+
 export interface MdDetectionActiveArraySnapshot {
   name: string
   path: string
   uuid?: string
   state: string
+  raidLevel?: string
+  raidDevices?: number
+  activeDevices?: number
+  workingDevices?: number
+  failedDevices?: number
+  sizeBytes?: number
+  memberCount?: number
 }
 
 export interface MdDetectionSummary {
@@ -297,6 +306,7 @@ export type RaidActionableCategory =
   | 'array_inactive'
   | 'resync'
   | 'cluster_asymmetry'
+  | 'cluster_structural_mismatch'
   | 'cluster_uuid_mismatch'
 
 export interface RaidActionTarget {

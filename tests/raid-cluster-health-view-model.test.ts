@@ -227,6 +227,15 @@ describe('buildRaidClusterHealthViewModel', () => {
             recommendedAction: 'none',
             uiAnchor: 'software-active',
           }],
+          activeMdArrays: [{
+            name: 'md0',
+            path: '/dev/md0',
+            state: 'clean',
+            raidLevel: '1',
+            raidDevices: 2,
+            activeDevices: 2,
+            failedDevices: 0,
+          }],
         }],
       }),
       currentSanId: 'san-a',
@@ -234,6 +243,7 @@ describe('buildRaidClusterHealthViewModel', () => {
       t,
     })
     expect(vm.actionableItems.some(i => i.category === 'metadata_peer')).toBe(false)
+    expect(vm.actionableItems.some(i => i.category === 'cluster_asymmetry')).toBe(false)
     expect(vm.health).toBe('healthy')
   })
 
@@ -276,7 +286,57 @@ describe('buildRaidClusterHealthViewModel', () => {
     expect(vm.summary.peerConsistencyStatus).toBe('ok')
   })
 
-  it('local healthy + peer UUID mismatch => global warning', () => {
+  it('local healthy + peer UUID mismatch (local_symmetric) => global healthy', () => {
+    const vm = buildRaidClusterHealthViewModel({
+      overview: baseOverview({
+        mdArrays: [{
+          name: 'md0',
+          path: '/dev/md0',
+          uuid: 'aaa-111',
+          raidLevel: '1',
+          state: 'clean',
+          raidDevices: 2,
+          activeDevices: 2,
+          workingDevices: 2,
+          failedDevices: 0,
+          spareDevices: 0,
+          members: [{ path: '/dev/sda1' }, { path: '/dev/sda2' }],
+          usedBy: [],
+          warnings: [],
+        }],
+        mdDetection: { nodeSanId: 'san-a', nodeLabel: 'node-a', hasAnyMdState: true, items: [] },
+        clusterMdDetection: [{
+          nodeSanId: 'san-b',
+          nodeLabel: 'node-b',
+          hasAnyMdState: true,
+          items: [],
+          activeMdArrays: [{
+            name: 'md0',
+            path: '/dev/md0',
+            uuid: 'bbb-222',
+            state: 'clean',
+            raidLevel: '1',
+            raidDevices: 2,
+            activeDevices: 2,
+            failedDevices: 0,
+            memberCount: 2,
+          }],
+        }],
+      }),
+      currentSanId: 'san-a',
+      isClustered: true,
+      t,
+    })
+    expect(vm.localHealth).toBe('healthy')
+    expect(vm.clusterHealth).toBe('healthy')
+    expect(vm.health).toBe('healthy')
+    expect(vm.actionableItems.some(i => i.category === 'cluster_uuid_mismatch')).toBe(false)
+    expect(vm.actionableItems.some(i => i.category === 'cluster_structural_mismatch')).toBe(false)
+    expect(vm.headline).toBe('raid.cockpit.headline.no_attention')
+    expect(vm.summary.peerConsistencyStatus).toBe('ok')
+  })
+
+  it('local healthy + peer RAID level mismatch => cluster warning', () => {
     const vm = buildRaidClusterHealthViewModel({
       overview: baseOverview({
         mdArrays: [{
@@ -300,7 +360,16 @@ describe('buildRaidClusterHealthViewModel', () => {
           nodeLabel: 'node-b',
           hasAnyMdState: true,
           items: [],
-          activeMdArrays: [{ name: 'md0', path: '/dev/md0', uuid: 'bbb-222', state: 'clean' }],
+          activeMdArrays: [{
+            name: 'md0',
+            path: '/dev/md0',
+            uuid: 'bbb-222',
+            state: 'clean',
+            raidLevel: '5',
+            raidDevices: 2,
+            activeDevices: 2,
+            failedDevices: 0,
+          }],
         }],
       }),
       currentSanId: 'san-a',
@@ -310,11 +379,8 @@ describe('buildRaidClusterHealthViewModel', () => {
     expect(vm.localHealth).toBe('healthy')
     expect(vm.clusterHealth).toBe('warning')
     expect(vm.health).toBe('warning')
-    expect(vm.actionableItems.some(i => i.category === 'cluster_uuid_mismatch')).toBe(true)
-    expect(vm.headline).toBe('raid.cockpit.headline.cluster_attention')
-    expect(vm.headline).not.toBe('raid.cockpit.headline.no_attention')
-    expect(vm.summary.peerConsistencyStatus).toBe('critical')
-    expect(vm.storageFactsHint).toBe('raid.cockpit.facts_line_storage_hint')
+    expect(vm.actionableItems.some(i => i.category === 'cluster_structural_mismatch')).toBe(true)
+    expect(vm.actionableItems.some(i => i.category === 'cluster_uuid_mismatch')).toBe(false)
   })
 
   it('local healthy + peer metadata residual => global warning', () => {
@@ -432,7 +498,7 @@ describe('buildRaidClusterHealthViewModel', () => {
     expect(vm.actionableItems.find(i => i.category === 'metadata_peer')?.primaryActionTarget?.sanId).toBe('san-b')
   })
 
-  it('merges cluster attention storage_md when overview lacks peer UUID data', () => {
+  it('ignores UUID-only storage_md attention in local_symmetric when overview is symmetric', () => {
     const attention: ClusterAttentionPoint[] = [{
       id: 'md_warn:md0',
       severity: 'warning',
@@ -479,7 +545,16 @@ describe('buildRaidClusterHealthViewModel', () => {
             recommendedAction: 'none',
             uiAnchor: 'software-active',
           }],
-          activeMdArrays: [{ name: 'md0', path: '/dev/md0', state: 'clean' }],
+          activeMdArrays: [{
+            name: 'md0',
+            path: '/dev/md0',
+            uuid: 'bbb',
+            state: 'clean',
+            raidLevel: '1',
+            raidDevices: 2,
+            activeDevices: 2,
+            failedDevices: 0,
+          }],
         }],
       }),
       currentSanId: 'san-a',
@@ -487,10 +562,11 @@ describe('buildRaidClusterHealthViewModel', () => {
       clusterStorageAttention: attention,
       t,
     })
-    expect(vm.health).toBe('warning')
+    expect(vm.health).toBe('healthy')
     expect(vm.localHealth).toBe('healthy')
-    expect(vm.actionableItems.some(i => i.category === 'cluster_uuid_mismatch')).toBe(true)
-    expect(vm.headline).not.toBe('raid.cockpit.headline.no_attention')
+    expect(vm.clusterHealth).toBe('healthy')
+    expect(vm.actionableItems.some(i => i.category === 'cluster_uuid_mismatch')).toBe(false)
+    expect(vm.headline).toBe('raid.cockpit.headline.no_attention')
   })
 
   it('detects cluster asymmetry when peer lacks active array', () => {

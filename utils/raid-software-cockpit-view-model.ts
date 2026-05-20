@@ -21,6 +21,7 @@ const COCKPIT_ACTION_CATEGORIES = new Set([
   'array_degraded',
   'array_inactive',
   'cluster_asymmetry',
+  'cluster_structural_mismatch',
   'cluster_uuid_mismatch',
 ])
 

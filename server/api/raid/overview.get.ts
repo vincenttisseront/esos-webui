@@ -112,6 +112,13 @@ async function loadClusterPeerMdDetection(currentSanId: string): Promise<import(
           path: a.path,
           uuid: a.uuid,
           state: a.state,
+          raidLevel: a.raidLevel,
+          raidDevices: a.raidDevices,
+          activeDevices: a.activeDevices,
+          workingDevices: a.workingDevices,
+          failedDevices: a.failedDevices,
+          sizeBytes: a.sizeBytes,
+          memberCount: a.members?.length ?? 0,
         })),
       })
     } catch {

@@ -373,13 +373,24 @@
           "recommendation": "Alignez l'état MD sur tous les nœuds avant toute modification.",
           "action": "Réparer le cluster RAID"
         },
-        "cluster_uuid_mismatch": {
+        "cluster_structural_mismatch": {
           "title": "Incohérence RAID entre nœuds",
-          "impact": "Le nœud courant est sain, mais le tableau MD ne correspond pas au nœud pair.",
+          "impact": "Le stockage MD du cluster n'est pas symétrique entre les nœuds.",
+          "impact_local_ok": "Le nœud courant est sain, mais le tableau MD ne correspond pas au nœud pair.",
+          "recommendation": "Alignez l'état MD sur tous les nœuds avant toute modification.",
+          "action": "Réparer le cluster RAID",
+          "action_peer": "Voir le RAID sur {label}"
+        },
+        "cluster_uuid_mismatch": {
+          "title": "Identité MD partagée incohérente",
+          "impact": "Les nœuds actifs n'exposent pas la même identité MD (UUID).",
           "recommendation": "UUID MD différents ({uuids}) — ce ne sont pas le même tableau sur tous les nœuds.",
           "action": "Réparer le cluster RAID",
           "action_peer": "Voir le RAID sur {label}"
         }
+      },
+      "technical": {
+        "uuid_local_symmetric": "UUID différents entre nœuds pour {arrayName} (attendu pour des tableaux MD locaux symétriques) : {uuids}"
       }
     },
     "software": {

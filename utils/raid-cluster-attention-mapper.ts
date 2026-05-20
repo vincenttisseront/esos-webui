@@ -4,6 +4,7 @@
  */
 import type { ClusterAttentionPoint } from '~/types/cluster-admin'
 import type { RaidActionableItem } from '~/types/raid'
+import { resolveClusterMdStorageMode } from '~/utils/cluster-md-symmetry'
 import type { RaidCockpitTranslate } from '~/utils/raid-cluster-health-view-model'
 
 function arrayNameFromAttentionId(id: string): string | undefined {
@@ -20,10 +21,15 @@ export function mapClusterStorageAttentionToRaidItems(
   currentSanId: string,
   t: RaidCockpitTranslate,
 ): RaidActionableItem[] {
+  const mode = resolveClusterMdStorageMode()
   const items: RaidActionableItem[] = []
 
   for (const p of points) {
     if (p.category !== 'storage_md' || p.severity === 'info') continue
+
+    if (mode === 'local_symmetric' && isUuidMismatchSummary(p.summary)) {
+      continue
+    }
 
     const arrayName = arrayNameFromAttentionId(p.id)
     const peerSanId = p.affectedNodeIds.find(id => id !== currentSanId)
@@ -31,14 +37,16 @@ export function mapClusterStorageAttentionToRaidItems(
     const peerLabel = peerIdx >= 0 ? p.affectedNodeLabels[peerIdx] : undefined
     const severity = p.severity === 'blocking' || p.severity === 'critical' ? 'critical' as const : 'warning' as const
 
-    if (isUuidMismatchSummary(p.summary)) {
+    if (mode === 'shared_identity' && isUuidMismatchSummary(p.summary)) {
       items.push({
         id: `attention:${p.id}`,
         severity,
         category: 'cluster_uuid_mismatch',
         title: t('raid.cockpit.item.cluster_uuid_mismatch.title'),
         impact: t('raid.cockpit.item.cluster_uuid_mismatch.impact'),
-        recommendation: p.summary,
+        recommendation: t('raid.cockpit.item.cluster_uuid_mismatch.recommendation', {
+          uuids: p.summary,
+        }),
         primaryActionLabel: peerLabel
           ? t('raid.cockpit.item.cluster_uuid_mismatch.action_peer', { label: peerLabel })
           : t('raid.cockpit.item.cluster_uuid_mismatch.action'),
@@ -59,18 +67,22 @@ export function mapClusterStorageAttentionToRaidItems(
     items.push({
       id: `attention:${p.id}`,
       severity,
-      category: 'cluster_asymmetry',
+      category: 'cluster_structural_mismatch',
       title: p.title,
-      impact: t('raid.cockpit.item.cluster_asymmetry.impact'),
+      impact: t('raid.cockpit.item.cluster_structural_mismatch.impact'),
       recommendation: p.summary,
-      primaryActionLabel: t('raid.cockpit.item.cluster_asymmetry.action'),
-      primaryActionTarget: {
-        type: 'scroll',
-        tab: 'software',
-        anchor: 'raid-software-active',
-        modal: 'cluster_recovery',
-        arrayName,
-      },
+      primaryActionLabel: peerLabel
+        ? t('raid.cockpit.item.cluster_structural_mismatch.action_peer', { label: peerLabel })
+        : t('raid.cockpit.item.cluster_structural_mismatch.action'),
+      primaryActionTarget: peerSanId
+        ? { type: 'navigate', tab: 'software', sanId: peerSanId }
+        : {
+            type: 'scroll',
+            tab: 'software',
+            anchor: 'raid-software-active',
+            modal: 'cluster_recovery',
+            arrayName,
+          },
       details: [p.summary],
     })
   }
@@ -86,8 +98,8 @@ export function mergeAttentionWithoutDuplicates(
   const seenIds = new Set(existing.map(i => i.id))
 
   function arrayTouched(item: RaidActionableItem): string | undefined {
-    const fromId = item.id.match(/cluster_uuid_mismatch:(.+)$/)?.[1]
-      ?? item.id.match(/cluster_asymmetry$/)?.[1]
+    const fromId = item.id.match(/cluster_structural:([^:]+)/)?.[1]
+      ?? item.id.match(/cluster_uuid_mismatch:(.+)$/)?.[1]
       ?? item.id.match(/attention:md_(?:warn|asym):(.+)$/)?.[1]
     if (fromId) return fromId
     const detail = item.details.find(d => /^md\d+/.test(d))
@@ -96,7 +108,11 @@ export function mergeAttentionWithoutDuplicates(
 
   const coveredArrays = new Set(
     existing
-      .filter(i => i.category === 'cluster_uuid_mismatch' || i.category === 'cluster_asymmetry')
+      .filter(i =>
+        i.category === 'cluster_structural_mismatch'
+        || i.category === 'cluster_uuid_mismatch'
+        || i.category === 'cluster_asymmetry',
+      )
       .map(arrayTouched)
       .filter(Boolean) as string[],
   )

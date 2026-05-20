@@ -267,6 +267,13 @@ export interface MdDetectionActiveArraySnapshot {
   path: string
   uuid?: string
   state: string
+  raidLevel?: string
+  raidDevices?: number
+  activeDevices?: number
+  workingDevices?: number
+  failedDevices?: number
+  sizeBytes?: number
+  memberCount?: number
 }
 
 export interface MdDetectionSummary {

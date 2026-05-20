@@ -373,13 +373,24 @@
           "recommendation": "Align MD state on all nodes before changes.",
           "action": "Repair cluster RAID"
         },
-        "cluster_uuid_mismatch": {
+        "cluster_structural_mismatch": {
           "title": "RAID inconsistency across nodes",
-          "impact": "The current node is healthy, but the MD array does not match the peer node.",
+          "impact": "Cluster MD storage is not symmetric across nodes.",
+          "impact_local_ok": "The current node is healthy, but the MD array does not match the peer node.",
+          "recommendation": "Align MD state on all nodes before making changes.",
+          "action": "Repair cluster RAID",
+          "action_peer": "Open RAID on {label}"
+        },
+        "cluster_uuid_mismatch": {
+          "title": "Inconsistent shared MD identity",
+          "impact": "Active nodes do not expose the same MD identity (UUID).",
           "recommendation": "Different MD UUIDs ({uuids}) — not the same array on all nodes.",
           "action": "Repair cluster RAID",
           "action_peer": "Open RAID on {label}"
         }
+      },
+      "technical": {
+        "uuid_local_symmetric": "Different UUIDs across nodes for {arrayName} (expected for locally symmetric MD arrays): {uuids}"
       }
     },
     "software": {

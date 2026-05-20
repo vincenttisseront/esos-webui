@@ -6,7 +6,13 @@ import { createHash } from 'node:crypto'
 import { createError } from 'h3'
 const MD_ARRAY_PATH_RE = /^\/dev\/md[a-z0-9_-]{0,15}$/
 import { runNodePreflight } from './raid-cluster-storage-preflight'
-import { getActiveUuidConflict as getActiveUuidConflictShared } from '../../utils/cluster-md-symmetry'
+import {
+  assessClusterArraySymmetry,
+  getActiveUuidConflict as getActiveUuidConflictShared,
+  mdArrayToActiveSnapshot,
+  resolveClusterMdStorageMode,
+  type ClusterMdStorageMode,
+} from '../../utils/cluster-md-symmetry'
 import type {
   ClusterMdPreflightAction,
   ClusterMdRecoveryMode,
@@ -256,14 +262,44 @@ type StopRecoveryAssessmentResult = Pick<
 export function buildStopRecoveryAssessment(
   nodeReports: MdArrayNodeStateReport[],
   arrayName: string,
+  nodes?: ClusterStorageNodeInventory[],
+  mode?: ClusterMdStorageMode,
 ): StopRecoveryAssessmentResult {
+  const storageMode = resolveClusterMdStorageMode(mode)
   const hardBlockers: string[] = []
   const warnings: string[] = []
   const activeReports = nodeReports.filter(r => r.state === 'active')
   const activeClean = activeReports.filter(r => r.nodeBlockers.length === 0)
   const uuidInfo = getActiveUuidConflict(nodeReports, arrayName)
 
-  if (uuidInfo.conflict) {
+  let structurallySymmetric = true
+  if (nodes?.length) {
+    const anchor = nodes.find(n => n.mdArrays.some(a => a.name === arrayName)) ?? nodes[0]!
+    const symmetry = assessClusterArraySymmetry({
+      currentSanId: anchor.sanId,
+      currentLabel: anchor.label,
+      localArrays: anchor.mdArrays
+        .filter(a => a.name === arrayName)
+        .map(mdArrayToActiveSnapshot),
+      peerSnapshots: nodes
+        .filter(n => n.sanId !== anchor.sanId)
+        .map(n => ({
+          nodeSanId: n.sanId,
+          nodeLabel: n.label,
+          activeMdArrays: n.mdArrays
+            .filter(a => a.name === arrayName)
+            .map(mdArrayToActiveSnapshot),
+        })),
+      mode: storageMode,
+    })
+    const forArray = symmetry.find(s => s.arrayName === arrayName)
+    if (forArray) {
+      structurallySymmetric = forArray.structurallySymmetric
+      for (const issue of forArray.structuralIssues) warnings.push(issue.message)
+    }
+  }
+
+  if (storageMode === 'shared_identity' && uuidInfo.conflict) {
     warnings.push(
       `UUID MD différents entre nœuds actifs pour ${arrayName} : ${uuidInfo.uniqueUuids.join(', ')} — ce ne sont pas le même tableau`,
     )
@@ -283,15 +319,19 @@ export function buildStopRecoveryAssessment(
   const allowedRecoveryModes: ClusterMdRecoveryMode[] = []
   const allNodesActive = nodeReports.length > 0 && nodeReports.every(r => r.state === 'active')
 
-  if (uuidInfo.conflict && activeReports.length >= 2) {
+  const uuidBlocksSymmetric = storageMode === 'shared_identity' && uuidInfo.conflict
+
+  if (uuidBlocksSymmetric && activeReports.length >= 2) {
     allowedRecoveryModes.push('stop_inconsistent_active')
-  } else if (!uuidInfo.conflict && activeClean.length === nodeReports.length && allNodesActive) {
+  } else if (!uuidBlocksSymmetric && structurallySymmetric && activeClean.length === nodeReports.length && allNodesActive) {
     allowedRecoveryModes.push('stop_all_active')
+  } else if (!structurallySymmetric && activeReports.length >= 2) {
+    allowedRecoveryModes.push('stop_inconsistent_active')
   }
 
-  if (!uuidInfo.conflict && activeClean.length >= 1 && activeClean.length < nodeReports.length) {
+  if (!uuidBlocksSymmetric && activeClean.length >= 1 && activeClean.length < nodeReports.length) {
     allowedRecoveryModes.push('stop_active_only')
-  } else if (!uuidInfo.conflict && activeClean.length >= 1 && nodeReports.some(r => r.state !== 'active')) {
+  } else if (!uuidBlocksSymmetric && activeClean.length >= 1 && nodeReports.some(r => r.state !== 'active')) {
     allowedRecoveryModes.push('stop_active_only')
   }
 
@@ -327,7 +367,7 @@ export function buildStopRecoveryAssessment(
     recommendedRecoveryMode,
     okSymmetric,
     okDegraded,
-    uuidConflict: uuidInfo.conflict
+    uuidConflict: storageMode === 'shared_identity' && uuidInfo.conflict
       ? { arrayName, nodes: uuidInfo.nodes }
       : undefined,
   }
@@ -409,7 +449,7 @@ export function buildClusterMdRecoveryAssessment(input: {
   const nodeReports = classifyClusterMdNodeStates(input.nodes, input.arrayName, input.uuid)
   const stopOrAssemble = input.action === 'stop_md' || input.action === 'assemble_md'
   const partial = input.action === 'stop_md'
-    ? buildStopRecoveryAssessment(nodeReports, input.arrayName)
+    ? buildStopRecoveryAssessment(nodeReports, input.arrayName, input.nodes)
     : input.action === 'assemble_md'
       ? buildAssembleRecoveryAssessment(nodeReports, input.arrayName)
       : {

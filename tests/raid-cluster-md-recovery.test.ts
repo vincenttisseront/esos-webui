@@ -98,27 +98,42 @@ describe('buildStopRecoveryAssessment', () => {
     expect(assessment.hardBlockers.some(b => b.includes('actif'))).toBe(true)
   })
 
-  it('allows stop_inconsistent_active on UUID conflict without hard blocker', () => {
-    const reports = [
-      classifyMdArrayNodeState(node({
-        sanId: 'san-1',
-        label: 'esos1',
-        mdArrays: [{ ...activeMd0, uuid: 'uuid-a' } as any],
-      }), 'md0'),
-      classifyMdArrayNodeState(node({
-        sanId: 'san-2',
-        label: 'esos2',
-        mdArrays: [{ ...activeMd0, uuid: 'uuid-b', members: [{ path: '/dev/sdb1' }] } as any],
-      }), 'md0'),
+  it('allows stop_all_active on UUID mismatch in local_symmetric when structure matches', () => {
+    const nodes = [
+      node({ sanId: 'san-1', label: 'esos1', mdArrays: [{ ...activeMd0, uuid: 'uuid-a' } as any] }),
+      node({ sanId: 'san-2', label: 'esos2', mdArrays: [{ ...activeMd0, uuid: 'uuid-b', members: [{ path: '/dev/sdb1' }] } as any] }),
     ]
-    const assessment = buildStopRecoveryAssessment(reports, 'md0')
+    const reports = [
+      classifyMdArrayNodeState(nodes[0], 'md0'),
+      classifyMdArrayNodeState(nodes[1], 'md0'),
+    ]
+    const assessment = buildStopRecoveryAssessment(reports, 'md0', nodes)
     expect(assessment.hardBlockers.some(b => b.includes('UUID'))).toBe(false)
+    expect(assessment.warnings.some(w => w.includes('ce ne sont pas le même tableau'))).toBe(false)
+    expect(assessment.allowedRecoveryModes).toContain('stop_all_active')
+    expect(assessment.allowedRecoveryModes).not.toContain('stop_inconsistent_active')
+    expect(assessment.recommendedRecoveryMode).toBe('stop_all_active')
+    expect(assessment.okSymmetric).toBe(true)
+    expect(assessment.okDegraded).toBe(true)
+    expect(assessment.uuidConflict).toBeUndefined()
+    expect(getActiveUuidConflict(reports, 'md0').conflict).toBe(true)
+  })
+
+  it('allows stop_inconsistent_active on UUID conflict in shared_identity', () => {
+    const nodes = [
+      node({ sanId: 'san-1', label: 'esos1', mdArrays: [{ ...activeMd0, uuid: 'uuid-a' } as any] }),
+      node({ sanId: 'san-2', label: 'esos2', mdArrays: [{ ...activeMd0, uuid: 'uuid-b', members: [{ path: '/dev/sdb1' }] } as any] }),
+    ]
+    const reports = [
+      classifyMdArrayNodeState(nodes[0], 'md0'),
+      classifyMdArrayNodeState(nodes[1], 'md0'),
+    ]
+    const assessment = buildStopRecoveryAssessment(reports, 'md0', nodes, 'shared_identity')
     expect(assessment.allowedRecoveryModes).toContain('stop_inconsistent_active')
     expect(assessment.allowedRecoveryModes).not.toContain('stop_all_active')
     expect(assessment.recommendedRecoveryMode).toBe('stop_inconsistent_active')
-    expect(assessment.okDegraded).toBe(true)
+    expect(assessment.okSymmetric).toBe(false)
     expect(assessment.uuidConflict?.nodes).toHaveLength(2)
-    expect(getActiveUuidConflict(reports, 'md0').conflict).toBe(true)
   })
 
   it('allows stop_active_only with unreachable peer when one active', () => {
