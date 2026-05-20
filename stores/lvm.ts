@@ -112,7 +112,7 @@ export const useLvmStore = defineStore('lvm', {
         method: 'POST',
         body: req,
       })
-      if (result.mappings.length) this.lastDiskMappings = result.mappings
+      if (result.mappings?.length) this.lastDiskMappings = result.mappings
       return result
     },
 

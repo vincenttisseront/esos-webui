@@ -57,11 +57,34 @@
       />
 
       <UAlert
-        v-if="preflightBlockerText"
+        v-if="preflightLoading"
+        color="gray"
+        variant="soft"
+        :title="t('lvm.wizard.scst_device.preflight_loading')"
+      />
+
+      <UAlert
+        v-if="preflightError"
         color="red"
         variant="soft"
-        :title="preflightBlockerText"
+        :title="t('lvm.wizard.scst_device.preflight_failed_title')"
+        :description="preflightError"
       />
+
+      <UAlert
+        v-else-if="preflightBlockerText"
+        color="red"
+        variant="soft"
+        :title="t('lvm.wizard.scst_device.preflight_blockers_title')"
+        :description="preflightBlockerText"
+      />
+
+      <ul
+        v-if="preflightPerNodeLines.length && !preflightError"
+        class="text-xs text-red-700 dark:text-red-300 space-y-1 list-disc list-inside rounded-md border border-red-200 dark:border-red-900/50 bg-red-50/50 dark:bg-red-950/20 px-3 py-2"
+      >
+        <li v-for="(line, idx) in preflightPerNodeLines" :key="idx">{{ line }}</li>
+      </ul>
 
       <UAlert
         v-if="executeError"
@@ -110,8 +133,11 @@
 
 <script setup lang="ts">
 import type { LogicalVolume } from '~/types/lvm'
+import type { ClusterLvmPreflightPerNode } from '~/types/lvm'
 import {
+  formatBindScstPerNodeLines,
   formatBindScstPreflightBlockers,
+  resolveBindScstClusterPreflightError,
   resolveBindScstExecuteError,
 } from '~/utils/lvm-bind-scst-ui'
 import {
@@ -136,6 +162,9 @@ const lv = computed(() => props.lv)
 const deviceName = ref('')
 const confirmation = ref('')
 const preflight = ref<Awaited<ReturnType<typeof lvm.preflight>> | null>(null)
+const clusterPerNode = ref<ClusterLvmPreflightPerNode[] | null>(null)
+const preflightLoading = ref(false)
+const preflightError = ref<string | null>(null)
 const busy = ref(false)
 const executeError = ref<string | null>(null)
 
@@ -160,10 +189,15 @@ const nameFieldError = computed(() => {
   }
 })
 
+const preflightPerNodeLines = computed(() =>
+  formatBindScstPerNodeLines(clusterPerNode.value ?? undefined, t),
+)
+
 const preflightBlockerText = computed(() => {
-  if (nameFieldError.value) return null
+  if (nameFieldError.value || preflightError.value || preflightLoading.value) return null
   const blockers = preflight.value?.blockers ?? []
   if (!blockers.length) return null
+  if (preflightPerNodeLines.value.length) return null
   return formatBindScstPreflightBlockers(blockers, t)
 })
 
@@ -205,16 +239,21 @@ onMounted(async () => {
   if (suggestedName.value) deviceName.value = suggestedName.value
 })
 
-watch([deviceName, lv, isClustered], async () => {
+async function runPreflight() {
   preflight.value = null
+  clusterPerNode.value = null
+  preflightError.value = null
   executeError.value = null
   if (!lv.value || nameValidationKey.value) return
+
   const payload = {
     vgName: lv.value.vgName,
     lvName: lv.value.name,
     deviceName: deviceName.value.trim(),
     confirmation: '',
   }
+
+  preflightLoading.value = true
   try {
     if (isClustered.value && props.clusterId) {
       const cluster = await lvm.clusterPreflight({
@@ -223,6 +262,7 @@ watch([deviceName, lv, isClustered], async () => {
         clusterId: props.clusterId,
         primarySanId: props.sanId,
       })
+      clusterPerNode.value = cluster.perNode ?? null
       preflight.value = {
         ok: cluster.ok,
         blockers: cluster.blockers,
@@ -238,24 +278,47 @@ watch([deviceName, lv, isClustered], async () => {
       })
     }
   } catch (e: unknown) {
-    preflight.value = null
-    const err = e as { data?: { preflight?: { blockers?: string[] } }; statusMessage?: string }
-    const blockers = err?.data?.preflight?.blockers
-    if (blockers?.length) {
+    const err = e as {
+      statusCode?: number
+      status?: number
+      message?: string
+      data?: { preflight?: { ok?: boolean; blockers?: string[]; perNode?: ClusterLvmPreflightPerNode[] } }
+    }
+    const status = err?.statusCode ?? err?.status
+    const embedded = err?.data?.preflight
+    if (embedded) {
+      clusterPerNode.value = embedded.perNode ?? null
       preflight.value = {
         ok: false,
-        blockers,
+        blockers: embedded.blockers ?? [],
         warnings: [],
         riskLevel: 'risky',
         requiredConfirmation: expectedBindScstConfirmation(deviceName.value),
         impactedDevices: [],
       }
+      if (status !== 409) {
+        preflightError.value = resolveBindScstClusterPreflightError(err, t)
+      }
+    } else {
+      preflight.value = null
+      clusterPerNode.value = null
+      preflightError.value = resolveBindScstClusterPreflightError(err, t)
     }
+  } finally {
+    preflightLoading.value = false
   }
-}, { immediate: true })
+}
+
+watch([deviceName, lv, isClustered], () => { runPreflight() }, { immediate: true })
 
 async function execute() {
-  if (!canExecute.value || !lv.value) return
+  if (!lv.value || nameValidationKey.value) return
+  if (isClustered.value && props.clusterId) {
+    await runPreflight()
+    if (preflightError.value || !preflight.value?.ok) return
+  }
+  if (!canExecute.value) return
+
   busy.value = true
   executeError.value = null
   try {

@@ -1286,6 +1286,11 @@
         "error_conflict_hint": "Delete the existing device or choose another name.",
         "error_cluster_blocked": "This SAN is clustered: local SCST creation is not available through this flow.",
         "error_generic": "Unable to create the SCST device.",
+        "error_preflight_failed": "Cluster preflight failed.",
+        "error_preflight_internal": "Internal preflight error",
+        "preflight_loading": "Running cluster checks…",
+        "preflight_failed_title": "Preflight failed",
+        "preflight_blockers_title": "Creation blocked",
         "success": "SCST device created"
       }
     }

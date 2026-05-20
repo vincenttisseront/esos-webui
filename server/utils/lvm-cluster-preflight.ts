@@ -8,7 +8,6 @@ import { collectRaidOverview } from './raid-overview.service'
 import { runLvmPreflight } from './lvm-preflight'
 import { mapDeviceToPeer } from './raid-cluster-storage-preflight'
 import type { ClusterStorageNodeInventory, MdArray } from './raid-types'
-import { withSanContext } from './ssh-runtime'
 import type {
   BindScstPayload,
   ClusterLvmDiskMapping,
@@ -24,6 +23,7 @@ import type {
 } from './lvm-types'
 import { assessLocalSymmetricLvm } from '../../utils/lvm-cluster-symmetry'
 import { validateClusterPvCreatePaths } from './lvm-cluster-pv-validation'
+import { preflightBindScstOnClusterNodes, validateBindScstClusterPayload } from './lvm-cluster-bind-scst-preflight'
 
 const MD_PATH_RE = /^\/dev\/md[a-z0-9_-]{0,15}$/i
 const SIZE_TOLERANCE_RATIO = 0.01
@@ -255,7 +255,38 @@ export async function runClusterLvmPreflight(
 ): Promise<ClusterLvmPreflightResult> {
   const nodes = await collectClusterLvmInventory(clusterId)
   if (nodes.length < 2) {
-    throw createError({ statusCode: 400, statusMessage: 'Au moins deux nœuds cluster requis' })
+    throw createError({ statusCode: 400, message: 'Au moins deux nœuds cluster requis' })
+  }
+
+  if (req.action === 'bind_scst') {
+    const payloadCheck = validateBindScstClusterPayload(req.payload as BindScstPayload)
+    if (!payloadCheck.ok) {
+      return {
+        ok: false,
+        blockers: [payloadCheck.message],
+        warnings: [],
+        mappings: [],
+        symmetryIssues: [],
+        nodes,
+        perNode: nodes.map(n => ({
+          sanId: n.sanId,
+          label: n.label,
+          ok: false,
+          blockers: [payloadCheck.message],
+          warnings: [],
+        })),
+      }
+    }
+    const scst = await preflightBindScstOnClusterNodes(nodes, payloadCheck.payload)
+    return {
+      ok: scst.blockers.length === 0,
+      blockers: scst.blockers,
+      warnings: scst.warnings,
+      mappings: [],
+      symmetryIssues: [],
+      nodes,
+      perNode: scst.perNode,
+    }
   }
   const blockers: string[] = []
   const warnings: string[] = []
@@ -400,22 +431,6 @@ export async function runClusterLvmPreflight(
         payload: { vgName: payload.vgName, name: payload.name, confirmation: '' },
       }, node.overview)
       blockers.push(...pre.blockers.map(b => `${node.label}: ${b}`))
-    }
-  }
-
-  if (req.action === 'bind_scst' && primary) {
-    const payload = req.payload as BindScstPayload
-    for (const node of nodes) {
-      if (!node.sshReady) continue
-      const manager = getSSHPool().get(node.sanId)!
-      const pre = await withSanContext(node.sanId, () =>
-        runLvmPreflight(manager, {
-          action: 'bind_scst',
-          payload: { ...payload, confirmation: '' },
-        }, node.overview),
-      )
-      blockers.push(...pre.blockers)
-      warnings.push(...pre.warnings)
     }
   }
 

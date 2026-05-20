@@ -113,13 +113,23 @@ export interface LocalSymmetricLvmIssue {
   severity: 'warning' | 'critical'
 }
 
+export interface ClusterLvmPreflightPerNode {
+  sanId: string
+  label: string
+  ok: boolean
+  blockers: string[]
+  warnings: string[]
+  error?: string
+}
+
 export interface ClusterLvmPreflightResult {
   ok: boolean
   blockers: string[]
   warnings: string[]
   mappings: ClusterLvmDiskMapping[]
-  symmetryIssues: Array<{ vgName?: string; message: string; severity: 'warning' | 'critical' }>
+  symmetryIssues: Array<{ vgName?: string; lvName?: string; message: string; severity: 'warning' | 'critical' }>
   nodes: ClusterLvmNodeInventory[]
+  perNode?: ClusterLvmPreflightPerNode[]
 }
 
 export interface ClusterLvmExecutionResult {

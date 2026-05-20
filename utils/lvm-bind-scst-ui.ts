@@ -1,3 +1,4 @@
+import type { ClusterLvmPreflightPerNode, ClusterLvmPreflightResult } from '~/types/lvm'
 import { BIND_SCST_BLOCKER_TAG, parseBindScstBlocker } from '~/utils/lvm-bind-scst-blockers'
 
 const CLUSTER_LVM_BLOCKED_SNIPPET = 'clusterExecution'
@@ -7,7 +8,15 @@ type ApiErrorLike = {
   status?: number
   statusMessage?: string
   message?: string
-  data?: { statusCode?: number; statusMessage?: string; message?: string; code?: string }
+  data?: {
+    statusCode?: number
+    statusMessage?: string
+    message?: string
+    code?: string
+    context?: string
+    detail?: string
+    preflight?: ClusterLvmPreflightResult
+  }
 } | null | undefined
 
 type TranslateFn = (key: string, params?: Record<string, unknown>) => string
@@ -15,12 +24,54 @@ type TranslateFn = (key: string, params?: Record<string, unknown>) => string
 export function extractApiErrorDetail(err: ApiErrorLike): string {
   if (!err) return ''
   return (
-    err.data?.statusMessage
-    ?? err.statusMessage
-    ?? err.data?.message
+    err.data?.message
     ?? err.message
+    ?? err.data?.statusMessage
+    ?? err.statusMessage
     ?? ''
   ).trim()
+}
+
+export function formatBindScstPerNodeLines(perNode: ClusterLvmPreflightPerNode[] | undefined, t: TranslateFn): string[] {
+  if (!perNode?.length) return []
+  return perNode
+    .filter(n => !n.ok || n.blockers.length)
+    .flatMap(n => {
+      if (n.error && !n.blockers.length) {
+        return [`${n.label}: ${n.error}`]
+      }
+      return n.blockers.map(b => {
+        const localized = resolveBindScstBlockerMessage(b, t)
+        return localized ? `${n.label}: ${localized}` : `${n.label}: ${b}`
+      })
+    })
+}
+
+export function resolveBindScstClusterPreflightError(err: ApiErrorLike, t: TranslateFn): string {
+  const status = extractApiStatusCode(err)
+  const detail = extractApiErrorDetail(err)
+  const preflight = err?.data?.preflight
+
+  if (status === 409) {
+    const lines = formatBindScstPerNodeLines(preflight?.perNode, t)
+    if (lines.length) return lines.join('\n')
+    if (preflight?.blockers?.length) return formatBindScstPreflightBlockers(preflight.blockers, t)
+    return detail || t('lvm.wizard.scst_device.error_conflict')
+  }
+
+  if (status === 500) {
+    const ctx = err?.data?.context
+    const internal = t('lvm.wizard.scst_device.error_preflight_internal')
+    return ctx ? `${internal} (${ctx})` : internal
+  }
+
+  if (preflight && !preflight.ok) {
+    const lines = formatBindScstPerNodeLines(preflight.perNode, t)
+    if (lines.length) return lines.join('\n')
+    if (preflight.blockers.length) return formatBindScstPreflightBlockers(preflight.blockers, t)
+  }
+
+  return detail || t('lvm.wizard.scst_device.error_preflight_failed')
 }
 
 export function extractApiStatusCode(err: ApiErrorLike): number | undefined {

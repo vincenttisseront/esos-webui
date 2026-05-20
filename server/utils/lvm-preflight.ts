@@ -129,9 +129,13 @@ export async function runLvmPreflight(
       )?.path
       let lvPathPresent: boolean | undefined
       if (lvGuess) {
-        const quoted = lvGuess.replace(/'/g, `'\\''`)
-        const test = await manager.exec(`test -b '${quoted}' && echo ok || echo missing`, 10_000)
-        lvPathPresent = test.stdout.trim().includes('ok')
+        try {
+          const quoted = lvGuess.replace(/'/g, `'\\''`)
+          const test = await manager.exec(`test -b '${quoted}' && echo ok || echo missing`, 10_000)
+          lvPathPresent = test.stdout.trim().includes('ok')
+        } catch {
+          lvPathPresent = false
+        }
       }
       const v = validateBindScst(p as any, overview, index, { nodeLabel, lvPathPresent })
       blockers.push(...v.blockers)

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { bindScstBlocker, parseBindScstBlocker } from '../utils/lvm-bind-scst-blockers'
 import {
   formatBindScstPreflightBlockers,
+  resolveBindScstClusterPreflightError,
   resolveBindScstExecuteError,
   resolveBindScstBlockerMessage,
 } from '../utils/lvm-bind-scst-ui'
@@ -37,6 +38,34 @@ describe('lvm-bind-scst-ui messages', () => {
     )
     expect(msg).toContain('error_conflict')
     expect(msg).toContain('error_conflict_hint')
+  })
+
+  it('maps 409 cluster preflight with perNode', () => {
+    const msg = resolveBindScstClusterPreflightError(
+      {
+        statusCode: 409,
+        data: {
+          preflight: {
+            ok: false,
+            blockers: ['BIND_SCST:device_exists:lv_data_photos:esos1'],
+            warnings: [],
+            mappings: [],
+            symmetryIssues: [],
+            nodes: [],
+            perNode: [{
+              sanId: 'esos1',
+              label: 'esos1',
+              ok: false,
+              blockers: ['BIND_SCST:device_exists:lv_data_photos:esos1'],
+              warnings: [],
+            }],
+          },
+        },
+      },
+      t,
+    )
+    expect(msg).toContain('error_device_exists_on_node')
+    expect(msg).toContain('esos1')
   })
 
   it('joins multiple preflight blockers', () => {
