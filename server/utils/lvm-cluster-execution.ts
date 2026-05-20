@@ -5,6 +5,7 @@ import { getDB } from '../db'
 import { sans } from '../db/schema'
 import { getSSHPool } from './ssh-pool'
 import { collectLvmOverviewLite } from './lvm-overview.service'
+import { overviewHasLv } from '../../utils/lvm-lv-size'
 import {
   buildLvCreatePreview,
   buildLvRemovePreview,
@@ -438,9 +439,20 @@ export async function executeClusterLvmPlan(
         } else if (plan.action === 'lvcreate') {
           const p = payload as LvCreatePayload
           const result = await runLvCreate(manager, p.vgName, p.name, p.sizeBytes)
-          const failed = result.code !== 0
+          let failed = result.code !== 0
+          let verifyDetail = ''
+          if (!failed) {
+            const lite = await collectLvmOverviewLite(manager)
+            if (!overviewHasLv(lite.lvs, p.vgName, p.name)) {
+              failed = true
+              verifyDetail = `LV ${p.vgName}/${p.name} absent après lvcreate (lvs)`
+            }
+          }
           if (failed) {
-            const msg = result.stderr.trim() || result.stdout.trim() || `lvcreate exit ${result.code}`
+            const msg = verifyDetail
+              || result.stderr.trim()
+              || result.stdout.trim()
+              || `lvcreate exit ${result.code}`
             errors.push(`${node.label}: ${msg}`)
           }
           nodeResults.push({
@@ -451,7 +463,9 @@ export async function executeClusterLvmPlan(
             exitCode: result.code,
             stdout: result.stdout,
             stderr: result.stderr,
-            error: failed ? (result.stderr.trim() || `exit ${result.code}`) : undefined,
+            error: failed
+              ? (verifyDetail || result.stderr.trim() || result.stdout.trim() || `exit ${result.code}`)
+              : undefined,
           })
         } else if (plan.action === 'lvremove') {
           const p = payload as LvRemovePayload

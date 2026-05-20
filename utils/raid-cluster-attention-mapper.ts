@@ -16,6 +16,11 @@ function isUuidMismatchSummary(summary: string): boolean {
   return summary.includes('UUID MD différents') || summary.toLowerCase().includes('different md uuid')
 }
 
+function isSymmetricLvmOnlyMdAsymmetry(id: string, summary: string): boolean {
+  if (!id.startsWith('md_asym:')) return false
+  return /est utilisé par LVM/i.test(summary) && !/pas de LVM sur/i.test(summary)
+}
+
 export function mapClusterStorageAttentionToRaidItems(
   points: ClusterAttentionPoint[],
   currentSanId: string,
@@ -28,6 +33,10 @@ export function mapClusterStorageAttentionToRaidItems(
     if (p.category !== 'storage_md' || p.severity === 'info') continue
 
     if (mode === 'local_symmetric' && isUuidMismatchSummary(p.summary)) {
+      continue
+    }
+
+    if (mode === 'local_symmetric' && isSymmetricLvmOnlyMdAsymmetry(p.id, p.summary)) {
       continue
     }
 

@@ -77,6 +77,15 @@ describe('buildStopRecoveryAssessment', () => {
     expect(assessment.recommendedRecoveryMode).toBe('stop_all_active')
   })
 
+  it('still records LVM blockers per node for stop (operational)', () => {
+    const withLvm = { ...activeMd0, usedBy: ['lvm'] as const }
+    const reports = [
+      classifyMdArrayNodeState(node({ sanId: 'san-1', label: 'esos1', mdArrays: [withLvm as any] }), 'md0'),
+      classifyMdArrayNodeState(node({ sanId: 'san-2', label: 'esos2', mdArrays: [withLvm as any] }), 'md0'),
+    ]
+    expect(reports.every(r => r.nodeBlockers.some(b => b.includes('LVM')))).toBe(true)
+  })
+
   it('allows stop_active_only when one missing one active', () => {
     const reports = [
       classifyMdArrayNodeState(node({ sanId: 'san-1', label: 'esos1' }), 'md0'),

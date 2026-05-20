@@ -245,6 +245,36 @@ export async function appendMdAttentionPoints(
       }
     }
     const primary = primarySanId ?? inventories.find(i => i.role === 'primary')?.sanId ?? inventories[0]?.sanId
+    let lvmInventories: Array<{
+      sanId: string
+      label: string
+      mdArrays: import('./raid-types').MdArray[]
+      pvs: Array<{ path: string; vgName: string }>
+    }> = []
+    try {
+      const { collectClusterLvmInventory } = await import('./lvm-cluster-preflight')
+      const lvmNodes = await collectClusterLvmInventory(clusterId)
+      lvmInventories = lvmNodes.map(n => ({
+        sanId: n.sanId,
+        label: n.label,
+        mdArrays: inventories.find(i => i.sanId === n.sanId)?.mdArrays ?? [],
+        pvs: n.overview.pvs.map(p => ({ path: p.path, vgName: p.vgName })),
+      }))
+    } catch {
+      lvmInventories = inventories.map(inv => ({
+        sanId: inv.sanId,
+        label: inv.label,
+        mdArrays: inv.mdArrays,
+        pvs: [],
+      }))
+    }
+
+    const {
+      assessMdLvmClusterSymmetry,
+      collectMdArrayLvmStates,
+      filterMdClusterAsymmetryHardBlockers,
+    } = await import('../../utils/md-lvm-cluster-symmetry')
+
     if (primary) {
       for (const name of arrayNames) {
         try {
@@ -253,13 +283,40 @@ export async function appendMdAttentionPoints(
             arrayName: name,
             nodes: inventories,
           })
-          if (assessment.hardBlockers.length) {
+          const mdLvmStates = collectMdArrayLvmStates(lvmInventories, name)
+          const mdLvmIssues = assessMdLvmClusterSymmetry(mdLvmStates)
+          const asymmetryBlockers = filterMdClusterAsymmetryHardBlockers(
+            assessment.hardBlockers,
+            mdLvmIssues,
+          )
+
+          for (const issue of mdLvmIssues) {
+            merged.push({
+              id: `md_lvm:${name}:${issue.message.slice(0, 48)}`,
+              severity: issue.severity === 'critical' ? 'blocking' : 'warning',
+              category: 'storage_md',
+              title: issue.severity === 'critical'
+                ? `MD ${name} — LVM asymétrique`
+                : `MD ${name} — LVM`,
+              summary: issue.message,
+              affectedNodeIds: mdLvmStates.map(s => s.sanId),
+              affectedNodeLabels: mdLvmStates.map(s => s.label),
+              recommendedAction: issue.severity === 'critical' ? 'open_raid' : 'open_raid',
+              actionRoute: `/admin/sans/${primary}/raid`,
+              actionPayload: { arrayName: name, tab: 'lvm' },
+              dismissible: false,
+              source: 'md_detection',
+              detectedAt: Date.now(),
+            })
+          }
+
+          if (asymmetryBlockers.length) {
             merged.push({
               id: `md_asym:${name}`,
               severity: 'blocking',
               category: 'storage_md',
               title: `MD ${name} — asymétrie cluster`,
-              summary: assessment.hardBlockers[0] ?? 'État MD incohérent entre nœuds',
+              summary: asymmetryBlockers[0] ?? 'État MD incohérent entre nœuds',
               affectedNodeIds: assessment.nodeReports.map(r => r.sanId),
               affectedNodeLabels: assessment.nodeReports.map(r => r.label),
               recommendedAction: 'run_recovery',

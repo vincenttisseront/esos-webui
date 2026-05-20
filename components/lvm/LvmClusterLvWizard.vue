@@ -201,12 +201,17 @@ async function execute() {
     })
     step.value = 4
     if (!executionResult.value.success) {
-      toast.error(t('lvm.wizard.execute_failed'), executionResult.value.errors.join(' · ') || undefined)
+      const detail = executionResult.value.errors.join(' · ')
+        || executionResult.value.nodeResults
+          .filter(n => n.error || n.stderr)
+          .map(n => `${n.label}: ${n.error ?? n.stderr}`)
+          .join(' · ')
+      toast.error(t('lvm.wizard.execute_failed'), detail || undefined)
       return
     }
     const detected = lvm.lvExistsAfterRefresh(selectedVg.value, lvName.value.trim())
     if (!detected) {
-      toast.warning(t('lvm.cluster.wizard.lv_create.not_detected_after_refresh'))
+      toast.error(t('lvm.cluster.wizard.lv_create.not_detected_after_refresh'))
       return
     }
     toast.success(t('lvm.cluster.wizard.lv_create.success'))
