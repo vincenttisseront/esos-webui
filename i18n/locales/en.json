@@ -925,6 +925,61 @@
         "open_tab": "Open LVM tab"
       }
     },
+    "provisioning": {
+      "chain_title": "Provisioning workflow",
+      "step": {
+        "source": "Source (MD / RAID)",
+        "pv": "Physical volume (PV)",
+        "vg": "Volume group (VG)",
+        "lv": "Logical volume (LV)",
+        "scst": "SCST"
+      },
+      "status": {
+        "ready": "Ready",
+        "created": "Created",
+        "missing": "Missing",
+        "blocked": "Blocked",
+        "next": "Next"
+      },
+      "scst": {
+        "bound": "{names}",
+        "unbound": "Not exposed"
+      },
+      "next": {
+        "title": "Recommended next step",
+        "create_pv": "Create a physical volume (PV) on {path}.",
+        "create_vg": "Create a volume group (VG) from PV {path}.",
+        "create_lv": "Create a logical volume (LV) in VG {vg}.",
+        "bind_scst": "Create an SCST blockio device for {lvPath}.",
+        "need_source": "Prepare an MD or hardware RAID device before creating a PV.",
+        "complete": "LVM chain is complete; use the lists below for maintenance.",
+        "readonly": "This SAN is read-only; provisioning actions are disabled.",
+        "blocked": "Provisioning is blocked: {reason}",
+        "blocked_no_orphan_pv": "All physical volumes are already in a volume group; add a new PV or remove a VG first.",
+        "blocked_no_vg_space": "No volume group has free space for a new logical volume.",
+        "cta": {
+          "create_pv": "Create PV",
+          "create_vg": "Create VG",
+          "create_lv": "Create LV",
+          "bind_scst": "Bind SCST",
+          "open_block_devices": "Open block devices"
+        }
+      },
+      "empty": {
+        "pv": "No physical volumes yet. Follow the workflow above to create a PV.",
+        "vg": "No volume groups yet. Create a VG from an orphan PV when ready.",
+        "lv": "No logical volumes yet. Create an LV in a volume group with free space."
+      },
+      "cluster": {
+        "mode_compact": "Commands run on every cluster node.",
+        "learn_more": "Learn more"
+      },
+      "technical": {
+        "title": "Technical details",
+        "candidates": "Candidate devices",
+        "peers": "Peer nodes"
+      }
+    },
     "remove": {
       "destructive_warning": "Destructive operation — data on affected volumes may be lost.",
       "preflight_loading": "Running preflight…",

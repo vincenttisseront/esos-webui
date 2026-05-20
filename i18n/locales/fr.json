@@ -925,6 +925,61 @@
         "open_tab": "Ouvrir l'onglet LVM"
       }
     },
+    "provisioning": {
+      "chain_title": "Chaîne de provisionnement",
+      "step": {
+        "source": "Source (MD / RAID)",
+        "pv": "Volume physique (PV)",
+        "vg": "Groupe de volumes (VG)",
+        "lv": "Volume logique (LV)",
+        "scst": "SCST"
+      },
+      "status": {
+        "ready": "Prêt",
+        "created": "Créé",
+        "missing": "Manquant",
+        "blocked": "Bloqué",
+        "next": "Suivant"
+      },
+      "scst": {
+        "bound": "{names}",
+        "unbound": "Non exposé"
+      },
+      "next": {
+        "title": "Prochaine étape recommandée",
+        "create_pv": "Créer un volume physique (PV) sur {path}.",
+        "create_vg": "Créer un groupe de volumes (VG) à partir du PV {path}.",
+        "create_lv": "Créer un volume logique (LV) dans le VG {vg}.",
+        "bind_scst": "Créer un device SCST blockio pour {lvPath}.",
+        "need_source": "Préparer un device MD ou RAID matériel avant de créer un PV.",
+        "complete": "Chaîne LVM complète ; utilisez les listes ci-dessous pour la maintenance.",
+        "readonly": "Ce SAN est en lecture seule ; les actions de provisionnement sont désactivées.",
+        "blocked": "Provisionnement bloqué : {reason}",
+        "blocked_no_orphan_pv": "Tous les volumes physiques sont déjà dans un groupe de volumes ; ajoutez un PV ou supprimez un VG.",
+        "blocked_no_vg_space": "Aucun groupe de volumes n'a d'espace libre pour un nouveau volume logique.",
+        "cta": {
+          "create_pv": "Créer PV",
+          "create_vg": "Créer VG",
+          "create_lv": "Créer LV",
+          "bind_scst": "Lier SCST",
+          "open_block_devices": "Ouvrir les périphériques"
+        }
+      },
+      "empty": {
+        "pv": "Aucun volume physique. Suivez la chaîne ci-dessus pour créer un PV.",
+        "vg": "Aucun groupe de volumes. Créez un VG à partir d'un PV orphelin lorsque vous êtes prêt.",
+        "lv": "Aucun volume logique. Créez un LV dans un VG disposant d'espace libre."
+      },
+      "cluster": {
+        "mode_compact": "Les commandes sont exécutées sur chaque nœud.",
+        "learn_more": "En savoir plus"
+      },
+      "technical": {
+        "title": "Détails techniques",
+        "candidates": "Périphériques candidats",
+        "peers": "Nœuds pairs"
+      }
+    },
     "remove": {
       "destructive_warning": "Opération destructive — les données des volumes concernés peuvent être perdues.",
       "preflight_loading": "Préflight en cours…",

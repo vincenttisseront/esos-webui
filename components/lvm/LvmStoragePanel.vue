@@ -8,9 +8,20 @@
       variant="soft"
     />
 
-    <div v-if="isClustered" class="rounded-lg border border-primary-200 dark:border-primary-800 bg-primary-50 dark:bg-primary-950/30 p-4 space-y-1">
-      <h3 class="text-sm font-semibold text-primary-900 dark:text-primary-100">{{ t('lvm.cluster.mode_title') }}</h3>
-      <p class="text-sm text-primary-800 dark:text-primary-200">{{ t('lvm.cluster.mode_body') }}</p>
+    <div
+      v-if="isClustered"
+      class="rounded-lg border border-primary-200 dark:border-primary-800 bg-primary-50/80 dark:bg-primary-950/30 px-3 py-2"
+    >
+      <p class="text-xs text-primary-800 dark:text-primary-200 flex items-center gap-2">
+        <UIcon name="i-heroicons-information-circle" class="w-4 h-4 shrink-0" />
+        <span>{{ t('lvm.provisioning.cluster.mode_compact') }}</span>
+      </p>
+      <details class="mt-1 text-xs text-primary-700 dark:text-primary-300">
+        <summary class="cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
+          {{ t('lvm.provisioning.cluster.learn_more') }}
+        </summary>
+        <p class="mt-1 pl-6">{{ t('lvm.cluster.mode_body') }}</p>
+      </details>
     </div>
 
     <div class="flex flex-wrap gap-2 justify-between items-center">
@@ -30,26 +41,13 @@
       </UButton>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <UCard>
-        <div class="text-center py-2">
-          <div class="text-2xl font-bold">{{ lvm.pvs.length }}</div>
-          <div class="text-sm text-gray-500">{{ t('lvm.overview.pv_count') }}</div>
-        </div>
-      </UCard>
-      <UCard>
-        <div class="text-center py-2">
-          <div class="text-2xl font-bold">{{ lvm.vgs.length }}</div>
-          <div class="text-sm text-gray-500">{{ t('lvm.overview.vg_count') }}</div>
-        </div>
-      </UCard>
-      <UCard>
-        <div class="text-center py-2">
-          <div class="text-2xl font-bold">{{ lvm.lvs.length }}</div>
-          <div class="text-sm text-gray-500">{{ t('lvm.overview.lv_count') }}</div>
-        </div>
-      </UCard>
-    </div>
+    <LvmProvisioningChain :steps="provisioningChain" />
+
+    <LvmNextStepCard
+      :action="nextAction"
+      :can-mutate="canMutate"
+      @action="onNextStepAction"
+    />
 
     <div v-if="isClustered && symmetryIssues.length" class="space-y-1">
       <UAlert
@@ -65,27 +63,30 @@
 
     <UCard>
       <template #header>
-        <h3 class="text-sm font-medium">
-          {{ isClustered ? t('lvm.cluster.this_node') : '' }}
-          {{ isClustered ? ' — ' : '' }}{{ t('lvm.pv.table_title') }}
-        </h3>
+        <div class="flex items-center justify-between gap-2">
+          <h3 class="text-sm font-medium">
+            {{ isClustered ? t('lvm.cluster.this_node') : '' }}
+            {{ isClustered ? ' — ' : '' }}{{ t('lvm.pv.table_title') }}
+          </h3>
+          <UBadge v-if="lvm.pvs.length" color="gray" variant="soft" size="xs" :label="String(lvm.pvs.length)" />
+        </div>
       </template>
-      <div class="overflow-x-auto">
+      <div v-if="lvm.pvs.length" class="overflow-x-auto">
         <table class="w-full text-xs">
           <thead>
             <tr class="text-left text-gray-500 border-b">
-              <th class="py-2 pr-3">PV</th>
-              <th class="py-2 pr-3">VG</th>
-              <th class="py-2 pr-3">{{ t('lvm.col.size') }}</th>
-              <th class="py-2" />
+              <th class="py-1.5 pr-3">PV</th>
+              <th class="py-1.5 pr-3">VG</th>
+              <th class="py-1.5 pr-3">{{ t('lvm.col.size') }}</th>
+              <th class="py-1.5" />
             </tr>
           </thead>
           <tbody>
             <tr v-for="row in lvm.pvs" :key="row.path" class="border-b border-gray-100 dark:border-gray-800">
-              <td class="py-2 font-mono">{{ row.path }}</td>
-              <td class="py-2">{{ row.vgName || '—' }}</td>
-              <td class="py-2">{{ formatBytes(row.sizeBytes) }}</td>
-              <td class="py-2 text-right">
+              <td class="py-1.5 font-mono">{{ row.path }}</td>
+              <td class="py-1.5">{{ row.vgName || '—' }}</td>
+              <td class="py-1.5">{{ formatBytes(row.sizeBytes) }}</td>
+              <td class="py-1.5 text-right">
                 <UButton v-if="!row.vgName && canMutate" size="xs" color="red" variant="ghost" @click="openRemovePvWizard(row.path)">
                   {{ t('lvm.pv.remove') }}
                 </UButton>
@@ -94,30 +95,36 @@
           </tbody>
         </table>
       </div>
+      <p v-else class="text-xs text-gray-500 px-1 py-2">{{ t('lvm.provisioning.empty.pv') }}</p>
     </UCard>
 
     <UCard>
-      <template #header><h3 class="text-sm font-medium">{{ t('lvm.vg.table_title') }}</h3></template>
-      <div class="overflow-x-auto">
+      <template #header>
+        <div class="flex items-center justify-between gap-2">
+          <h3 class="text-sm font-medium">{{ t('lvm.vg.table_title') }}</h3>
+          <UBadge v-if="lvm.vgs.length" color="gray" variant="soft" size="xs" :label="String(lvm.vgs.length)" />
+        </div>
+      </template>
+      <div v-if="lvm.vgs.length" class="overflow-x-auto">
         <table class="w-full text-xs">
           <thead>
             <tr class="text-left text-gray-500 border-b">
-              <th class="py-2 pr-3">VG</th>
-              <th class="py-2 pr-3">{{ t('lvm.col.size_free') }}</th>
-              <th class="py-2 pr-3">PVs</th>
-              <th class="py-2 pr-3">LVs</th>
-              <th class="py-2" />
+              <th class="py-1.5 pr-3">VG</th>
+              <th class="py-1.5 pr-3">{{ t('lvm.col.size_free') }}</th>
+              <th class="py-1.5 pr-3">PVs</th>
+              <th class="py-1.5 pr-3">LVs</th>
+              <th class="py-1.5" />
             </tr>
           </thead>
           <tbody>
             <tr v-for="row in lvm.vgs" :key="row.name" class="border-b border-gray-100 dark:border-gray-800">
-              <td class="py-2 font-mono">{{ row.name }}</td>
-              <td class="py-2">{{ formatBytes(row.sizeBytes) }} / {{ formatBytes(row.freeBytes) }}</td>
-              <td class="py-2">{{ row.pvCount }}</td>
-              <td class="py-2">{{ row.lvCount }}</td>
-              <td class="py-2 text-right">
+              <td class="py-1.5 font-mono">{{ row.name }}</td>
+              <td class="py-1.5">{{ formatBytes(row.sizeBytes) }} / {{ formatBytes(row.freeBytes) }}</td>
+              <td class="py-1.5">{{ row.pvCount }}</td>
+              <td class="py-1.5">{{ row.lvCount }}</td>
+              <td class="py-1.5 text-right">
                 <UBadge v-if="row.clustered" color="amber" size="xs" :label="t('lvm.vg.clustered')" />
-                <UButton v-if="canMutate && !row.clustered" size="xs" color="red" variant="ghost" class="ml-2" @click="confirmRemoveVg(row.name)">
+                <UButton v-if="canMutate && !row.clustered" size="xs" color="red" variant="ghost" class="ml-2" @click="openRemoveVgWizard(row.name)">
                   {{ t('lvm.vg.remove') }}
                 </UButton>
               </td>
@@ -125,31 +132,37 @@
           </tbody>
         </table>
       </div>
+      <p v-else class="text-xs text-gray-500 px-1 py-2">{{ t('lvm.provisioning.empty.vg') }}</p>
     </UCard>
 
     <UCard>
-      <template #header><h3 class="text-sm font-medium">{{ t('lvm.lv.table_title') }}</h3></template>
-      <div class="overflow-x-auto">
+      <template #header>
+        <div class="flex items-center justify-between gap-2">
+          <h3 class="text-sm font-medium">{{ t('lvm.lv.table_title') }}</h3>
+          <UBadge v-if="lvm.lvs.length" color="gray" variant="soft" size="xs" :label="String(lvm.lvs.length)" />
+        </div>
+      </template>
+      <div v-if="lvm.lvs.length" class="overflow-x-auto">
         <table class="w-full text-xs">
           <thead>
             <tr class="text-left text-gray-500 border-b">
-              <th class="py-2 pr-3">LV</th>
-              <th class="py-2 pr-3">VG</th>
-              <th class="py-2 pr-3">{{ t('lvm.col.size') }}</th>
-              <th class="py-2 pr-3">SCST</th>
-              <th class="py-2" />
+              <th class="py-1.5 pr-3">LV</th>
+              <th class="py-1.5 pr-3">VG</th>
+              <th class="py-1.5 pr-3">{{ t('lvm.col.size') }}</th>
+              <th class="py-1.5 pr-3">SCST</th>
+              <th class="py-1.5" />
             </tr>
           </thead>
           <tbody>
             <tr v-for="row in lvm.lvs" :key="row.path" class="border-b border-gray-100 dark:border-gray-800">
-              <td class="py-2 font-mono">{{ row.path }}</td>
-              <td class="py-2">{{ row.vgName }}</td>
-              <td class="py-2">{{ formatBytes(row.sizeBytes) }}</td>
-              <td class="py-2">
+              <td class="py-1.5 font-mono">{{ row.path }}</td>
+              <td class="py-1.5">{{ row.vgName }}</td>
+              <td class="py-1.5">{{ formatBytes(row.sizeBytes) }}</td>
+              <td class="py-1.5">
                 <span v-if="row.scstDeviceNames?.length">{{ row.scstDeviceNames.join(', ') }}</span>
                 <UButton v-else-if="canMutate" size="xs" variant="soft" @click="openScstWizard(row)">{{ t('lvm.lv.bind_scst') }}</UButton>
               </td>
-              <td class="py-2 text-right">
+              <td class="py-1.5 text-right">
                 <UButton v-if="canMutate && !row.scstDeviceNames?.length" size="xs" color="red" variant="ghost" @click="openRemoveLvWizard(row)">
                   {{ t('lvm.lv.remove') }}
                 </UButton>
@@ -158,66 +171,81 @@
           </tbody>
         </table>
       </div>
+      <p v-else class="text-xs text-gray-500 px-1 py-2">{{ t('lvm.provisioning.empty.lv') }}</p>
     </UCard>
 
-    <template v-if="isClustered && lvm.clusterPeers.length">
-      <UCard v-for="peer in lvm.clusterPeers" :key="peer.nodeSanId">
-        <template #header>
-          <h3 class="text-sm font-medium">{{ t('lvm.cluster.peer_node', { label: peer.nodeLabel }) }}</h3>
+    <details
+      v-if="showTechnicalDetails"
+      class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/40"
+    >
+      <summary class="cursor-pointer px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 select-none list-none [&::-webkit-details-marker]:hidden">
+        {{ t('lvm.provisioning.technical.title') }}
+      </summary>
+      <div class="px-4 pb-4 pt-1 space-y-4 border-t border-gray-200 dark:border-gray-700">
+        <div v-if="displayCandidates.length">
+          <h4 class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">{{ t('lvm.provisioning.technical.candidates') }}</h4>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+              <thead>
+                <tr class="text-left text-gray-500 border-b">
+                  <th class="py-1 pr-3">{{ t('lvm.col.device') }}</th>
+                  <th class="py-1 pr-3">{{ t('lvm.col.kind') }}</th>
+                  <th class="py-1">{{ t('lvm.col.size') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in displayCandidates" :key="row.path" class="border-b border-gray-100 dark:border-gray-800">
+                  <td class="py-1 font-mono">{{ row.path }}</td>
+                  <td class="py-1">{{ row.kind }}</td>
+                  <td class="py-1">{{ formatBytes(row.sizeBytes) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <template v-if="isClustered && lvm.clusterPeers.length">
+          <div v-for="peer in lvm.clusterPeers" :key="peer.nodeSanId">
+            <h4 class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
+              {{ t('lvm.provisioning.technical.peers') }} — {{ t('lvm.cluster.peer_node', { label: peer.nodeLabel }) }}
+            </h4>
+            <div class="grid grid-cols-3 gap-2 text-xs mb-2">
+              <div><span class="text-gray-500">PV</span> {{ peer.pvs.length }}</div>
+              <div><span class="text-gray-500">VG</span> {{ peer.vgs.length }}</div>
+              <div><span class="text-gray-500">LV</span> {{ peer.lvs.length }}</div>
+            </div>
+            <div v-if="peer.vgs.length" class="overflow-x-auto">
+              <table class="w-full text-xs">
+                <thead>
+                  <tr class="text-left text-gray-500 border-b">
+                    <th class="py-1 pr-2">VG</th>
+                    <th class="py-1">{{ t('lvm.col.size_free') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="vg in peer.vgs" :key="vg.name" class="border-b border-gray-100 dark:border-gray-800">
+                    <td class="py-1 font-mono">{{ vg.name }}</td>
+                    <td class="py-1">{{ formatBytes(vg.freeBytes) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p v-else class="text-xs text-gray-500">{{ t('lvm.cluster.peer_empty') }}</p>
+          </div>
         </template>
-        <div class="grid grid-cols-3 gap-2 text-xs mb-3">
-          <div><span class="text-gray-500">PV</span> {{ peer.pvs.length }}</div>
-          <div><span class="text-gray-500">VG</span> {{ peer.vgs.length }}</div>
-          <div><span class="text-gray-500">LV</span> {{ peer.lvs.length }}</div>
-        </div>
-        <div v-if="peer.vgs.length" class="overflow-x-auto">
-          <table class="w-full text-xs">
-            <thead>
-              <tr class="text-left text-gray-500 border-b">
-                <th class="py-1 pr-2">VG</th>
-                <th class="py-1">{{ t('lvm.col.size_free') }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="vg in peer.vgs" :key="vg.name" class="border-b border-gray-100 dark:border-gray-800">
-                <td class="py-1 font-mono">{{ vg.name }}</td>
-                <td class="py-1">{{ formatBytes(vg.freeBytes) }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <p v-else class="text-xs text-gray-500">{{ t('lvm.cluster.peer_empty') }}</p>
-      </UCard>
-    </template>
-
-    <UCard v-if="displayCandidates.length">
-      <template #header><h3 class="text-sm font-medium">{{ t('lvm.candidate.table_title') }}</h3></template>
-      <div class="overflow-x-auto">
-        <table class="w-full text-xs">
-          <thead>
-            <tr class="text-left text-gray-500 border-b">
-              <th class="py-2 pr-3">{{ t('lvm.col.device') }}</th>
-              <th class="py-2 pr-3">{{ t('lvm.col.kind') }}</th>
-              <th class="py-2">{{ t('lvm.col.size') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="row in displayCandidates" :key="row.path" class="border-b border-gray-100 dark:border-gray-800">
-              <td class="py-2 font-mono">{{ row.path }}</td>
-              <td class="py-2">{{ row.kind }}</td>
-              <td class="py-2">{{ formatBytes(row.sizeBytes) }}</td>
-            </tr>
-          </tbody>
-        </table>
       </div>
-    </UCard>
-
+    </details>
   </div>
 </template>
 
 <script setup lang="ts">
 import type { LogicalVolume, LocalSymmetricLvmIssue } from '~/types/lvm'
 import { listClusterEligiblePaths, symmetryIssuesForOverview } from '~/utils/lvm-cluster-ui'
+import {
+  buildProvisioningChain,
+  computeLvmNextAction,
+  type LvmNextAction,
+} from '~/utils/lvm-provisioning-chain'
 
 const props = defineProps<{
   sanId: string
@@ -230,7 +258,6 @@ const emit = defineEmits<{ 'navigate-block-devices': [] }>()
 
 const { t } = useEsosI18n()
 const lvm = useLvmStore()
-const toast = useAppToast()
 const { open: openModal } = useAppModal()
 
 const canMutate = computed(() => !props.readOnly)
@@ -257,6 +284,63 @@ async function refreshAfterWizard() {
 
 function navigateBlockDevicesFromWizard() {
   emit('navigate-block-devices')
+}
+
+const eligibleCandidates = computed(() => lvm.candidates.filter(c => c.eligible))
+
+const displayCandidates = computed(() => {
+  if (props.isClustered && props.clusterId && lvm.clusterInventory) {
+    return listClusterEligiblePaths(props.sanId, lvm.candidates, lvm.clusterInventory)
+  }
+  return eligibleCandidates.value
+})
+
+const symmetryIssues = computed((): LocalSymmetricLvmIssue[] => {
+  if (!props.isClustered || !lvm.overview) return []
+  return symmetryIssuesForOverview(
+    { pvs: lvm.pvs, vgs: lvm.vgs, lvs: lvm.lvs },
+    lvm.clusterPeers,
+  )
+})
+
+const provisioningContext = computed(() => ({
+  candidates: displayCandidates.value,
+  pvs: lvm.pvs,
+  vgs: lvm.vgs,
+  lvs: lvm.lvs,
+  orphanPvs: lvm.orphanPvs,
+  readOnly: props.readOnly,
+  symmetryIssues: symmetryIssues.value,
+}))
+
+const provisioningChain = computed(() => buildProvisioningChain(provisioningContext.value))
+const nextAction = computed(() => computeLvmNextAction(provisioningContext.value))
+
+const showTechnicalDetails = computed(() =>
+  displayCandidates.value.length > 0
+  || (props.isClustered && lvm.clusterPeers.length > 0),
+)
+
+function onNextStepAction(kind: NonNullable<LvmNextAction['action']>) {
+  switch (kind) {
+    case 'pv':
+      openPvWizard()
+      break
+    case 'vg':
+      openVgWizard()
+      break
+    case 'lv':
+      openLvWizard()
+      break
+    case 'scst': {
+      const lv = nextAction.value.targetLv
+      if (lv) openScstWizard(lv)
+      break
+    }
+    case 'block_devices':
+      emit('navigate-block-devices')
+      break
+  }
 }
 
 async function openPvWizard() {
@@ -310,23 +394,6 @@ async function openLvWizard() {
     await refreshAfterWizard()
   } catch { /* dismissed */ }
 }
-
-const eligibleCandidates = computed(() => lvm.candidates.filter(c => c.eligible))
-
-const displayCandidates = computed(() => {
-  if (props.isClustered && props.clusterId && lvm.clusterInventory) {
-    return listClusterEligiblePaths(props.sanId, lvm.candidates, lvm.clusterInventory)
-  }
-  return eligibleCandidates.value
-})
-
-const symmetryIssues = computed((): LocalSymmetricLvmIssue[] => {
-  if (!props.isClustered || !lvm.overview) return []
-  return symmetryIssuesForOverview(
-    { pvs: lvm.pvs, vgs: lvm.vgs, lvs: lvm.lvs },
-    lvm.clusterPeers,
-  )
-})
 
 function symmetryIssueTitle(issue: LocalSymmetricLvmIssue) {
   if (issue.lvName) return `LV ${issue.vgName}/${issue.lvName}`
