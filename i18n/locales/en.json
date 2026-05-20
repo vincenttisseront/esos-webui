@@ -1265,7 +1265,20 @@
       },
       "scst_device": {
         "title": "Create SCST blockio device from LV",
+        "explanation": "This step exposes the logical volume {lvPath} as a SCSI device in SCST. The device will be available in SCST under the name you provide, and must then be assigned to a target and a LUN to be visible to iSCSI or FC clients.",
+        "backing_label": "Backing device",
         "name": "SCST device name",
+        "name_help": "Letters, digits, hyphens, underscores. Maximum 32 characters.",
+        "cluster_note": "This device will be created on each node in the cluster.",
+        "next_steps_title": "Next steps",
+        "next_steps_body": "After creation, assign this device to a target and a LUN to expose it to initiators.",
+        "confirm_label": "Confirmation",
+        "confirm_hint": "Type the exact phrase below to confirm device creation.",
+        "execute": "Execute",
+        "error_name_empty": "Device name is required.",
+        "error_name_invalid": "Invalid name: use only letters, digits, hyphens, and underscores.",
+        "error_name_too_long": "Name cannot exceed 32 characters.",
+        "error_name_exists": "SCST device \"{name}\" already exists.",
         "success": "SCST device created"
       }
     }

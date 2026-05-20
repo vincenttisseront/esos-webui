@@ -157,7 +157,9 @@ export function validateBindScst(
   const deviceName = String(payload.deviceName ?? '').trim()
   const lv = overview.lvs.find(l => l.vgName === vgName && l.name === lvName)
   if (!lv) blockers.push('LV introuvable')
-  if (!/^[A-Za-z0-9_\-]+$/.test(deviceName)) blockers.push('Nom de device SCST invalide')
+  if (!deviceName) blockers.push('Nom de device SCST requis')
+  else if (deviceName.length > 32) blockers.push('Nom de device SCST : maximum 32 caractères')
+  else if (!/^[A-Za-z0-9_\-]+$/.test(deviceName)) blockers.push('Nom de device SCST invalide')
   if (existingDeviceNames.has(deviceName)) blockers.push(`Device SCST "${deviceName}" existe déjà`)
   if (lv?.scstDeviceNames?.length) blockers.push('LV déjà lié à un device SCST')
   return { blockers, warnings, lvPath: lv?.path }

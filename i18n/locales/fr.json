@@ -1265,7 +1265,20 @@
       },
       "scst_device": {
         "title": "Créer un device SCST blockio depuis le LV",
+        "explanation": "Cette étape expose le volume logique {lvPath} comme un device SCSI dans SCST. Le device sera disponible dans SCST sous le nom fourni, et devra ensuite être assigné à un target et un LUN pour être visible par les clients iSCSI ou FC.",
+        "backing_label": "Périphérique source",
         "name": "Nom du device SCST",
+        "name_help": "Lettres, chiffres, tirets, underscores. Maximum 32 caractères.",
+        "cluster_note": "Ce device sera créé sur chaque nœud du cluster.",
+        "next_steps_title": "Étapes suivantes",
+        "next_steps_body": "Après création, assignez ce device à un target et un LUN pour l'exposer aux initiateurs.",
+        "confirm_label": "Confirmation",
+        "confirm_hint": "Saisissez la phrase exacte ci-dessous pour confirmer la création du device.",
+        "execute": "Exécuter",
+        "error_name_empty": "Le nom du device est requis.",
+        "error_name_invalid": "Nom invalide : utilisez uniquement lettres, chiffres, tirets et underscores.",
+        "error_name_too_long": "Le nom ne peut pas dépasser 32 caractères.",
+        "error_name_exists": "Le device SCST « {name} » existe déjà.",
         "success": "Device SCST créé"
       }
     }

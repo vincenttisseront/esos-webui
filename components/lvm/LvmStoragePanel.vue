@@ -608,7 +608,13 @@ async function openScstWizard(lv: LogicalVolume) {
   try {
     await openModal({
       component: Wizard,
-      props: { sanId: props.sanId, lv, persistent: true },
+      props: {
+        sanId: props.sanId,
+        lv,
+        isClustered: props.isClustered,
+        clusterId: clusterId.value || undefined,
+        persistent: true,
+      },
     })
     await refreshAfterWizard()
   } catch { /* dismissed */ }
