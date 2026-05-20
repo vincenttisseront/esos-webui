@@ -6,8 +6,11 @@
     icon="i-heroicons-circle-stack"
   >
     <div class="space-y-3">
-      <UFormGroup :label="t('lvm.wizard.lv_create.vg')">
-        <USelect v-model="vgName" :items="vgOptions" value-attribute="value" option-attribute="label" />
+      <UFormGroup
+        :label="t('lvm.wizard.lv_create.vg')"
+        :hint="t('lvm.wizard.lv_create.vg_help')"
+      >
+        <LvmNativeSelect v-model="vgName" :options="vgOptions" />
       </UFormGroup>
       <UFormGroup :label="t('lvm.wizard.lv_create.name')">
         <UInput v-model="lvName" />

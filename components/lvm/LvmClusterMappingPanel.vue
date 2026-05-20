@@ -8,12 +8,11 @@
     >
       <div class="text-sm font-medium">{{ peer.label }}</div>
       <div class="text-xs text-gray-500 font-mono">{{ sourcePath }} →</div>
-      <USelect
+      <LvmNativeSelect
         :model-value="mappingForPeer(peer.sanId)"
-        :items="peerCandidateOptions(peer)"
-        value-attribute="value"
-        option-attribute="label"
-        @update:model-value="v => setMapping(peer.sanId, String(v))"
+        :options="peerCandidateOptions(peer)"
+        :placeholder="t('lvm.wizard.select_placeholder')"
+        @update:model-value="v => setMapping(peer.sanId, v)"
       />
       <p v-if="mappingBlocker(peer.sanId)" class="text-xs text-red-600">{{ mappingBlocker(peer.sanId) }}</p>
     </div>

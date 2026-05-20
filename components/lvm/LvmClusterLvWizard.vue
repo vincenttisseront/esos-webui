@@ -7,8 +7,11 @@
   >
     <div class="space-y-4">
       <template v-if="step === 1">
-        <UFormGroup :label="t('lvm.wizard.lv_create.vg')">
-          <USelect v-model="selectedVg" :items="vgOptions" value-attribute="value" option-attribute="label" />
+        <UFormGroup
+          :label="t('lvm.wizard.lv_create.vg')"
+          :hint="t('lvm.wizard.lv_create.vg_help')"
+        >
+          <LvmNativeSelect v-model="selectedVg" :options="vgOptions" />
         </UFormGroup>
         <UFormGroup :label="t('lvm.wizard.lv_create.name')">
           <UInput v-model="lvName" placeholder="lv0" />

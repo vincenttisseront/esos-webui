@@ -6,13 +6,11 @@
     icon="i-heroicons-circle-stack"
   >
     <div class="space-y-3">
-      <UFormGroup :label="t('lvm.wizard.pv_create.device')">
-        <USelect
-          v-model="selectedPath"
-          :items="deviceOptions"
-          value-attribute="value"
-          option-attribute="label"
-        />
+      <UFormGroup
+        :label="t('lvm.wizard.pv_create.device')"
+        :hint="t('lvm.wizard.pv_create.device_help')"
+      >
+        <LvmNativeSelect v-model="selectedPath" :options="deviceOptions" />
       </UFormGroup>
       <UCheckbox v-model="force" :label="t('lvm.wizard.pv_create.force')" />
       <UAlert v-if="preflight?.blockers.length" color="red" variant="soft" :title="preflight.blockers.join(' · ')" />

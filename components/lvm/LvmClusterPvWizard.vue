@@ -7,8 +7,11 @@
   >
     <div class="space-y-4">
       <template v-if="step === 1">
-        <UFormGroup :label="t('lvm.wizard.pv_create.device')">
-          <USelect v-model="selectedPath" :items="deviceOptions" value-attribute="value" option-attribute="label" />
+        <UFormGroup
+          :label="t('lvm.wizard.pv_create.device')"
+          :hint="t('lvm.wizard.pv_create.device_help')"
+        >
+          <LvmNativeSelect v-model="selectedPath" :options="deviceOptions" />
         </UFormGroup>
         <UCheckbox v-model="force" :label="t('lvm.wizard.pv_create.force')" />
         <p v-if="selectedClusterBlock" class="text-xs text-red-600">{{ selectedClusterBlock }}</p>
