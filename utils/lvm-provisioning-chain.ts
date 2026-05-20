@@ -25,6 +25,7 @@ export interface ProvisioningStepView {
   detail: string
   count?: number
   hintKey?: string
+  clusterProgress?: { ready: number; total: number; labelKey: string }
 }
 
 export interface LvmNextAction {

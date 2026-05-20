@@ -168,24 +168,29 @@ export async function collectLvmOverview(manager: SSHSessionManager): Promise<Lv
   }
 }
 
-export function collectLvmOverviewLite(manager: SSHSessionManager): Promise<Pick<LvmOverviewResponse, 'pvs' | 'vgs' | 'lvs' | 'tools'>> {
-  return manager.exec(LVM_OVERVIEW_CMD, 30_000).then((r) => {
-    const sections = splitSections(r.stdout)
-    const tools = parseTools(sections.TOOLS ?? '')
-    return {
-      tools,
-      pvs: parsePvsJson(sections.PVS_JSON ?? '{}').map(pv => ({ ...pv, usedBy: [] })),
-      vgs: parseVgsJson(sections.VGS_JSON ?? '{}').map(vg => ({
-        name: vg.name,
-        uuid: vg.uuid,
-        sizeBytes: vg.sizeBytes,
-        freeBytes: vg.freeBytes,
-        pvCount: vg.pvCount,
-        lvCount: vg.lvCount,
-        attr: vg.attr,
-        clustered: vg.clustered,
-      })),
-      lvs: parseLvsJson(sections.LVS_JSON ?? '{}').map(lv => ({
+export async function collectLvmOverviewLite(manager: SSHSessionManager): Promise<Pick<LvmOverviewResponse, 'pvs' | 'vgs' | 'lvs' | 'tools'>> {
+  const [r, scstMap] = await Promise.all([
+    manager.exec(LVM_OVERVIEW_CMD, 30_000),
+    scstFilenamesByPath(),
+  ])
+  const sections = splitSections(r.stdout)
+  const tools = parseTools(sections.TOOLS ?? '')
+  return {
+    tools,
+    pvs: parsePvsJson(sections.PVS_JSON ?? '{}').map(pv => ({ ...pv, usedBy: [] })),
+    vgs: parseVgsJson(sections.VGS_JSON ?? '{}').map(vg => ({
+      name: vg.name,
+      uuid: vg.uuid,
+      sizeBytes: vg.sizeBytes,
+      freeBytes: vg.freeBytes,
+      pvCount: vg.pvCount,
+      lvCount: vg.lvCount,
+      attr: vg.attr,
+      clustered: vg.clustered,
+    })),
+    lvs: parseLvsJson(sections.LVS_JSON ?? '{}').map(lv => {
+      const scstNames = scstMap.get(lv.path) ?? []
+      return {
         name: lv.name,
         path: lv.path,
         vgName: lv.vgName,
@@ -193,8 +198,9 @@ export function collectLvmOverviewLite(manager: SSHSessionManager): Promise<Pick
         uuid: lv.uuid,
         attr: lv.attr,
         active: lv.active,
-        usedBy: [],
-      })),
-    }
-  })
+        usedBy: scstNames.length ? ['scst' as const] : [],
+        scstDeviceNames: scstNames.length ? scstNames : undefined,
+      }
+    }),
+  }
 }

@@ -1076,6 +1076,45 @@
       "symmetry_title": "Symétrie LVM cluster",
       "blocked_clvmd": "VG clusterisé (clvmd) non géré par la WebUI.",
       "local_symmetric_hint": "Ce SAN est en cluster. Utilisez les assistants cluster pour un provisionnement symétrique sur tous les nœuds.",
+      "view": {
+        "summary_title": "LVM cluster",
+        "symmetry_ok": "Symétrique",
+        "symmetry_warning": "Asymétrique",
+        "symmetry_critical": "Bloqué",
+        "inventory_degraded": "Inventaire cluster complet non chargé — affichage partiel des pairs.",
+        "inventory_loading": "Chargement de l'inventaire cluster…",
+        "table": {
+          "pv_title": "Cluster — Volumes physiques (PV)",
+          "vg_title": "Cluster — Groupes de volumes (VG)",
+          "lv_title": "Cluster — Volumes logiques (LV)"
+        },
+        "col": { "node": "Nœud", "status": "Statut" },
+        "status": {
+          "ok": "OK",
+          "missing": "Manquant",
+          "ssh_down": "SSH indisponible",
+          "inconsistent": "Incohérent",
+          "in_vg": "Dans un VG",
+          "unmapped": "Non mappé",
+          "clvmd": "clvmd",
+          "size_mismatch": "Taille différente",
+          "scst_missing": "Sans SCST"
+        },
+        "progress": {
+          "source_partial": "Source prête sur {ready}/{total} nœuds",
+          "pv_partial": "PV présent sur {ready}/{total} nœuds",
+          "vg_partial": "VG présent sur {ready}/{total} nœuds",
+          "lv_partial": "LV présent sur {ready}/{total} nœuds",
+          "scst_partial": "SCST lié sur {ready}/{total} nœuds"
+        },
+        "next": {
+          "pv_partial": "PV présent sur {ready}/{total} nœuds — à compléter sur : {missing}",
+          "vg_partial": "VG présent sur {ready}/{total} nœuds — à compléter sur : {missing}",
+          "source_partial": "Source prête sur {ready}/{total} nœuds — vérifier : {missing}"
+        },
+        "recommend": { "complete_node": "Compléter le provisionnement sur : {label}" },
+        "current_node_section": "Ce nœud (détail)"
+      },
       "wizard": {
         "node": "Nœud",
         "participation": "Participation",

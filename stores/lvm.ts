@@ -28,6 +28,7 @@ export const useLvmStore = defineStore('lvm', {
     lastClusterPlan: null as ClusterLvmExecutionPlan | null,
     lastDiskMappings: [] as ClusterLvmDiskMapping[],
     clusterInventory: null as ClusterLvmNodeInventory[] | null,
+    clusterInventoryLoading: false,
   }),
 
   getters: {
@@ -63,6 +64,9 @@ export const useLvmStore = defineStore('lvm', {
         this.overview = await $fetch<LvmOverviewResponse>('/api/lvm/overview', {
           query: { ...this.query(), ...(refresh ? { refresh: '1' } : {}) },
         })
+        if (this.clusterId) {
+          await this.fetchClusterInventory(this.clusterId)
+        }
       } catch (err: any) {
         this.error = err?.data?.message ?? err?.statusMessage ?? err?.message ?? 'Erreur scan LVM'
       } finally {
@@ -71,30 +75,35 @@ export const useLvmStore = defineStore('lvm', {
     },
 
     async fetchClusterInventory(clusterId: string) {
-      const res = await $fetch<{ nodes: ClusterLvmNodeInventory[] }>('/api/lvm/cluster/inventory', {
-        query: { clusterId },
-      })
-      this.clusterInventory = res.nodes
-      const primary = res.nodes.find(n => n.sanId === this.sanId)
-      if (primary?.overview.candidates.length) {
-        const mappings: ClusterLvmDiskMapping[] = []
-        for (const c of primary.overview.candidates.filter(x => x.eligible && x.kind === 'md')) {
-          for (const peer of res.nodes.filter(p => p.sanId !== this.sanId)) {
-            const peerCand = peer.overview.candidates.find(x => x.path === c.path && x.eligible)
-            if (peerCand) {
-              mappings.push({
-                sourceSanId: this.sanId!,
-                peerSanId: peer.sanId,
-                sourcePath: c.path,
-                peerPath: c.path,
-                stableKey: c.path,
-              })
+      this.clusterInventoryLoading = true
+      try {
+        const res = await $fetch<{ nodes: ClusterLvmNodeInventory[] }>('/api/lvm/cluster/inventory', {
+          query: { clusterId },
+        })
+        this.clusterInventory = res.nodes
+        const primary = res.nodes.find(n => n.sanId === this.sanId)
+        if (primary?.overview.candidates.length) {
+          const mappings: ClusterLvmDiskMapping[] = []
+          for (const c of primary.overview.candidates.filter(x => x.eligible && x.kind === 'md')) {
+            for (const peer of res.nodes.filter(p => p.sanId !== this.sanId)) {
+              const peerCand = peer.overview.candidates.find(x => x.path === c.path && x.eligible)
+              if (peerCand) {
+                mappings.push({
+                  sourceSanId: this.sanId!,
+                  peerSanId: peer.sanId,
+                  sourcePath: c.path,
+                  peerPath: c.path,
+                  stableKey: c.path,
+                })
+              }
             }
           }
+          this.lastDiskMappings = mappings
         }
-        this.lastDiskMappings = mappings
+        return res.nodes
+      } finally {
+        this.clusterInventoryLoading = false
       }
-      return res.nodes
     },
 
     async clusterPreflight(req: LvmPreflightRequest & { clusterId: string; primarySanId: string }): Promise<ClusterLvmPreflightResult> {

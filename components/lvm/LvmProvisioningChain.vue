@@ -16,7 +16,10 @@
           <p class="font-mono text-[11px] truncate text-gray-800 dark:text-gray-200" :title="step.detail">
             {{ step.detail }}
           </p>
-          <p v-if="step.count != null && step.count > 0" class="text-[10px] text-gray-500 mt-0.5">
+          <p v-if="step.clusterProgress" class="text-[10px] font-medium text-gray-600 dark:text-gray-400 mt-0.5">
+            {{ step.clusterProgress.ready }}/{{ step.clusterProgress.total }}
+          </p>
+          <p v-else-if="step.count != null && step.count > 0" class="text-[10px] text-gray-500 mt-0.5">
             ×{{ step.count }}
           </p>
           <p v-if="step.hintKey" class="text-[10px] text-amber-700 dark:text-amber-300 mt-1">

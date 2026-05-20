@@ -72,6 +72,88 @@ export function findLvmStructuralIssues(
   return issues
 }
 
+/** Warn when nodes do not share the same set of non-clvmd VG names. */
+export function findCrossNodeVgNameMismatch(
+  nodes: Array<{ nodeLabel: string; vgs: VolumeGroup[] }>,
+): LvmStructuralIssue[] {
+  const issues: LvmStructuralIssue[] = []
+  const connected = nodes.filter(n => n.vgs.length >= 0)
+  if (connected.length < 2) return issues
+
+  const sets = connected.map(n => ({
+    label: n.nodeLabel,
+    names: new Set(n.vgs.filter(v => !v.clustered).map(v => v.name)),
+  }))
+  const union = new Set<string>()
+  for (const s of sets) for (const name of s.names) union.add(name)
+
+  for (const name of union) {
+    const present = sets.filter(s => s.names.has(name))
+    const absent = sets.filter(s => !s.names.has(name))
+    if (present.length && absent.length) {
+      for (const a of absent) {
+        issues.push({
+          vgName: name,
+          severity: 'warning',
+          message: `VG ${name} absent sur ${a.label}`,
+        })
+      }
+    }
+  }
+  return issues
+}
+
+/** Warn when LV name sets differ for the same VG across nodes. */
+export function findCrossNodeLvNameMismatch(
+  nodes: Array<{ nodeLabel: string; lvs: LogicalVolume[] }>,
+  vgName: string,
+): LvmStructuralIssue[] {
+  const issues: LvmStructuralIssue[] = []
+  const sets = nodes.map(n => ({
+    label: n.nodeLabel,
+    names: new Set(n.lvs.filter(l => l.vgName === vgName).map(l => l.name)),
+  }))
+  const union = new Set<string>()
+  for (const s of sets) for (const n of s.names) union.add(n)
+
+  for (const lvName of union) {
+    const absent = sets.filter(s => !s.names.has(lvName))
+    if (absent.length && absent.length < sets.length) {
+      for (const a of absent) {
+        issues.push({
+          vgName,
+          severity: 'warning',
+          message: `LV ${lvName} absent sur ${a.label}`,
+        })
+      }
+    }
+  }
+  return issues
+}
+
+export function assessClusterSymmetricLvm(
+  primary: { nodeLabel: string; pvs: { path: string; vgName: string }[]; vgs: VolumeGroup[]; lvs: LogicalVolume[] },
+  peers: LvmNodeSnapshot[],
+  allNodes?: Array<{ nodeLabel: string; vgs: VolumeGroup[]; lvs: LogicalVolume[] }>,
+): LocalSymmetricLvmIssue[] {
+  const issues = assessLocalSymmetricLvm(primary, peers)
+  if (allNodes?.length) {
+    for (const si of findCrossNodeVgNameMismatch(allNodes)) {
+      issues.push({ vgName: si.vgName, message: si.message, severity: si.severity })
+    }
+    const vgNames = new Set<string>()
+    for (const n of allNodes) {
+      for (const v of n.vgs) if (!v.clustered) vgNames.add(v.name)
+    }
+    for (const vgName of vgNames) {
+      for (const si of findCrossNodeLvNameMismatch(allNodes, vgName)) {
+        issues.push({ vgName: si.vgName, message: si.message, severity: si.severity })
+      }
+    }
+  }
+  return issues
+}
+
 export function assessLocalSymmetricLvm(
   local: { pvs: { path: string; vgName: string }[]; vgs: VolumeGroup[]; lvs: LogicalVolume[] },
   peers: LvmNodeSnapshot[],

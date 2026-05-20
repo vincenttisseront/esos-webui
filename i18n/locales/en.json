@@ -1076,6 +1076,45 @@
       "symmetry_title": "Cluster LVM symmetry",
       "blocked_clvmd": "Clustered VG (clvmd) is not supported by the WebUI.",
       "local_symmetric_hint": "This SAN is in a cluster. Use cluster wizards for symmetric provisioning on all nodes.",
+      "view": {
+        "summary_title": "Cluster LVM",
+        "symmetry_ok": "Symmetric",
+        "symmetry_warning": "Asymmetric",
+        "symmetry_critical": "Blocked",
+        "inventory_degraded": "Full cluster inventory not loaded — showing partial peer data.",
+        "inventory_loading": "Loading cluster inventory…",
+        "table": {
+          "pv_title": "Cluster — Physical volumes (PV)",
+          "vg_title": "Cluster — Volume groups (VG)",
+          "lv_title": "Cluster — Logical volumes (LV)"
+        },
+        "col": { "node": "Node", "status": "Status" },
+        "status": {
+          "ok": "OK",
+          "missing": "Missing",
+          "ssh_down": "SSH down",
+          "inconsistent": "Inconsistent",
+          "in_vg": "In VG",
+          "unmapped": "Unmapped",
+          "clvmd": "clvmd",
+          "size_mismatch": "Size mismatch",
+          "scst_missing": "No SCST"
+        },
+        "progress": {
+          "source_partial": "Source ready on {ready}/{total} nodes",
+          "pv_partial": "PV present on {ready}/{total} nodes",
+          "vg_partial": "VG present on {ready}/{total} nodes",
+          "lv_partial": "LV present on {ready}/{total} nodes",
+          "scst_partial": "SCST bound on {ready}/{total} nodes"
+        },
+        "next": {
+          "pv_partial": "PV present on {ready}/{total} nodes — complete on: {missing}",
+          "vg_partial": "VG present on {ready}/{total} nodes — complete on: {missing}",
+          "source_partial": "Source device ready on {ready}/{total} nodes — check: {missing}"
+        },
+        "recommend": { "complete_node": "Complete provisioning on: {label}" },
+        "current_node_section": "This node (detail)"
+      },
       "wizard": {
         "node": "Node",
         "participation": "Participation",

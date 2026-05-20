@@ -36,11 +36,120 @@
           {{ t('lvm.lv.create_action') }}
         </UButton>
       </div>
-      <UButton size="sm" color="gray" variant="ghost" icon="i-heroicons-arrow-path" :loading="lvm.loading" @click="lvm.fetchOverview(true)">
+      <UButton size="sm" color="gray" variant="ghost" icon="i-heroicons-arrow-path" :loading="refreshing" @click="refreshAll">
         {{ t('lvm.overview.refresh') }}
       </UButton>
     </div>
 
+    <div v-if="isClustered && lvm.clusterInventoryLoading && !clusterView" class="text-sm text-gray-500">
+      {{ t('lvm.cluster.view.inventory_loading') }}
+    </div>
+
+    <template v-if="isClustered && clusterView">
+      <LvmClusterLvmSummary :view="clusterView" />
+
+      <LvmProvisioningChain :steps="clusterView.chainSteps" />
+
+      <LvmNextStepCard
+        :action="clusterView.nextAction"
+        :can-mutate="canMutate"
+        @action="onNextStepAction"
+      />
+
+      <div v-if="clusterView.issues.length" class="space-y-1">
+        <UAlert
+          v-for="(issue, i) in clusterView.issues"
+          :key="i"
+          :title="symmetryIssueTitle(issue)"
+          :description="issue.message"
+          :color="issue.severity === 'critical' ? 'red' : 'amber'"
+          variant="soft"
+          size="sm"
+        />
+      </div>
+
+      <UCard>
+        <template #header>
+          <h3 class="text-sm font-medium">{{ t('lvm.cluster.view.table.pv_title') }}</h3>
+        </template>
+        <LvmClusterComparisonTable
+          :columns="pvColumns"
+          :rows="pvRowsDisplay"
+          :empty-text="t('lvm.provisioning.empty.pv')"
+        >
+          <template #actions="{ row }">
+            <UButton
+              v-if="row.isPrimary && row.status === 'ok' && canMutate"
+              size="xs"
+              color="red"
+              variant="ghost"
+              @click="openRemovePvWizard(String(row.path))"
+            >
+              {{ t('lvm.pv.remove') }}
+            </UButton>
+          </template>
+        </LvmClusterComparisonTable>
+      </UCard>
+
+      <UCard>
+        <template #header>
+          <h3 class="text-sm font-medium">{{ t('lvm.cluster.view.table.vg_title') }}</h3>
+        </template>
+        <LvmClusterComparisonTable
+          :columns="vgColumns"
+          :rows="vgRowsDisplay"
+          :empty-text="t('lvm.provisioning.empty.vg')"
+        >
+          <template #actions="{ row }">
+            <UButton
+              v-if="row.isPrimary && row.status === 'ok' && canMutate"
+              size="xs"
+              color="red"
+              variant="ghost"
+              @click="openRemoveVgWizard(String(row.name))"
+            >
+              {{ t('lvm.vg.remove') }}
+            </UButton>
+          </template>
+        </LvmClusterComparisonTable>
+      </UCard>
+
+      <UCard>
+        <template #header>
+          <h3 class="text-sm font-medium">{{ t('lvm.cluster.view.table.lv_title') }}</h3>
+        </template>
+        <LvmClusterComparisonTable
+          :columns="lvColumns"
+          :rows="lvRowsDisplay"
+          :empty-text="t('lvm.provisioning.empty.lv')"
+        >
+          <template #actions="{ row }">
+            <template v-if="row.isPrimary && canMutate">
+              <UButton
+                v-if="row.status === 'scst_missing'"
+                size="xs"
+                variant="soft"
+                @click="openScstWizard(primaryLvByPath(String(row.path)))"
+              >
+                {{ t('lvm.lv.bind_scst') }}
+              </UButton>
+              <UButton
+                v-if="row.status === 'scst_missing' || row.status === 'ok'"
+                size="xs"
+                color="red"
+                variant="ghost"
+                class="ml-1"
+                @click="openRemoveLvWizard(primaryLvByPath(String(row.path)))"
+              >
+                {{ t('lvm.lv.remove') }}
+              </UButton>
+            </template>
+          </template>
+        </LvmClusterComparisonTable>
+      </UCard>
+    </template>
+
+    <template v-else-if="!isClustered">
     <LvmProvisioningChain :steps="provisioningChain" />
 
     <LvmNextStepCard
@@ -173,6 +282,7 @@
       </div>
       <p v-else class="text-xs text-gray-500 px-1 py-2">{{ t('lvm.provisioning.empty.lv') }}</p>
     </UCard>
+    </template>
 
     <details
       v-if="showTechnicalDetails"
@@ -241,6 +351,7 @@
 <script setup lang="ts">
 import type { LogicalVolume, LocalSymmetricLvmIssue } from '~/types/lvm'
 import { listClusterEligiblePaths, symmetryIssuesForOverview } from '~/utils/lvm-cluster-ui'
+import { buildClusterLvmViewModel } from '~/utils/lvm-cluster-view-model'
 import {
   buildProvisioningChain,
   computeLvmNextAction,
@@ -267,19 +378,21 @@ const clusterId = computed(() => props.clusterId ?? '')
 watch(() => props.sanId, (id) => {
   if (id) {
     lvm.setSanId(id)
-    lvm.fetchOverview()
     if (props.isClustered && props.clusterId) {
       lvm.setClusterContext(props.clusterId, id)
-      lvm.fetchClusterInventory(props.clusterId)
     }
+    lvm.fetchOverview()
   }
 }, { immediate: true })
 
-async function refreshAfterWizard() {
+const refreshing = computed(() => lvm.loading || lvm.clusterInventoryLoading)
+
+async function refreshAll() {
   await lvm.fetchOverview(true)
-  if (props.isClustered && props.clusterId) {
-    await lvm.fetchClusterInventory(props.clusterId)
-  }
+}
+
+async function refreshAfterWizard() {
+  await refreshAll()
 }
 
 function navigateBlockDevicesFromWizard() {
@@ -313,8 +426,88 @@ const provisioningContext = computed(() => ({
   symmetryIssues: symmetryIssues.value,
 }))
 
+const clusterView = computed(() => {
+  if (!props.isClustered) return null
+  return buildClusterLvmViewModel({
+    primarySanId: props.sanId,
+    nodes: lvm.clusterInventory ?? [],
+    diskMappings: lvm.lastDiskMappings,
+    readOnly: props.readOnly,
+    overview: lvm.overview,
+    clusterPeers: lvm.clusterPeers,
+  })
+})
+
+const pvRowsDisplay = computed(() =>
+  (clusterView.value?.comparison.pvRows ?? []).map(r => ({
+    ...r,
+    sizeBytes: formatBytes(r.sizeBytes),
+  })),
+)
+
+const vgRowsDisplay = computed(() =>
+  (clusterView.value?.comparison.vgRows ?? []).map(r => ({
+    ...r,
+    sizeFree: `${formatBytes(r.sizeBytes)} / ${formatBytes(r.freeBytes)}`,
+  })),
+)
+
+const lvRowsDisplay = computed(() =>
+  (clusterView.value?.comparison.lvRows ?? []).map(r => ({
+    ...r,
+    sizeBytes: formatBytes(r.sizeBytes),
+  })),
+)
+
+const activeNextAction = computed(() =>
+  clusterView.value?.nextAction ?? nextAction.value,
+)
+
 const provisioningChain = computed(() => buildProvisioningChain(provisioningContext.value))
 const nextAction = computed(() => computeLvmNextAction(provisioningContext.value))
+
+const pvColumns = computed(() => [
+  { key: 'nodeLabel', label: t('lvm.cluster.view.col.node') },
+  { key: 'path', label: 'PV', mono: true },
+  { key: 'vgName', label: 'VG' },
+  { key: 'sizeBytes', label: t('lvm.col.size') },
+  { key: 'status', label: t('lvm.cluster.view.col.status') },
+  { key: 'actions', label: '' },
+])
+
+const vgColumns = computed(() => [
+  { key: 'nodeLabel', label: t('lvm.cluster.view.col.node') },
+  { key: 'name', label: 'VG', mono: true },
+  { key: 'sizeFree', label: t('lvm.col.size_free') },
+  { key: 'pvCount', label: 'PVs' },
+  { key: 'lvCount', label: 'LVs' },
+  { key: 'status', label: t('lvm.cluster.view.col.status') },
+  { key: 'actions', label: '' },
+])
+
+const lvColumns = computed(() => [
+  { key: 'nodeLabel', label: t('lvm.cluster.view.col.node') },
+  { key: 'path', label: 'LV', mono: true },
+  { key: 'vgName', label: 'VG' },
+  { key: 'sizeBytes', label: t('lvm.col.size') },
+  { key: 'scst', label: 'SCST' },
+  { key: 'status', label: t('lvm.cluster.view.col.status') },
+  { key: 'actions', label: '' },
+])
+
+function primaryLvByPath(path: string): LogicalVolume {
+  const lv = lvm.lvs.find(l => l.path === path)
+  if (lv) return lv
+  return {
+    name: path.split('/').pop() ?? 'lv',
+    path,
+    vgName: path.split('/')[2] ?? '',
+    sizeBytes: 0,
+    uuid: '',
+    active: true,
+    usedBy: [],
+  }
+}
 
 const showTechnicalDetails = computed(() =>
   displayCandidates.value.length > 0
@@ -333,7 +526,7 @@ function onNextStepAction(kind: NonNullable<LvmNextAction['action']>) {
       openLvWizard()
       break
     case 'scst': {
-      const lv = nextAction.value.targetLv
+      const lv = activeNextAction.value.targetLv
       if (lv) openScstWizard(lv)
       break
     }
