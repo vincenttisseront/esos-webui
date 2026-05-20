@@ -1,13 +1,13 @@
 /**
  * POST /api/raid/software/arrays/{name}/devices/plan — Plan d'ajout membre MD multi-nœud.
  */
-import { requireSanIdQuery } from '../../../../../../../utils/san-query'
-import { getSanSummary } from '../../../../../../../db/repositories/san.repository'
+import { requireSanIdQuery } from '../../../../../../utils/san-query'
+import { getSanSummary } from '../../../../../../db/repositories/san.repository'
 import {
   assertClusteredSanAllowsMutation,
   buildAddMdMemberExecutionPlanForCluster,
-} from '../../../../../../../utils/raid-cluster-md-execution'
-import type { AddMdMemberRequest } from '../../../../../../../utils/raid-types'
+} from '../../../../../../utils/raid-cluster-md-execution'
+import type { AddMdMemberRequest } from '../../../../../../utils/raid-types'
 
 export default defineEventHandler(async (event) => {
   const sanId = requireSanIdQuery(event)
