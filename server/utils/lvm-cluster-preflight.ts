@@ -8,7 +8,9 @@ import { collectRaidOverview } from './raid-overview.service'
 import { runLvmPreflight } from './lvm-preflight'
 import { mapDeviceToPeer } from './raid-cluster-storage-preflight'
 import type { ClusterStorageNodeInventory, MdArray } from './raid-types'
+import { withSanContext } from './ssh-runtime'
 import type {
+  BindScstPayload,
   ClusterLvmDiskMapping,
   ClusterLvmNodeInventory,
   ClusterLvmPreflightResult,
@@ -398,6 +400,22 @@ export async function runClusterLvmPreflight(
         payload: { vgName: payload.vgName, name: payload.name, confirmation: '' },
       }, node.overview)
       blockers.push(...pre.blockers.map(b => `${node.label}: ${b}`))
+    }
+  }
+
+  if (req.action === 'bind_scst' && primary) {
+    const payload = req.payload as BindScstPayload
+    for (const node of nodes) {
+      if (!node.sshReady) continue
+      const manager = getSSHPool().get(node.sanId)!
+      const pre = await withSanContext(node.sanId, () =>
+        runLvmPreflight(manager, {
+          action: 'bind_scst',
+          payload: { ...payload, confirmation: '' },
+        }, node.overview),
+      )
+      blockers.push(...pre.blockers)
+      warnings.push(...pre.warnings)
     }
   }
 

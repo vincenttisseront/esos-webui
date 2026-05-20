@@ -21,7 +21,9 @@ import {
   buildPvCreatePreview,
   buildVgCreatePreview,
 } from './lvm-actions'
-import { readScstConfig } from './scst-config-reader'
+import { getSanSummary } from '../db/repositories/san.repository'
+import { getCurrentSanId } from './ssh-runtime'
+import { readScstDeviceIndex } from './scst-device-index'
 
 const RISK: Record<LvmPreflightRequest['action'], LvmRiskLevel> = {
   pvcreate: 'destructive',
@@ -116,14 +118,22 @@ export async function runLvmPreflight(
       break
     }
     case 'bind_scst': {
-      let deviceNames = new Set<string>()
+      const sanId = getCurrentSanId()
+      const nodeLabel = (sanId && getSanSummary(sanId)?.label) || sanId || 'nœud'
+      let index = { names: new Set<string>(), pathToDevices: new Map<string, string[]>() }
       try {
-        const cfg = await readScstConfig()
-        for (const h of cfg.handlers) {
-          for (const d of h.devices) deviceNames.add(d.name)
-        }
+        index = await readScstDeviceIndex(manager)
       } catch { /* empty */ }
-      const v = validateBindScst(p as any, overview, deviceNames)
+      const lvGuess = overview.lvs.find(
+        l => l.vgName === String(p.vgName ?? '').trim() && l.name === String(p.lvName ?? '').trim(),
+      )?.path
+      let lvPathPresent: boolean | undefined
+      if (lvGuess) {
+        const quoted = lvGuess.replace(/'/g, `'\\''`)
+        const test = await manager.exec(`test -b '${quoted}' && echo ok || echo missing`, 10_000)
+        lvPathPresent = test.stdout.trim().includes('ok')
+      }
+      const v = validateBindScst(p as any, overview, index, { nodeLabel, lvPathPresent })
       blockers.push(...v.blockers)
       warnings.push(...v.warnings)
       const deviceName = String(p.deviceName ?? '')

@@ -63,6 +63,13 @@
         :title="preflightBlockerText"
       />
 
+      <UAlert
+        v-if="executeError"
+        color="red"
+        variant="soft"
+        :title="executeError"
+      />
+
       <div
         v-if="canShowConfirmation"
         class="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2"
@@ -104,7 +111,12 @@
 <script setup lang="ts">
 import type { LogicalVolume } from '~/types/lvm'
 import {
+  formatBindScstPreflightBlockers,
+  resolveBindScstExecuteError,
+} from '~/utils/lvm-bind-scst-ui'
+import {
   buildScstRegisterPreview,
+  expectedBindScstConfirmation,
   suggestedScstDeviceName,
   validateScstDeviceName,
 } from '~/utils/lvm-scst-device-ui'
@@ -125,6 +137,7 @@ const deviceName = ref('')
 const confirmation = ref('')
 const preflight = ref<Awaited<ReturnType<typeof lvm.preflight>> | null>(null)
 const busy = ref(false)
+const executeError = ref<string | null>(null)
 
 const isClustered = computed(() => !!props.isClustered && !!props.clusterId)
 
@@ -151,9 +164,7 @@ const preflightBlockerText = computed(() => {
   if (nameFieldError.value) return null
   const blockers = preflight.value?.blockers ?? []
   if (!blockers.length) return null
-  const duplicate = blockers.find(b => /existe déjà|already exists/i.test(b))
-  if (duplicate) return t('lvm.wizard.scst_device.error_name_exists', { name: deviceName.value.trim() })
-  return blockers.join(' · ')
+  return formatBindScstPreflightBlockers(blockers, t)
 })
 
 const clusterCommandRows = computed(() => {
@@ -194,27 +205,59 @@ onMounted(async () => {
   if (suggestedName.value) deviceName.value = suggestedName.value
 })
 
-watch([deviceName, lv], async () => {
+watch([deviceName, lv, isClustered], async () => {
   preflight.value = null
+  executeError.value = null
   if (!lv.value || nameValidationKey.value) return
+  const payload = {
+    vgName: lv.value.vgName,
+    lvName: lv.value.name,
+    deviceName: deviceName.value.trim(),
+    confirmation: '',
+  }
   try {
-    preflight.value = await lvm.preflight({
-      action: 'bind_scst',
-      payload: {
-        vgName: lv.value.vgName,
-        lvName: lv.value.name,
-        deviceName: deviceName.value.trim(),
-        confirmation: '',
-      },
-    })
-  } catch {
+    if (isClustered.value && props.clusterId) {
+      const cluster = await lvm.clusterPreflight({
+        action: 'bind_scst',
+        payload,
+        clusterId: props.clusterId,
+        primarySanId: props.sanId,
+      })
+      preflight.value = {
+        ok: cluster.ok,
+        blockers: cluster.blockers,
+        warnings: cluster.warnings,
+        riskLevel: 'risky',
+        requiredConfirmation: expectedBindScstConfirmation(deviceName.value),
+        impactedDevices: [],
+      }
+    } else {
+      preflight.value = await lvm.preflight({
+        action: 'bind_scst',
+        payload,
+      })
+    }
+  } catch (e: unknown) {
     preflight.value = null
+    const err = e as { data?: { preflight?: { blockers?: string[] } }; statusMessage?: string }
+    const blockers = err?.data?.preflight?.blockers
+    if (blockers?.length) {
+      preflight.value = {
+        ok: false,
+        blockers,
+        warnings: [],
+        riskLevel: 'risky',
+        requiredConfirmation: expectedBindScstConfirmation(deviceName.value),
+        impactedDevices: [],
+      }
+    }
   }
 }, { immediate: true })
 
 async function execute() {
   if (!canExecute.value || !lv.value) return
   busy.value = true
+  executeError.value = null
   try {
     await lvm.bindScst({
       vgName: lv.value.vgName,
@@ -224,8 +267,10 @@ async function execute() {
     })
     toast.success(t('lvm.wizard.scst_device.success'))
     emit('close')
-  } catch (e: any) {
-    toast.error(t('lvm.wizard.execute_failed'), e?.statusMessage ?? 'Erreur')
+  } catch (e: unknown) {
+    const message = resolveBindScstExecuteError(e as object, t)
+    executeError.value = message
+    toast.error(t('lvm.wizard.execute_failed'), message)
   } finally {
     busy.value = false
   }

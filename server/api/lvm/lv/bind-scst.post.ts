@@ -19,6 +19,13 @@ export default defineEventHandler(async (event) => {
       await createDevice('vdisk_blockio', body.deviceName, lvPath)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur SCST'
+      if (/existe déjà/i.test(msg)) {
+        throw createError({
+          statusCode: 409,
+          statusMessage: msg,
+          data: { code: 'lvm.scst_device_conflict' },
+        })
+      }
       throw createError({ statusCode: 422, statusMessage: msg })
     }
     invalidateStorageCaches(sanId)

@@ -1278,6 +1278,14 @@
         "error_name_invalid": "Nom invalide : utilisez uniquement lettres, chiffres, tirets et underscores.",
         "error_name_too_long": "Le nom ne peut pas dépasser 32 caractères.",
         "error_name_exists": "Le device SCST « {name} » existe déjà.",
+        "error_device_exists_on_node": "Le device SCST {name} existe déjà sur {node}.",
+        "error_lv_not_found": "Volume logique introuvable ({path}).",
+        "error_lv_path_missing": "Le chemin {path} est absent sur {node}.",
+        "error_lv_path_in_use": "Le chemin {path} est déjà utilisé par le device SCST {device} sur {node}.",
+        "error_conflict": "Conflit : ce device SCST existe déjà.",
+        "error_conflict_hint": "Supprimez le device existant ou choisissez un autre nom.",
+        "error_cluster_blocked": "Ce SAN est en cluster : la création SCST locale n'est pas disponible via ce flux.",
+        "error_generic": "Impossible de créer le device SCST.",
         "success": "Device SCST créé"
       }
     }

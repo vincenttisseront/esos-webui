@@ -75,8 +75,30 @@ describe('lvm-validation', () => {
     const r = validateBindScst(
       { vgName: 'vg0', lvName: 'lv1', deviceName: 'dup' },
       overview,
-      new Set(['dup']),
+      { names: new Set(['dup']), pathToDevices: new Map() },
+      { nodeLabel: 'esos1' },
     )
-    expect(r.blockers.some(b => b.includes('existe'))).toBe(true)
+    expect(r.blockers.some(b => b.includes('device_exists'))).toBe(true)
+  })
+
+  it('blocks bind_scst when LV path already bound to another device', () => {
+    const overview = emptyOverview()
+    overview.lvs = [{
+      name: 'photos',
+      path: '/dev/data/photos',
+      vgName: 'data',
+      sizeBytes: 1e9,
+      uuid: 'l',
+      active: true,
+      usedBy: [],
+    }]
+    const pathToDevices = new Map([['/dev/data/photos', ['existing']]])
+    const r = validateBindScst(
+      { vgName: 'data', lvName: 'photos', deviceName: 'lv_data_photos' },
+      overview,
+      { names: new Set(), pathToDevices },
+      { nodeLabel: 'esos1', lvPathPresent: true },
+    )
+    expect(r.blockers.some(b => b.includes('lv_path_in_use'))).toBe(true)
   })
 })

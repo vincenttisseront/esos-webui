@@ -1,3 +1,5 @@
+import { bindScstBlocker } from '~/utils/lvm-bind-scst-blockers'
+import type { ScstDeviceIndex } from './scst-device-index'
 import type {
   BindScstPayload,
   LvCreatePayload,
@@ -148,19 +150,39 @@ export function validateLvRemove(payload: Partial<LvRemovePayload>, overview: Lv
 export function validateBindScst(
   payload: Partial<BindScstPayload>,
   overview: LvmOverviewResponse,
-  existingDeviceNames: Set<string>,
+  index: ScstDeviceIndex,
+  ctx: { nodeLabel: string; lvPathPresent?: boolean },
 ): { blockers: string[]; warnings: string[]; lvPath?: string } {
   const blockers: string[] = []
   const warnings: string[] = []
   const vgName = String(payload.vgName ?? '').trim()
   const lvName = String(payload.lvName ?? '').trim()
   const deviceName = String(payload.deviceName ?? '').trim()
+  const nodeLabel = ctx.nodeLabel
   const lv = overview.lvs.find(l => l.vgName === vgName && l.name === lvName)
-  if (!lv) blockers.push('LV introuvable')
+  const lvPath = lv?.path ?? (vgName && lvName ? `/dev/${vgName}/${lvName}` : undefined)
+
+  if (!lv) {
+    blockers.push(bindScstBlocker('lv_not_found', lvPath ?? `${vgName}/${lvName}`))
+  }
+  if (lvPath && ctx.lvPathPresent === false) {
+    blockers.push(bindScstBlocker('lv_path_missing', lvPath, nodeLabel))
+  }
   if (!deviceName) blockers.push('Nom de device SCST requis')
   else if (deviceName.length > 32) blockers.push('Nom de device SCST : maximum 32 caractères')
   else if (!/^[A-Za-z0-9_\-]+$/.test(deviceName)) blockers.push('Nom de device SCST invalide')
-  if (existingDeviceNames.has(deviceName)) blockers.push(`Device SCST "${deviceName}" existe déjà`)
-  if (lv?.scstDeviceNames?.length) blockers.push('LV déjà lié à un device SCST')
+  if (deviceName && index.names.has(deviceName)) {
+    blockers.push(bindScstBlocker('device_exists', deviceName, nodeLabel))
+  }
+  if (lvPath) {
+    const bound = index.pathToDevices.get(lvPath) ?? []
+    const other = bound.find(n => n !== deviceName)
+    if (other) {
+      blockers.push(bindScstBlocker('lv_path_in_use', lvPath, other, nodeLabel))
+    }
+  }
+  if (lv?.scstDeviceNames?.length) {
+    blockers.push(bindScstBlocker('lv_path_in_use', lv.path, lv.scstDeviceNames[0]!, nodeLabel))
+  }
   return { blockers, warnings, lvPath: lv?.path }
 }

@@ -34,7 +34,7 @@ export async function requirePreflightOk(
   if (san?.readOnly) {
     throw createError({ statusCode: 403, statusMessage: 'SAN en lecture seule' })
   }
-  if (san?.clusterId) {
+  if (san?.clusterId && req.action !== 'bind_scst') {
     assertClusteredSanAllowsLvmMutation(sanId, clusterExecution)
   }
   await withLvmOverview(sanId, false, async (overview) => {

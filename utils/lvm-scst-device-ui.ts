@@ -18,6 +18,10 @@ export function buildScstRegisterPreview(deviceName: string, lvPath: string): st
   return `scst_register vdisk_blockio ${dev} ${path}`
 }
 
+export function expectedBindScstConfirmation(deviceName: string): string {
+  return `SCST DEVICE ${deviceName.trim()}`
+}
+
 export function suggestedScstDeviceName(vgName: string, lvName: string): string {
   const raw = `lv_${vgName}_${lvName}`.replace(/[^A-Za-z0-9_-]/g, '_')
   return raw.slice(0, SCST_DEVICE_NAME_MAX_LEN)
