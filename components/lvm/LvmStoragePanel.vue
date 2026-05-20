@@ -212,13 +212,6 @@
       </div>
     </UCard>
 
-    <LvmCreatePvWizard v-if="!isClustered" v-model="showPvWizard" :san-id="sanId" @done="onDone" />
-    <LvmClusterPvWizard v-else-if="clusterId" v-model="showPvWizard" :san-id="sanId" :cluster-id="clusterId" @done="onDone" />
-    <LvmCreateVgWizard v-if="!isClustered" v-model="showVgWizard" :san-id="sanId" @done="onDone" />
-    <LvmClusterVgWizard v-else-if="clusterId" v-model="showVgWizard" :san-id="sanId" :cluster-id="clusterId" @done="onDone" />
-    <LvmCreateLvWizard v-if="!isClustered" v-model="showLvWizard" :san-id="sanId" @done="onDone" />
-    <LvmClusterLvWizard v-else-if="clusterId" v-model="showLvWizard" :san-id="sanId" :cluster-id="clusterId" @done="onDone" />
-    <LvmBindScstWizard v-model="showScstWizard" :lv="scstLv" @done="onDone" />
   </div>
 </template>
 
@@ -236,12 +229,7 @@ const props = defineProps<{
 const { t } = useEsosI18n()
 const lvm = useLvmStore()
 const toast = useAppToast()
-
-const showPvWizard = ref(false)
-const showVgWizard = ref(false)
-const showLvWizard = ref(false)
-const showScstWizard = ref(false)
-const scstLv = ref<LogicalVolume | null>(null)
+const { open: openModal } = useAppModal()
 
 const canMutate = computed(() => !props.readOnly)
 const canCreate = computed(() => canMutate.value)
@@ -258,9 +246,63 @@ watch(() => props.sanId, (id) => {
   }
 }, { immediate: true })
 
-function openPvWizard() { showPvWizard.value = true }
-function openVgWizard() { showVgWizard.value = true }
-function openLvWizard() { showLvWizard.value = true }
+async function refreshAfterWizard() {
+  await lvm.fetchOverview(true)
+  if (props.isClustered && props.clusterId) {
+    await lvm.fetchClusterInventory(props.clusterId)
+  }
+}
+
+async function openPvWizard() {
+  const Wizard = props.isClustered && clusterId.value
+    ? (await import('~/components/lvm/LvmClusterPvWizard.vue')).default
+    : (await import('~/components/lvm/LvmCreatePvWizard.vue')).default
+  try {
+    await openModal({
+      component: Wizard,
+      props: {
+        sanId: props.sanId,
+        ...(props.isClustered && clusterId.value ? { clusterId: clusterId.value } : {}),
+        persistent: true,
+      },
+    })
+    await refreshAfterWizard()
+  } catch { /* dismissed */ }
+}
+
+async function openVgWizard() {
+  const Wizard = props.isClustered && clusterId.value
+    ? (await import('~/components/lvm/LvmClusterVgWizard.vue')).default
+    : (await import('~/components/lvm/LvmCreateVgWizard.vue')).default
+  try {
+    await openModal({
+      component: Wizard,
+      props: {
+        sanId: props.sanId,
+        ...(props.isClustered && clusterId.value ? { clusterId: clusterId.value } : {}),
+        persistent: true,
+      },
+    })
+    await refreshAfterWizard()
+  } catch { /* dismissed */ }
+}
+
+async function openLvWizard() {
+  const Wizard = props.isClustered && clusterId.value
+    ? (await import('~/components/lvm/LvmClusterLvWizard.vue')).default
+    : (await import('~/components/lvm/LvmCreateLvWizard.vue')).default
+  try {
+    await openModal({
+      component: Wizard,
+      props: {
+        sanId: props.sanId,
+        ...(props.isClustered && clusterId.value ? { clusterId: clusterId.value } : {}),
+        persistent: true,
+      },
+    })
+    await refreshAfterWizard()
+  } catch { /* dismissed */ }
+}
 
 const eligibleCandidates = computed(() => lvm.candidates.filter(c => c.eligible))
 
@@ -294,13 +336,15 @@ function formatBytes(n: number) {
   return `${v.toFixed(1)} ${u[i]}`
 }
 
-function onDone() {
-  lvm.fetchOverview(true)
-}
-
-function openScstWizard(lv: LogicalVolume) {
-  scstLv.value = lv
-  showScstWizard.value = true
+async function openScstWizard(lv: LogicalVolume) {
+  const { default: Wizard } = await import('~/components/lvm/LvmBindScstWizard.vue')
+  try {
+    await openModal({
+      component: Wizard,
+      props: { sanId: props.sanId, lv, persistent: true },
+    })
+    await refreshAfterWizard()
+  } catch { /* dismissed */ }
 }
 
 async function confirmRemovePv(path: string) {
