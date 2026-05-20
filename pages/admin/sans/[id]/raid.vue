@@ -108,7 +108,7 @@
       </UCard>
 
       <!-- Résumé cartes -->
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <UCard>
           <div class="text-center py-2">
             <div class="text-3xl font-bold text-gray-900 dark:text-gray-100">{{ raid.controllers.length }}</div>
@@ -125,6 +125,50 @@
           <div class="text-center py-2">
             <div class="text-3xl font-bold text-gray-900 dark:text-gray-100">{{ raid.blockDevices.length }}</div>
             <div class="text-sm text-gray-500 mt-1">Block devices</div>
+          </div>
+        </UCard>
+        <UCard>
+          <div class="py-2 px-1 space-y-2">
+            <div class="flex items-center justify-between gap-2">
+              <div class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('lvm.overview.raid_summary.title') }}</div>
+              <UBadge
+                :color="lvmSummaryBadgeColor"
+                variant="soft"
+                size="xs"
+                :label="t(lvmRaidSummary.statusKey)"
+              />
+            </div>
+            <p class="text-xs text-gray-500">{{ t('lvm.overview.raid_summary.chain_hint') }}</p>
+            <div class="grid grid-cols-3 gap-2 text-center text-xs">
+              <div>
+                <div class="text-lg font-bold">{{ lvmRaidSummary.pvCount }}</div>
+                <div class="text-gray-500">PV</div>
+              </div>
+              <div>
+                <div class="text-lg font-bold">{{ lvmRaidSummary.vgCount }}</div>
+                <div class="text-gray-500">VG</div>
+              </div>
+              <div>
+                <div class="text-lg font-bold">{{ lvmRaidSummary.lvCount }}</div>
+                <div class="text-gray-500">LV</div>
+              </div>
+            </div>
+            <UAlert
+              v-if="lvmRaidSummary.status === 'unavailable'"
+              color="amber"
+              variant="soft"
+              size="sm"
+              :title="t('lvm.overview.raid_summary.load_warning')"
+            />
+            <p
+              v-else-if="lvmRaidSummary.issueMessages.length"
+              class="text-xs text-amber-700 dark:text-amber-300"
+            >
+              {{ lvmRaidSummary.issueMessages.slice(0, 2).join(' · ') }}
+            </p>
+            <UButton size="xs" color="primary" variant="soft" block @click="activeTab = 'lvm'">
+              {{ t('lvm.overview.raid_summary.open_tab') }}
+            </UButton>
           </div>
         </UCard>
       </div>
@@ -408,6 +452,7 @@ import {
 import type { MdDetectionItem, RaidActionableItem } from '~/types/raid'
 import type { ClusterMdPreflightAction, PreflightBlockerRef, RaidRiskLevel } from '~/types/raid'
 import { raidDetectionNavigateKey } from '~/composables/useRaidDetectionNavigate'
+import { buildLvmRaidSummary } from '~/utils/lvm-overview-summary'
 
 definePageMeta({ layout: 'default', ssr: false })
 
@@ -1302,9 +1347,26 @@ const canCreateHwRaid = computed(() =>
   raid.controllers.some(c => c.supportsCreate),
 )
 
+const lvmRaidSummary = computed(() =>
+  buildLvmRaidSummary(
+    lvm.overview,
+    lvm.error,
+    lvm.clusterPeers,
+    isClusteredSan.value,
+  ),
+)
+
+const lvmSummaryBadgeColor = computed(() => {
+  const s = lvmRaidSummary.value.status
+  if (s === 'ok') return 'green'
+  if (s === 'empty' || s === 'unavailable') return 'gray'
+  return 'amber'
+})
+
 async function manualRefreshRaid() {
   await Promise.all([
     raid.fetchOverview(true),
+    lvm.fetchOverview(true),
     fetchClusterStorageAttention(),
   ])
   await raid.fetchOperations()
@@ -1314,7 +1376,9 @@ function bindRaidPage(sanIdValue: string) {
   raid.teardownRaidPage()
   raid.sanId = sanIdValue
   raid.hydratePendingAdvancedCleanup()
+  lvm.setSanId(sanIdValue)
   void raid.initRaidPage()
+  void lvm.fetchOverview()
 }
 
 watch(

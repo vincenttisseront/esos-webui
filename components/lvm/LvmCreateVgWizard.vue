@@ -83,10 +83,10 @@ async function execute() {
       pvPaths: [...selectedPvs.value],
       confirmation: confirmation.value.trim(),
     })
-    toast.add({ title: t('lvm.wizard.vg_create.success'), color: 'green' })
+    toast.success(t('lvm.wizard.vg_create.success'))
     emit('close')
   } catch (e: any) {
-    toast.add({ title: e?.statusMessage ?? 'Erreur', color: 'red' })
+    toast.error(t('lvm.wizard.execute_failed'), e?.statusMessage ?? 'Erreur')
   } finally {
     busy.value = false
   }

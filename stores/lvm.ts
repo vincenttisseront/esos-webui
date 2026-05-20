@@ -201,5 +201,62 @@ export const useLvmStore = defineStore('lvm', {
     async planPvCreate(payload: PvCreatePayload & { clusterExecution: { primarySanId: string; clusterId?: string; diskMappings?: unknown[] } }): Promise<ClusterLvmExecutionPlan> {
       return this.planClusterPvCreate(payload)
     },
+
+    async planClusterPvRemove(
+      payload: PvRemovePayload & { clusterExecution: ClusterLvmExecutionRequest },
+    ): Promise<ClusterLvmExecutionPlan> {
+      return $fetch('/api/lvm/pv/remove/plan', { method: 'POST', query: this.query(), body: payload })
+    },
+
+    async executeClusterPvRemove(
+      payload: PvRemovePayload & { clusterExecution: ClusterLvmExecutionRequest },
+    ): Promise<ClusterLvmExecutionResult> {
+      const result = await $fetch<ClusterLvmExecutionResult>('/api/lvm/pv/remove/cluster', {
+        method: 'POST',
+        query: this.query(),
+        body: payload,
+      })
+      await this.fetchOverview(true)
+      if (this.clusterId) await this.fetchClusterInventory(this.clusterId)
+      return result
+    },
+
+    async planClusterVgRemove(
+      payload: VgRemovePayload & { clusterExecution: ClusterLvmExecutionRequest },
+    ): Promise<ClusterLvmExecutionPlan> {
+      return $fetch('/api/lvm/vg/remove/plan', { method: 'POST', query: this.query(), body: payload })
+    },
+
+    async executeClusterVgRemove(
+      payload: VgRemovePayload & { clusterExecution: ClusterLvmExecutionRequest },
+    ): Promise<ClusterLvmExecutionResult> {
+      const result = await $fetch<ClusterLvmExecutionResult>('/api/lvm/vg/remove/cluster', {
+        method: 'POST',
+        query: this.query(),
+        body: payload,
+      })
+      await this.fetchOverview(true)
+      if (this.clusterId) await this.fetchClusterInventory(this.clusterId)
+      return result
+    },
+
+    async planClusterLvRemove(
+      payload: LvRemovePayload & { clusterExecution: ClusterLvmExecutionRequest },
+    ): Promise<ClusterLvmExecutionPlan> {
+      return $fetch('/api/lvm/lv/remove/plan', { method: 'POST', query: this.query(), body: payload })
+    },
+
+    async executeClusterLvRemove(
+      payload: LvRemovePayload & { clusterExecution: ClusterLvmExecutionRequest },
+    ): Promise<ClusterLvmExecutionResult> {
+      const result = await $fetch<ClusterLvmExecutionResult>('/api/lvm/lv/remove/cluster', {
+        method: 'POST',
+        query: this.query(),
+        body: payload,
+      })
+      await this.fetchOverview(true)
+      if (this.clusterId) await this.fetchClusterInventory(this.clusterId)
+      return result
+    },
   },
 })

@@ -76,6 +76,18 @@ export function buildLvCreatePreview(vgName: string, lvName: string, sizeBytes: 
   return `lvcreate -y -v -L ${sizeBytes} -n ${lvName} ${vgName}`
 }
 
+export function buildPvRemovePreview(path: string): string {
+  return `pvremove -y -f ${path}`
+}
+
+export function buildVgRemovePreview(name: string): string {
+  return `vgremove -y -f ${name}`
+}
+
+export function buildLvRemovePreview(vgName: string, lvName: string): string {
+  return `lvremove -y -f ${vgName}/${lvName}`
+}
+
 export function assertConfirmation(expected: string, actual: string): void {
   if (actual.trim() !== expected) {
     throw createError({

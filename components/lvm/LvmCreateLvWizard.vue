@@ -91,10 +91,10 @@ async function execute() {
       sizeBytes: Math.floor(sizeGib.value * 1024 ** 3),
       confirmation: confirmation.value.trim(),
     })
-    toast.add({ title: t('lvm.wizard.lv_create.success'), color: 'green' })
+    toast.success(t('lvm.wizard.lv_create.success'))
     emit('close')
   } catch (e: any) {
-    toast.add({ title: e?.statusMessage ?? 'Erreur', color: 'red' })
+    toast.error(t('lvm.wizard.execute_failed'), e?.statusMessage ?? 'Erreur')
   } finally {
     busy.value = false
   }

@@ -14,8 +14,11 @@ import type {
   ClusterLvmPreflightResult,
   LvmPreflightRequest,
   PvCreatePayload,
+  PvRemovePayload,
   VgCreatePayload,
+  VgRemovePayload,
   LvCreatePayload,
+  LvRemovePayload,
 } from './lvm-types'
 import { assessLocalSymmetricLvm } from '../../utils/lvm-cluster-symmetry'
 import { validateClusterPvCreatePaths } from './lvm-cluster-pv-validation'
@@ -344,6 +347,55 @@ export async function runClusterLvmPreflight(
       const pre = await runLvmPreflight(manager, {
         action: 'vgcreate',
         payload: { name: payload.name, pvPaths, confirmation: '' },
+      }, node.overview)
+      blockers.push(...pre.blockers.map(b => `${node.label}: ${b}`))
+    }
+  }
+
+  if (req.action === 'pvremove' && primary) {
+    const payload = req.payload as PvRemovePayload
+    if (!mappings.length) {
+      mappings = buildClusterLvmDiskMappings(primarySanId, payload.path, nodes)
+    }
+    for (const node of nodes) {
+      const path = node.sanId === primarySanId
+        ? payload.path
+        : mappings.find(m => m.peerSanId === node.sanId && m.sourcePath === payload.path)?.peerPath ?? payload.path
+      if (!path) {
+        blockers.push(`${node.label} : chemin PV non mappé`)
+        continue
+      }
+      if (!node.sshReady) continue
+      const manager = getSSHPool().get(node.sanId)!
+      const pre = await runLvmPreflight(manager, {
+        action: 'pvremove',
+        payload: { path, confirmation: '' },
+      }, node.overview)
+      blockers.push(...pre.blockers.map(b => `${node.label}: ${b}`))
+    }
+  }
+
+  if (req.action === 'vgremove' && primary) {
+    const payload = req.payload as VgRemovePayload
+    for (const node of nodes) {
+      if (!node.sshReady) continue
+      const manager = getSSHPool().get(node.sanId)!
+      const pre = await runLvmPreflight(manager, {
+        action: 'vgremove',
+        payload: { name: payload.name, confirmation: '' },
+      }, node.overview)
+      blockers.push(...pre.blockers.map(b => `${node.label}: ${b}`))
+    }
+  }
+
+  if (req.action === 'lvremove' && primary) {
+    const payload = req.payload as LvRemovePayload
+    for (const node of nodes) {
+      if (!node.sshReady) continue
+      const manager = getSSHPool().get(node.sanId)!
+      const pre = await runLvmPreflight(manager, {
+        action: 'lvremove',
+        payload: { vgName: payload.vgName, name: payload.name, confirmation: '' },
       }, node.overview)
       blockers.push(...pre.blockers.map(b => `${node.label}: ${b}`))
     }

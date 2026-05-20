@@ -7,11 +7,17 @@ import { getSSHPool } from './ssh-pool'
 import { collectLvmOverviewLite } from './lvm-overview.service'
 import {
   buildLvCreatePreview,
+  buildLvRemovePreview,
   buildPvCreatePreview,
+  buildPvRemovePreview,
   buildVgCreatePreview,
+  buildVgRemovePreview,
   runLvCreate,
+  runLvRemove,
   runPvCreate,
+  runPvRemove,
   runVgCreate,
+  runVgRemove,
 } from './lvm-actions'
 import { invalidateCacheKey } from './cache'
 
@@ -32,8 +38,11 @@ import type {
   ClusterLvmExecutionResult,
   ClusterLvmNodeResult,
   LvCreatePayload,
+  LvRemovePayload,
   PvCreatePayload,
+  PvRemovePayload,
   VgCreatePayload,
+  VgRemovePayload,
 } from './lvm-types'
 
 export const CLUSTER_LVM_BLOCKED_MESSAGE =
@@ -211,10 +220,141 @@ export async function buildClusterLvCreatePlan(
   }
 }
 
+function resolvePvPathOnNode(
+  nodeSanId: string,
+  primarySanId: string,
+  sourcePath: string,
+  mappings: ClusterLvmDiskMapping[],
+): string {
+  return nodeSanId === primarySanId
+    ? sourcePath
+    : mappings.find(m => m.sourcePath === sourcePath && m.peerSanId === nodeSanId)?.peerPath ?? sourcePath
+}
+
+export async function buildClusterPvRemovePlan(
+  primarySanId: string,
+  clusterId: string,
+  payload: PvRemovePayload,
+  mappings: ClusterLvmDiskMapping[] = [],
+): Promise<ClusterLvmExecutionPlan> {
+  const pre = await runClusterLvmPreflight(clusterId, primarySanId, {
+    action: 'pvremove',
+    payload,
+    clusterExecution: { primarySanId, clusterId, diskMappings: mappings },
+  })
+  const diskMappings = pre.mappings.length ? pre.mappings : mappings
+  const nodes = resolveClusterNodes(clusterId)
+  const nodeResults: ClusterLvmNodeResult[] = []
+
+  for (const node of nodes) {
+    const inv = pre.nodes.find(n => n.sanId === node.id)
+    if (!inv?.sshReady) {
+      nodeResults.push({ sanId: node.id, label: node.label, participation: 'skip', error: inv?.error ?? 'SSH non connecté' })
+      continue
+    }
+    const path = resolvePvPathOnNode(node.id, primarySanId, payload.path, diskMappings)
+    nodeResults.push({
+      sanId: node.id,
+      label: node.label,
+      participation: pre.ok ? 'execute' : 'skip',
+      command: buildPvRemovePreview(path),
+    })
+  }
+
+  return {
+    action: 'pvremove',
+    clusterId,
+    primarySanId,
+    confirmationPhrase: `PVREMOVE CLUSTER ${payload.path}`,
+    nodeResults,
+    okSymmetric: pre.ok && nodeResults.every(n => n.participation === 'execute'),
+    warnings: pre.warnings,
+    blockers: pre.blockers,
+  }
+}
+
+export async function buildClusterVgRemovePlan(
+  primarySanId: string,
+  clusterId: string,
+  payload: VgRemovePayload,
+): Promise<ClusterLvmExecutionPlan> {
+  const pre = await runClusterLvmPreflight(clusterId, primarySanId, {
+    action: 'vgremove',
+    payload,
+    clusterExecution: { primarySanId, clusterId },
+  })
+  const nodes = resolveClusterNodes(clusterId)
+  const nodeResults: ClusterLvmNodeResult[] = []
+
+  for (const node of nodes) {
+    const inv = pre.nodes.find(n => n.sanId === node.id)
+    if (!inv?.sshReady) {
+      nodeResults.push({ sanId: node.id, label: node.label, participation: 'skip', error: 'SSH non connecté' })
+      continue
+    }
+    nodeResults.push({
+      sanId: node.id,
+      label: node.label,
+      participation: pre.ok ? 'execute' : 'skip',
+      command: buildVgRemovePreview(payload.name),
+    })
+  }
+
+  return {
+    action: 'vgremove',
+    clusterId,
+    primarySanId,
+    confirmationPhrase: `VGREMOVE CLUSTER ${payload.name}`,
+    nodeResults,
+    okSymmetric: pre.ok && nodeResults.every(n => n.participation === 'execute'),
+    warnings: pre.warnings,
+    blockers: pre.blockers,
+  }
+}
+
+export async function buildClusterLvRemovePlan(
+  primarySanId: string,
+  clusterId: string,
+  payload: LvRemovePayload,
+): Promise<ClusterLvmExecutionPlan> {
+  const pre = await runClusterLvmPreflight(clusterId, primarySanId, {
+    action: 'lvremove',
+    payload,
+    clusterExecution: { primarySanId, clusterId },
+  })
+  const nodes = resolveClusterNodes(clusterId)
+  const nodeResults: ClusterLvmNodeResult[] = []
+
+  for (const node of nodes) {
+    const inv = pre.nodes.find(n => n.sanId === node.id)
+    if (!inv?.sshReady) {
+      nodeResults.push({ sanId: node.id, label: node.label, participation: 'skip', error: 'SSH non connecté' })
+      continue
+    }
+    nodeResults.push({
+      sanId: node.id,
+      label: node.label,
+      participation: pre.ok ? 'execute' : 'skip',
+      command: buildLvRemovePreview(payload.vgName, payload.name),
+    })
+  }
+
+  return {
+    action: 'lvremove',
+    clusterId,
+    primarySanId,
+    confirmationPhrase: `LVREMOVE CLUSTER ${payload.vgName}/${payload.name}`,
+    nodeResults,
+    okSymmetric: pre.ok && nodeResults.every(n => n.participation === 'execute'),
+    warnings: pre.warnings,
+    blockers: pre.blockers,
+  }
+}
+
 export async function executeClusterLvmPlan(
   plan: ClusterLvmExecutionPlan,
   clusterExecution: ClusterLvmExecutionRequest,
-  payload: PvCreatePayload | VgCreatePayload | LvCreatePayload,
+  payload: PvCreatePayload | VgCreatePayload | LvCreatePayload | PvRemovePayload | VgRemovePayload | LvRemovePayload,
   diskMappings: ClusterLvmDiskMapping[] = [],
 ): Promise<ClusterLvmExecutionResult> {
   assertPlanExecutable(plan)
@@ -231,6 +371,10 @@ export async function executeClusterLvmPlan(
     throw createError({ statusCode: 400, statusMessage: 'clusterId requis' })
   }
 
+  const inventories = clusterId
+    ? await collectClusterLvmInventory(clusterId)
+    : []
+
   const nodeResults: ClusterLvmNodeResult[] = []
   const errors: string[] = []
   const refreshedSanIds = new Set<string>()
@@ -242,11 +386,21 @@ export async function executeClusterLvmPlan(
         if (!manager || manager.getStatus() !== 'connected') {
           throw new Error('SSH non connecté')
         }
-        if (plan.action === 'pvcreate') {
+        if (plan.action === 'pvremove') {
+          const p = payload as PvRemovePayload
+          const path = resolvePvPathOnNode(node.sanId, clusterExecution.primarySanId, p.path, diskMappings)
+          const result = await runPvRemove(manager, path)
+          nodeResults.push({
+            sanId: node.sanId,
+            label: node.label,
+            participation: 'execute',
+            command: node.command,
+            stdout: result.stdout,
+            stderr: result.stderr,
+          })
+        } else if (plan.action === 'pvcreate') {
           const p = payload as PvCreatePayload
-          const path = node.sanId === clusterExecution.primarySanId
-            ? p.path
-            : diskMappings.find(m => m.sourcePath === p.path && m.peerSanId === node.sanId)?.peerPath ?? p.path
+          const path = resolvePvPathOnNode(node.sanId, clusterExecution.primarySanId, p.path, diskMappings)
           const result = await runPvCreate(manager, path, !!p.force)
           nodeResults.push({
             sanId: node.sanId,
@@ -270,9 +424,31 @@ export async function executeClusterLvmPlan(
             stdout: result.stdout,
             stderr: result.stderr,
           })
+        } else if (plan.action === 'vgremove') {
+          const p = payload as VgRemovePayload
+          const result = await runVgRemove(manager, p.name)
+          nodeResults.push({
+            sanId: node.sanId,
+            label: node.label,
+            participation: 'execute',
+            command: node.command,
+            stdout: result.stdout,
+            stderr: result.stderr,
+          })
         } else if (plan.action === 'lvcreate') {
           const p = payload as LvCreatePayload
           const result = await runLvCreate(manager, p.vgName, p.name, p.sizeBytes)
+          nodeResults.push({
+            sanId: node.sanId,
+            label: node.label,
+            participation: 'execute',
+            command: node.command,
+            stdout: result.stdout,
+            stderr: result.stderr,
+          })
+        } else if (plan.action === 'lvremove') {
+          const p = payload as LvRemovePayload
+          const result = await runLvRemove(manager, p.vgName, p.name)
           nodeResults.push({
             sanId: node.sanId,
             label: node.label,

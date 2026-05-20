@@ -162,11 +162,11 @@ async function execute() {
     })
     step.value = 4
     if (executionResult.value.success) {
-      toast.add({ title: t('lvm.cluster.wizard.lv_create.success'), color: 'green' })
+      toast.success(t('lvm.cluster.wizard.lv_create.success'))
       emit('close')
     }
   } catch (e: any) {
-    toast.add({ title: e?.statusMessage ?? 'Erreur', color: 'red' })
+    toast.error(t('lvm.wizard.execute_failed'), e?.statusMessage ?? 'Erreur')
   } finally {
     busy.value = false
   }

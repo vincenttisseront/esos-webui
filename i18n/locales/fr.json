@@ -913,7 +913,46 @@
       "refresh": "Rafraîchir",
       "pv_count": "Volumes physiques",
       "vg_count": "Groupes de volumes",
-      "lv_count": "Volumes logiques"
+      "lv_count": "Volumes logiques",
+      "raid_summary": {
+        "title": "LVM",
+        "chain_hint": "Chaîne de provisionnement : Matériel / MD → LVM → SCST",
+        "status_ok": "OK",
+        "status_attention": "Attention",
+        "status_empty": "Non configuré",
+        "status_unavailable": "Indisponible",
+        "load_warning": "Impossible de charger l'aperçu LVM",
+        "open_tab": "Ouvrir l'onglet LVM"
+      }
+    },
+    "remove": {
+      "destructive_warning": "Opération destructive — les données des volumes concernés peuvent être perdues.",
+      "preflight_loading": "Préflight en cours…",
+      "preflight_failed": "Échec du préflight",
+      "execute_failed": "Échec de l'exécution",
+      "partial_failure": "Exécution partielle ou en échec",
+      "commands_title": "Commandes par nœud",
+      "phrase_help": "Saisissez la phrase de confirmation exactement comme indiqué :",
+      "pv": {
+        "title": "Supprimer le volume physique",
+        "intro": "Retire les métadonnées LVM du périphérique. Le périphérique bloc sous-jacent n'est pas effacé.",
+        "cluster_intro": "En mode cluster symétrique local, pvremove s'exécute sur chaque nœud du cluster.",
+        "execute": "Supprimer le PV",
+        "check_exists": "PV {path} présent sur ce nœud",
+        "check_not_in_vg": "Le PV n'est pas rattaché à un groupe de volumes",
+        "check_in_vg": "Le PV est dans le VG {vg} — retirez-le du VG d'abord",
+        "check_preflight": "Préflight OK sur tous les nœuds"
+      },
+      "vg": {
+        "title": "Supprimer le groupe de volumes",
+        "intro": "Supprime le groupe de volumes {name} et ses métadonnées sur les PV.",
+        "execute": "Supprimer le VG"
+      },
+      "lv": {
+        "title": "Supprimer le volume logique",
+        "intro": "Supprime le volume logique {name} du VG {vg}.",
+        "execute": "Supprimer le LV"
+      }
     },
     "col": {
       "size": "Taille",
@@ -1027,6 +1066,7 @@
     "wizard": {
       "cancel": "Annuler",
       "execute": "Exécuter",
+      "execute_failed": "Échec de l'exécution",
       "select_placeholder": "Sélectionner…",
       "pv_create": {
         "title": "Créer un volume physique",

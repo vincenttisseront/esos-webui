@@ -86,7 +86,7 @@
               <td class="py-2">{{ row.vgName || '—' }}</td>
               <td class="py-2">{{ formatBytes(row.sizeBytes) }}</td>
               <td class="py-2 text-right">
-                <UButton v-if="!row.vgName && canMutate" size="xs" color="red" variant="ghost" @click="confirmRemovePv(row.path)">
+                <UButton v-if="!row.vgName && canMutate" size="xs" color="red" variant="ghost" @click="openRemovePvWizard(row.path)">
                   {{ t('lvm.pv.remove') }}
                 </UButton>
               </td>
@@ -150,7 +150,7 @@
                 <UButton v-else-if="canMutate" size="xs" variant="soft" @click="openScstWizard(row)">{{ t('lvm.lv.bind_scst') }}</UButton>
               </td>
               <td class="py-2 text-right">
-                <UButton v-if="canMutate && !row.scstDeviceNames?.length" size="xs" color="red" variant="ghost" @click="confirmRemoveLv(row)">
+                <UButton v-if="canMutate && !row.scstDeviceNames?.length" size="xs" color="red" variant="ghost" @click="openRemoveLvWizard(row)">
                   {{ t('lvm.lv.remove') }}
                 </UButton>
               </td>
@@ -354,42 +354,58 @@ async function openScstWizard(lv: LogicalVolume) {
   } catch { /* dismissed */ }
 }
 
-async function confirmRemovePv(path: string) {
+async function openRemovePvWizard(path: string) {
   if (!canMutate.value) return
-  const pre = await lvm.preflight({ action: 'pvremove', payload: { path, confirmation: '' } })
-  const conf = prompt(pre.requiredConfirmation)
-  if (conf !== pre.requiredConfirmation) return
+  const { default: Wizard } = await import('~/components/lvm/LvmRemovePvWizard.vue')
   try {
-    await lvm.removePv({ path, confirmation: conf })
-    toast.add({ title: t('lvm.pv.removed'), color: 'green' })
-  } catch (e: any) {
-    toast.add({ title: e?.statusMessage ?? 'Erreur', color: 'red' })
-  }
+    await openModal({
+      component: Wizard,
+      props: {
+        sanId: props.sanId,
+        path,
+        isClustered: props.isClustered,
+        clusterId: clusterId.value || undefined,
+        persistent: true,
+      },
+    })
+    await refreshAfterWizard()
+  } catch { /* dismissed */ }
 }
 
-async function confirmRemoveVg(name: string) {
+async function openRemoveVgWizard(name: string) {
   if (!canMutate.value) return
-  const pre = await lvm.preflight({ action: 'vgremove', payload: { name, confirmation: '' } })
-  const conf = prompt(pre.requiredConfirmation)
-  if (conf !== pre.requiredConfirmation) return
+  const { default: Wizard } = await import('~/components/lvm/LvmRemoveVgWizard.vue')
   try {
-    await lvm.removeVg({ name, confirmation: conf })
-    toast.add({ title: t('lvm.vg.removed'), color: 'green' })
-  } catch (e: any) {
-    toast.add({ title: e?.statusMessage ?? 'Erreur', color: 'red' })
-  }
+    await openModal({
+      component: Wizard,
+      props: {
+        sanId: props.sanId,
+        vgName: name,
+        isClustered: props.isClustered,
+        clusterId: clusterId.value || undefined,
+        persistent: true,
+      },
+    })
+    await refreshAfterWizard()
+  } catch { /* dismissed */ }
 }
 
-async function confirmRemoveLv(lv: LogicalVolume) {
+async function openRemoveLvWizard(lv: LogicalVolume) {
   if (!canMutate.value) return
-  const pre = await lvm.preflight({ action: 'lvremove', payload: { vgName: lv.vgName, name: lv.name, confirmation: '' } })
-  const conf = prompt(pre.requiredConfirmation)
-  if (conf !== pre.requiredConfirmation) return
+  const { default: Wizard } = await import('~/components/lvm/LvmRemoveLvWizard.vue')
   try {
-    await lvm.removeLv({ vgName: lv.vgName, name: lv.name, confirmation: conf })
-    toast.add({ title: t('lvm.lv.removed'), color: 'green' })
-  } catch (e: any) {
-    toast.add({ title: e?.statusMessage ?? 'Erreur', color: 'red' })
-  }
+    await openModal({
+      component: Wizard,
+      props: {
+        sanId: props.sanId,
+        vgName: lv.vgName,
+        lvName: lv.name,
+        isClustered: props.isClustered,
+        clusterId: clusterId.value || undefined,
+        persistent: true,
+      },
+    })
+    await refreshAfterWizard()
+  } catch { /* dismissed */ }
 }
 </script>

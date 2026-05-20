@@ -913,7 +913,46 @@
       "refresh": "Refresh",
       "pv_count": "Physical volumes",
       "vg_count": "Volume groups",
-      "lv_count": "Logical volumes"
+      "lv_count": "Logical volumes",
+      "raid_summary": {
+        "title": "LVM",
+        "chain_hint": "Provisioning chain: Hardware / MD → LVM → SCST",
+        "status_ok": "OK",
+        "status_attention": "Attention",
+        "status_empty": "Not configured",
+        "status_unavailable": "Unavailable",
+        "load_warning": "LVM overview could not be loaded",
+        "open_tab": "Open LVM tab"
+      }
+    },
+    "remove": {
+      "destructive_warning": "Destructive operation — data on affected volumes may be lost.",
+      "preflight_loading": "Running preflight…",
+      "preflight_failed": "Preflight failed",
+      "execute_failed": "Execution failed",
+      "partial_failure": "Partial or failed execution",
+      "commands_title": "Commands per node",
+      "phrase_help": "Type the confirmation phrase exactly as shown:",
+      "pv": {
+        "title": "Remove physical volume",
+        "intro": "This removes LVM metadata from the device. The underlying block device is not erased.",
+        "cluster_intro": "In local-symmetric cluster mode, pvremove runs on every cluster node.",
+        "execute": "Remove PV",
+        "check_exists": "PV {path} exists on this node",
+        "check_not_in_vg": "PV is not assigned to a volume group",
+        "check_in_vg": "PV is in volume group {vg} — remove from VG first",
+        "check_preflight": "Preflight checks passed on all nodes"
+      },
+      "vg": {
+        "title": "Remove volume group",
+        "intro": "Removes volume group {name} and its metadata from all PVs.",
+        "execute": "Remove VG"
+      },
+      "lv": {
+        "title": "Remove logical volume",
+        "intro": "Removes logical volume {name} from VG {vg}.",
+        "execute": "Remove LV"
+      }
     },
     "col": {
       "size": "Size",
@@ -1027,6 +1066,7 @@
     "wizard": {
       "cancel": "Cancel",
       "execute": "Execute",
+      "execute_failed": "Execution failed",
       "select_placeholder": "Select…",
       "pv_create": {
         "title": "Create physical volume",
