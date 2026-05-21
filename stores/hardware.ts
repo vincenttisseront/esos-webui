@@ -63,8 +63,9 @@ export const useHardwareStore = defineStore('hardware', {
     },
 
     startPolling(intervalMs = 15_000) {
+      if (!useAuthStore().isAuthenticated) return
+      this.stopPolling()
       this.fetch()
-      if (this.pollInterval) return
       this.pollInterval = setInterval(() => {
         this.fetch()
       }, intervalMs)

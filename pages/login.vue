@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { useAuthStore } from '~/stores/auth'
-import { useSSHStore } from '~/stores/ssh'
-import { useOverviewStore } from '~/stores/overview'
-import { useStatsStore } from '~/stores/stats'
 import { useSelectedSan } from '~/composables/useSelectedSan'
+import { startCoreAppPolling } from '~/utils/app-polling'
 
 definePageMeta({ layout: false })
 
@@ -89,14 +87,9 @@ watch(loginProviders, () => {
 })
 
 async function bootstrapAfterLogin(user: { forcePasswordChange: boolean }) {
-  const sanSelector   = useSelectedSan()
-  const sshStore      = useSSHStore()
-  const overviewStore = useOverviewStore()
-  const statsStore    = useStatsStore()
+  const sanSelector = useSelectedSan()
   await sanSelector.fetchSans()
-  sshStore.startPolling()
-  overviewStore.startPolling()
-  statsStore.startPolling()
+  startCoreAppPolling()
 
   if (user.forcePasswordChange) {
     await router.push('/admin/change-password')

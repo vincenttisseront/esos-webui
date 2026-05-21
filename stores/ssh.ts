@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { isUnauthorizedError } from '~/utils/auth-api'
 
 export type SSHStatus = 'connecting' | 'connected' | 'reconnecting' | 'error' | 'unconfigured'
 
@@ -47,11 +48,13 @@ export const useSSHStore = defineStore('ssh', {
 
   actions: {
     async fetchStatus() {
+      if (!useAuthStore().isAuthenticated) return
       try {
         const data = await $fetch<{ status: SSHStatus; configured: boolean }>('/api/ssh-status')
         this.configured = data.configured
         this.setStatus(data.status)
-      } catch {
+      } catch (err) {
+        if (isUnauthorizedError(err)) return
         this.configured = true
         this.setStatus('error')
       }
@@ -73,6 +76,7 @@ export const useSSHStore = defineStore('ssh', {
     },
 
     startPolling() {
+      if (!useAuthStore().isAuthenticated) return
       if (this.pollInterval) return
       this.fetchStatus()
       this.pollInterval = setInterval(() => this.fetchStatus(), 5_000)

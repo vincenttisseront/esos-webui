@@ -115,6 +115,7 @@ export const useClusterStore = defineStore('cluster', {
     },
 
     startPolling(intervalMs = 15_000) {
+      if (!useAuthStore().isAuthenticated) return
       this.stopPolling()
       if (!this.activeClusterId && !this.activeNodeIds?.length) {
         this.error = 'Polling cluster impossible. Appelez fetch() d’abord.'

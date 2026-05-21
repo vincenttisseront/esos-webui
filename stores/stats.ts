@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import type { SessionThroughput, DeviceThroughput, DiskStatThroughput } from '~/server/utils/types'
+import { isUnauthorizedError } from '~/utils/auth-api'
 
 /**
  * Store Pinia pour les métriques I/O temps réel (cf. SDD v2.2 §6).
@@ -53,6 +54,8 @@ export const useStatsStore = defineStore('stats', {
 
   actions: {
     async fetchAll() {
+      if (!useAuthStore().isAuthenticated) return
+
       const sshStore = useSSHStore()
       if (!sshStore.isReady) return
 
@@ -132,6 +135,7 @@ export const useStatsStore = defineStore('stats', {
           this.capturedAt = sessionsRes.capturedAt
         }
       } catch (err) {
+        if (isUnauthorizedError(err)) return
         this.error = (err as Error).message
       } finally {
         this.loading = false
@@ -146,6 +150,7 @@ export const useStatsStore = defineStore('stats', {
     },
 
     startPolling(intervalMs = 10_000) {
+      if (!useAuthStore().isAuthenticated) return
       this.stopPolling()
       this.fetchAll()
       this.pollInterval = setInterval(() => this.fetchAll(), intervalMs)

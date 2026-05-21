@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
 import { shouldSkipAuthMeFetch } from '~/utils/auth-client'
+import { isUnauthorizedError } from '~/utils/auth-api'
+import { startCoreAppPolling, stopAllAppPolling } from '~/utils/app-polling'
 
 interface AuthUser {
   id: string
@@ -24,24 +26,31 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated    = computed(() => user.value !== null)
   const mustChangePassword = computed(() => user.value?.forcePasswordChange ?? false)
 
+  function clearSession() {
+    user.value = null
+    fetched.value = true
+  }
+
   async function fetchMe(fetcher: typeof $fetch = $fetch) {
     if (import.meta.client) {
       const path = useRoute().path
       if (shouldSkipAuthMeFetch(path)) {
-        user.value = null
-        fetched.value = true
+        clearSession()
         return
       }
     }
+    const hadUser = user.value !== null
     try {
       const result = await fetcher<AuthUser>('/api/auth/me', { ignoreResponseError: true })
       if (result && typeof result === 'object' && 'username' in result) {
         user.value = { ...result, authSource: result.authSource ?? 'local' }
       } else {
-        user.value = null
+        if (hadUser) stopAllAppPolling()
+        clearSession()
       }
-    } catch {
-      user.value = null
+    } catch (err) {
+      if (hadUser || isUnauthorizedError(err)) stopAllAppPolling()
+      clearSession()
     } finally {
       fetched.value = true
     }
@@ -89,12 +98,14 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function logout() {
+    stopAllAppPolling()
+    useErrorStore().dismissAll()
     try {
       await $fetch('/api/auth/logout', { method: 'POST' })
     } catch {
       /* ignore */
     }
-    user.value = null
+    clearSession()
     await navigateTo('/login')
   }
 
@@ -112,6 +123,7 @@ export const useAuthStore = defineStore('auth', () => {
     fetched,
     isAuthenticated,
     mustChangePassword,
+    clearSession,
     fetchMe,
     login,
     loginLdap,

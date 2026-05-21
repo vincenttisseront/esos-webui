@@ -177,6 +177,8 @@ export const usePerfStore = defineStore('perf', {
     },
 
     startPolling(intervalMs = 30_000) {
+      if (!useAuthStore().isAuthenticated) return
+      this.stopPolling()
       this.refreshDashboard()
       this.pollTimer = setInterval(() => this.refreshDashboard(), intervalMs)
     },

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import type { Overview } from '~/types/esos'
 import { createEmptyOverview } from '~/types/esos'
+import { isUnauthorizedError } from '~/utils/auth-api'
 
 interface OverviewState {
   data: Overview | null
@@ -40,6 +41,8 @@ export const useOverviewStore = defineStore('overview', {
 
   actions: {
     async fetch() {
+      if (!useAuthStore().isAuthenticated) return
+
       const sshStore = useSSHStore()
 
       if (sshStore.isUnconfigured) {
@@ -68,6 +71,7 @@ export const useOverviewStore = defineStore('overview', {
         this.error = null
         useErrorStore().clearSource('overview')
       } catch (err: unknown) {
+        if (isUnauthorizedError(err)) return
         const fetchErr = err as { statusCode?: number; message?: string; data?: { message?: string } }
         this.error = fetchErr.data?.message ?? fetchErr.message ?? 'Erreur de chargement'
         // Page-local only — do not push to global error banner
@@ -77,6 +81,7 @@ export const useOverviewStore = defineStore('overview', {
     },
 
     startPolling(intervalMs = DEFAULT_INTERVAL) {
+      if (!useAuthStore().isAuthenticated) return
       this.stopPolling()
       this.currentIntervalMs = intervalMs
       this.fetch()

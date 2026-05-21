@@ -156,6 +156,7 @@
 
 <script setup lang="ts">
 import { ALL_SANS_ID } from '~/composables/useSelectedSan'
+import { AUTH_STOP_POLLING_EVENT } from '~/utils/app-polling'
 
 const route = useRoute()
 const sshStore = useSSHStore()
@@ -170,21 +171,46 @@ const driftDetection = useNetworkDriftDetection()
 
 let statusInterval: ReturnType<typeof setInterval> | null = null
 
-onMounted(async () => {
-  if (!sanSelector.sans.value.length) {
-    await sanSelector.fetchSans()
+function clearHeaderPolling() {
+  driftDetection.stop()
+  if (statusInterval) {
+    clearInterval(statusInterval)
+    statusInterval = null
   }
+}
+
+function startHeaderPolling() {
+  if (!authStore.isAuthenticated) return
+  clearHeaderPolling()
   const role = authStore.user?.role
   if (role === 'operator' || role === 'admin') {
     driftDetection.start(60_000)
   }
-  // Refresh SSH live statuses every 15s
-  statusInterval = setInterval(() => sanSelector.fetchSans(), 15_000)
+  statusInterval = setInterval(() => {
+    if (authStore.isAuthenticated) sanSelector.fetchSans()
+  }, 15_000)
+}
+
+useEventBus<void>(AUTH_STOP_POLLING_EVENT).on(clearHeaderPolling)
+
+watch(
+  () => authStore.isAuthenticated,
+  (ok) => {
+    if (ok) startHeaderPolling()
+    else clearHeaderPolling()
+  },
+)
+
+onMounted(async () => {
+  if (!authStore.isAuthenticated) return
+  if (!sanSelector.sans.value.length) {
+    await sanSelector.fetchSans()
+  }
+  startHeaderPolling()
 })
 
 onBeforeUnmount(() => {
-  driftDetection.stop()
-  if (statusInterval) clearInterval(statusInterval)
+  clearHeaderPolling()
 })
 
 async function switchSan(id: string) {

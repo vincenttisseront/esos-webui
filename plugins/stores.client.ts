@@ -1,9 +1,7 @@
 import { shouldSkipAuthMeFetch } from '~/utils/auth-client'
+import { startCoreAppPolling, stopAllAppPolling } from '~/utils/app-polling'
 
 export default defineNuxtPlugin(async (nuxtApp) => {
-  const sshStore = useSSHStore()
-  const overviewStore = useOverviewStore()
-  const statsStore = useStatsStore()
   const sanSelector = useSelectedSan()
   const auth = useAuthStore()
   const appVersionStore = useAppVersionStore()
@@ -24,26 +22,18 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     }
 
     // Defer polling until AFTER Vue has hydrated the app.
-    // startPolling() sets `loading = true` synchronously which would mismatch
-    // the SSR-rendered HTML where loading was false.
     nuxtApp.hook('app:mounted', () => {
-      sshStore.startPolling()
-      overviewStore.startPolling()
-      statsStore.startPolling()
+      if (auth.isAuthenticated) startCoreAppPolling()
     })
   }
 
-  // Pause polling when tab is hidden, resume on visibility
+  // Pause polling when tab is hidden, resume on visibility (only when authenticated)
   if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
-        sshStore.stopPolling()
-        overviewStore.stopPolling()
-        statsStore.stopPolling()
-      } else {
-        sshStore.startPolling()
-        overviewStore.startPolling(overviewStore.currentIntervalMs)
-        statsStore.startPolling()
+        stopAllAppPolling()
+      } else if (auth.isAuthenticated) {
+        startCoreAppPolling()
       }
     })
   }
