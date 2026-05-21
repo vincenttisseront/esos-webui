@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import type { Overview } from '~/types/esos'
 import { createEmptyOverview } from '~/types/esos'
 import { isUnauthorizedError } from '~/utils/auth-api'
+import { isOverviewRoute, isPollingPaused } from '~/utils/polling-coordinator'
 
 interface OverviewState {
   data: Overview | null
@@ -11,6 +12,7 @@ interface OverviewState {
   pollInterval: ReturnType<typeof setInterval> | null
   currentIntervalMs: number
   reconnectBound: boolean
+  fetchInFlight: boolean
 }
 
 const DEFAULT_INTERVAL = 30_000
@@ -24,6 +26,7 @@ export const useOverviewStore = defineStore('overview', {
     pollInterval: null,
     currentIntervalMs: DEFAULT_INTERVAL,
     reconnectBound: false,
+    fetchInFlight: false,
   }),
 
   getters: {
@@ -42,6 +45,8 @@ export const useOverviewStore = defineStore('overview', {
   actions: {
     async fetch() {
       if (!useAuthStore().isAuthenticated) return
+      if (this.fetchInFlight) return
+      this.fetchInFlight = true
 
       const sshStore = useSSHStore()
 
@@ -49,11 +54,13 @@ export const useOverviewStore = defineStore('overview', {
         this.data = createEmptyOverview()
         this.error = null
         this.lastRefresh = new Date()
+        this.fetchInFlight = false
         return
       }
 
       if (sshStore.isError) {
         this.error = 'Connexion SSH indisponible'
+        this.fetchInFlight = false
         return
       }
 
@@ -77,15 +84,21 @@ export const useOverviewStore = defineStore('overview', {
         // Page-local only — do not push to global error banner
       } finally {
         this.loading = false
+        this.fetchInFlight = false
       }
     },
 
     startPolling(intervalMs = DEFAULT_INTERVAL) {
       if (!useAuthStore().isAuthenticated) return
+      if (!isOverviewRoute()) return
+      if (isPollingPaused()) return
       this.stopPolling()
       this.currentIntervalMs = intervalMs
-      this.fetch()
-      this.pollInterval = setInterval(() => this.fetch(), intervalMs)
+      void this.fetch()
+      this.pollInterval = setInterval(() => {
+        if (!isOverviewRoute() || isPollingPaused()) return
+        void this.fetch()
+      }, intervalMs)
 
       if (!this.reconnectBound) {
         this.reconnectBound = true

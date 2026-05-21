@@ -33,8 +33,12 @@ export default defineNuxtConfig({
     { path: '~/components', pathPrefix: false },
   ],
   runtimeConfig: {
+    public: {
+      sshStatusPollMs: Number(process.env.NUXT_PUBLIC_SSH_STATUS_POLL_MS) || 30_000,
+    },
     // Server-only — never exposed to the client.
     sshHost: process.env.NUXT_SSH_HOST || '',
+    githubToken: process.env.NUXT_GITHUB_TOKEN || '',
     sshPort: process.env.NUXT_SSH_PORT || '22',
     sshUser: process.env.NUXT_SSH_USER || '',
     sshPrivateKey: process.env.NUXT_SSH_PRIVATE_KEY || '',

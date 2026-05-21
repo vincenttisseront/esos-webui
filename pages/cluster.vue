@@ -287,6 +287,8 @@ async function loadDetail() {
       storageConsistency.value = null
     }
   } catch (err: any) {
+    const { isUnauthorizedError } = await import('~/utils/auth-api')
+    if (isUnauthorizedError(err)) return
     detailError.value = err?.data?.message ?? t('cluster.toasts.fetch_status_error')
   } finally {
     detailLoading.value = false

@@ -21,7 +21,7 @@ import {
 } from '~/utils/stopped-md'
 import { overviewHasActiveMdProgress } from '~/utils/raid-md-progress'
 
-const MD_PROGRESS_POLL_INTERVAL_MS = 4_000
+const MD_PROGRESS_POLL_INTERVAL_MS = 5_000
 const MD_PROGRESS_POLL_MAX_FAILURES = 3
 
 export const useRaidStore = defineStore('raid', {

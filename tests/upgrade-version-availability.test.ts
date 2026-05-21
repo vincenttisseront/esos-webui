@@ -6,11 +6,11 @@ vi.mock('../server/utils/esos-github', async (importOriginal) => {
   return {
     ...actual,
     resolveLatestStableRelease: vi.fn(),
-    fetchESOSTags: vi.fn(),
+    fetchESOSTagsLite: vi.fn(),
   }
 })
 
-import { resolveLatestStableRelease, fetchESOSTags } from '../server/utils/esos-github'
+import { resolveLatestStableRelease, fetchESOSTagsLite } from '../server/utils/esos-github'
 import { buildUpgradeVersionAvailability } from '../server/utils/upgrade-version-availability'
 import type { GitHubTag } from '../server/utils/types'
 
@@ -40,7 +40,7 @@ function latestTag(version: string): GitHubTag {
 describe('buildUpgradeVersionAvailability', () => {
   beforeEach(() => {
     vi.mocked(resolveLatestStableRelease).mockReset()
-    vi.mocked(fetchESOSTags).mockReset()
+    vi.mocked(fetchESOSTagsLite).mockReset()
   })
 
   it('marks upgrade-available when installed is behind latest', async () => {
@@ -48,11 +48,10 @@ describe('buildUpgradeVersionAvailability', () => {
       ok: true,
       latest: latestTag('4.4.1'),
     })
-    vi.mocked(fetchESOSTags).mockResolvedValue([
-      latestTag('4.4.1'),
-      latestTag('4.4.0'),
-      latestTag('4.3.5'),
-    ])
+    vi.mocked(fetchESOSTagsLite).mockResolvedValue({
+      tags: [latestTag('4.4.1'), latestTag('4.4.0'), latestTag('4.3.5')],
+      meta: { source: 'live', fetchedAt: Date.now() },
+    })
 
     const result = await buildUpgradeVersionAvailability([
       node('san-1', { raw: '4.4.0', buildType: 'stable', version: '4.4.0' }),
@@ -69,7 +68,10 @@ describe('buildUpgradeVersionAvailability', () => {
       ok: true,
       latest: latestTag('4.4.1'),
     })
-    vi.mocked(fetchESOSTags).mockResolvedValue([latestTag('4.4.1')])
+    vi.mocked(fetchESOSTagsLite).mockResolvedValue({
+      tags: [latestTag('4.4.1')],
+      meta: { source: 'live', fetchedAt: Date.now() },
+    })
 
     const result = await buildUpgradeVersionAvailability([
       node('san-1', { raw: '4.4.1', buildType: 'stable', version: '4.4.1' }),
@@ -84,7 +86,10 @@ describe('buildUpgradeVersionAvailability', () => {
       ok: true,
       latest: latestTag('4.4.0'),
     })
-    vi.mocked(fetchESOSTags).mockResolvedValue([latestTag('4.4.0')])
+    vi.mocked(fetchESOSTagsLite).mockResolvedValue({
+      tags: [latestTag('4.4.0')],
+      meta: { source: 'live', fetchedAt: Date.now() },
+    })
 
     const result = await buildUpgradeVersionAvailability([
       node('san-1', { raw: '4.4.1', buildType: 'stable', version: '4.4.1' }),
@@ -99,7 +104,10 @@ describe('buildUpgradeVersionAvailability', () => {
       ok: true,
       latest: latestTag('4.4.1'),
     })
-    vi.mocked(fetchESOSTags).mockResolvedValue([latestTag('4.4.1')])
+    vi.mocked(fetchESOSTagsLite).mockResolvedValue({
+      tags: [latestTag('4.4.1')],
+      meta: { source: 'live', fetchedAt: Date.now() },
+    })
 
     const result = await buildUpgradeVersionAvailability([
       node('san-1', { raw: 'master_abc_opts', buildType: 'master' }),
@@ -114,7 +122,10 @@ describe('buildUpgradeVersionAvailability', () => {
       ok: true,
       latest: latestTag('4.4.1'),
     })
-    vi.mocked(fetchESOSTags).mockResolvedValue([latestTag('4.4.1')])
+    vi.mocked(fetchESOSTagsLite).mockResolvedValue({
+      tags: [latestTag('4.4.1')],
+      meta: { source: 'live', fetchedAt: Date.now() },
+    })
 
     const result = await buildUpgradeVersionAvailability([
       node('san-1', { raw: 'custom', buildType: 'unknown' }),
@@ -146,10 +157,10 @@ describe('buildUpgradeVersionAvailability', () => {
       ok: true,
       latest: latestTag('4.4.1'),
     })
-    vi.mocked(fetchESOSTags).mockResolvedValue([
-      latestTag('4.4.1'),
-      latestTag('4.4.0'),
-    ])
+    vi.mocked(fetchESOSTagsLite).mockResolvedValue({
+      tags: [latestTag('4.4.1'), latestTag('4.4.0')],
+      meta: { source: 'live', fetchedAt: Date.now() },
+    })
 
     const result = await buildUpgradeVersionAvailability([
       node('san-1', { raw: '4.4.1', buildType: 'stable', version: '4.4.1' }),

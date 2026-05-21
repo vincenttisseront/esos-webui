@@ -1,8 +1,20 @@
 import { getActiveSSHManager } from './ssh-runtime'
-import { withCache } from './cache'
+import { withCache, invalidateCacheKey } from './cache'
 import { compareSemver } from './semver'
-import type { InstalledESOSVersion, BuildOption, GitHubTag, ESOSVersionDiff, ESOSVersionReport } from './types'
-import { fetchESOSTags, pickLatestSemverTag } from './esos-github'
+import type {
+  InstalledESOSVersion,
+  BuildOption,
+  GitHubTag,
+  ESOSVersionDiff,
+  ESOSVersionReport,
+  GitHubCacheMeta,
+} from './types'
+import {
+  fetchESOSTags,
+  pickLatestSemverTag,
+  githubMetaFromSources,
+  resolveLatestStableRelease,
+} from './esos-github'
 
 const BUILD_OPTIONS: Record<string, string> = {
   d: 'Debug (symboles non strippés)',
@@ -32,7 +44,7 @@ export async function readInstalledESOSVersion(): Promise<InstalledESOSVersion> 
   ].join(' || ')
 
   const result = await manager.exec(cmd, 8_000)
-  const raw    = result.stdout.trim().split('\n')[0]?.trim() ?? ''
+  const raw = result.stdout.trim().split('\n')[0]?.trim() ?? ''
 
   return parseInstalledVersion(raw)
 }
@@ -40,7 +52,6 @@ export async function readInstalledESOSVersion(): Promise<InstalledESOSVersion> 
 export function parseInstalledVersion(raw: string): InstalledESOSVersion {
   if (!raw) return { raw: '', buildType: 'unknown' }
 
-  // Format master : "master_547868d_dgvszq" ou "master_abc1234_dg"
   const masterMatch = raw.match(/^(master)_([a-f0-9]{7,})_([a-zA-Z]*)$/)
   if (masterMatch) {
     const [, branch, commitHash, optsStr] = masterMatch
@@ -51,7 +62,6 @@ export function parseInstalledVersion(raw: string): InstalledESOSVersion {
     return { raw, buildType: 'master', branch, commitHash, buildOpts }
   }
 
-  // Format stable : "3.0.1", "4.4.1", etc.
   const stableMatch = raw.match(/^(\d+\.\d+\.\d+)$/)
   if (stableMatch) {
     return { raw, buildType: 'stable', version: stableMatch[1] }
@@ -62,7 +72,7 @@ export function parseInstalledVersion(raw: string): InstalledESOSVersion {
 
 export function computeVersionDiff(
   installed: InstalledESOSVersion,
-  tags:      GitHubTag[],
+  tags: GitHubTag[],
 ): { diff: ESOSVersionDiff; behindCount: number } {
   if (!tags.length) return { diff: 'unknown', behindCount: 0 }
 
@@ -76,10 +86,10 @@ export function computeVersionDiff(
 
   const latestTag = pickLatestSemverTag(tags)
   if (!latestTag) return { diff: 'unknown', behindCount: 0 }
-  const diff      = compareSemver(installed.version, latestTag.name)
+  const diff = compareSemver(installed.version, latestTag.name)
 
   const installedParts = installed.version.split('.').map(Number)
-  const behindCount    = tags.filter(tag => {
+  const behindCount = tags.filter((tag) => {
     const parts = tag.name.split('.').map(Number)
     for (let i = 0; i < 3; i++) {
       if ((parts[i] ?? 0) > (installedParts[i] ?? 0)) return true
@@ -91,22 +101,38 @@ export function computeVersionDiff(
   return { diff: diff as ESOSVersionDiff, behindCount }
 }
 
-export async function buildVersionReport(): Promise<ESOSVersionReport> {
+export async function buildVersionReport(options?: {
+  forceRefresh?: boolean
+}): Promise<ESOSVersionReport> {
+  const force = options?.forceRefresh === true
+  if (force) {
+    invalidateCacheKey('esos-version-report')
+  }
+
   return withCache('esos-version-report', 6 * 60 * 60 * 1000, async () => {
-    const [installed, tags] = await Promise.all([
-      readInstalledESOSVersion(),
-      fetchESOSTags(),
-    ])
+    const installed = await readInstalledESOSVersion()
+    const tagsResult = await fetchESOSTags({ forceRefresh: force })
+    const tags = tagsResult.tags
+    const latestResult = await resolveLatestStableRelease({ forceRefresh: force })
 
     const { diff, behindCount } = computeVersionDiff(installed, tags)
+    const githubMeta: GitHubCacheMeta = {
+      source: githubMetaFromSources([
+        tagsResult.meta.source,
+        latestResult.meta?.source ?? 'cache',
+      ]),
+      fetchedAt: Math.max(tagsResult.meta.fetchedAt, latestResult.meta?.fetchedAt ?? 0),
+      error: tagsResult.meta.error ?? latestResult.meta?.error,
+    }
 
     return {
-      scannedAt:    Date.now(),
+      scannedAt: Date.now(),
       installed,
-      latestStable: pickLatestSemverTag(tags),
-      allTags:      tags,
+      latestStable: latestResult.latest ?? pickLatestSemverTag(tags),
+      allTags: tags,
       diff,
       behindCount,
+      githubMeta,
     }
   })
 }

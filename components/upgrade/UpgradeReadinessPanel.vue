@@ -18,7 +18,8 @@
           size="sm"
           icon="i-heroicons-arrow-path"
           :loading="upgradeStore.readinessLoading"
-          @click="emit('refresh')"
+          :disabled="upgradeStore.readinessThrottled"
+          @click="emit('refresh', true)"
         >
           {{ t('admin.upgrade.refresh') }}
         </UButton>
@@ -63,7 +64,7 @@
 </template>
 
 <script setup lang="ts">
-const emit = defineEmits<{ (e: 'refresh'): void }>()
+const emit = defineEmits<{ (e: 'refresh', force?: boolean): void }>()
 
 const props = defineProps<{ scopeLabel: string }>()
 

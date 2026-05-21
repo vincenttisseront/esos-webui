@@ -157,7 +157,8 @@
 
 <script setup lang="ts">
 import { ALL_SANS_ID } from '~/composables/useSelectedSan'
-import { AUTH_STOP_POLLING_EVENT } from '~/utils/app-polling'
+import { AUTH_STOP_POLLING_EVENT, registerPagePoller, unregisterPagePoller } from '~/utils/app-polling'
+import { isPollingPaused } from '~/utils/polling-coordinator'
 
 const route = useRoute()
 const sshStore = useSSHStore()
@@ -171,6 +172,7 @@ const statsStore = useStatsStore()
 const driftDetection = useNetworkDriftDetection()
 
 let statusInterval: ReturnType<typeof setInterval> | null = null
+let headerPollerRegistered = false
 
 function clearHeaderPolling() {
   driftDetection.stop()
@@ -182,14 +184,21 @@ function clearHeaderPolling() {
 
 function startHeaderPolling() {
   if (!authStore.isAuthenticated) return
-  clearHeaderPolling()
   const role = authStore.user?.role
   if (role === 'operator' || role === 'admin') {
     driftDetection.start(60_000)
   }
-  statusInterval = setInterval(() => {
-    if (authStore.isAuthenticated) sanSelector.fetchSans()
-  }, 15_000)
+  if (!headerPollerRegistered) {
+    headerPollerRegistered = true
+    registerPagePoller('header-selection', () => {
+      clearHeaderPolling()
+      statusInterval = setInterval(() => {
+        if (!authStore.isAuthenticated || isPollingPaused()) return
+        void sanSelector.fetchSans()
+      }, 60_000)
+    }, clearHeaderPolling)
+  }
+  void sanSelector.fetchSans()
 }
 
 useEventBus<void>(AUTH_STOP_POLLING_EVENT).on(clearHeaderPolling)
@@ -212,6 +221,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   clearHeaderPolling()
+  unregisterPagePoller('header-selection')
 })
 
 async function switchSan(id: string) {

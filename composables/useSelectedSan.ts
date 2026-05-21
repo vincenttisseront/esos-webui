@@ -4,6 +4,7 @@ import type {
   SelectionContextResponse,
   SSHLiveStatus,
 } from '~/server/utils/selection-context'
+import { singleFlight } from '~/utils/single-flight'
 
 export type { SSHLiveStatus } from '~/server/utils/selection-context'
 
@@ -79,7 +80,9 @@ export function useSelectedSan() {
     if (loading.value) return
     loading.value = true
     try {
-      const body = await $f<SelectionContextResponse>('/api/context/selection')
+      const body = await singleFlight('context-selection', () =>
+        $f<SelectionContextResponse>('/api/context/selection'),
+      )
       sans.value        = body.sans
       sshStatuses.value = body.sshStatuses
       clusters.value    = body.clusters

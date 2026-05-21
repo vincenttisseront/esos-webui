@@ -15,6 +15,7 @@
       <div class="flex items-center gap-3">
         <span v-if="versionStore.report" class="text-xs text-gray-400">
           {{ timeAgo }}
+          <template v-if="githubCacheLine"> · {{ githubCacheLine }}</template>
         </span>
         <UButton
           icon="i-heroicons-arrow-path"
@@ -53,6 +54,13 @@
     <div v-if="versionStore.loading && !versionStore.report" class="flex items-center justify-center py-20 text-gray-400 gap-3">
       <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin" />
     </div>
+    <UAlert
+      v-if="versionStore.refreshThrottled"
+      color="amber"
+      variant="soft"
+      class="mb-4"
+      :title="t('admin.version.cache.refresh_throttled')"
+    />
     <UAlert
       v-else-if="versionStore.error"
       color="red"
@@ -120,12 +128,25 @@ const { scopeLabel, upgradeUrl } = useUpgradeScope()
 
 const upgradeLink = computed(() => upgradeUrl('readiness'))
 
-const timeAgo = computed(() => {
-  if (!versionStore.report) return ''
-  const diffSec = Math.floor((Date.now() - versionStore.report.scannedAt) / 1000)
+const githubCacheLine = computed(() => {
+  const meta = versionStore.report?.githubMeta
+  if (!meta) return ''
+  return t('admin.version.cache.checked', {
+    source: t(`admin.version.cache.source.${meta.source}`),
+    ago: timeAgoFrom(meta.fetchedAt),
+  })
+})
+
+function timeAgoFrom(ts: number): string {
+  const diffSec = Math.floor((Date.now() - ts) / 1000)
   if (diffSec < 60) return t('admin.esos_version.page.time_ago_seconds', { count: diffSec })
   if (diffSec < 3600) return t('admin.esos_version.page.time_ago_minutes', { count: Math.floor(diffSec / 60) })
   return t('admin.esos_version.page.time_ago_hours', { count: Math.floor(diffSec / 3600) })
+}
+
+const timeAgo = computed(() => {
+  if (!versionStore.report) return ''
+  return timeAgoFrom(versionStore.report.scannedAt)
 })
 
 onMounted(() => {

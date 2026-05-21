@@ -1852,10 +1852,22 @@
       "login_success": "Succès",
       "login_failure": "Échec"
     },
+    "version": {
+      "cache": {
+        "source": {
+          "live": "direct",
+          "cache": "cache",
+          "stale": "cache (GitHub indisponible)"
+        },
+        "checked": "GitHub : {source} — {ago}",
+        "refresh_throttled": "Veuillez patienter avant de revérifier GitHub.",
+        "stale_github": "Dernières données GitHub connues (API indisponible)."
+      }
+    },
     "esos_version": {
       "page": {
         "subtitle": "Comparer le build ESOS installé avec les releases GitHub. La mise à niveau se gère dans la configuration système.",
-        "refresh": "Actualiser",
+        "refresh": "Revérifier",
         "upgrade_heading": "Mise à niveau planifiée",
         "upgrade_hint": "Préparation, transfert du paquet et plan pas à pas sont dans Configuration système pour le SAN ou le cluster sélectionné.",
         "prepare_upgrade": "Préparer une mise à niveau",

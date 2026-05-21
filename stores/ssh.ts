@@ -1,13 +1,25 @@
 import { defineStore } from 'pinia'
 import { isUnauthorizedError } from '~/utils/auth-api'
+import { isPollingPaused } from '~/utils/polling-coordinator'
 
 export type SSHStatus = 'connecting' | 'connected' | 'reconnecting' | 'error' | 'unconfigured'
+
+const DEFAULT_POLL_MS = 30_000
+
+function sshPollIntervalMs(): number {
+  if (import.meta.client) {
+    const cfg = useRuntimeConfig().public.sshStatusPollMs as number | undefined
+    if (typeof cfg === 'number' && cfg >= 10_000) return cfg
+  }
+  return DEFAULT_POLL_MS
+}
 
 interface SSHState {
   status: SSHStatus
   configured: boolean
   lastCheckedAt: Date | null
   pollInterval: ReturnType<typeof setInterval> | null
+  fetchInFlight: boolean
 }
 
 export const useSSHStore = defineStore('ssh', {
@@ -16,6 +28,7 @@ export const useSSHStore = defineStore('ssh', {
     configured: true,
     lastCheckedAt: null,
     pollInterval: null,
+    fetchInFlight: false,
   }),
 
   getters: {
@@ -49,6 +62,8 @@ export const useSSHStore = defineStore('ssh', {
   actions: {
     async fetchStatus() {
       if (!useAuthStore().isAuthenticated) return
+      if (this.fetchInFlight) return
+      this.fetchInFlight = true
       try {
         const data = await $fetch<{ status: SSHStatus; configured: boolean }>('/api/ssh-status')
         this.configured = data.configured
@@ -57,8 +72,10 @@ export const useSSHStore = defineStore('ssh', {
         if (isUnauthorizedError(err)) return
         this.configured = true
         this.setStatus('error')
+      } finally {
+        this.lastCheckedAt = new Date()
+        this.fetchInFlight = false
       }
-      this.lastCheckedAt = new Date()
     },
 
     setStatus(status: SSHStatus) {
@@ -68,7 +85,6 @@ export const useSSHStore = defineStore('ssh', {
         useEventBus<void>('ssh:reconnected').emit()
       }
       if (status === 'connected' || status === 'unconfigured') {
-        // Erreurs SSH/overview obsolètes au retour de la connexion
         const errorStore = useErrorStore()
         errorStore.clearSource('ssh')
         errorStore.clearSource('overview')
@@ -77,9 +93,14 @@ export const useSSHStore = defineStore('ssh', {
 
     startPolling() {
       if (!useAuthStore().isAuthenticated) return
+      if (isPollingPaused()) return
       if (this.pollInterval) return
-      this.fetchStatus()
-      this.pollInterval = setInterval(() => this.fetchStatus(), 5_000)
+      void this.fetchStatus()
+      const ms = sshPollIntervalMs()
+      this.pollInterval = setInterval(() => {
+        if (isPollingPaused()) return
+        void this.fetchStatus()
+      }, ms)
     },
 
     stopPolling() {

@@ -275,6 +275,14 @@ export interface GitHubTag {
 
 export type ESOSVersionDiff = 'up-to-date' | 'patch' | 'minor' | 'major' | 'on-master' | 'unknown'
 
+export type GitHubCacheSource = 'live' | 'cache' | 'stale'
+
+export interface GitHubCacheMeta {
+  source: GitHubCacheSource
+  fetchedAt: number
+  error?: string
+}
+
 export interface ESOSVersionReport {
   scannedAt:    number
   installed:    InstalledESOSVersion
@@ -282,6 +290,7 @@ export interface ESOSVersionReport {
   allTags:      GitHubTag[]
   diff:         ESOSVersionDiff
   behindCount:  number
+  githubMeta?:  GitHubCacheMeta
 }
 
 // ─── Cluster Mode (SDD v3.4) ─────────────────────────────────────────────────

@@ -16,7 +16,7 @@
     </div>
 
     <div v-show="activeSubTab === 'readiness'">
-      <UpgradeReadinessPanel :scope-label="scopeLabel" @refresh="refreshReadiness" />
+      <UpgradeReadinessPanel :scope-label="scopeLabel" @refresh="(force) => refreshReadiness(force)" />
     </div>
 
     <div v-show="activeSubTab === 'package'">
@@ -126,9 +126,9 @@ function setSubTab(tab: UpgradeSubTab) {
   emit('sub-tab-change', tab)
 }
 
-function refreshReadiness() {
+function refreshReadiness(force = false) {
   const p = readinessQueryParams.value
-  if (p) void upgradeStore.fetchReadiness(p)
+  if (p) void upgradeStore.fetchReadiness(p, { force })
 }
 
 function generatePlan() {

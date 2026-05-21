@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import type { SessionThroughput, DeviceThroughput, DiskStatThroughput } from '~/server/utils/types'
 import { isUnauthorizedError } from '~/utils/auth-api'
+import { isPollingPaused, isStatsRoute } from '~/utils/polling-coordinator'
 
 /**
  * Store Pinia pour les métriques I/O temps réel (cf. SDD v2.2 §6).
@@ -16,6 +17,7 @@ interface StatsState {
   loading:    boolean
   error:      string | null
   pollInterval: ReturnType<typeof setInterval> | null
+  fetchInFlight: boolean
 }
 
 export const useStatsStore = defineStore('stats', {
@@ -27,6 +29,7 @@ export const useStatsStore = defineStore('stats', {
     loading:      false,
     error:        null,
     pollInterval: null,
+    fetchInFlight: false,
   }),
 
   getters: {
@@ -55,10 +58,12 @@ export const useStatsStore = defineStore('stats', {
   actions: {
     async fetchAll() {
       if (!useAuthStore().isAuthenticated) return
+      if (this.fetchInFlight) return
 
       const sshStore = useSSHStore()
       if (!sshStore.isReady) return
 
+      this.fetchInFlight = true
       this.loading = true
       this.error = null
 
@@ -139,6 +144,7 @@ export const useStatsStore = defineStore('stats', {
         this.error = (err as Error).message
       } finally {
         this.loading = false
+        this.fetchInFlight = false
       }
     },
 
@@ -149,11 +155,16 @@ export const useStatsStore = defineStore('stats', {
       this.capturedAt = null
     },
 
-    startPolling(intervalMs = 10_000) {
+    startPolling(intervalMs = 30_000) {
       if (!useAuthStore().isAuthenticated) return
+      if (!isStatsRoute()) return
+      if (isPollingPaused()) return
       this.stopPolling()
-      this.fetchAll()
-      this.pollInterval = setInterval(() => this.fetchAll(), intervalMs)
+      void this.fetchAll()
+      this.pollInterval = setInterval(() => {
+        if (!isStatsRoute() || isPollingPaused()) return
+        void this.fetchAll()
+      }, intervalMs)
     },
 
     stopPolling() {

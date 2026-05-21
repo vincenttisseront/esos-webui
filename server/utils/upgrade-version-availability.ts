@@ -1,4 +1,4 @@
-import { resolveLatestStableRelease, fetchESOSTags, filterSemverTags } from './esos-github'
+import { resolveLatestStableRelease, fetchESOSTagsLite } from './esos-github'
 import { compareSemver, relativeSemver } from './semver'
 import type { InstalledESOSVersion } from './types'
 import type {
@@ -98,20 +98,30 @@ function aggregateOverall(
   return 'mixed'
 }
 
+function githubUsable(github: Awaited<ReturnType<typeof resolveLatestStableRelease>>): boolean {
+  return github.ok || (github.meta?.source === 'stale' && !!github.latest)
+}
+
 export async function buildUpgradeVersionAvailability(
   nodes: UpgradeNodeReadiness[],
 ): Promise<UpgradeVersionAvailability> {
   const github = await resolveLatestStableRelease()
   const latest = github.latest
   const latestVersion = latest?.name ?? null
+  const ok = githubUsable(github)
 
   let semverTags: { name: string }[] = []
-  if (github.ok) {
-    try {
-      const all = await fetchESOSTags()
-      semverTags = filterSemverTags(all)
-    } catch {
-      semverTags = latest ? [latest] : []
+  let tagsMeta = github.meta
+  if (ok) {
+    const needsBehind = nodes.some(
+      n => n.installed.buildType === 'stable' && n.installed.version,
+    )
+    if (needsBehind) {
+      const lite = await fetchESOSTagsLite()
+      semverTags = lite.tags
+      tagsMeta = lite.meta
+    } else if (latest) {
+      semverTags = [latest]
     }
   }
 
@@ -119,11 +129,11 @@ export async function buildUpgradeVersionAvailability(
     const { status, diff, behindCount: _bc } = evaluateNodeStatus(
       node.installed,
       latestVersion,
-      github.ok,
+      ok,
     )
     let behindCount: number | undefined
     if (
-      github.ok
+      ok
       && status === 'upgrade-available'
       && node.installed.buildType === 'stable'
       && node.installed.version
@@ -140,12 +150,22 @@ export async function buildUpgradeVersionAvailability(
     }
   })
 
-  const overall = aggregateOverall(nodeResults.map(n => n.status), github.ok)
+  const overall = aggregateOverall(nodeResults.map(n => n.status), ok)
+
+  const githubSource = github.meta?.source ?? tagsMeta?.source
+  const githubCheckedAt = Math.max(
+    github.meta?.fetchedAt ?? 0,
+    tagsMeta?.fetchedAt ?? 0,
+  ) || undefined
 
   return {
-    githubOk: github.ok,
-    githubError: github.error,
-    githubMessage: github.message,
+    githubOk: ok,
+    githubError: ok ? undefined : github.error,
+    githubMessage: ok && github.meta?.source === 'stale'
+      ? github.message ?? github.meta.error
+      : github.message,
+    githubCheckedAt,
+    githubSource,
     latestStable: latest
       ? {
           version: latest.name,

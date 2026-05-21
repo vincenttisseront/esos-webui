@@ -1852,10 +1852,22 @@
       "login_success": "Success",
       "login_failure": "Failed"
     },
+    "version": {
+      "cache": {
+        "source": {
+          "live": "live",
+          "cache": "cache",
+          "stale": "cached (GitHub unavailable)"
+        },
+        "checked": "GitHub: {source} — {ago}",
+        "refresh_throttled": "Please wait before checking GitHub again.",
+        "stale_github": "Showing last known GitHub data (API unavailable)."
+      }
+    },
     "esos_version": {
       "page": {
         "subtitle": "Compare the installed ESOS build with GitHub releases. Upgrades are managed under System configuration.",
-        "refresh": "Refresh",
+        "refresh": "Re-check",
         "upgrade_heading": "Planned upgrade",
         "upgrade_hint": "Readiness checks, package staging, and step-by-step plans are in System configuration for the selected SAN or cluster.",
         "prepare_upgrade": "Prepare an upgrade",

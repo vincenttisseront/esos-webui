@@ -57,6 +57,8 @@ export interface UpgradeVersionAvailability {
   githubOk: boolean
   githubError?: 'rate_limit' | 'network' | 'http_error' | 'no_semver_tags'
   githubMessage?: string
+  githubCheckedAt?: number
+  githubSource?: 'live' | 'cache' | 'stale'
   latestStable: { version: string; name: string; downloadUrl: string } | null
   overall: UpgradeVersionAvailabilityOverall
   nodes: UpgradeVersionAvailabilityNode[]

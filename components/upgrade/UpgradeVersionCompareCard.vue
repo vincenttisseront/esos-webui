@@ -3,9 +3,14 @@
     v-if="availability"
     class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 space-y-3"
   >
-    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-      {{ t('admin.upgrade.version.title') }}
-    </p>
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+        {{ t('admin.upgrade.version.title') }}
+      </p>
+      <p v-if="cacheMetaLine" class="text-[10px] text-gray-400 dark:text-gray-500">
+        {{ cacheMetaLine }}
+      </p>
+    </div>
 
     <div
       v-if="availability.overall === 'up-to-date'"
@@ -161,8 +166,27 @@ const upToDateDetail = computed(() => {
   return t('admin.upgrade.version.up_to_date.detail', { installed: ver, latest: latest ?? ver })
 })
 
+const cacheMetaLine = computed(() => {
+  const a = props.availability
+  if (!a?.githubCheckedAt) return ''
+  const src = a.githubSource ?? 'cache'
+  const label = t(`admin.version.cache.source.${src}`)
+  const ago = formatCheckedAgo(a.githubCheckedAt)
+  return t('admin.version.cache.checked', { source: label, ago })
+})
+
+function formatCheckedAgo(ts: number): string {
+  const sec = Math.floor((Date.now() - ts) / 1000)
+  if (sec < 60) return t('admin.esos_version.page.time_ago_seconds', { count: sec })
+  if (sec < 3600) return t('admin.esos_version.page.time_ago_minutes', { count: Math.floor(sec / 60) })
+  return t('admin.esos_version.page.time_ago_hours', { count: Math.floor(sec / 3600) })
+}
+
 const githubDetail = computed(() => {
   const err = props.availability?.githubError
+  if (props.availability?.githubSource === 'stale') {
+    return t('admin.version.cache.stale_github')
+  }
   if (err === 'rate_limit') return t('admin.upgrade.version.github_unavailable.rate_limit')
   return props.availability?.githubMessage ?? t('admin.upgrade.version.github_unavailable.detail')
 })

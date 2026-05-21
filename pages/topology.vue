@@ -169,15 +169,5 @@ async function switchSan(id: string) {
   await Promise.all([overviewStore.fetch(), hwStore.fetch()])
 }
 
-// ── Polling 15 s ─────────────────────────────────────────────────────────────
-let timer: ReturnType<typeof setInterval> | null = null
-
-onMounted(() => {
-  refresh()
-  timer = setInterval(refresh, 15_000)
-})
-
-onUnmounted(() => {
-  if (timer) clearInterval(timer)
-})
+useManagedPagePoll('topology', refresh, 30_000)
 </script>

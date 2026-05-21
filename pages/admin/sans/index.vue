@@ -440,11 +440,9 @@ async function refreshLiveStatuses() {
   liveStatuses.value = await $fetch<Record<string, SSHStatus>>('/api/admin/sans/statuses')
 }
 
-let pollingInterval: ReturnType<typeof setInterval> | null = null
+useManagedPagePoll('admin-sans-status', refreshLiveStatuses, 30_000)
+
 onMounted(() => {
-  pollingInterval = setInterval(async () => {
-    await refreshLiveStatuses()
-  }, 10_000)
   for (const group of clusterGroups.value) {
     void refreshClusterGroup(group)
   }
@@ -452,9 +450,6 @@ onMounted(() => {
 })
 
 watch(() => route.query.clusterId, () => scrollToClusterFromQuery())
-onUnmounted(() => {
-  if (pollingInterval) clearInterval(pollingInterval)
-})
 
 watch(clusterGroups, (groups) => {
   for (const group of groups) {
