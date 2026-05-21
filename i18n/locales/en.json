@@ -1459,6 +1459,9 @@
       }
     },
     "sysconfig": {
+      "smtp": {
+        "auth_none": "None"
+      },
       "datetime": {
         "title": "Date & time",
         "local_time_label": "System local time",

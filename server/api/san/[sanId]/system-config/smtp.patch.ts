@@ -9,6 +9,7 @@ import {
   validateSafeSmtpMailHub,
   validateSmtpAuthPass,
 } from '~~/server/utils/remote-config-paths'
+import { toBackendSmtpAuthMethod } from '~~/utils/smtp-auth-method'
 
 const SSMTP = '/etc/ssmtp/ssmtp.conf'
 
@@ -19,7 +20,7 @@ const bodySchema = z.object({
   authPass:     z.string().optional().default(''),
   useTLS:       z.boolean().optional().default(false),
   useSTARTTLS:  z.boolean().optional().default(false),
-  authMethod:   z.enum(['LOGIN', 'PLAIN', 'CRAM-MD5', '']).optional().default(''),
+  authMethod:   z.enum(['LOGIN', 'PLAIN', 'CRAM-MD5', '', 'none']).optional().default(''),
   fromOverride: z.boolean().optional().default(true),
 })
 
@@ -61,7 +62,7 @@ export default defineEventHandler(async (event) => {
     authPass,
     useTLS:       input.useTLS,
     useSTARTTLS:  input.useSTARTTLS,
-    authMethod:   input.authMethod,
+    authMethod:   toBackendSmtpAuthMethod(input.authMethod),
     fromOverride: input.fromOverride,
   }
 

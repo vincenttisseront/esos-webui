@@ -51,6 +51,7 @@
             <USelect
               v-model="form.authMethod"
               :items="authMethods"
+              value-key="value"
               class="w-full"
               :disabled="isDisabled"
             />
@@ -124,7 +125,13 @@
 
 <script setup lang="ts">
 import type { SMTPConfig } from '~/server/utils/types'
-import { useAppToast }     from '~/composables/useAppToast'
+import { useAppToast } from '~/composables/useAppToast'
+import {
+  smtpAuthMethodSelectItems,
+  toBackendSmtpAuthMethod,
+  toUiSmtpAuthMethod,
+  type SmtpAuthMethodUi,
+} from '~/utils/smtp-auth-method'
 
 const props = defineProps<{
   sanId:    string
@@ -138,12 +145,16 @@ const emit = defineEmits<{
 
 const toast = useAppToast()
 
-const authMethods = [
-  { label: 'Aucune',   value: '' },
-  { label: 'LOGIN',    value: 'LOGIN' },
-  { label: 'PLAIN',    value: 'PLAIN' },
-  { label: 'CRAM-MD5', value: 'CRAM-MD5' },
-]
+const { t } = useEsosI18n()
+
+const authMethods = computed(() =>
+  smtpAuthMethodSelectItems({
+    none:  t('admin.sysconfig.smtp.auth_none') as string,
+    login: 'LOGIN',
+    plain: 'PLAIN',
+    cram:  'CRAM-MD5',
+  }),
+)
 
 const form = reactive({
   alertEmail:   props.config.alertEmail,
@@ -152,7 +163,7 @@ const form = reactive({
   authPass:     '',
   useTLS:       props.config.useTLS,
   useSTARTTLS:  props.config.useSTARTTLS,
-  authMethod:   props.config.authMethod,
+  authMethod:   toUiSmtpAuthMethod(props.config.authMethod) as SmtpAuthMethodUi,
   fromOverride: props.config.fromOverride,
 })
 
@@ -168,7 +179,10 @@ async function save() {
   try {
     await $fetch(`/api/san/${props.sanId}/system-config/smtp`, {
       method: 'PATCH',
-      body:   { ...form },
+      body: {
+        ...form,
+        authMethod: toBackendSmtpAuthMethod(form.authMethod),
+      },
     })
     toast.success('Configuration SMTP enregistrée')
     emit('saved')
