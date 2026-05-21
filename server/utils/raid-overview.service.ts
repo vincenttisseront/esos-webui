@@ -12,6 +12,7 @@ import { parseMdstat } from './parsers/mdstat.parser'
 import { parseMdadmDetail } from './parsers/mdadm-detail.parser'
 import { parseMdadmExamineBulk } from './parsers/mdadm-examine.parser'
 import { discoverHardwareControllers } from './raid-hardware'
+import { enrichHardwareLdOsPaths } from './hw-raid-os-mapper'
 import { collectKernelRaidInfo } from './raid-pci-detection'
 import { buildMdDetectionSummary, getMdEligibilityReasons } from './raid-md-detection'
 import { detectStoppedMdArrays } from './stopped-md-arrays'
@@ -83,7 +84,13 @@ export async function collectRaidOverview(manager: SSHSessionManager): Promise<R
   const mdadmScan = sections.MDADM_SCAN ?? ''
   const mdArrays = await parseMdArrays(manager, sections.MDSTAT ?? '', mdadmScan, blockDevices)
   const stoppedMdArrays = detectStoppedMdArrays({ mdadmScan, blockDevices, activeMdArrays: mdArrays })
-  const hardwareControllers = await discoverHardwareControllers(manager, tools, resolvedCli, kernelInfo)
+  const discovered = await discoverHardwareControllers(manager, tools, resolvedCli, kernelInfo)
+  const hardwareControllers = enrichHardwareLdOsPaths({
+    controllers: discovered,
+    blockDevices,
+    kernelLogicalDrives: kernelInfo.kernelLogicalDrives,
+    tools,
+  })
 
   // Marquer les block devices utilisés par MD
   markMdUsage(blockDevices, mdArrays)

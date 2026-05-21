@@ -56,6 +56,17 @@ export async function countAdmins(): Promise<number> {
   return Number(rows[0]?.count ?? 0)
 }
 
+/** Active users for a given auth source (login provider visibility). */
+export async function countActiveUsersByAuthSource(source: AuthSource): Promise<number> {
+  const db   = getDB()
+  const rows = db
+    .select({ count: sql<number>`count(*)` })
+    .from(users)
+    .where(and(eq(users.authSource, source), eq(users.active, true)))
+    .all()
+  return Number(rows[0]?.count ?? 0)
+}
+
 // ─── Écriture ─────────────────────────────────────────────────────────────────
 
 export async function createUser(

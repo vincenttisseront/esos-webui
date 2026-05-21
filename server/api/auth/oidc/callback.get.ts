@@ -10,6 +10,7 @@ import {
 import { buildOidcRedirectUri } from '../../../utils/auth-trusted-origin'
 import { getOidcConfigurationCached } from '../../../utils/oidc-discovery'
 import { idTokenSatisfiesMfaPolicy } from '../../../utils/auth-providers-mfa'
+import { isSanitizedFederatedLoginFailure } from '../../../utils/auth-login-errors'
 import { resolveOidcLoginUser } from '../../../utils/oidc-user-resolve'
 import { setSessionCookieForUser } from '../../../utils/auth-session-cookie'
 
@@ -93,8 +94,12 @@ export default defineEventHandler(async (event) => {
   try {
     user = await resolveOidcLoginUser({ issuer, subject, claims: idClaims, dto })
   } catch (e) {
-    if ((e as { statusCode?: number }).statusCode) throw e
-    return redirectLoginError(event, 'oidc_user')
+    const status = (e as { statusCode?: number }).statusCode
+    if (status === 403 || isSanitizedFederatedLoginFailure(e)) {
+      return redirectLoginError(event, 'login_failed')
+    }
+    if (status) throw e
+    return redirectLoginError(event, 'login_failed')
   }
 
   if (!user.active) {

@@ -201,9 +201,15 @@
       "local_help": "Authentification avec un compte local ESOS.",
       "local_identifier_label": "Identifiant ou e-mail",
       "local_identifier_placeholder": "root",
+      "local_username_label": "Identifiant local",
+      "local_username_placeholder": "admin",
+      "local_password_placeholder": "Saisissez votre mot de passe",
       "local_submit": "Se connecter",
       "ldap_title": "Annuaire LDAP / Active Directory",
       "ldap_help": "Utilisez vos identifiants d'annuaire d'entreprise.",
+      "ldap_username_label": "Identifiant AD",
+      "ldap_username_placeholder": "DOMAINE\\utilisateur ou utilisateur@entreprise.fr",
+      "ldap_password_placeholder": "Mot de passe annuaire",
       "ldap_unavailable": "L'authentification annuaire n'est pas activée pour cette instance ESOS.",
       "sso_title": "Single Sign-On",
       "sso_help": "Redirection vers le fournisseur d'identité configuré.",
@@ -212,7 +218,15 @@
       "sso_submit": "Continuer avec SSO",
       "forgot_password": "Mot de passe oublié ?",
       "forgot_password_toast_title": "Réinitialiser le mot de passe",
-      "forgot_password_toast_desc": "La réinitialisation en libre-service n'est pas activée. Contactez votre administrateur."
+      "forgot_password_toast_desc": "La réinitialisation en libre-service n'est pas activée. Contactez votre administrateur.",
+      "no_methods_title": "Connexion indisponible",
+      "no_methods_help": "Aucune méthode d'authentification n'est configurée. Contactez l'administrateur ESOS.",
+      "providers_load_error": "Impossible de charger les options de connexion. Actualisez la page ou contactez l'administrateur.",
+      "provider_reason": {
+        "disabled": "Cette méthode est désactivée dans les paramètres.",
+        "config_incomplete": "La configuration est incomplète.",
+        "no_provisioned_users": "Aucun utilisateur provisionné et le provisionnement automatique est désactivé."
+      }
     }
   },
   "errors": {
@@ -234,7 +248,8 @@
       "mfa_required": "L'authentification multifacteur est requise par la politique.",
       "user": "Aucun compte autorisé pour cet identifiant.",
       "inactive": "Compte désactivé.",
-      "external_generic": "Erreur de connexion externe."
+      "external_generic": "Erreur de connexion externe.",
+      "login_failed": "Échec de la connexion. Vérifiez vos identifiants ou contactez l'administrateur."
     }
   },
   "raid": {
@@ -2219,6 +2234,10 @@
         "technical_details": "Détails techniques",
         "stale_title": "Données affichées depuis le dernier scan réussi",
         "stale_body": "Données du dernier scan réussi ({time})."
+      },
+      "hw_ld": {
+        "tool_missing": "Aucun outil storcli/perccli disponible pour résoudre le chemin OS de ce volume logique.",
+        "mapping_not_found": "perccli détecté, mais aucun chemin Linux fiable n'a été trouvé pour ce volume logique."
       },
       "next": {
         "title": "Prochaine étape recommandée",

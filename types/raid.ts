@@ -121,6 +121,10 @@ export interface HardwareRaidLogicalDrive {
   detectionSource?: 'cli' | 'lsscsi' | 'dmesg' | 'proc_scsi'
   progressPct?: number
   warnings?: string[]
+  wwn?: string
+  serial?: string
+  inquiry?: string
+  osMappingStatus?: 'mapped' | 'unmapped'
 }
 
 export type StoppedMdMemberStatus =

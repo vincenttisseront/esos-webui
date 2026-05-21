@@ -1,10 +1,12 @@
 import { buildAdminAuthProvidersDto } from '../../utils/auth-providers-config'
+import { buildPublicAuthProviders } from '../../utils/auth-providers-public'
+import { countActiveUsersByAuthSource } from '../../db/repositories/user.repository'
 
 export default defineEventHandler(async () => {
   const dto = await buildAdminAuthProvidersDto()
-  return {
-    local: true,
-    ldap:  dto.ldap.enabled,
-    oidc:  dto.oidc.enabled,
-  }
+  const [ldapCount, oidcCount] = await Promise.all([
+    countActiveUsersByAuthSource('ldap'),
+    countActiveUsersByAuthSource('oidc'),
+  ])
+  return buildPublicAuthProviders(dto, { ldap: ldapCount, oidc: oidcCount })
 })

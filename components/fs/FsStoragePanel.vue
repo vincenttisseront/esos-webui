@@ -274,7 +274,7 @@
         </template>
         <template #reasons-cell="{ row }">
           <span v-if="row.original.eligible" class="text-green-600 text-xs">OK</span>
-          <span v-else class="text-red-600 text-xs">{{ row.original.reasons.join(' · ') || '—' }}</span>
+          <span v-else class="text-red-600 text-xs">{{ formatBackendReasons(row.original.reasons) }}</span>
         </template>
         <template #hw-cell="{ row }">
           <span v-if="row.original.controllerLabel" class="text-xs">{{ row.original.controllerLabel }} / {{ row.original.hwLdId ?? '—' }}</span>
@@ -483,6 +483,13 @@ function healthColor(h: MountHealth) {
   if (h === 'full') return 'red'
   if (h === 'degraded') return 'amber'
   return 'green'
+}
+
+function formatBackendReasons(reasons: string[]): string {
+  if (!reasons.length) return '—'
+  return reasons
+    .map((r) => (r.startsWith('storage.') ? (t(r) as string) : r))
+    .join(' · ')
 }
 
 function highlightLunsForDevice(name: string) {

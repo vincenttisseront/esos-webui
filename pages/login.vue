@@ -21,8 +21,27 @@ const ldapUsername = ref('')
 const ldapPassword = ref('')
 const ldapSubmitting = ref(false)
 
-const { data: providers } = await useFetch<{ local: boolean; ldap: boolean; oidc: boolean }>(
+type PublicAuthProvidersResponse = {
+  providers: Array<{
+    key: 'local' | 'ldap' | 'oidc'
+    label: string
+    available: boolean
+    loginUrl?: string
+    reason?: string
+  }>
+  defaultProvider?: 'local' | 'ldap' | 'oidc'
+}
+
+const { data: providersPayload, error: providersError } = await useFetch<PublicAuthProvidersResponse>(
   '/api/auth/providers',
+)
+
+const loginProviders = computed(() =>
+  (providersPayload.value?.providers ?? []).filter((p) => p.available),
+)
+
+const defaultLoginProvider = computed(
+  () => providersPayload.value?.defaultProvider ?? loginProviders.value[0]?.key ?? 'local',
 )
 
 const features = computed(() => [
@@ -44,6 +63,7 @@ const OIDC_ERROR_KEYS: Record<string, string> = {
   oidc_claims:    'errors.oidc.claims',
   mfa_required:   'errors.oidc.mfa_required',
   oidc_user:      'errors.oidc.user',
+  login_failed:   'errors.oidc.login_failed',
   inactive:       'errors.oidc.inactive',
 }
 
@@ -63,6 +83,10 @@ watch(
   () => route.query.error,
   () => applyRouteError(),
 )
+
+watch(loginProviders, () => {
+  error.value = null
+})
 
 async function bootstrapAfterLogin(user: { forcePasswordChange: boolean }) {
   const sanSelector   = useSelectedSan()
@@ -105,10 +129,6 @@ async function onLdapSubmit() {
   } finally {
     ldapSubmitting.value = false
   }
-}
-
-function startOidc() {
-  window.location.href = '/api/auth/oidc/login'
 }
 
 function onForgotPasswordToast() {
@@ -185,20 +205,29 @@ function onForgotPasswordToast() {
           </p>
         </div>
 
+        <div
+          v-if="providersError"
+          class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          role="alert"
+        >
+          {{ t('auth.login.providers_load_error') }}
+        </div>
+
         <LoginCard
+          v-else
           v-model:username="username"
           v-model:password="password"
           v-model:ldap-username="ldapUsername"
           v-model:ldap-password="ldapPassword"
-          :show-sso="!!providers?.oidc"
-          :show-ldap="!!providers?.ldap"
+          :providers="loginProviders"
+          :default-provider="defaultLoginProvider"
           :submitting="submitting"
           :ldap-submitting="ldapSubmitting"
           :error="error"
           @submit-local="onSubmit"
           @ldap-submit="onLdapSubmit"
-          @sso="startOidc"
           @forgot-password="onForgotPasswordToast"
+          @clear-error="error = null"
         />
 
         <div class="flex items-center justify-between gap-3 px-1 pt-1">

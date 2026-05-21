@@ -4,6 +4,7 @@
     :aria-label="t('auth.login.card_label')"
   >
     <div
+      v-if="availableModes.length > 1"
       class="relative mb-7 rounded-full border border-slate-200 bg-slate-100 p-1"
       role="tablist"
       :aria-label="t('auth.login.mode_selector_label')"
@@ -13,9 +14,12 @@
         class="pointer-events-none absolute top-1 bottom-1 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 shadow-md shadow-blue-900/20 transition-[left,width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
         :style="pillStyle"
       />
-      <div class="relative z-10 grid grid-cols-3">
+      <div
+        class="relative z-10 grid"
+        :style="{ gridTemplateColumns: `repeat(${availableModes.length}, minmax(0, 1fr))` }"
+      >
         <button
-          v-for="mode in modes"
+          v-for="mode in availableModes"
           :id="tabId(mode.id)"
           :key="mode.id"
           type="button"
@@ -23,10 +27,8 @@
           class="min-h-11 rounded-full px-2 text-center text-xs font-semibold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 sm:text-sm"
           :class="tabClass(mode)"
           :aria-selected="activeMode === mode.id"
-          :aria-disabled="!mode.enabled"
           :tabindex="activeMode === mode.id ? 0 : -1"
           :aria-controls="panelId(mode.id)"
-          :disabled="!mode.enabled"
           @click="selectMode(mode.id)"
         >
           {{ mode.label }}
@@ -34,7 +36,7 @@
       </div>
     </div>
 
-    <div class="mb-7 flex justify-center">
+    <div v-if="availableModes.length > 0" class="mb-7 flex justify-center">
       <div
         class="flex h-16 w-16 items-center justify-center rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-inner"
         aria-hidden="true"
@@ -61,7 +63,21 @@
       </div>
     </Transition>
 
-    <div class="relative min-h-[18.5rem]">
+    <div
+      v-if="availableModes.length === 0"
+      class="space-y-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-5 text-center"
+      role="alert"
+    >
+      <UIcon name="i-heroicons-exclamation-triangle" class="mx-auto h-8 w-8 text-amber-600" />
+      <h2 class="text-lg font-semibold text-amber-950">
+        {{ t('auth.login.no_methods_title') }}
+      </h2>
+      <p class="text-sm leading-6 text-amber-800">
+        {{ t('auth.login.no_methods_help') }}
+      </p>
+    </div>
+
+    <div v-else class="relative min-h-[18.5rem]">
       <Transition
         mode="out-in"
         enter-active-class="transition-all duration-200 ease-out"
@@ -77,7 +93,8 @@
           key="local"
           class="space-y-5"
           role="tabpanel"
-          :aria-labelledby="tabId('local')"
+          :aria-labelledby="availableModes.length > 1 ? tabId('local') : undefined"
+          autocomplete="on"
           @submit.prevent="emit('submit-local')"
         >
           <div class="space-y-1.5">
@@ -89,15 +106,17 @@
             </p>
           </div>
 
-          <UFormGroup :label="t('auth.login.local_identifier_label')">
+          <UFormGroup :label="t('auth.login.local_username_label')">
             <UInput
               v-model="username"
+              name="username"
               type="text"
-              :placeholder="t('auth.login.local_identifier_placeholder')"
+              :placeholder="t('auth.login.local_username_placeholder')"
               autocomplete="username"
               size="lg"
               class="w-full"
               :ui="inputUi"
+              :disabled="submitting"
               autofocus
             />
           </UFormGroup>
@@ -105,19 +124,22 @@
           <UFormGroup :label="t('auth.login.password')">
             <UInput
               v-model="password"
+              name="password"
               type="password"
-              :placeholder="t('auth.login.password_placeholder')"
+              :placeholder="t('auth.login.local_password_placeholder')"
               autocomplete="current-password"
               size="lg"
               class="w-full"
               :ui="inputUi"
+              :disabled="submitting"
             />
           </UFormGroup>
 
           <div class="flex justify-end">
             <button
               type="button"
-              class="rounded text-sm font-medium text-blue-700 underline-offset-2 hover:text-blue-800 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
+              class="rounded text-sm font-medium text-blue-700 underline-offset-2 hover:text-blue-800 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 disabled:opacity-50"
+              :disabled="submitting"
               @click="emit('forgot-password')"
             >
               {{ t('auth.login.forgot_password') }}
@@ -142,7 +164,8 @@
           key="ldap"
           class="space-y-5"
           role="tabpanel"
-          :aria-labelledby="tabId('ldap')"
+          :aria-labelledby="availableModes.length > 1 ? tabId('ldap') : undefined"
+          autocomplete="on"
           @submit.prevent="emit('ldap-submit')"
         >
           <div class="space-y-1.5">
@@ -154,33 +177,32 @@
             </p>
           </div>
 
-          <div
-            v-if="!showLdap"
-            class="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-800"
-          >
-            {{ t('auth.login.ldap_unavailable') }}
-          </div>
-
-          <UFormGroup :label="t('auth.login.username_label_ldap')">
+          <UFormGroup :label="t('auth.login.ldap_username_label')">
             <UInput
               v-model="ldapUsername"
+              name="username"
+              type="text"
+              :placeholder="t('auth.login.ldap_username_placeholder')"
               autocomplete="username"
-              :disabled="!showLdap"
               size="lg"
               class="w-full"
               :ui="inputUi"
+              :disabled="ldapSubmitting"
+              autofocus
             />
           </UFormGroup>
 
           <UFormGroup :label="t('auth.login.password')">
             <UInput
               v-model="ldapPassword"
+              name="password"
               type="password"
+              :placeholder="t('auth.login.ldap_password_placeholder')"
               autocomplete="current-password"
-              :disabled="!showLdap"
               size="lg"
               class="w-full"
               :ui="inputUi"
+              :disabled="ldapSubmitting"
             />
           </UFormGroup>
 
@@ -189,7 +211,7 @@
             block
             size="lg"
             :loading="ldapSubmitting"
-            :disabled="!showLdap || !ldapUsername?.trim() || !ldapPassword"
+            :disabled="!ldapUsername?.trim() || !ldapPassword"
             class="h-12 justify-center bg-gradient-to-r from-blue-600 to-indigo-600 font-semibold shadow-lg shadow-blue-900/20 hover:from-blue-700 hover:to-indigo-700"
           >
             {{ t('auth.login.ldap_submit') }}
@@ -197,12 +219,12 @@
         </form>
 
         <div
-          v-else
-          :id="panelId('sso')"
-          key="sso"
+          v-else-if="activeMode === 'oidc'"
+          :id="panelId('oidc')"
+          key="oidc"
           class="space-y-6 text-center"
           role="tabpanel"
-          :aria-labelledby="tabId('sso')"
+          :aria-labelledby="availableModes.length > 1 ? tabId('oidc') : undefined"
         >
           <div class="space-y-1.5 text-center">
             <h2 class="text-xl font-semibold tracking-tight text-slate-950">
@@ -220,21 +242,14 @@
             {{ t('auth.login.sso_provider_generic') }}
           </div>
 
-          <div
-            v-if="!showSso"
-            class="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-800"
-          >
-            {{ t('auth.login.sso_unavailable') }}
-          </div>
-
           <UButton
             type="button"
             block
             size="lg"
             icon="i-heroicons-arrow-right-on-rectangle"
-            :disabled="!showSso"
+            :loading="ssoRedirecting"
             class="h-12 justify-center bg-gradient-to-r from-blue-600 to-indigo-600 font-semibold shadow-lg shadow-blue-900/20 hover:from-blue-700 hover:to-indigo-700"
-            @click="emit('sso')"
+            @click="onSsoClick"
           >
             {{ t('auth.login.sso_submit') }}
           </UButton>
@@ -245,21 +260,27 @@
 </template>
 
 <script setup lang="ts">
-type ModeId = 'local' | 'ldap' | 'sso'
+type ModeId = 'local' | 'ldap' | 'oidc'
+
+export type LoginProviderOption = {
+  key: ModeId
+  label: string
+  loginUrl?: string
+}
 
 const { t } = useEsosI18n()
 
 const props = withDefaults(
   defineProps<{
-    showLdap?: boolean
-    showSso?: boolean
+    providers?: LoginProviderOption[]
+    defaultProvider?: ModeId
     submitting?: boolean
     ldapSubmitting?: boolean
     error?: string | null
   }>(),
   {
-    showLdap: false,
-    showSso: false,
+    providers: () => [],
+    defaultProvider: 'local',
     submitting: false,
     ldapSubmitting: false,
     error: null,
@@ -271,6 +292,7 @@ const emit = defineEmits<{
   'ldap-submit': []
   sso: []
   'forgot-password': []
+  'clear-error': []
 }>()
 
 const username = defineModel<string>('username', { required: true })
@@ -278,27 +300,58 @@ const password = defineModel<string>('password', { required: true })
 const ldapUsername = defineModel<string>('ldapUsername', { default: '' })
 const ldapPassword = defineModel<string>('ldapPassword', { default: '' })
 
+const ssoRedirecting = ref(false)
+
+const tabLabelKeys: Record<ModeId, string> = {
+  local: 'auth.login.tab_local',
+  ldap:  'auth.login.tab_ldap',
+  oidc:  'auth.login.tab_sso',
+}
+
+const availableModes = computed(() =>
+  props.providers.map((p) => ({
+    id:    p.key,
+    label: t(tabLabelKeys[p.key]) as string,
+    loginUrl: p.loginUrl,
+  })),
+)
+
 const activeMode = ref<ModeId>('local')
 
-const modes = computed(() => [
-  { id: 'local' as const, label: t('auth.login.tab_local') as string, enabled: true },
-  { id: 'ldap' as const, label: t('auth.login.tab_ldap') as string, enabled: props.showLdap },
-  { id: 'sso' as const, label: t('auth.login.tab_sso') as string, enabled: props.showSso },
-])
+watch(
+  () => [props.providers, props.defaultProvider] as const,
+  () => {
+    const ids = availableModes.value.map((m) => m.id)
+    if (ids.length === 0) return
+    const preferred = props.defaultProvider && ids.includes(props.defaultProvider)
+      ? props.defaultProvider
+      : ids[0]!
+    if (!ids.includes(activeMode.value)) {
+      activeMode.value = preferred
+    }
+  },
+  { immediate: true },
+)
 
-const enabledModes = computed(() => modes.value.filter((mode) => mode.enabled))
-const activeIndex = computed(() => modes.value.findIndex((mode) => mode.id === activeMode.value))
+const activeIndex = computed(() =>
+  availableModes.value.findIndex((mode) => mode.id === activeMode.value),
+)
 
-const pillStyle = computed(() => ({
-  width: 'calc((100% - 0.5rem) / 3)',
-  left: `calc(0.25rem + (100% - 0.5rem) * ${Math.max(0, activeIndex.value)} / 3)`,
-}))
+const pillStyle = computed(() => {
+  const n = availableModes.value.length
+  if (n <= 1) return {}
+  const idx = Math.max(0, activeIndex.value)
+  return {
+    width: `calc((100% - 0.5rem) / ${n})`,
+    left:  `calc(0.25rem + (100% - 0.5rem) * ${idx} / ${n})`,
+  }
+})
 
 const activeIcon = computed(() => {
   switch (activeMode.value) {
     case 'ldap':
       return 'i-heroicons-server-stack'
-    case 'sso':
+    case 'oidc':
       return 'i-heroicons-shield-check'
     default:
       return 'i-heroicons-key'
@@ -309,14 +362,8 @@ const inputUi = {
   base: 'h-12 bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/30',
 }
 
-watch(
-  () => [props.showLdap, props.showSso] as const,
-  () => {
-    const current = modes.value.find((mode) => mode.id === activeMode.value)
-    if (!current?.enabled) {
-      activeMode.value = 'local'
-    }
-  },
+const oidcLoginUrl = computed(() =>
+  props.providers.find((p) => p.key === 'oidc')?.loginUrl ?? '/api/auth/oidc/login',
 )
 
 function tabId(id: ModeId) {
@@ -327,17 +374,18 @@ function panelId(id: ModeId) {
   return `login-panel-${id}`
 }
 
-function tabClass(mode: { id: ModeId, enabled: boolean }) {
-  if (!mode.enabled) return 'cursor-not-allowed text-slate-400'
+function tabClass(mode: { id: ModeId }) {
   return activeMode.value === mode.id
     ? 'text-white'
     : 'text-slate-600 hover:text-slate-950'
 }
 
 function selectMode(id: ModeId) {
-  const mode = modes.value.find((item) => item.id === id)
-  if (mode?.enabled) {
-    activeMode.value = id
+  if (availableModes.value.some((m) => m.id === id)) {
+    if (activeMode.value !== id) {
+      activeMode.value = id
+      emit('clear-error')
+    }
   }
 }
 
@@ -345,7 +393,7 @@ function onTablistKeydown(e: KeyboardEvent) {
   if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) return
   e.preventDefault()
 
-  const ids = enabledModes.value.map((mode) => mode.id)
+  const ids = availableModes.value.map((mode) => mode.id)
   const current = ids.indexOf(activeMode.value)
   if (current < 0) return
 
@@ -355,7 +403,16 @@ function onTablistKeydown(e: KeyboardEvent) {
   if (e.key === 'Home') next = 0
   if (e.key === 'End') next = ids.length - 1
 
-  activeMode.value = ids[next]!
+  if (ids[next] !== activeMode.value) {
+    activeMode.value = ids[next]!
+    emit('clear-error')
+  }
   ;(document.getElementById(tabId(ids[next]!)) as HTMLButtonElement | null)?.focus()
+}
+
+function onSsoClick() {
+  ssoRedirecting.value = true
+  emit('sso')
+  window.location.href = oidcLoginUrl.value
 }
 </script>

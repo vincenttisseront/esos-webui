@@ -77,5 +77,6 @@ describe('fs-inventory-resolver', () => {
     expect(hw).toBeDefined()
     expect(hw?.eligible).toBe(false)
     expect(hw?.reasons.some(r => r.includes('Monté'))).toBe(true)
+    expect(hw?.path).toBe('/dev/sdb')
   })
 })

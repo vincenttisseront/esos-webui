@@ -1,4 +1,5 @@
-import type { RaidOverview, RaidBlockDevice } from './raid-types'
+import type { RaidOverview, RaidBlockDevice, RaidToolsInfo } from './raid-types'
+import { hwLdUnmappedReasonKey } from './hw-raid-os-mapper'
 import type { LvmOverview } from './lvm-types'
 import type {
   FileSystemMount,
@@ -104,6 +105,7 @@ export interface BuildFsInventoryInput {
   mounts: FileSystemMount[]
   pathToDevices: Map<string, string[]>
   allowRawDisk?: boolean
+  tools?: RaidToolsInfo
 }
 
 export interface FsInventoryResult {
@@ -153,10 +155,13 @@ export function buildFsBackendsAndLinks(input: BuildFsInventoryInput): FsInvento
   const links: FsResourceLink[] = []
   const seen = new Set<string>()
 
+  const backendKey = (path: string) =>
+    path.startsWith('hw:') ? path : resolveCanonicalPath(path, index)
+
   const push = (b: FsBackendRef) => {
-    const key = resolveCanonicalPath(b.path, index)
+    const key = backendKey(b.path)
     if (seen.has(key)) {
-      const existing = backends.find(x => resolveCanonicalPath(x.path, index) === key)
+      const existing = backends.find(x => backendKey(x.path) === key)
       if (existing && !b.eligible && existing.eligible) {
         existing.reasons = [...new Set([...existing.reasons, ...b.reasons])]
         if (b.mountPoint) existing.mountPoint = b.mountPoint
@@ -209,6 +214,22 @@ export function buildFsBackendsAndLinks(input: BuildFsInventoryInput): FsInvento
     })
   }
 
+  const raidTools: RaidToolsInfo = input.tools ?? raid.tools ?? {
+    mdadm: false,
+    lspci: false,
+    storcli: false,
+    perccli: false,
+    MegaCli64: false,
+    arcconf: false,
+    lsscsi: false,
+    wipefs: false,
+    parted: false,
+    sfdisk: false,
+    fdisk: false,
+    partprobe: false,
+    udevadm: false,
+  }
+
   for (const ctrl of raid.hardwareControllers) {
     const ctrlLabel = ctrl.model || ctrl.id
     for (const ld of ctrl.logicalDrives) {
@@ -221,7 +242,7 @@ export function buildFsBackendsAndLinks(input: BuildFsInventoryInput): FsInvento
           source: 'hw_raid',
           sizeBytes: ld.sizeBytes ?? 0,
           eligible: false,
-          reasons: ['Chemin OS du volume logique non détecté (vérifier storcli/perccli)'],
+          reasons: [hwLdUnmappedReasonKey(raidTools)],
           displayName: ld.name ?? ld.id,
           hwLdId: ld.id,
           controllerLabel: ctrlLabel,

@@ -4,6 +4,8 @@ import {
   buildAdminAuthProvidersDto,
   loadAuthProviderSecretsForServer,
 } from '../../../utils/auth-providers-config'
+import { isOidcLoginAvailable } from '../../../utils/auth-providers-public'
+import { countActiveUsersByAuthSource } from '../../../db/repositories/user.repository'
 import { encrypt } from '../../../utils/crypto'
 import { hashAuthOpaqueToken } from '../../../utils/auth-state-hash'
 import { insertOidcAttempt } from '../../../db/repositories/oidc-auth-attempt.repository'
@@ -12,7 +14,11 @@ import { getOidcConfigurationCached } from '../../../utils/oidc-discovery'
 
 export default defineEventHandler(async (event) => {
   const dto = await buildAdminAuthProvidersDto()
-  if (!dto.oidc.enabled || !dto.oidc.issuer?.trim() || !dto.oidc.clientId?.trim()) {
+  const [ldapCount, oidcCount] = await Promise.all([
+    countActiveUsersByAuthSource('ldap'),
+    countActiveUsersByAuthSource('oidc'),
+  ])
+  if (!isOidcLoginAvailable(dto, { ldap: ldapCount, oidc: oidcCount })) {
     throw createError({ statusCode: 404, message: 'Connexion OIDC non disponible' })
   }
 

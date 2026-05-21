@@ -1,4 +1,5 @@
-import type { HardwareRaidController, HardwareRaidLogicalDrive, MdArray, RaidBlockDevice } from './raid-types'
+import type { HardwareRaidController, HardwareRaidLogicalDrive, MdArray, RaidBlockDevice, RaidToolsInfo } from './raid-types'
+import { hwLdUnmappedReasonKey } from './hw-raid-os-mapper'
 import type { LvmCandidateDevice, LvmCandidateKind, LvmUsedBy, PhysicalVolume } from './lvm-types'
 
 const MD_PATH_RE = /^\/dev\/md[a-z0-9_-]{0,15}$/i
@@ -111,6 +112,7 @@ export interface LvmCandidateInventoryInput {
   hardwareControllers?: HardwareRaidController[]
   pvs: PhysicalVolume[]
   lvPaths: Set<string>
+  tools?: RaidToolsInfo
 }
 
 export function buildLvmCandidatesFromInventory(input: LvmCandidateInventoryInput): LvmCandidateDevice[] {
@@ -143,11 +145,38 @@ export function buildLvmCandidatesFromInventory(input: LvmCandidateInventoryInpu
     }))
   }
 
+  const raidTools: RaidToolsInfo = input.tools ?? {
+    mdadm: false,
+    lspci: false,
+    storcli: false,
+    perccli: false,
+    MegaCli64: false,
+    arcconf: false,
+    lsscsi: false,
+    wipefs: false,
+    parted: false,
+    sfdisk: false,
+    fdisk: false,
+    partprobe: false,
+    udevadm: false,
+  }
+
   for (const ctrl of input.hardwareControllers ?? []) {
     for (const ld of ctrl.logicalDrives) {
       if (!hwLdEligible(ld)) continue
       const path = hwLdPath(ld)
-      if (!path || pvPaths.has(path)) continue
+      if (!path) {
+        push(candidateFromPath({
+          path: `hw:${ctrl.id}/${ld.id}`,
+          kind: 'hw_raid_ld',
+          sizeBytes: ld.sizeBytes ?? 0,
+          usedBy: [],
+          reasons: [hwLdUnmappedReasonKey(raidTools)],
+          model: ld.scsiModel,
+        }))
+        continue
+      }
+      if (pvPaths.has(path)) continue
       const dev = input.blockDevices.find(d => d.path === path)
       if (dev) {
         push(evaluateBlockDevice(dev, pvPaths, input.lvPaths))

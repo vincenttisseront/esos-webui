@@ -154,6 +154,12 @@ function parseStorCliJson(json: string, cli: string): HardwareRaidController[] {
         const sizeBytes = parseStorCliSize(sizeStr)
         const stateStr = String(vd['State'] ?? 'Optl').toLowerCase()
 
+        const osDrive = String(vd['OS Drive Name'] ?? vd['OS Drive Letter'] ?? '').trim()
+        const wwn = String(
+          vd['WWN'] ?? vd['SCSI NAA ID'] ?? vd['SCSI NAA Id'] ?? '',
+        ).trim()
+        const inquiry = String(vd['Inquiry Data'] ?? vd['Inquiry'] ?? '').trim()
+
         return {
           controllerId: ctrlIndex,
           id: `${ctrlIndex}/vd${idx}`,
@@ -163,7 +169,9 @@ function parseStorCliJson(json: string, cli: string): HardwareRaidController[] {
           cachePolicy: String(vd['Cache'] ?? ''),
           readPolicy: String(vd['sCC'] ?? ''),
           writePolicy: String(vd['Cache'] ?? '').includes('WB') ? 'WB' : 'WT',
-          devicePath: String(vd['OS Drive Name'] ?? ''),
+          devicePath: osDrive,
+          wwn: wwn || undefined,
+          inquiry: inquiry || undefined,
         }
       })
 

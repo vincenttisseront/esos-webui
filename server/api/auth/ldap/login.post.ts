@@ -2,11 +2,19 @@ import {
   buildAdminAuthProvidersDto,
   loadAuthProviderSecretsForServer,
 } from '../../../utils/auth-providers-config'
+import { isLdapLoginAvailable } from '../../../utils/auth-providers-public'
+import {
+  delayThenThrowInvalidCredentials,
+  isSanitizedFederatedLoginFailure,
+} from '../../../utils/auth-login-errors'
 import { authenticateLdapUser } from '../../../utils/ldap-service'
 import { assertSafeLdapLoginUsername } from '../../../utils/ldap-filter-escape'
 import { resolveLdapLoginUser } from '../../../utils/ldap-user-resolve'
 import { setSessionCookieForUser } from '../../../utils/auth-session-cookie'
-import { recordLoginEvent } from '../../../db/repositories/user.repository'
+import {
+  countActiveUsersByAuthSource,
+  recordLoginEvent,
+} from '../../../db/repositories/user.repository'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody<{ username?: string; password?: string }>(event)
@@ -19,7 +27,8 @@ export default defineEventHandler(async (event) => {
   }
 
   const dto = await buildAdminAuthProvidersDto()
-  if (!dto.ldap.enabled) {
+  const ldapCount = await countActiveUsersByAuthSource('ldap')
+  if (!isLdapLoginAvailable(dto, { ldap: ldapCount, oidc: 0 })) {
     throw createError({ statusCode: 404, message: 'Connexion LDAP non disponible' })
   }
 
@@ -55,12 +64,10 @@ export default defineEventHandler(async (event) => {
       },
     }
   } catch (e) {
+    if (isSanitizedFederatedLoginFailure(e)) {
+      await delayThenThrowInvalidCredentials()
+    }
     if ((e as { statusCode?: number }).statusCode) throw e
-    await new Promise((r) => setTimeout(r, 500))
-    throw createError({
-      statusCode: 401,
-      message: 'Identifiants incorrects',
-      data: { code: 'auth.invalid_credentials' },
-    })
+    await delayThenThrowInvalidCredentials()
   }
 })

@@ -127,6 +127,11 @@ export interface HardwareRaidLogicalDrive {
   detectionSource?: 'cli' | 'lsscsi' | 'dmesg' | 'proc_scsi'
   progressPct?: number
   warnings?: string[]
+  wwn?: string
+  serial?: string
+  inquiry?: string
+  osMappingStatus?: 'mapped' | 'unmapped'
+  osMappingDiagnostic?: import('./hw-raid-os-mapper').HwLdOsMappingDiagnostic
 }
 
 // ─── Software RAID MD ────────────────────────────────────────────────────────
@@ -649,6 +654,12 @@ export interface RaidToolsInfo {
   partprobe: boolean
   udevadm: boolean
 }
+
+/** Subset used by FS/LVM inventory (full scan = RaidOverviewResponse). */
+export type RaidOverview = Pick<
+  RaidOverviewResponse,
+  'blockDevices' | 'hardwareControllers' | 'mdArrays'
+> & { tools?: RaidToolsInfo }
 
 export interface RaidOverviewResponse {
   scannedAt: number

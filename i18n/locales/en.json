@@ -201,9 +201,15 @@
       "local_help": "Authenticate with a local ESOS account.",
       "local_identifier_label": "Identifier or email",
       "local_identifier_placeholder": "root",
+      "local_username_label": "Local username",
+      "local_username_placeholder": "admin",
+      "local_password_placeholder": "Enter your password",
       "local_submit": "Sign in",
       "ldap_title": "LDAP / Active Directory",
       "ldap_help": "Use your enterprise directory credentials.",
+      "ldap_username_label": "AD username",
+      "ldap_username_placeholder": "DOMAIN\\user or user@company.com",
+      "ldap_password_placeholder": "Directory password",
       "ldap_unavailable": "Directory authentication is not enabled for this ESOS instance.",
       "sso_title": "Single Sign-On",
       "sso_help": "Redirect to the configured identity provider.",
@@ -212,7 +218,15 @@
       "sso_submit": "Continue with SSO",
       "forgot_password": "Forgot password?",
       "forgot_password_toast_title": "Reset password",
-      "forgot_password_toast_desc": "Self-service password reset is not enabled. Contact your administrator."
+      "forgot_password_toast_desc": "Self-service password reset is not enabled. Contact your administrator.",
+      "no_methods_title": "Sign-in unavailable",
+      "no_methods_help": "No authentication method is configured. Contact your ESOS administrator.",
+      "providers_load_error": "Unable to load sign-in options. Refresh the page or contact your administrator.",
+      "provider_reason": {
+        "disabled": "This method is disabled in settings.",
+        "config_incomplete": "Configuration is incomplete.",
+        "no_provisioned_users": "No provisioned users and automatic provisioning is disabled."
+      }
     }
   },
   "errors": {
@@ -234,7 +248,8 @@
       "mfa_required": "Multi-factor authentication is required by policy.",
       "user": "No authorized account for this identifier.",
       "inactive": "Account disabled.",
-      "external_generic": "External sign-in error."
+      "external_generic": "External sign-in error.",
+      "login_failed": "Sign-in failed. Check your credentials or contact your administrator."
     }
   },
   "raid": {
@@ -2219,6 +2234,10 @@
         "technical_details": "Technical details",
         "stale_title": "Stale data",
         "stale_body": "Showing data from the last successful scan ({time})."
+      },
+      "hw_ld": {
+        "tool_missing": "No storcli/perccli tool available to resolve the OS path for this logical volume.",
+        "mapping_not_found": "perccli detected, but no reliable Linux path was found for this logical volume."
       },
       "next": {
         "title": "Recommended next step",

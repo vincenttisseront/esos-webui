@@ -273,6 +273,16 @@ export async function collectFsOverview(manager?: SSHSessionManager): Promise<Fs
   const enriched = enrichMountsWithRolesAndLinks(mounts, fileioFilenames, index)
   mounts = enriched.mounts
 
+  if (raid.tools && mounts.length) {
+    raid.hardwareControllers = enrichHardwareLdOsPaths({
+      controllers: raid.hardwareControllers,
+      blockDevices: raid.blockDevices,
+      kernelLogicalDrives: [],
+      tools: raid.tools,
+      mounts,
+    })
+  }
+
   const vdiskR = await runFsScanner('vdisk_files', [] as VDiskFile[], () =>
     buildVdiskInventory(ssh, mounts, scstIndex.pathToDevices, lunDeviceNames, fileioDevices),
   )
@@ -285,6 +295,7 @@ export async function collectFsOverview(manager?: SSHSessionManager): Promise<Fs
     mounts,
     pathToDevices: scstIndex.pathToDevices,
     allowRawDisk: false,
+    tools: raid.tools,
   })
   const backends = inventory.backends
 
