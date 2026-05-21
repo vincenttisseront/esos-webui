@@ -1458,6 +1458,25 @@
         "node_diagnostics": "Node diagnostics"
       }
     },
+    "sysconfig": {
+      "datetime": {
+        "title": "Date & time",
+        "local_time_label": "System local time",
+        "utc_time_label": "UTC time",
+        "timezone_label": "Time zone",
+        "timezone_placeholder": "Select (e.g. Europe/Paris)",
+        "timezone_search": "Search…",
+        "timezone_loading": "Loading…",
+        "ntp_servers_label": "NTP servers",
+        "ntp_add_server": "Add server",
+        "ntp_running": "ntpd: active",
+        "ntp_stopped": "ntpd: inactive",
+        "save": "Save",
+        "save_success": "Date & time updated",
+        "save_error": "Failed",
+        "utc_fallback": "unknown time zone, UTC used"
+      }
+    },
     "authProviders": {
       "jsonErrors": {
         "empty": "Empty JSON.",

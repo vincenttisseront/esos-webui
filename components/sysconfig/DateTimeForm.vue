@@ -3,40 +3,57 @@
     <template #header>
       <div class="flex items-center gap-2">
         <UIcon name="i-heroicons-clock" class="text-gray-500 size-5" />
-        <span class="font-semibold text-gray-800">Date &amp; Heure</span>
+        <span class="font-semibold text-gray-800">{{ t('admin.sysconfig.datetime.title') }}</span>
       </div>
     </template>
 
     <div class="space-y-5">
-      <!-- Current time (read-only) -->
-      <div class="flex items-center gap-3">
-        <span class="text-sm text-gray-500">Heure système :</span>
-        <UBadge color="gray" variant="subtle" :label="config.currentTime || '—'" />
+      <!-- System time (client-formatted to avoid SSR/locale drift) -->
+      <div class="rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 space-y-2">
+        <div v-if="!timeDisplayReady" class="text-sm text-slate-400">
+          —
+        </div>
+        <template v-else>
+          <div>
+            <p class="text-xs font-medium uppercase tracking-wide text-slate-500">
+              {{ t('admin.sysconfig.datetime.local_time_label') }}
+            </p>
+            <p class="mt-1 text-sm font-medium text-slate-900 tabular-nums">
+              {{ timeDisplay.localMain }}
+            </p>
+          </div>
+          <div v-if="timeDisplay.utcSecondary">
+            <p class="text-xs text-slate-500">
+              {{ t('admin.sysconfig.datetime.utc_time_label') }}
+            </p>
+            <p class="text-xs text-slate-600 tabular-nums font-mono">
+              {{ timeDisplay.utcSecondary }}
+            </p>
+          </div>
+        </template>
       </div>
 
-      <!-- Timezone -->
-      <UFormField label="Fuseau horaire">
+      <AppFormField :label="t('admin.sysconfig.datetime.timezone_label')">
         <USelectMenu
           v-model="form.timezone"
           :items="tzList"
           :loading="tzLoading"
-          :placeholder="tzLoading ? 'Chargement…' : 'Sélectionner (ex: Europe/Paris)'"
+          :placeholder="tzLoading ? t('admin.sysconfig.datetime.timezone_loading') : t('admin.sysconfig.datetime.timezone_placeholder')"
           :disabled="isDisabled"
-          :search-input="{ placeholder: 'Rechercher…' }"
+          :search-input="{ placeholder: t('admin.sysconfig.datetime.timezone_search') }"
           class="w-full"
         />
-      </UFormField>
+      </AppFormField>
 
-      <!-- NTP servers -->
-      <UFormField label="Serveurs NTP">
-        <div class="space-y-2">
+      <AppFormField :label="t('admin.sysconfig.datetime.ntp_servers_label')">
+        <div class="flex flex-col gap-3">
           <div
-            v-for="(server, idx) in form.ntpServers"
+            v-for="(_server, idx) in form.ntpServers"
             :key="idx"
             class="flex items-center gap-2"
           >
-            <UInput
-              v-model="form.ntpServers[idx]"
+            <AppTextInput
+              v-model="form.ntpServers[idx]!"
               placeholder="pool.ntp.org"
               class="flex-1"
               :disabled="isDisabled"
@@ -51,7 +68,7 @@
             />
           </div>
           <UButton
-            label="Ajouter un serveur"
+            :label="t('admin.sysconfig.datetime.ntp_add_server')"
             icon="i-heroicons-plus"
             variant="outline"
             size="sm"
@@ -59,21 +76,23 @@
             @click="addServer"
           />
         </div>
-      </UFormField>
+      </AppFormField>
 
       <div v-if="config.ntpRunning !== undefined" class="flex items-center gap-2 text-sm">
         <span
-          class="size-2 rounded-full"
+          class="size-2 rounded-full shrink-0"
           :class="config.ntpRunning ? 'bg-green-500' : 'bg-gray-400'"
         />
-        <span class="text-gray-500">ntpd : {{ config.ntpRunning ? 'actif' : 'inactif' }}</span>
+        <span class="text-gray-500">
+          {{ config.ntpRunning ? t('admin.sysconfig.datetime.ntp_running') : t('admin.sysconfig.datetime.ntp_stopped') }}
+        </span>
       </div>
     </div>
 
     <template #footer>
       <div class="flex justify-end">
         <UButton
-          label="Enregistrer"
+          :label="t('admin.sysconfig.datetime.save')"
           icon="i-heroicons-check"
           :loading="saving"
           :disabled="!dirty || props.disabled"
@@ -86,7 +105,8 @@
 
 <script setup lang="ts">
 import type { DateTimeConfig } from '~/server/utils/types'
-import { useAppToast }         from '~/composables/useAppToast'
+import { useAppToast } from '~/composables/useAppToast'
+import { formatSystemDateTimeDisplay } from '~/utils/system-datetime-display'
 
 const props = defineProps<{
   sanId:    string
@@ -98,6 +118,7 @@ const emit = defineEmits<{
   saved: []
 }>()
 
+const { t, locale } = useEsosI18n()
 const toast = useAppToast()
 
 const form = reactive({
@@ -105,18 +126,28 @@ const form = reactive({
   ntpServers: [...(props.config.ntpServers.length ? props.config.ntpServers : [''])],
 })
 
-// ── Timezone datalist ──────────────────────────────────────────────────────────
 const tzList    = ref<string[]>([])
 const tzLoading = ref(false)
 
+const timeDisplayReady = ref(false)
+const timeDisplay = computed(() =>
+  formatSystemDateTimeDisplay({
+    currentTimeUtc: props.config.currentTime,
+    timezone:       form.timezone || props.config.timezone,
+    locale:         locale.value,
+    utcFallbackLabel: t('admin.sysconfig.datetime.utc_fallback') as string,
+  }),
+)
+
 onMounted(async () => {
+  timeDisplayReady.value = true
   tzLoading.value = true
   try {
     const { timezones } = await $fetch<{ timezones: string[] }>(
       `/api/san/${props.sanId}/system-config/timezones`,
     )
     tzList.value = timezones
-  } catch { /* SSH indisponible — saisie libre */ }
+  } catch { /* SSH unavailable — free text via select empty */ }
   finally { tzLoading.value = false }
 })
 
@@ -126,10 +157,10 @@ const isDisabled = computed(() => props.disabled || saving.value)
 
 const dirty = computed(() =>
   form.timezone !== props.config.timezone ||
-  JSON.stringify(form.ntpServers) !== JSON.stringify(props.config.ntpServers)
+  JSON.stringify(form.ntpServers) !== JSON.stringify(props.config.ntpServers),
 )
 
-function addServer()        { form.ntpServers.push('') }
+function addServer() { form.ntpServers.push('') }
 function removeServer(i: number) { form.ntpServers.splice(i, 1) }
 
 async function save() {
@@ -142,10 +173,11 @@ async function save() {
         ntpServers: form.ntpServers.filter(Boolean),
       },
     })
-    toast.success('Date & Heure mis à jour')
+    toast.success(t('admin.sysconfig.datetime.save_success') as string)
     emit('saved')
-  } catch (err: any) {
-    toast.error('Échec', err?.data?.message ?? String(err))
+  } catch (err: unknown) {
+    const e = err as { data?: { message?: string }; message?: string }
+    toast.error(t('admin.sysconfig.datetime.save_error') as string, e?.data?.message ?? e?.message ?? String(err))
   } finally {
     saving.value = false
   }

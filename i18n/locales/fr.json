@@ -1458,6 +1458,25 @@
         "node_diagnostics": "Diagnostic nœud"
       }
     },
+    "sysconfig": {
+      "datetime": {
+        "title": "Date & heure",
+        "local_time_label": "Heure locale du système",
+        "utc_time_label": "Heure UTC",
+        "timezone_label": "Fuseau horaire",
+        "timezone_placeholder": "Sélectionner (ex. Europe/Paris)",
+        "timezone_search": "Rechercher…",
+        "timezone_loading": "Chargement…",
+        "ntp_servers_label": "Serveurs NTP",
+        "ntp_add_server": "Ajouter un serveur",
+        "ntp_running": "ntpd : actif",
+        "ntp_stopped": "ntpd : inactif",
+        "save": "Enregistrer",
+        "save_success": "Date & heure mis à jour",
+        "save_error": "Échec",
+        "utc_fallback": "fuseau inconnu, UTC utilisé"
+      }
+    },
     "authProviders": {
       "jsonErrors": {
         "empty": "JSON vide.",
