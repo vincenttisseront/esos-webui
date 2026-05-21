@@ -2218,7 +2218,18 @@
         "unmapped": "Unmapped"
       },
       "wizard": {
+        "back": "Back",
+        "next": "Next",
+        "cancel": "Cancel",
+        "preflight_loading": "Running preflight…",
+        "preflight_blockers": "Preflight blocked",
+        "command_preview": "Command preview",
+        "config_preview": "SCST config preview",
+        "destructive_intro": "This operation is destructive. Type the exact phrase below to confirm.",
+        "confirm_intro": "Type the exact phrase below to confirm.",
         "create_fs": {
+          "no_backend": "No eligible block backend — check RAID/LVM inventory first.",
+          "success": "Filesystem created",
           "title": "Create filesystem",
           "backend": "Block backend",
           "fs_type": "Filesystem type",
@@ -2234,18 +2245,29 @@
           "title": "Create vdisk file",
           "mount": "Filesystem mount",
           "file_name": "File name",
-          "size": "Size (bytes)",
+          "size": "Size",
+          "size_unit": "Unit",
+          "free_hint": "Free on mount: {free}",
+          "no_mount": "No mounted filesystem — create one first.",
           "alloc": "Allocation",
-          "execute": "Create file"
+          "execute": "Create file",
+          "success": "VDisk file created"
         },
         "fileio": {
           "title": "Register SCST FILEIO",
-          "vdisk": "VDisk path",
+          "vdisk": "VDisk file",
+          "no_vdisk": "No unmapped vdisk files.",
           "device_name": "SCST device name",
           "nv_cache": "Enable nv_cache",
           "execute": "Create device",
-          "expose_cta": "Expose to clients"
-        }
+          "expose_cta": "Expose to clients",
+          "success": "SCST FILEIO device registered",
+          "error_name_empty": "Device name is required",
+          "error_name_invalid": "Invalid device name (letters, digits, _ - only)",
+          "error_name_too_long": "Device name too long (max 32)"
+        },
+        "delete_vdisk": { "success": "VDisk file deleted" },
+        "unmount": { "success": "Filesystem unmounted" }
       },
       "errors": {
         "mount_point_invalid": "Invalid mount point",

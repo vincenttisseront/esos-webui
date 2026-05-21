@@ -2218,7 +2218,18 @@
         "unmapped": "Non mappé"
       },
       "wizard": {
+        "back": "Retour",
+        "next": "Suivant",
+        "cancel": "Annuler",
+        "preflight_loading": "Préflight en cours…",
+        "preflight_blockers": "Préflight bloqué",
+        "command_preview": "Aperçu des commandes",
+        "config_preview": "Aperçu config SCST",
+        "destructive_intro": "Opération destructive. Saisissez la phrase exacte ci-dessous.",
+        "confirm_intro": "Saisissez la phrase exacte ci-dessous pour confirmer.",
         "create_fs": {
+          "no_backend": "Aucun backend bloc éligible — vérifiez l'inventaire RAID/LVM.",
+          "success": "Filesystem créé",
           "title": "Créer un filesystem",
           "backend": "Backend bloc",
           "fs_type": "Type",
@@ -2234,18 +2245,29 @@
           "title": "Créer un fichier vdisk",
           "mount": "Montage",
           "file_name": "Nom du fichier",
-          "size": "Taille (octets)",
+          "size": "Taille",
+          "size_unit": "Unité",
+          "free_hint": "Libre sur le montage : {free}",
+          "no_mount": "Aucun filesystem monté — créez-en un d'abord.",
           "alloc": "Allocation",
-          "execute": "Créer le fichier"
+          "execute": "Créer le fichier",
+          "success": "Fichier vdisk créé"
         },
         "fileio": {
           "title": "Enregistrer SCST FILEIO",
-          "vdisk": "Chemin vdisk",
+          "vdisk": "Fichier vdisk",
+          "no_vdisk": "Aucun fichier vdisk non mappé.",
           "device_name": "Nom device SCST",
           "nv_cache": "Activer nv_cache",
           "execute": "Créer le device",
-          "expose_cta": "Exposer aux clients"
-        }
+          "expose_cta": "Exposer aux clients",
+          "success": "Device SCST FILEIO enregistré",
+          "error_name_empty": "Nom du device requis",
+          "error_name_invalid": "Nom invalide (lettres, chiffres, _ - uniquement)",
+          "error_name_too_long": "Nom trop long (max 32)"
+        },
+        "delete_vdisk": { "success": "Fichier vdisk supprimé" },
+        "unmount": { "success": "Filesystem démonté" }
       },
       "errors": {
         "mount_point_invalid": "Point de montage invalide",

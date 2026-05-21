@@ -6,13 +6,34 @@
 
     <div class="flex flex-wrap gap-2 justify-between items-center">
       <div class="flex flex-wrap gap-2">
-        <UButton size="sm" color="primary" icon="i-heroicons-plus" :disabled="readOnly" @click="showFsWizard = true">
+        <UButton
+          size="sm"
+          color="primary"
+          icon="i-heroicons-plus"
+          :disabled="readOnly || !eligibleCandidates.length"
+          :title="!eligibleCandidates.length ? t('storage.fs.wizard.create_fs.no_backend') : undefined"
+          @click="openCreateFsWizard"
+        >
           {{ t('storage.fs.actions.create_fs') }}
         </UButton>
-        <UButton size="sm" color="primary" variant="soft" icon="i-heroicons-document-plus" :disabled="readOnly || !fs.mounts.length" @click="showVdiskWizard = true">
+        <UButton
+          size="sm"
+          color="primary"
+          variant="soft"
+          icon="i-heroicons-document-plus"
+          :disabled="readOnly || !fs.mounts.length"
+          @click="openCreateVdiskWizard"
+        >
           {{ t('storage.fs.actions.create_vdisk') }}
         </UButton>
-        <UButton size="sm" color="primary" variant="soft" icon="i-heroicons-circle-stack" :disabled="readOnly || !unmappedVdisks.length" @click="openFileioWizard">
+        <UButton
+          size="sm"
+          color="primary"
+          variant="soft"
+          icon="i-heroicons-circle-stack"
+          :disabled="readOnly || !unmappedVdisks.length"
+          @click="openFileioWizard"
+        >
           {{ t('storage.fs.actions.bind_fileio') }}
         </UButton>
       </div>
@@ -41,7 +62,7 @@
 
     <UCard>
       <template #header>{{ t('storage.fs.overview.candidates_title') }}</template>
-      <UTable v-if="eligibleCandidates.length" :rows="eligibleCandidates" :columns="candCols">
+      <UTable v-if="fs.candidates.length" :rows="fs.candidates" :columns="candCols">
         <template #path-data="{ row }">
           <span class="font-mono text-xs">{{ row.path }}</span>
         </template>
@@ -61,47 +82,37 @@
         </template>
         <template #size-data="{ row }">{{ formatBytes(row.sizeBytes) }}</template>
         <template #mapped-data="{ row }">
-          <UBadge :color="row.mapped ? 'green' : 'gray'" size="xs" :label="row.mapped ? t('storage.fs.table.mapped') : t('storage.fs.table.unmapped')" />
+          <UBadge
+            :color="row.mapped ? 'green' : 'gray'"
+            size="xs"
+            :label="row.mapped ? t('storage.fs.table.mapped') : t('storage.fs.table.unmapped')"
+          />
         </template>
         <template #actions-data="{ row }">
-          <UButton v-if="!readOnly && !row.mapped" size="xs" color="red" variant="ghost" @click="confirmDeleteVdisk(row.path)">
-            {{ t('storage.fs.actions.delete_vdisk') }}
-          </UButton>
+          <div class="flex gap-1">
+            <UButton
+              v-if="!readOnly && !row.mapped"
+              size="xs"
+              color="primary"
+              variant="ghost"
+              @click="openFileioWizardFor(row)"
+            >
+              {{ t('storage.fs.actions.bind_fileio') }}
+            </UButton>
+            <UButton
+              v-if="!readOnly && !row.mapped"
+              size="xs"
+              color="red"
+              variant="ghost"
+              @click="confirmDeleteVdisk(row.path)"
+            >
+              {{ t('storage.fs.actions.delete_vdisk') }}
+            </UButton>
+          </div>
         </template>
       </UTable>
       <p v-else class="text-sm text-gray-500">{{ t('storage.fs.overview.empty_vdisks') }}</p>
     </UCard>
-
-    <UModal v-model="showFsWizard">
-      <CreateFilesystemWizard
-        :san-id="sanId"
-        :cluster-id="clusterId"
-        :is-clustered="isClustered"
-        :candidates="fs.candidates"
-        @done="onWizardDone"
-        @close="showFsWizard = false"
-      />
-    </UModal>
-    <UModal v-model="showVdiskWizard">
-      <CreateVdiskWizard
-        :san-id="sanId"
-        :cluster-id="clusterId"
-        :is-clustered="isClustered"
-        :mounts="fs.mounts"
-        @done="onWizardDone"
-        @close="showVdiskWizard = false"
-      />
-    </UModal>
-    <UModal v-model="showFileioWizard">
-      <CreateFileioWizard
-        :san-id="sanId"
-        :cluster-id="clusterId"
-        :is-clustered="isClustered"
-        :vdisk="fileioTarget"
-        @done="onFileioDone"
-        @close="showFileioWizard = false"
-      />
-    </UModal>
   </div>
 </template>
 
@@ -119,11 +130,8 @@ const props = defineProps<{
 const { t } = useEsosI18n()
 const fs = useFsStore()
 const toast = useAppToast()
+const { open: openModal } = useAppModal()
 const refreshing = ref(false)
-const showFsWizard = ref(false)
-const showVdiskWizard = ref(false)
-const showFileioWizard = ref(false)
-const fileioTarget = ref<VDiskFile | null>(null)
 
 onMounted(async () => {
   fs.setSanId(props.sanId)
@@ -154,6 +162,16 @@ const vdiskCols = [
   { key: 'actions', label: '' },
 ]
 
+function wizardProps(extra: Record<string, unknown> = {}) {
+  return {
+    sanId: props.sanId,
+    clusterId: props.clusterId,
+    isClustered: props.isClustered,
+    persistent: true,
+    ...extra,
+  }
+}
+
 async function refreshAll() {
   refreshing.value = true
   try {
@@ -163,39 +181,66 @@ async function refreshAll() {
   }
 }
 
-function openFileioWizard() {
-  fileioTarget.value = unmappedVdisks.value[0] ?? null
-  showFileioWizard.value = true
+async function openCreateFsWizard() {
+  const { default: Wizard } = await import('~/components/fs/CreateFilesystemWizard.vue')
+  try {
+    await openModal({
+      component: Wizard,
+      props: wizardProps({ candidates: fs.candidates }),
+    })
+    await refreshAll()
+  } catch { /* dismissed */ }
 }
 
-async function onWizardDone() {
-  showFsWizard.value = false
-  showVdiskWizard.value = false
-  await refreshAll()
-  toast.success('OK')
+async function openCreateVdiskWizard() {
+  const { default: Wizard } = await import('~/components/fs/CreateVdiskWizard.vue')
+  try {
+    await openModal({
+      component: Wizard,
+      props: wizardProps({ mounts: fs.mounts }),
+    })
+    await refreshAll()
+  } catch { /* dismissed */ }
 }
 
-async function onFileioDone(payload: { route: string; query?: Record<string, string> }) {
-  showFileioWizard.value = false
-  await refreshAll()
-  if (payload?.route) {
-    await navigateTo({ path: payload.route, query: payload.query })
-  }
+async function openFileioWizard(vdisks = unmappedVdisks.value) {
+  const { default: Wizard } = await import('~/components/fs/CreateFileioWizard.vue')
+  try {
+    await openModal({
+      component: Wizard,
+      props: wizardProps({ vdisks }),
+    })
+    await refreshAll()
+  } catch { /* dismissed */ }
+}
+
+function openFileioWizardFor(row: VDiskFile) {
+  openFileioWizard([row])
 }
 
 async function confirmDeleteVdisk(path: string) {
   const pre = await fs.preflight('delete_vdisk', { path })
-  const conf = prompt(pre.requiredConfirmation ?? '')
-  if (conf !== pre.requiredConfirmation) return
-  await fs.deleteVdisk(path, conf)
+  const ok = await modalDestructive({
+    title: t('storage.fs.actions.delete_vdisk'),
+    message: path,
+    inputConfirm: pre.requiredConfirmation,
+  })
+  if (!ok) return
+  await fs.deleteVdisk(path, pre.requiredConfirmation ?? '')
+  toast.success(t('storage.fs.wizard.delete_vdisk.success'))
   await refreshAll()
 }
 
 async function confirmUnmount(mountPoint: string) {
   const pre = await fs.preflight('unmount', { mountPoint })
-  const conf = prompt(pre.requiredConfirmation ?? '')
-  if (conf !== pre.requiredConfirmation) return
-  await fs.unmount(mountPoint, conf)
+  const ok = await modalDestructive({
+    title: t('storage.fs.actions.unmount'),
+    message: mountPoint,
+    inputConfirm: pre.requiredConfirmation,
+  })
+  if (!ok) return
+  await fs.unmount(mountPoint, pre.requiredConfirmation ?? '')
+  toast.success(t('storage.fs.wizard.unmount.success'))
   await refreshAll()
 }
 </script>

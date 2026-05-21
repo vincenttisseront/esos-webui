@@ -1,82 +1,211 @@
 <template>
-  <LvmWizardModalShell :title="t('storage.fs.wizard.fileio.title')" icon="i-heroicons-circle-stack">
-    <div class="space-y-3">
-      <p class="text-sm font-mono break-all">{{ vdisk?.path }}</p>
-      <UFormGroup :label="t('storage.fs.wizard.fileio.device_name')">
-        <UInput v-model="deviceName" />
-      </UFormGroup>
-      <UCheckbox v-model="nvCache" :label="t('storage.fs.wizard.fileio.nv_cache')" />
-      <UFormGroup v-if="preflight?.requiredConfirmation" :label="t('storage.fs.wizard.create_fs.confirm_phrase')">
-        <UInput v-model="confirmation" />
-      </UFormGroup>
-      <UAlert v-if="preflightBlockers" color="red" variant="soft" :description="preflightBlockers" />
+  <LvmWizardModalShell
+    :title="t('storage.fs.wizard.fileio.title')"
+    :step="step"
+    :total-steps="3"
+    icon="i-heroicons-circle-stack"
+  >
+    <div class="space-y-4">
+      <template v-if="step === 1">
+        <UAlert
+          v-if="!vdiskOptions.length"
+          color="amber"
+          variant="soft"
+          :title="t('storage.fs.wizard.fileio.no_vdisk')"
+        />
+        <UFormGroup :label="t('storage.fs.wizard.fileio.vdisk')">
+          <USelect
+            v-model="selectedPath"
+            :options="vdiskOptions"
+            :disabled="!vdiskOptions.length"
+          />
+        </UFormGroup>
+        <UFormGroup :label="t('storage.fs.wizard.fileio.device_name')">
+          <UInput v-model="deviceName" />
+          <p v-if="nameError" class="mt-1 text-xs text-red-600">{{ nameError }}</p>
+        </UFormGroup>
+        <UCheckbox v-model="nvCache" :label="t('storage.fs.wizard.fileio.nv_cache')" />
+      </template>
+
+      <template v-else-if="step === 2">
+        <UAlert v-if="preflightLoading" color="gray" variant="soft" :title="t('storage.fs.wizard.preflight_loading')" />
+        <UAlert
+          v-else-if="preflightBlockers"
+          color="red"
+          variant="soft"
+          :title="t('storage.fs.wizard.preflight_blockers')"
+          :description="preflightBlockers"
+        />
+        <template v-else-if="preflight">
+          <p class="text-xs text-gray-600 dark:text-gray-400">{{ t('storage.fs.wizard.config_preview') }}</p>
+          <pre class="text-xs font-mono whitespace-pre-wrap rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">{{ configPreview }}</pre>
+        </template>
+      </template>
+
+      <template v-else>
+        <p class="text-sm text-gray-700 dark:text-gray-300">{{ t('storage.fs.wizard.confirm_intro') }}</p>
+        <p class="font-mono text-sm font-semibold text-primary-700 dark:text-primary-300 select-all">{{ preflight?.requiredConfirmation }}</p>
+        <UFormGroup :label="t('storage.fs.wizard.create_fs.confirm_phrase')">
+          <UInput v-model="confirmation" class="font-mono" :placeholder="preflight?.requiredConfirmation" />
+        </UFormGroup>
+        <UAlert v-if="executeError" color="red" variant="soft" :description="executeError" />
+      </template>
     </div>
+
     <template #footer>
-      <div class="flex justify-end gap-2">
-        <UButton color="gray" variant="ghost" @click="emit('close')">{{ t('common.actions.cancel') }}</UButton>
-        <UButton color="primary" :loading="busy" :disabled="!preflight?.ok" @click="execute">
-          {{ t('storage.fs.wizard.fileio.execute') }}
-        </UButton>
+      <div class="flex justify-between gap-2">
+        <UButton v-if="step > 1" color="gray" variant="ghost" @click="step--">{{ t('storage.fs.wizard.back') }}</UButton>
+        <span v-else />
+        <div class="flex gap-2">
+          <UButton color="gray" variant="ghost" @click="emit('cancel')">{{ t('storage.fs.wizard.cancel') }}</UButton>
+          <UButton
+            v-if="step < 3"
+            color="primary"
+            :disabled="(step === 1 && !step1Valid) || (step === 2 && !preflight?.ok)"
+            :loading="preflightLoading"
+            @click="onNext"
+          >
+            {{ t('storage.fs.wizard.next') }}
+          </UButton>
+          <UButton
+            v-else
+            color="primary"
+            :loading="busy"
+            :disabled="!canExecute"
+            @click="execute"
+          >
+            {{ t('storage.fs.wizard.fileio.execute') }}
+          </UButton>
+        </div>
       </div>
     </template>
   </LvmWizardModalShell>
 </template>
 
 <script setup lang="ts">
-import { suggestedScstDeviceName } from '~/utils/lvm-scst-device-ui'
 import type { VDiskFile } from '~/types/filesystem'
+import { suggestedScstDeviceName, validateScstDeviceName } from '~/utils/lvm-scst-device-ui'
 
 const props = defineProps<{
   sanId: string
   clusterId?: string
   isClustered?: boolean
-  vdisk: VDiskFile | null
+  vdisks: VDiskFile[]
 }>()
-const emit = defineEmits<{ close: []; done: [payload: { route: string; query?: Record<string, string> }] }>()
+const emit = defineEmits<{ cancel: []; close: [] }>()
 const { t } = useEsosI18n()
 const fs = useFsStore()
+const toast = useAppToast()
+const router = useRouter()
 
+const step = ref(1)
+const selectedPath = ref('')
 const deviceName = ref('')
 const nvCache = ref(true)
 const confirmation = ref('')
 const preflight = ref<Awaited<ReturnType<typeof fs.preflight>> | null>(null)
+const preflightLoading = ref(false)
 const busy = ref(false)
+const executeError = ref<string | null>(null)
 
-const preflightBlockers = computed(() => preflight.value?.blockers?.join(', ') || '')
+const vdiskOptions = computed(() =>
+  props.vdisks.map(v => ({ label: `${v.fileName} — ${v.path}`, value: v.path })),
+)
 
-watch(() => props.vdisk, (v) => {
-  if (v) {
-    const base = v.fileName.replace(/\.img$/i, '').replace(/[^A-Za-z0-9_-]/g, '_')
-    deviceName.value = suggestedScstDeviceName('vdisk', base)
-    runPre()
+const selectedVdisk = computed(() => props.vdisks.find(v => v.path === selectedPath.value))
+
+const nameError = computed(() => {
+  const err = validateScstDeviceName(deviceName.value)
+  if (!err) return null
+  return t(`storage.fs.wizard.fileio.error_name_${err}`)
+})
+
+const step1Valid = computed(() =>
+  !!selectedPath.value
+  && props.vdisks.some(v => v.path === selectedPath.value)
+  && !nameError.value,
+)
+
+const preflightBlockers = computed(() => preflight.value?.blockers?.join(' · ') || '')
+const configPreview = computed(() =>
+  (preflight.value?.configPreview ?? []).join('\n') || '—',
+)
+
+const canExecute = computed(() =>
+  preflight.value?.ok
+  && confirmation.value.trim() === preflight.value.requiredConfirmation,
+)
+
+onMounted(() => {
+  fs.setSanId(props.sanId)
+  if (props.clusterId) fs.setClusterContext(props.clusterId, props.sanId)
+  if (vdiskOptions.value[0]) {
+    selectedPath.value = vdiskOptions.value[0].value
+    syncDeviceName()
   }
-}, { immediate: true })
+})
 
-watch([deviceName, nvCache], runPre)
+watch(selectedPath, syncDeviceName)
 
-async function runPre() {
-  if (!props.vdisk) return
-  preflight.value = await fs.preflight('bind_fileio', {
-    deviceName: deviceName.value,
-    vdiskPath: props.vdisk.path,
-    nvCache: nvCache.value,
-  })
+function syncDeviceName() {
+  const v = selectedVdisk.value
+  if (!v) return
+  const base = v.fileName.replace(/\.img$/i, '').replace(/[^A-Za-z0-9_-]/g, '_')
+  deviceName.value = suggestedScstDeviceName('vdisk', base)
+}
+
+async function loadPreflight() {
+  if (!selectedVdisk.value) return
+  preflightLoading.value = true
+  preflight.value = null
+  try {
+    preflight.value = await fs.preflight('bind_fileio', {
+      deviceName: deviceName.value.trim(),
+      vdiskPath: selectedVdisk.value.path,
+      nvCache: nvCache.value,
+    })
+  } catch (e: unknown) {
+    preflight.value = { ok: false, blockers: [(e as Error).message], commands: [], configPreview: [], warnings: [] }
+  } finally {
+    preflightLoading.value = false
+  }
+}
+
+async function onNext() {
+  if (step.value === 1) {
+    await loadPreflight()
+    step.value = 2
+    return
+  }
+  if (step.value === 2 && !preflight.value?.ok) return
+  if (step.value === 2) {
+    step.value = 3
+    confirmation.value = ''
+  }
 }
 
 async function execute() {
-  if (!props.vdisk) return
+  if (!canExecute.value || !selectedVdisk.value) return
   busy.value = true
+  executeError.value = null
   try {
     const clusterExecution = props.isClustered && props.clusterId
       ? { clusterId: props.clusterId, primarySanId: props.sanId }
       : undefined
     const res = await fs.bindFileio({
-      deviceName: deviceName.value,
-      vdiskPath: props.vdisk.path,
+      deviceName: deviceName.value.trim(),
+      vdiskPath: selectedVdisk.value.path,
       nvCache: nvCache.value,
-      confirmation: confirmation.value,
+      confirmation: confirmation.value.trim(),
     }, clusterExecution)
-    emit('done', res.nextAction ?? { route: '/targets', query: { exposeDevice: res.deviceName } })
+    toast.success(t('storage.fs.wizard.fileio.success'))
+    emit('close')
+    const next = res.nextAction ?? { route: '/targets', query: { exposeDevice: res.deviceName } }
+    if (next.route) {
+      await router.push({ path: next.route, query: next.query })
+    }
+  } catch (e: unknown) {
+    executeError.value = (e as { message?: string })?.message ?? t('common.error')
   } finally {
     busy.value = false
   }
