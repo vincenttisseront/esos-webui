@@ -11,7 +11,16 @@ export interface UpgradeScopeQuery {
  * (system-config route). Prefers cluster scope when the page node belongs to the
  * selected cluster.
  */
-export function useUpgradeScope(pageSanId?: Ref<string | undefined> | ComputedRef<string | undefined>) {
+export interface RouteClusterUpgradeScope {
+  clusterId: string
+  clusterName: string
+  nodeIds: string[]
+}
+
+export function useUpgradeScope(
+  pageSanId?: Ref<string | undefined> | ComputedRef<string | undefined>,
+  routeClusterScope?: ComputedRef<RouteClusterUpgradeScope | null>,
+) {
   const sanSelector = useSelectedSan()
   const versionStore = useESOSVersionStore()
 
@@ -26,6 +35,8 @@ export function useUpgradeScope(pageSanId?: Ref<string | undefined> | ComputedRe
   })
 
   const scopeLabel = computed(() => {
+    const forced = routeClusterScope?.value
+    if (forced) return `Cluster: ${forced.clusterName}`
     const ctx = sanSelector.context.value
     if (ctx?.type === 'cluster') return `Cluster: ${ctx.cluster.name}`
     const san = sanSelector.effective.value
@@ -33,6 +44,10 @@ export function useUpgradeScope(pageSanId?: Ref<string | undefined> | ComputedRe
   })
 
   const readinessQueryParams = computed((): UpgradeScopeQuery | null => {
+    const forced = routeClusterScope?.value
+    if (forced && forced.nodeIds.length > 0) {
+      return { clusterId: forced.clusterId, nodeIds: forced.nodeIds }
+    }
     const ctx = sanSelector.context.value
     const pageId = pageSanId ? toValue(pageSanId) : undefined
     if (ctx?.type === 'cluster') {
@@ -59,6 +74,10 @@ export function useUpgradeScope(pageSanId?: Ref<string | undefined> | ComputedRe
   function upgradeUrl(subTab: UpgradeSubTab = 'readiness'): string | null {
     const base = upgradeSystemConfigPath.value
     if (!base) return null
+    const forced = routeClusterScope?.value
+    if (forced) {
+      return `${base}?scope=cluster&clusterId=${forced.clusterId}&tab=upgrade&upgradeTab=${subTab}`
+    }
     return `${base}?tab=upgrade&upgradeTab=${subTab}`
   }
 

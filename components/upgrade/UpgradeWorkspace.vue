@@ -56,6 +56,11 @@ import { isUpgradeSubTab, useUpgradeScope, type UpgradeSubTab } from '~/composab
 const props = defineProps<{
   sanId: string
   initialSubTab?: UpgradeSubTab
+  routeClusterScope?: {
+    clusterId: string
+    clusterName: string
+    nodeIds: string[]
+  } | null
 }>()
 
 const emit = defineEmits<{
@@ -65,8 +70,11 @@ const emit = defineEmits<{
 const { t } = useEsosI18n()
 const authStore = useAuthStore()
 const upgradeStore = useUpgradeStore()
+const routeClusterScope = computed(() => props.routeClusterScope ?? null)
+
 const { scopeLabel, readinessQueryParams, versionStore, sanSelector } = useUpgradeScope(
   computed(() => props.sanId),
+  routeClusterScope,
 )
 
 const activeSubTab = ref<UpgradeSubTab>(

@@ -42,38 +42,18 @@
     />
 
     <template v-else>
-      <!-- Contexte cluster (navigation depuis carte HA) -->
       <UAlert
-        v-if="clusterScope"
-        color="blue"
+        v-if="clusterScope && !isClusterMember"
+        color="amber"
         variant="subtle"
-        icon="i-heroicons-server-stack"
-        :title="t('admin.sysconfig.page.cluster_banner_title', { name: clusterScope.name }) as string"
+        icon="i-heroicons-exclamation-triangle"
+        :title="t('admin.sysconfig.page.cluster_node_mismatch_title') as string"
+        :description="t('admin.sysconfig.page.cluster_node_mismatch_desc') as string"
       >
-        <template #description>
-          <p class="text-sm text-blue-800/90 dark:text-blue-200/90">
-            {{ t('admin.sysconfig.page.cluster_banner_anchor', { label: san?.label ?? sanId }) as string }}
-          </p>
-          <p class="text-xs font-medium text-blue-900 dark:text-blue-100 mt-3 mb-1">
-            {{ t('admin.sysconfig.page.cluster_banner_nodes') as string }}
-          </p>
-          <ul class="text-xs text-blue-800 dark:text-blue-200 space-y-0.5 list-disc list-inside">
-            <li v-for="node in clusterScope.nodes" :key="node.id">
-              <span class="font-medium">{{ node.label }}</span>
-              <span class="text-blue-600/80 dark:text-blue-300/80">
-                — {{ node.host }}
-                <template v-if="node.clusterRole">
-                  ({{ clusterRoleLabel(node.clusterRole) }})
-                </template>
-                <span v-if="node.id === sanId" class="font-semibold">
-                  · {{ t('admin.sysconfig.page.cluster_banner_current_node') as string }}
-                </span>
-              </span>
-            </li>
-          </ul>
-          <p class="text-xs text-blue-700 dark:text-blue-300 mt-3">
-            {{ t('admin.sysconfig.page.cluster_banner_per_node_warning') as string }}
-          </p>
+        <template #actions>
+          <UButton to="/admin/sans" size="xs" color="amber" variant="soft">
+            {{ t('admin.sysconfig.page.cluster_node_mismatch_back') as string }}
+          </UButton>
         </template>
       </UAlert>
 
@@ -173,6 +153,15 @@
           </div>
         </div>
 
+        <SysconfigClusterNodeBar
+          v-if="clusterScope && isClusterMember"
+          :cluster-name="clusterScope.name"
+          :nodes="clusterScope.nodes"
+          :selected-san-id="sanId"
+          :role-label="clusterRoleLabel"
+          @select="navigateToClusterNode"
+        />
+
         <!-- Tab bar -->
         <div class="flex gap-1 border-b border-gray-200 dark:border-gray-700">
           <button
@@ -200,6 +189,12 @@
         <div>
           <!-- Réseau -->
           <div v-if="activeTabKey === 'network'">
+            <SysconfigTabScopeNotice
+              v-if="clusterScope"
+              :scope-kind="tabScopeKind"
+              :node-label="san?.label ?? sanId"
+              :edits-disabled="isSshDown"
+            />
             <SectionErrorState
               v-if="config?.network.status !== 'ok'"
               class="mb-4"
@@ -219,6 +214,12 @@
 
           <!-- Date & Heure -->
           <div v-else-if="activeTabKey === 'datetime'">
+            <SysconfigTabScopeNotice
+              v-if="clusterScope"
+              :scope-kind="tabScopeKind"
+              :node-label="san?.label ?? sanId"
+              :edits-disabled="isSshDown"
+            />
             <SectionErrorState
               v-if="config?.dateTime.status !== 'ok'"
               class="mb-4"
@@ -236,6 +237,12 @@
 
           <!-- Mail SMTP -->
           <div v-else-if="activeTabKey === 'smtp'">
+            <SysconfigTabScopeNotice
+              v-if="clusterScope"
+              :scope-kind="tabScopeKind"
+              :node-label="san?.label ?? sanId"
+              :edits-disabled="isSshDown"
+            />
             <SectionErrorState
               v-if="config?.smtp.status !== 'ok'"
               class="mb-4"
@@ -254,6 +261,12 @@
 
           <!-- Utilisateurs -->
           <div v-else-if="activeTabKey === 'users'">
+            <SysconfigTabScopeNotice
+              v-if="clusterScope"
+              :scope-kind="tabScopeKind"
+              :node-label="san?.label ?? sanId"
+              :edits-disabled="isSshDown || isReadOnly"
+            />
             <UsersPanel
               :san-id="sanId"
               :disabled="isReadOnly"
@@ -262,6 +275,12 @@
 
           <!-- Terminal (admin / opérateur — masqué pour viewer, Batch 2B.6) -->
           <div v-else-if="activeTabKey === 'terminal'">
+            <SysconfigTabScopeNotice
+              v-if="clusterScope"
+              :scope-kind="tabScopeKind"
+              :node-label="san?.label ?? sanId"
+              :edits-disabled="isSshDown"
+            />
             <ClientOnly>
               <TerminalPane :san-id="sanId" />
             </ClientOnly>
@@ -269,15 +288,27 @@
 
           <!-- Mise à niveau ESOS -->
           <div v-else-if="activeTabKey === 'upgrade'">
+            <SysconfigTabScopeNotice
+              v-if="clusterScope"
+              :scope-kind="tabScopeKind"
+              :node-label="san?.label ?? sanId"
+            />
             <UpgradeWorkspace
               :san-id="sanId"
               :initial-sub-tab="upgradeSubTab"
+              :route-cluster-scope="routeClusterUpgradeScope"
               @sub-tab-change="onUpgradeSubTabChange"
             />
           </div>
 
           <!-- Système -->
           <div v-else-if="activeTabKey === 'system'" class="space-y-4">
+            <SysconfigTabScopeNotice
+              v-if="clusterScope"
+              :scope-kind="tabScopeKind"
+              :node-label="san?.label ?? sanId"
+              :edits-disabled="isSshDown"
+            />
             <SectionErrorState
               v-if="config?.hostname.status !== 'ok'"
               class="mb-4"
@@ -321,18 +352,12 @@
 <script setup lang="ts">
 import type { SystemConfigResponse } from '~/server/utils/types'
 import type { SanSummary }           from '~/server/db/repositories/san.repository'
-import type { ClusterWithNodes } from '~/server/api/admin/clusters/index.get'
 import { isUpgradeSubTab, type UpgradeSubTab } from '~/composables/useUpgradeScope'
-
-/** Main system-config tab keys (must match `tabs` computed). */
-type SysConfigTabKey =
-  | 'network'
-  | 'datetime'
-  | 'smtp'
-  | 'users'
-  | 'upgrade'
-  | 'system'
-  | 'terminal'
+import {
+  type SysConfigTabKey,
+  getSysconfigTabScope,
+  useSysconfigClusterScope,
+} from '~/composables/useSysconfigClusterScope'
 
 const SYS_CONFIG_TAB_KEYS = new Set<SysConfigTabKey>([
   'network',
@@ -353,8 +378,7 @@ definePageMeta({ layout: 'default' })
 const { t, tError } = useEsosI18n()
 
 const route = useRoute()
-const router = useRouter()
-const sanId = route.params.id as string
+const sanId = computed(() => route.params.id as string)
 
 const authStore = useAuthStore()
 const isViewer = computed(() => authStore.user?.role === 'viewer')
@@ -365,41 +389,12 @@ const { markPending, isPending } = useNetworkPendingRestart()
 const {
   data: san,
   error: sanFetchError,
-} = await useFetch<SanSummary>(`/api/admin/sans/${sanId}`)
+} = await useFetch<SanSummary>(() => `/api/admin/sans/${sanId.value}`, {
+  watch: [sanId],
+})
 
 const sanError   = computed(() => sanFetchError.value?.message ?? null)
 const isReadOnly = computed(() => san.value?.readOnly ?? false)
-
-const clusterScopeId = computed((): string | null => {
-  const scope = route.query.scope
-  const rawScope = Array.isArray(scope) ? scope[0] : scope
-  const id = route.query.clusterId
-  const rawId = Array.isArray(id) ? id[0] : id
-  if (rawScope === 'cluster' && typeof rawId === 'string' && rawId.trim()) return rawId.trim()
-  return null
-})
-
-const { data: clustersRegistry } = await useFetch<ClusterWithNodes[]>(
-  '/api/admin/clusters',
-  { default: () => [] },
-)
-
-const clusterScope = computed(() => {
-  const id = clusterScopeId.value
-  if (!id) return null
-  const cluster = clustersRegistry.value?.find(c => c.id === id)
-  return {
-    id,
-    name: cluster?.name ?? id,
-    nodes: cluster?.nodes ?? [],
-  }
-})
-
-function clusterRoleLabel(role: string | null): string {
-  if (role === 'primary') return t('admin.sans.cluster_card.primary') as string
-  if (role === 'secondary') return t('admin.sans.cluster_card.secondary') as string
-  return role ?? '—'
-}
 
 // ── Config système ────────────────────────────────────────────────────────────
 const loading  = ref(false)
@@ -460,7 +455,7 @@ onBeforeUnmount(() => {
 async function reload() {
   loading.value = true
   try {
-    const data = await $fetch<SystemConfigResponse>(`/api/san/${sanId}/system-config`)
+    const data = await $fetch<SystemConfigResponse>(`/api/san/${sanId.value}/system-config`)
     config.value  = data
     loadedAt.value = Date.now()
     // Réinitialiser forceShow si les données sont maintenant ok
@@ -468,18 +463,18 @@ async function reload() {
     if (data.network.status  === 'ok') forceShow.network  = false
     if (data.smtp.status     === 'ok') forceShow.smtp     = false
     // Détecter désynchronisation IP
-    if (data.network.data && !isPending(sanId).value) {
+    if (data.network.data && !isPending(sanId.value).value) {
       const hasMismatch = data.network.data.interfaces.some(
         i => !i.useDHCP && i.currentIp && i.ipAddress && i.currentIp !== i.ipAddress,
       )
-      if (hasMismatch) markPending(sanId, san.value?.label ?? sanId)
+      if (hasMismatch) markPending(sanId.value, san.value?.label ?? sanId.value)
     }
   } catch (err: any) {
     // Cas exceptionnel (l'API est censée toujours retourner 200)
     const msg = err?.data?.message ?? err?.message ?? 'Erreur inattendue'
     const errObj = { code: 'UNKNOWN', message: msg }
     config.value = {
-      sanId,
+      sanId: sanId.value,
       scannedAt: Date.now(),
       sshStatus: 'error',
       hostname:  { data: null, status: 'error', error: errObj },
@@ -495,7 +490,7 @@ async function reload() {
 async function retrySSH() {
   retrying.value = true
   try {
-    await $fetch(`/api/admin/sans/${sanId}/reconnect`, { method: 'POST' })
+    await $fetch(`/api/admin/sans/${sanId.value}/reconnect`, { method: 'POST' })
     // Attendre 2s que le manager reconnecte
     await new Promise(r => setTimeout(r, 2_000))
     await reload()
@@ -520,12 +515,12 @@ async function updateHost() {
   savingHost.value   = true
   hostSaveError.value = null
   try {
-    await $fetch(`/api/admin/sans/${sanId}`, {
+    await $fetch(`/api/admin/sans/${sanId.value}`, {
       method: 'PUT',
       body: { host: editHostForm.host, port: editHostForm.port },
     })
     // Rafraîchir les meta du SAN
-    await refreshNuxtData(`/api/admin/sans/${sanId}`)
+    await refreshNuxtData(`/api/admin/sans/${sanId.value}`)
     editingHost.value = false
     // Le PUT force déjà une reconnexion côté serveur, attendre 2s puis recharger
     await new Promise(r => setTimeout(r, 2_000))
@@ -539,20 +534,26 @@ async function updateHost() {
 
 onMounted(reload)
 
+watch(sanId, () => {
+  void reload()
+  editHostForm.host = san.value?.host ?? ''
+  editHostForm.port = san.value?.port ?? 22
+})
+
 const pageTitle = computed(() => {
   if (clusterScope.value) {
     return t('admin.sysconfig.page.cluster_title', { name: clusterScope.value.name }) as string
   }
   if (activeTabKey.value === 'upgrade') {
-    return t('admin.sysconfig.page.upgrade_title', { label: san.value?.label ?? sanId }) as string
+    return t('admin.sysconfig.page.upgrade_title', { label: san.value?.label ?? sanId.value }) as string
   }
-  return t('admin.sysconfig.page.title', { label: san.value?.label ?? sanId }) as string
+  return t('admin.sysconfig.page.title', { label: san.value?.label ?? sanId.value }) as string
 })
 
 const pageDescription = computed(() => {
   if (clusterScope.value) {
     return t('admin.sysconfig.page.cluster_description', {
-      label: san.value?.label ?? sanId,
+      label: san.value?.label ?? sanId.value,
       host: san.value ? `${san.value.host}:${san.value.port}` : '—',
     }) as string
   }
@@ -593,20 +594,29 @@ const upgradeSubTab = computed((): UpgradeSubTab | undefined => {
   return isUpgradeSubTab(raw) ? raw : undefined
 })
 
-function syncRouteQuery() {
-  const query: Record<string, string> = {}
-  if (clusterScopeId.value) {
-    query.scope = 'cluster'
-    query.clusterId = clusterScopeId.value
+const activeSubTabInUrl = ref<UpgradeSubTab>(upgradeSubTab.value ?? 'readiness')
+
+const {
+  clusterScope,
+  isClusterMember,
+  clusterRoleLabel,
+  navigateToClusterNode,
+  syncRouteQuery,
+} = useSysconfigClusterScope(sanId, {
+  activeTabKey,
+  activeUpgradeSubTab: activeSubTabInUrl,
+})
+
+const tabScopeKind = computed(() => getSysconfigTabScope(activeTabKey.value))
+
+const routeClusterUpgradeScope = computed(() => {
+  if (!clusterScope.value) return null
+  return {
+    clusterId: clusterScope.value.id,
+    clusterName: clusterScope.value.name,
+    nodeIds: clusterScope.value.nodes.map(n => n.id),
   }
-  if (activeTabKey.value === 'upgrade') {
-    query.tab = 'upgrade'
-    query.upgradeTab = activeSubTabInUrl.value
-  } else if (activeTabKey.value === 'terminal') {
-    query.tab = 'terminal'
-  }
-  void router.replace({ path: route.path, query })
-}
+})
 
 /** Switches main tab and updates `?tab=` / `?upgradeTab=` in the URL. */
 function selectTab(key: string) {
@@ -614,8 +624,6 @@ function selectTab(key: string) {
   activeTabKey.value = key
   syncRouteQuery()
 }
-
-const activeSubTabInUrl = ref<UpgradeSubTab>(upgradeSubTab.value ?? 'readiness')
 
 watch(upgradeSubTab, (tab) => {
   if (tab) activeSubTabInUrl.value = tab
