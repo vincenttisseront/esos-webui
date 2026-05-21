@@ -42,6 +42,41 @@
     />
 
     <template v-else>
+      <!-- Contexte cluster (navigation depuis carte HA) -->
+      <UAlert
+        v-if="clusterScope"
+        color="blue"
+        variant="subtle"
+        icon="i-heroicons-server-stack"
+        :title="t('admin.sysconfig.page.cluster_banner_title', { name: clusterScope.name }) as string"
+      >
+        <template #description>
+          <p class="text-sm text-blue-800/90 dark:text-blue-200/90">
+            {{ t('admin.sysconfig.page.cluster_banner_anchor', { label: san?.label ?? sanId }) as string }}
+          </p>
+          <p class="text-xs font-medium text-blue-900 dark:text-blue-100 mt-3 mb-1">
+            {{ t('admin.sysconfig.page.cluster_banner_nodes') as string }}
+          </p>
+          <ul class="text-xs text-blue-800 dark:text-blue-200 space-y-0.5 list-disc list-inside">
+            <li v-for="node in clusterScope.nodes" :key="node.id">
+              <span class="font-medium">{{ node.label }}</span>
+              <span class="text-blue-600/80 dark:text-blue-300/80">
+                — {{ node.host }}
+                <template v-if="node.clusterRole">
+                  ({{ clusterRoleLabel(node.clusterRole) }})
+                </template>
+                <span v-if="node.id === sanId" class="font-semibold">
+                  · {{ t('admin.sysconfig.page.cluster_banner_current_node') as string }}
+                </span>
+              </span>
+            </li>
+          </ul>
+          <p class="text-xs text-blue-700 dark:text-blue-300 mt-3">
+            {{ t('admin.sysconfig.page.cluster_banner_per_node_warning') as string }}
+          </p>
+        </template>
+      </UAlert>
+
       <!-- Bannière lecture seule -->
       <UAlert
         v-if="isReadOnly"
@@ -286,7 +321,32 @@
 <script setup lang="ts">
 import type { SystemConfigResponse } from '~/server/utils/types'
 import type { SanSummary }           from '~/server/db/repositories/san.repository'
+import type { ClusterWithNodes } from '~/server/api/admin/clusters/index.get'
 import { isUpgradeSubTab, type UpgradeSubTab } from '~/composables/useUpgradeScope'
+
+/** Main system-config tab keys (must match `tabs` computed). */
+type SysConfigTabKey =
+  | 'network'
+  | 'datetime'
+  | 'smtp'
+  | 'users'
+  | 'upgrade'
+  | 'system'
+  | 'terminal'
+
+const SYS_CONFIG_TAB_KEYS = new Set<SysConfigTabKey>([
+  'network',
+  'datetime',
+  'smtp',
+  'users',
+  'upgrade',
+  'system',
+  'terminal',
+])
+
+function isSysConfigTabKey(key: string): key is SysConfigTabKey {
+  return SYS_CONFIG_TAB_KEYS.has(key as SysConfigTabKey)
+}
 
 definePageMeta({ layout: 'default' })
 
@@ -309,6 +369,37 @@ const {
 
 const sanError   = computed(() => sanFetchError.value?.message ?? null)
 const isReadOnly = computed(() => san.value?.readOnly ?? false)
+
+const clusterScopeId = computed((): string | null => {
+  const scope = route.query.scope
+  const rawScope = Array.isArray(scope) ? scope[0] : scope
+  const id = route.query.clusterId
+  const rawId = Array.isArray(id) ? id[0] : id
+  if (rawScope === 'cluster' && typeof rawId === 'string' && rawId.trim()) return rawId.trim()
+  return null
+})
+
+const { data: clustersRegistry } = await useFetch<ClusterWithNodes[]>(
+  '/api/admin/clusters',
+  { default: () => [] },
+)
+
+const clusterScope = computed(() => {
+  const id = clusterScopeId.value
+  if (!id) return null
+  const cluster = clustersRegistry.value?.find(c => c.id === id)
+  return {
+    id,
+    name: cluster?.name ?? id,
+    nodes: cluster?.nodes ?? [],
+  }
+})
+
+function clusterRoleLabel(role: string | null): string {
+  if (role === 'primary') return t('admin.sans.cluster_card.primary') as string
+  if (role === 'secondary') return t('admin.sans.cluster_card.secondary') as string
+  return role ?? '—'
+}
 
 // ── Config système ────────────────────────────────────────────────────────────
 const loading  = ref(false)
@@ -449,6 +540,9 @@ async function updateHost() {
 onMounted(reload)
 
 const pageTitle = computed(() => {
+  if (clusterScope.value) {
+    return t('admin.sysconfig.page.cluster_title', { name: clusterScope.value.name }) as string
+  }
   if (activeTabKey.value === 'upgrade') {
     return t('admin.sysconfig.page.upgrade_title', { label: san.value?.label ?? sanId }) as string
   }
@@ -456,6 +550,12 @@ const pageTitle = computed(() => {
 })
 
 const pageDescription = computed(() => {
+  if (clusterScope.value) {
+    return t('admin.sysconfig.page.cluster_description', {
+      label: san.value?.label ?? sanId,
+      host: san.value ? `${san.value.host}:${san.value.port}` : '—',
+    }) as string
+  }
   if (activeTabKey.value === 'upgrade') {
     return t('admin.sysconfig.page.upgrade_description') as string
   }
@@ -477,13 +577,15 @@ const visibleTabs = computed(() => {
   return tabs.value
 })
 
-function resolveTabFromQuery(tab: unknown): string {
-  if (tab === 'upgrade') return 'upgrade'
-  if (tab === 'terminal' && !isViewer.value) return 'terminal'
+function resolveTabFromQuery(tab: unknown): SysConfigTabKey {
+  const raw = Array.isArray(tab) ? tab[0] : tab
+  if (raw === 'upgrade') return 'upgrade'
+  if (raw === 'terminal' && !isViewer.value) return 'terminal'
+  if (typeof raw === 'string' && isSysConfigTabKey(raw)) return raw
   return 'network'
 }
 
-const activeTabKey = ref<string>(resolveTabFromQuery(route.query.tab))
+const activeTabKey = ref<SysConfigTabKey>(resolveTabFromQuery(route.query.tab))
 
 const upgradeSubTab = computed((): UpgradeSubTab | undefined => {
   const q = route.query.upgradeTab
@@ -493,13 +595,24 @@ const upgradeSubTab = computed((): UpgradeSubTab | undefined => {
 
 function syncRouteQuery() {
   const query: Record<string, string> = {}
+  if (clusterScopeId.value) {
+    query.scope = 'cluster'
+    query.clusterId = clusterScopeId.value
+  }
   if (activeTabKey.value === 'upgrade') {
     query.tab = 'upgrade'
     query.upgradeTab = activeSubTabInUrl.value
   } else if (activeTabKey.value === 'terminal') {
     query.tab = 'terminal'
   }
-  void router.replace({ query })
+  void router.replace({ path: route.path, query })
+}
+
+/** Switches main tab and updates `?tab=` / `?upgradeTab=` in the URL. */
+function selectTab(key: string) {
+  if (!isSysConfigTabKey(key)) return
+  activeTabKey.value = key
+  syncRouteQuery()
 }
 
 const activeSubTabInUrl = ref<UpgradeSubTab>(upgradeSubTab.value ?? 'readiness')
@@ -514,8 +627,9 @@ function onUpgradeSubTabChange(tab: UpgradeSubTab) {
 }
 
 watch(visibleTabs, (list) => {
-  if (!list.some(t => t.key === activeTabKey.value)) {
-    activeTabKey.value = list[0]?.key ?? 'network'
+  const fallback = list[0]?.key
+  if (!list.some(t => t.key === activeTabKey.value) && fallback && isSysConfigTabKey(fallback)) {
+    activeTabKey.value = fallback
   }
 }, { immediate: true })
 

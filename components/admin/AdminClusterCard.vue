@@ -42,6 +42,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'configure', clusterId: string): void
   (e: 'monitor', clusterId: string): void
+  (e: 'systemConfig', payload: { clusterId: string; nodeId: string }): void
   (e: 'testAll', clusterId: string): void
   (e: 'reconnectAll', clusterId: string): void
   (e: 'sync', clusterId: string): void
@@ -121,6 +122,14 @@ function emitStorage(route: StorageRoute) {
     clusterId: props.clusterId,
     nodeId: primaryNode.value.id,
     route,
+  })
+}
+
+function emitSystemConfig() {
+  if (!primaryNode.value) return
+  emit('systemConfig', {
+    clusterId: props.clusterId,
+    nodeId: primaryNode.value.id,
   })
 }
 
@@ -208,6 +217,23 @@ function liveStatusTextColor(s: SSHStatus | undefined): string {
           <UButton size="xs" color="indigo" variant="soft" icon="i-heroicons-wrench-screwdriver" @click="emit('configure', clusterId)">
             {{ t('admin.sans.cluster_card.configure_ha') }}
           </UButton>
+          <UTooltip
+            v-if="!isViewer"
+            :text="hasPrimaryNode ? t('admin.sans.cluster_card.system_config_hint') : t('admin.sans.cluster_card.no_primary_storage')"
+          >
+            <span class="inline-flex">
+              <UButton
+                size="xs"
+                color="gray"
+                variant="soft"
+                icon="i-heroicons-cog-6-tooth"
+                :disabled="!hasPrimaryNode"
+                @click="emitSystemConfig"
+              >
+                {{ t('admin.sans.cluster_card.system_config') }}
+              </UButton>
+            </span>
+          </UTooltip>
           <UTooltip v-if="!isViewer" :text="hasPrimaryNode ? t('admin.sans.cluster_card.configure_storage') : t('admin.sans.cluster_card.no_primary_storage')">
             <span class="inline-flex">
               <UDropdownMenu

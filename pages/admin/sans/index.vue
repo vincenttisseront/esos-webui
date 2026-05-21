@@ -211,6 +211,7 @@
           @sync="onClusterSync"
           @probe="onClusterProbe"
           @storage="onClusterStorage"
+          @system-config="onClusterSystemConfig"
           @test-node="onTest"
           @reconnect-node="onReconnect"
           @remove-node="onRemoveClusterNode"
@@ -741,9 +742,28 @@ function onClusterMonitor(clusterId: string) {
   router.push({ path: '/cluster', query: { clusterId } })
 }
 
-function onClusterStorage(payload: { nodeId: string; route: StorageRoute }) {
+function systemConfigClusterQuery(clusterId: string): Record<string, string> {
+  return { scope: 'cluster', clusterId }
+}
+
+function onClusterSystemConfig(payload: { clusterId: string; nodeId: string }) {
   if (isViewer.value) return
-  router.push({ path: `/admin/sans/${payload.nodeId}/${payload.route}` })
+  router.push({
+    path: `/admin/sans/${payload.nodeId}/system-config`,
+    query: systemConfigClusterQuery(payload.clusterId),
+  })
+}
+
+function onClusterStorage(payload: { clusterId: string; nodeId: string; route: StorageRoute }) {
+  if (isViewer.value) return
+  const query =
+    payload.route === 'system-config'
+      ? systemConfigClusterQuery(payload.clusterId)
+      : undefined
+  router.push({
+    path: `/admin/sans/${payload.nodeId}/${payload.route}`,
+    ...(query ? { query } : {}),
+  })
 }
 
 async function onClusterTestAll(clusterId: string) {
