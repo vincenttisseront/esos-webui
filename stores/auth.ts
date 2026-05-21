@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { shouldSkipAuthMeFetch } from '~/utils/auth-client'
 
 interface AuthUser {
   id: string
@@ -24,9 +25,21 @@ export const useAuthStore = defineStore('auth', () => {
   const mustChangePassword = computed(() => user.value?.forcePasswordChange ?? false)
 
   async function fetchMe(fetcher: typeof $fetch = $fetch) {
+    if (import.meta.client) {
+      const path = useRoute().path
+      if (shouldSkipAuthMeFetch(path)) {
+        user.value = null
+        fetched.value = true
+        return
+      }
+    }
     try {
-      const result = await fetcher<AuthUser>('/api/auth/me')
-      user.value = { ...result, authSource: result.authSource ?? 'local' }
+      const result = await fetcher<AuthUser>('/api/auth/me', { ignoreResponseError: true })
+      if (result && typeof result === 'object' && 'username' in result) {
+        user.value = { ...result, authSource: result.authSource ?? 'local' }
+      } else {
+        user.value = null
+      }
     } catch {
       user.value = null
     } finally {

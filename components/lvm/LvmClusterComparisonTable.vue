@@ -73,6 +73,7 @@ function statusColor(status: ClusterRowStatus): 'green' | 'amber' | 'red' | 'gra
     case 'clvmd':
     case 'inconsistent':
     case 'scst_missing':
+    case 'scst_partial':
       return 'amber'
     default: return 'red'
   }

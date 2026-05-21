@@ -5,6 +5,7 @@ import type {
   PhysicalVolume,
   VolumeGroup,
 } from '~/types/lvm'
+import { lvCanBindScst, vgsWithFreeSpace } from '~/utils/lvm-action-availability'
 
 export type ProvisioningStepId = 'source' | 'pv' | 'vg' | 'lv' | 'scst'
 export type ProvisioningStepStatus = 'ready' | 'created' | 'missing' | 'blocked' | 'next'
@@ -63,7 +64,7 @@ export function pickSourcePath(
 }
 
 function firstUnboundLv(lvs: LogicalVolume[]): LogicalVolume | undefined {
-  return lvs.find(lv => !lv.scstDeviceNames?.length)
+  return lvs.find(lv => lvCanBindScst(lv))
 }
 
 function vgWithMostFree(vgs: VolumeGroup[]): VolumeGroup | undefined {
@@ -149,7 +150,8 @@ export function computeLvmNextAction(ctx: LvmProvisioningContext): LvmNextAction
   }
 
   if (ctx.lvs.length === 0) {
-    const vg = vgWithMostFree(ctx.vgs)
+    const freeVgs = vgsWithFreeSpace(ctx.vgs)
+    const vg = freeVgs.length ? vgWithMostFree(freeVgs) : undefined
     if (vg && vg.freeBytes > 0) {
       return {
         kind: 'create_lv',
@@ -189,9 +191,9 @@ export function computeLvmNextAction(ctx: LvmProvisioningContext): LvmNextAction
 }
 
 function scstDetail(lvs: LogicalVolume[]): { detail: string; bound: boolean } {
-  const bound = lvs.filter(lv => lv.scstDeviceNames?.length)
+  const bound = lvs.filter(lv => !lvCanBindScst(lv))
   if (bound.length) {
-    const names = bound.flatMap(lv => lv.scstDeviceNames ?? [])
+    const names = bound.flatMap(lv => lv.scst?.deviceNames ?? lv.scstDeviceNames ?? [])
     return { detail: names.join(', '), bound: true }
   }
   const unbound = firstUnboundLv(lvs)

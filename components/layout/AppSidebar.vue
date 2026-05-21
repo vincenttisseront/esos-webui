@@ -185,7 +185,6 @@ const { t }            = useEsosI18n()
 
 onMounted(() => {
   if (!esosVersionStore.report) esosVersionStore.fetch()
-  if (!authStore.user)          authStore.fetchMe()
 })
 
 // Charger les dépendances uniquement quand le rôle est connu et non-viewer

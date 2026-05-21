@@ -11,7 +11,8 @@
         <UButton
           size="sm"
           color="primary"
-          :disabled="!canMutate"
+          :disabled="!canMutate || ctaDisabled"
+          :title="ctaDisabled ? ctaDisabledReason : undefined"
           @click="$emit('action', action!.action!)"
         >
           {{ action.actionLabelKey ? t(action.actionLabelKey) : '' }}
@@ -27,6 +28,8 @@ import type { LvmNextAction } from '~/utils/lvm-provisioning-chain'
 const props = defineProps<{
   action: LvmNextAction
   canMutate: boolean
+  ctaDisabled?: boolean
+  ctaDisabledReason?: string
 }>()
 
 defineEmits<{

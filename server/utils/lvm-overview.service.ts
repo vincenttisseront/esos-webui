@@ -6,7 +6,7 @@ import { collectRaidOverview } from './raid-overview.service'
 import { parsePvsJson, parseVgsJson, parseLvsJson } from './parsers/lvm-json.parser'
 import { allLvPathCandidates, mapParsedLvToLogicalVolume } from './lvm-lv-mapper'
 import { buildLvmCandidatesFromInventory } from './lvm-candidates'
-import { readScstConfig } from './scst-config-reader'
+import { readScstDeviceIndex } from './scst-device-index'
 import type {
   LvmAlert,
   LvmOverviewResponse,
@@ -61,20 +61,13 @@ function parseTools(raw: string): LvmToolsInfo {
   }
 }
 
-async function scstFilenamesByPath(): Promise<Map<string, string[]>> {
-  const map = new Map<string, string[]>()
+async function scstFilenamesByPath(manager: SSHSessionManager): Promise<Map<string, string[]>> {
   try {
-    const config = await readScstConfig()
-    for (const h of config.handlers) {
-      for (const d of h.devices) {
-        if (!d.filename) continue
-        const list = map.get(d.filename) ?? []
-        list.push(d.name)
-        map.set(d.filename, list)
-      }
-    }
-  } catch { /* no scst */ }
-  return map
+    const index = await readScstDeviceIndex(manager)
+    return index.pathToDevices
+  } catch {
+    return new Map()
+  }
 }
 
 function buildAlerts(tools: LvmToolsInfo, clusteredVg: boolean): LvmAlert[] {
@@ -95,7 +88,7 @@ export async function collectLvmOverview(manager: SSHSessionManager): Promise<Lv
   const [raidOverview, lvmResult, scstMap] = await Promise.all([
     collectRaidOverview(manager),
     manager.exec(LVM_OVERVIEW_CMD, 30_000),
-    scstFilenamesByPath(),
+    scstFilenamesByPath(manager),
   ])
 
   const sections = splitSections(lvmResult.stdout)
@@ -157,7 +150,7 @@ export async function collectLvmOverview(manager: SSHSessionManager): Promise<Lv
 export async function collectLvmOverviewLite(manager: SSHSessionManager): Promise<Pick<LvmOverviewResponse, 'pvs' | 'vgs' | 'lvs' | 'tools'>> {
   const [r, scstMap] = await Promise.all([
     manager.exec(LVM_OVERVIEW_CMD, 30_000),
-    scstFilenamesByPath(),
+    scstFilenamesByPath(manager),
   ])
   const sections = splitSections(r.stdout)
   const tools = parseTools(sections.TOOLS ?? '')

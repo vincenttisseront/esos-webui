@@ -15,15 +15,9 @@ export default defineNuxtConfig({
     ],
     lazy: true,
     bundle: { optimizeTranslationDirective: false },
-    detectBrowserLanguage: {
-      useCookie: true,
-      cookieKey: 'esos_locale',
-      cookieSecure: true,
-      cookieCrossOrigin: false,
-      alwaysRedirect: false,
-      redirectOn: 'no prefix',
-      fallbackLocale: 'fr',
-    },
+    // Cookie-only detection: avoids client-only navigator.language switching
+    // after SSR (fr default), which causes hydration text mismatches.
+    detectBrowserLanguage: false,
     vueI18n: '~/i18n/i18n.config.ts',
   },
   css: ['~/assets/css/main.css'],

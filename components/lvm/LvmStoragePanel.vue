@@ -25,16 +25,44 @@
     </div>
 
     <div class="flex flex-wrap gap-2 justify-between items-center">
-      <div class="flex flex-wrap gap-2">
-        <UButton size="sm" color="primary" icon="i-heroicons-plus" :disabled="!canCreate" @click="openPvWizard">
-          {{ t('lvm.pv.create_action') }}
-        </UButton>
-        <UButton size="sm" color="primary" variant="soft" icon="i-heroicons-plus" :disabled="!canCreate || !lvm.orphanPvs.length" @click="openVgWizard">
-          {{ t('lvm.vg.create_action') }}
-        </UButton>
-        <UButton size="sm" color="primary" variant="soft" icon="i-heroicons-plus" :disabled="!canCreate || !lvm.vgs.length" @click="openLvWizard">
-          {{ t('lvm.lv.create_action') }}
-        </UButton>
+      <div class="flex flex-col gap-1">
+        <div class="flex flex-wrap gap-2">
+          <UButton
+            size="sm"
+            color="primary"
+            icon="i-heroicons-plus"
+            :disabled="!actionAvail.pvCreate.enabled"
+            :title="disabledReason(actionAvail.pvCreate)"
+            @click="openPvWizard"
+          >
+            {{ t('lvm.pv.create_action') }}
+          </UButton>
+          <UButton
+            size="sm"
+            color="primary"
+            variant="soft"
+            icon="i-heroicons-plus"
+            :disabled="!actionAvail.vgCreate.enabled"
+            :title="disabledReason(actionAvail.vgCreate)"
+            @click="openVgWizard"
+          >
+            {{ t('lvm.vg.create_action') }}
+          </UButton>
+          <UButton
+            size="sm"
+            color="primary"
+            variant="soft"
+            icon="i-heroicons-plus"
+            :disabled="!actionAvail.lvCreate.enabled"
+            :title="disabledReason(actionAvail.lvCreate)"
+            @click="openLvWizard"
+          >
+            {{ t('lvm.lv.create_action') }}
+          </UButton>
+        </div>
+        <p v-if="actionHint" class="text-[11px] text-gray-500 dark:text-gray-400 max-w-2xl">
+          {{ actionHint }}
+        </p>
       </div>
       <UButton size="sm" color="gray" variant="ghost" icon="i-heroicons-arrow-path" :loading="refreshing" @click="refreshAll">
         {{ t('lvm.overview.refresh') }}
@@ -53,6 +81,8 @@
       <LvmNextStepCard
         :action="clusterView.nextAction"
         :can-mutate="canMutate"
+        :cta-disabled="!nextStepCtaEnabled"
+        :cta-disabled-reason="nextStepCtaReason"
         @action="onNextStepAction"
       />
 
@@ -134,7 +164,16 @@
                 {{ t('lvm.lv.bind_scst') }}
               </UButton>
               <UButton
-                v-if="row.status === 'scst_missing' || row.status === 'ok'"
+                v-else-if="row.status === 'scst_partial'"
+                size="xs"
+                color="amber"
+                variant="soft"
+                @click="openScstWizard(primaryLvByPath(String(row.path)))"
+              >
+                {{ t('lvm.lv.repair_scst') }}
+              </UButton>
+              <UButton
+                v-if="row.status === 'scst_missing' || row.status === 'scst_partial' || row.status === 'ok'"
                 size="xs"
                 color="red"
                 variant="ghost"
@@ -153,8 +192,10 @@
     <LvmProvisioningChain :steps="provisioningChain" />
 
     <LvmNextStepCard
-      :action="nextAction"
+      :action="activeNextAction"
       :can-mutate="canMutate"
+      :cta-disabled="!nextStepCtaEnabled"
+      :cta-disabled-reason="nextStepCtaReason"
       @action="onNextStepAction"
     />
 
@@ -248,10 +289,10 @@
       <template #header>
         <div class="flex items-center justify-between gap-2">
           <h3 class="text-sm font-medium">{{ t('lvm.lv.table_title') }}</h3>
-          <UBadge v-if="lvm.lvs.length" color="gray" variant="soft" size="xs" :label="String(lvm.lvs.length)" />
+          <UBadge v-if="displayLvs.length" color="gray" variant="soft" size="xs" :label="String(displayLvs.length)" />
         </div>
       </template>
-      <div v-if="lvm.lvs.length" class="overflow-x-auto">
+      <div v-if="displayLvs.length" class="overflow-x-auto">
         <table class="w-full text-xs">
           <thead>
             <tr class="text-left text-gray-500 border-b">
@@ -264,17 +305,40 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in lvm.lvs" :key="`${row.vgName}/${row.name}`" class="border-b border-gray-100 dark:border-gray-800">
+            <tr v-for="row in displayLvs" :key="`${row.vgName}/${row.name}`" class="border-b border-gray-100 dark:border-gray-800">
               <td class="py-1.5 font-mono">{{ row.displayName || `${row.vgName}/${row.name}` }}</td>
               <td class="py-1.5 font-mono text-gray-600 dark:text-gray-400 break-all">{{ row.path }}</td>
               <td class="py-1.5">{{ row.vgName }}</td>
               <td class="py-1.5">{{ formatBytes(row.sizeBytes) }}</td>
               <td class="py-1.5">
-                <span v-if="row.scstDeviceNames?.length">{{ row.scstDeviceNames.join(', ') }}</span>
-                <UButton v-else-if="canMutate" size="xs" variant="soft" @click="openScstWizard(row)">{{ t('lvm.lv.bind_scst') }}</UButton>
+                <template v-if="lvScstUiState(row) === 'linked'">
+                  <span class="font-mono text-gray-700 dark:text-gray-300">{{ lvScstLabel(row) }}</span>
+                </template>
+                <template v-else-if="lvScstUiState(row) === 'partial'">
+                  <UBadge color="amber" variant="soft" size="xs" :label="t('lvm.lv.scst_partial')" class="mr-1" />
+                  <span class="font-mono text-gray-600">{{ lvScstLabel(row) || '—' }}</span>
+                  <UButton
+                    v-if="canMutate"
+                    size="xs"
+                    color="amber"
+                    variant="soft"
+                    class="ml-1"
+                    @click="openScstWizard(row)"
+                  >
+                    {{ t('lvm.lv.repair_scst') }}
+                  </UButton>
+                </template>
+                <UButton
+                  v-else-if="canMutate && lvCanBindScst(row)"
+                  size="xs"
+                  variant="soft"
+                  @click="openScstWizard(row)"
+                >
+                  {{ t('lvm.lv.bind_scst') }}
+                </UButton>
               </td>
               <td class="py-1.5 text-right">
-                <UButton v-if="canMutate && !row.scstDeviceNames?.length" size="xs" color="red" variant="ghost" @click="openRemoveLvWizard(row)">
+                <UButton v-if="canMutate && lvCanBindScst(row)" size="xs" color="red" variant="ghost" @click="openRemoveLvWizard(row)">
                   {{ t('lvm.lv.remove') }}
                 </UButton>
               </td>
@@ -355,6 +419,14 @@ import type { LogicalVolume, LocalSymmetricLvmIssue } from '~/types/lvm'
 import { listClusterEligiblePaths, symmetryIssuesForOverview } from '~/utils/lvm-cluster-ui'
 import { buildClusterLvmViewModel } from '~/utils/lvm-cluster-view-model'
 import {
+  buildLvmActionAvailability,
+  enrichLvWithClusterScst,
+  lvCanBindScst,
+  lvScstDeviceLabel,
+  lvScstUiState,
+  type LvmActionAvailability,
+} from '~/utils/lvm-action-availability'
+import {
   buildProvisioningChain,
   computeLvmNextAction,
   type LvmNextAction,
@@ -418,15 +490,69 @@ const symmetryIssues = computed((): LocalSymmetricLvmIssue[] => {
   )
 })
 
-const provisioningContext = computed(() => ({
+const displayLvs = computed(() => {
+  const base = lvm.lvs
+  if (props.isClustered && lvm.clusterInventory?.length) {
+    return base.map(lv => enrichLvWithClusterScst(lv, lvm.clusterInventory!))
+  }
+  return base
+})
+
+const actionContext = computed(() => ({
   candidates: displayCandidates.value,
   pvs: lvm.pvs,
   vgs: lvm.vgs,
-  lvs: lvm.lvs,
+  lvs: displayLvs.value,
   orphanPvs: lvm.orphanPvs,
   readOnly: props.readOnly,
   symmetryIssues: symmetryIssues.value,
+  isClustered: props.isClustered,
+  clusterInventory: lvm.clusterInventory,
+  primarySanId: props.sanId,
 }))
+
+const provisioningContext = computed(() => actionContext.value)
+
+const actionAvail = computed(() => buildLvmActionAvailability(actionContext.value))
+
+function disabledReason(avail: LvmActionAvailability): string | undefined {
+  return avail.reasonKey ? (t(avail.reasonKey) as string) : undefined
+}
+
+const actionHint = computed(() => {
+  const keys = [
+    actionAvail.value.pvCreate,
+    actionAvail.value.vgCreate,
+    actionAvail.value.lvCreate,
+    actionAvail.value.bindScst,
+  ]
+  const first = keys.find(k => !k.enabled && k.reasonKey)
+  return first?.reasonKey ? (t(first.reasonKey) as string) : ''
+})
+
+function nextStepAvailability(kind: LvmNextAction): LvmActionAvailability {
+  switch (kind.action) {
+    case 'pv': return actionAvail.value.pvCreate
+    case 'vg': return actionAvail.value.vgCreate
+    case 'lv': return actionAvail.value.lvCreate
+    case 'scst': return actionAvail.value.bindScst
+    default: return { enabled: true }
+  }
+}
+
+const nextStepCtaEnabled = computed(() => {
+  const a = activeNextAction.value
+  if (['complete', 'readonly', 'blocked'].includes(a.kind)) return false
+  if (!a.action) return false
+  return nextStepAvailability(a).enabled
+})
+
+const nextStepCtaReason = computed(() => {
+  const a = activeNextAction.value
+  if (nextStepCtaEnabled.value) return ''
+  const avail = nextStepAvailability(a)
+  return disabledReason(avail) ?? ''
+})
 
 const clusterView = computed(() => {
   if (!props.isClustered) return null
@@ -468,6 +594,8 @@ const activeNextAction = computed(() =>
 const provisioningChain = computed(() => buildProvisioningChain(provisioningContext.value))
 const nextAction = computed(() => computeLvmNextAction(provisioningContext.value))
 
+const lvScstLabel = lvScstDeviceLabel
+
 const pvColumns = computed(() => [
   { key: 'nodeLabel', label: t('lvm.cluster.view.col.node') },
   { key: 'path', label: 'PV', mono: true },
@@ -498,7 +626,7 @@ const lvColumns = computed(() => [
 ])
 
 function primaryLvByPath(path: string): LogicalVolume {
-  const lv = lvm.lvs.find(l => l.path === path)
+  const lv = displayLvs.value.find(l => l.path === path) ?? lvm.lvs.find(l => l.path === path)
   if (lv) return lv
   return {
     name: path.split('/').pop() ?? 'lv',

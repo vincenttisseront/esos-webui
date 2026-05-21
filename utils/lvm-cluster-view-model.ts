@@ -10,6 +10,11 @@ import type {
 } from '~/types/lvm'
 import { assessClusterSymmetricLvm } from '~/utils/lvm-cluster-symmetry'
 import {
+  clusterLvScstStateForKey,
+  lvScstDeviceLabel,
+  lvScstUiState,
+} from '~/utils/lvm-action-availability'
+import {
   buildProvisioningChain,
   computeLvmNextAction,
   pickSourcePath,
@@ -28,6 +33,7 @@ export type ClusterRowStatus =
   | 'clvmd'
   | 'size_mismatch'
   | 'scst_missing'
+  | 'scst_partial'
   | 'inconsistent'
 
 export interface ClusterPvRow {
@@ -362,7 +368,13 @@ export function buildClusterComparisonTables(
 
     for (const lv of node.overview.lvs) {
       const issue = issues.find(i => i.vgName === lv.vgName && (i.lvName === lv.name || !i.lvName))
-      const scst = lv.scstDeviceNames?.join(', ') ?? ''
+      const scst = lvScstDeviceLabel(lv)
+      const clusterScst = clusterLvScstStateForKey(nodes, lv.vgName, lv.name)
+      let status: ClusterRowStatus = 'scst_missing'
+      if (issue) status = 'inconsistent'
+      else if (clusterScst === 'linked' && lvScstUiState(lv) !== 'none') status = 'ok'
+      else if (clusterScst === 'partial') status = 'scst_partial'
+      else if (lvScstUiState(lv) !== 'none') status = 'ok'
       lvRows.push({
         nodeSanId: node.sanId,
         nodeLabel: node.label,
@@ -370,12 +382,8 @@ export function buildClusterComparisonTables(
         vgName: lv.vgName,
         name: lv.name,
         sizeBytes: lv.sizeBytes,
-        scst,
-        status: issue
-          ? 'inconsistent'
-          : scst
-            ? 'ok'
-            : 'scst_missing',
+        scst: scst || '—',
+        status,
         statusDetail: issue?.message,
         isPrimary: node.sanId === primarySanId,
       })

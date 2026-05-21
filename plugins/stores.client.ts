@@ -1,3 +1,5 @@
+import { shouldSkipAuthMeFetch } from '~/utils/auth-client'
+
 export default defineNuxtPlugin(async (nuxtApp) => {
   const sshStore = useSSHStore()
   const overviewStore = useOverviewStore()
@@ -5,17 +7,12 @@ export default defineNuxtPlugin(async (nuxtApp) => {
   const sanSelector = useSelectedSan()
   const auth = useAuthStore()
   const appVersionStore = useAppVersionStore()
+  const route = useRoute()
 
-  // Fetch version info early (no auth required)
   appVersionStore.fetchVersion().catch(() => {})
 
-  // Only load SANs and start polling if already authenticated
-  if (!auth.fetched) {
-    try {
-      await auth.fetchMe(useRequestFetch())
-    } catch {
-      // not authenticated — skip
-    }
+  if (!auth.fetched && !shouldSkipAuthMeFetch(route.path)) {
+    await auth.fetchMe(useRequestFetch())
   }
 
   if (auth.isAuthenticated) {

@@ -171,10 +171,9 @@ const driftDetection = useNetworkDriftDetection()
 let statusInterval: ReturnType<typeof setInterval> | null = null
 
 onMounted(async () => {
-  if (!authStore.user) {
-    await authStore.fetchMe()
+  if (!sanSelector.sans.value.length) {
+    await sanSelector.fetchSans()
   }
-  await sanSelector.fetchSans()
   const role = authStore.user?.role
   if (role === 'operator' || role === 'admin') {
     driftDetection.start(60_000)

@@ -2,6 +2,7 @@ import {
   pickLvBackingPathFromReport,
   scstDeviceNamesForLvPaths,
 } from '~/utils/lvm-lv-path'
+import { resolveLvScstBinding } from '~/utils/lvm-action-availability'
 import type { LogicalVolume, LvmUsedBy } from './lvm-types'
 
 export type ParsedLvRow = {
@@ -25,7 +26,8 @@ export function mapParsedLvToLogicalVolume(
     raw.name,
     { lvPath: raw.lvPath, lvDmPath: raw.lvDmPath },
   )
-  const scstNames = scstDeviceNamesForLvPaths(scstMap, pathCandidates)
+  const scstBinding = resolveLvScstBinding(pathCandidates, scstMap)
+  const scstNames = scstBinding.deviceNames
   const usedBy: LvmUsedBy[] = []
   if (scstNames.length) usedBy.push('scst')
   const dev = blockByPath.get(backingPath)
@@ -43,6 +45,7 @@ export function mapParsedLvToLogicalVolume(
     attr: raw.attr,
     active: raw.active,
     usedBy,
+    scst: scstBinding.state !== 'none' ? scstBinding : undefined,
     scstDeviceNames: scstNames.length ? scstNames : undefined,
   }
 }

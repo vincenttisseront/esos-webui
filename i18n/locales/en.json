@@ -1062,7 +1062,23 @@
       "create_action": "Create LV",
       "remove": "Remove LV",
       "removed": "LV removed",
-      "bind_scst": "SCST device"
+      "bind_scst": "SCST device",
+      "repair_scst": "Repair SCST",
+      "scst_partial": "Partial SCST"
+    },
+    "actions": {
+      "disabled": {
+        "readonly": "SAN is read-only.",
+        "no_pv_candidate": "No candidate device available for PV creation.",
+        "all_devices_are_pv": "All candidate devices are already PVs.",
+        "no_free_pv": "No free PV available.",
+        "no_vg": "No volume group.",
+        "no_vg_free_space": "No VG with free space.",
+        "all_lv_scst_bound": "All logical volumes are already exposed.",
+        "cluster_no_free_pv": "No free PV on all required nodes.",
+        "cluster_no_vg_space": "No VG with free space on all required nodes.",
+        "cluster_no_pv_candidate": "No PV candidate eligible on all nodes."
+      }
     },
     "candidate": { "table_title": "Candidate devices for pvcreate" },
     "confirm": { "label": "Confirmation phrase" },
@@ -1099,7 +1115,8 @@
           "unmapped": "Unmapped",
           "clvmd": "clvmd",
           "size_mismatch": "Size mismatch",
-          "scst_missing": "No SCST"
+          "scst_missing": "No SCST",
+          "scst_partial": "Partial SCST"
         },
         "progress": {
           "source_partial": "Source ready on {ready}/{total} nodes",

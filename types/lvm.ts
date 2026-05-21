@@ -54,6 +54,21 @@ export interface VolumeGroup {
   clustered: boolean
 }
 
+export type LvScstBindingState = 'none' | 'linked' | 'partial'
+
+export interface LvScstNodeBinding {
+  nodeSanId: string
+  nodeLabel: string
+  state: 'linked' | 'missing'
+  deviceNames: string[]
+}
+
+export interface LvScstBinding {
+  state: LvScstBindingState
+  deviceNames: string[]
+  perNode?: LvScstNodeBinding[]
+}
+
 export interface LogicalVolume {
   name: string
   /** Block device path used for SCST / validation (resolved backing path). */
@@ -68,7 +83,10 @@ export interface LogicalVolume {
   attr?: string
   active: boolean
   usedBy: LvmUsedBy[]
+  /** SCST devices bound to this LV (path-matched). */
   scstDeviceNames?: string[]
+  /** Rich SCST linkage (path + optional per-node state in cluster views). */
+  scst?: LvScstBinding
 }
 
 export interface LvmCandidateDevice {

@@ -1,6 +1,6 @@
 /**
  * GET /api/app/version — Version globale de l'application WebUI (SDD v3.13 §10.1).
- * Route publique (authentifiée mais pas admin-only).
+ * Route publique (sans session) — version affichée dans le footer / login.
  */
 import { getAppVersion } from '../../db/repositories/app-version.repository'
 import { resolveRuntimeAppVersion } from '../../utils/app-version'

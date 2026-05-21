@@ -1062,7 +1062,23 @@
       "create_action": "Créer un LV",
       "remove": "Supprimer le LV",
       "removed": "LV supprimé",
-      "bind_scst": "Device SCST"
+      "bind_scst": "Device SCST",
+      "repair_scst": "Réparer SCST",
+      "scst_partial": "SCST partiel"
+    },
+    "actions": {
+      "disabled": {
+        "readonly": "SAN en lecture seule.",
+        "no_pv_candidate": "Aucun périphérique candidat pour créer un PV.",
+        "all_devices_are_pv": "Tous les périphériques candidats sont déjà des PV.",
+        "no_free_pv": "Aucun PV libre disponible.",
+        "no_vg": "Aucun groupe de volumes.",
+        "no_vg_free_space": "Aucun VG avec espace libre.",
+        "all_lv_scst_bound": "Tous les LV sont déjà exposés.",
+        "cluster_no_free_pv": "Aucun PV libre sur tous les nœuds requis.",
+        "cluster_no_vg_space": "Aucun VG avec espace libre sur tous les nœuds.",
+        "cluster_no_pv_candidate": "Aucun candidat PV éligible sur tous les nœuds."
+      }
     },
     "candidate": { "table_title": "Périphériques candidats pour pvcreate" },
     "confirm": { "label": "Phrase de confirmation" },
@@ -1099,7 +1115,8 @@
           "unmapped": "Non mappé",
           "clvmd": "clvmd",
           "size_mismatch": "Taille différente",
-          "scst_missing": "Sans SCST"
+          "scst_missing": "Sans SCST",
+          "scst_partial": "SCST partiel"
         },
         "progress": {
           "source_partial": "Source prête sur {ready}/{total} nœuds",

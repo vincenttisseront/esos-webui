@@ -27,6 +27,7 @@ const PUBLIC_API_PREFIXES = [
   '/api/auth/oidc/callback',
   '/api/auth/ldap/login',
   '/api/health',
+  '/api/app/version',
   '/api/_nuxt_icon',
 ]
 
