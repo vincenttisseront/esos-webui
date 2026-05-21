@@ -241,6 +241,27 @@
       "auto_refresh_active": "Mise à jour automatique active",
       "auto_refresh_failed": "La mise à jour automatique de la progression RAID a été interrompue"
     },
+    "page_health": {
+      "local": "Local",
+      "cluster": "Cluster",
+      "warning": "Attention",
+      "critical": "Critique",
+      "rebuilding": "Rebuild",
+      "unknown": "Inconnu"
+    },
+    "overview": {
+      "local_alerts_title": "Alertes locales ({count})",
+      "cluster_alerts_title": "Alertes cluster ({count})",
+      "no_local_alerts": "Aucune alerte locale détectée",
+      "cluster_critical_hint": "Cluster critique — le stockage cluster nécessite une intervention.",
+      "lvm_cluster_storage_critical": "LVM local complet — le stockage cluster reste en état critique.",
+      "cluster_alert": {
+        "title": "Stockage cluster — {cluster}",
+        "nodes": "Nœuds concernés : {nodes}",
+        "open_cluster": "Administration cluster",
+        "open_peer_raid": "RAID nœud pair"
+      }
+    },
     "cockpit": {
       "status": {
         "title": "Statut RAID cluster"

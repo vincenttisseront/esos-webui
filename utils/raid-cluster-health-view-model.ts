@@ -25,7 +25,11 @@ import {
   mdArrayToActiveSnapshot,
   resolveClusterMdStorageMode,
 } from '~/utils/cluster-md-symmetry'
-import type { ClusterAttentionPoint } from '~/types/cluster-admin'
+import type { ClusterAttentionPoint, ClusterAttentionResponse, ClusterHealth } from '~/types/cluster-admin'
+import {
+  clusterHealthToCockpitHealth,
+  storageOverallToCockpitHealth,
+} from '~/utils/cluster-raid-page-health'
 import {
   collectActiveMdMemberPaths,
   isAttentionItem,
@@ -292,7 +296,7 @@ function deriveHealth(actionable: RaidActionableItem[]): RaidCockpitHealth {
   return 'healthy'
 }
 
-function mergeWorstHealth(a: RaidCockpitHealth, b: RaidCockpitHealth): RaidCockpitHealth {
+export function mergeWorstHealth(a: RaidCockpitHealth, b: RaidCockpitHealth): RaidCockpitHealth {
   const rank: Record<RaidCockpitHealth, number> = { healthy: 0, warning: 1, critical: 2, unknown: 3 }
   return rank[a] >= rank[b] ? a : b
 }
@@ -561,8 +565,20 @@ export function buildRaidClusterHealthViewModel(input: {
   t: RaidCockpitTranslate
   /** Cluster-wide storage_md points from /api/cluster/attention (fallback when peer overview is incomplete). */
   clusterStorageAttention?: ClusterAttentionPoint[]
+  /** Same `health` as Administration (`/api/cluster/attention`). */
+  clusterAttentionHealth?: ClusterHealth
+  /** Same `storageOverall` as Administration. */
+  clusterStorageOverall?: ClusterAttentionResponse['storageOverall']
 }): RaidClusterHealthViewModel {
-  const { overview, currentSanId, isClustered, t, clusterStorageAttention } = input
+  const {
+    overview,
+    currentSanId,
+    isClustered,
+    t,
+    clusterStorageAttention,
+    clusterAttentionHealth,
+    clusterStorageOverall,
+  } = input
 
   if (!overview) {
     return {
@@ -705,7 +721,14 @@ export function buildRaidClusterHealthViewModel(input: {
   const localActionableItems = actionableItems.filter(a => !CLUSTER_ACTION_CATEGORIES.has(a.category))
   const clusterActionableItems = actionableItems.filter(a => CLUSTER_ACTION_CATEGORIES.has(a.category))
   const localHealth = deriveHealth(localActionableItems)
-  const clusterHealth = isClustered ? deriveHealth(clusterActionableItems) : 'healthy'
+  let clusterHealth = isClustered ? deriveHealth(clusterActionableItems) : 'healthy'
+  if (isClustered && input.clusterAttentionHealth) {
+    clusterHealth = mergeWorstHealth(clusterHealth, clusterHealthToCockpitHealth(input.clusterAttentionHealth))
+  }
+  if (isClustered && input.clusterStorageOverall) {
+    const storageHealth = storageOverallToCockpitHealth(input.clusterStorageOverall)
+    if (storageHealth) clusterHealth = mergeWorstHealth(clusterHealth, storageHealth)
+  }
   const health = mergeWorstHealth(localHealth, clusterHealth)
   const productionImpact = deriveProductionImpact(health, mdArrays, summary)
   const actionableCount = actionableItems.filter(a => a.severity !== 'info').length || actionableItems.length

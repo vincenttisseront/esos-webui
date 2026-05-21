@@ -15,7 +15,12 @@
           <h1 class="text-xl font-semibold text-gray-900 dark:text-gray-100">Gestion RAID</h1>
           <p class="text-sm text-gray-500">{{ san?.label ?? sanId }}</p>
         </div>
-        <RaidHealthBadge :health="pageRaidHealth" />
+        <RaidPerSanHealthBadges
+          :page-health="pageRaidHealth"
+          :local-health="perSanHealth.localHealth"
+          :cluster-health="perSanHealth.clusterHealth"
+          :is-clustered="isClusteredSan"
+        />
       </div>
       <div class="flex items-center gap-2">
         <span v-if="raid.overview" class="text-xs text-gray-600 dark:text-gray-400">
@@ -144,6 +149,12 @@
             <p class="text-xs text-primary-700 dark:text-primary-300">
               {{ t(lvmRaidSummary.nextStepKey, lvmRaidSummary.nextStepParams ?? {}) }}
             </p>
+            <p
+              v-if="lvmClusterStorageHint"
+              class="text-xs text-red-700 dark:text-red-400 font-medium"
+            >
+              {{ lvmClusterStorageHint }}
+            </p>
             <p class="text-[11px] text-gray-500">
               {{ t(lvmRaidSummary.countsLabelKey, lvmRaidSummary.countsParams) }}
             </p>
@@ -167,9 +178,28 @@
         </UCard>
       </div>
 
-      <!-- Toutes les alertes -->
+      <RaidClusterStorageAlertCard :model="clusterAlertCard" />
+
+      <div v-if="clusterOverviewAlerts.length" class="space-y-2">
+        <h3 class="text-sm font-medium text-gray-700 dark:text-gray-400">
+          {{ t('raid.overview.cluster_alerts_title', { count: clusterOverviewAlerts.length }) }}
+        </h3>
+        <UAlert
+          v-for="p in clusterOverviewAlerts"
+          :key="p.id"
+          :title="p.title"
+          :description="p.summary"
+          :color="p.severity === 'critical' || p.severity === 'blocking' ? 'red' : 'amber'"
+          icon="i-heroicons-server-stack"
+          variant="soft"
+          size="sm"
+        />
+      </div>
+
       <div v-if="raid.allAlerts.length" class="space-y-2">
-        <h3 class="text-sm font-medium text-gray-700 dark:text-gray-400">Alertes ({{ raid.allAlerts.length }})</h3>
+        <h3 class="text-sm font-medium text-gray-700 dark:text-gray-400">
+          {{ t('raid.overview.local_alerts_title', { count: raid.allAlerts.length }) }}
+        </h3>
         <UAlert
           v-for="a in raid.allAlerts"
           :key="a.message"
@@ -181,10 +211,24 @@
         />
       </div>
 
-      <div v-if="!raid.allAlerts.length" class="text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
-        <UIcon name="i-heroicons-check-circle" class="w-4 h-4" />
-        Aucune alerte RAID détectée
+      <div
+        v-if="!raid.allAlerts.length"
+        class="text-sm flex items-center gap-2"
+        :class="clusterOverviewAlerts.length ? 'text-gray-600 dark:text-gray-400' : 'text-green-600 dark:text-green-400'"
+      >
+        <UIcon
+          :name="clusterOverviewAlerts.length ? 'i-heroicons-information-circle' : 'i-heroicons-check-circle'"
+          class="w-4 h-4"
+        />
+        {{ t('raid.overview.no_local_alerts') }}
       </div>
+      <p
+        v-if="!raid.allAlerts.length && perSanHealth.isClusterCritical"
+        class="text-sm text-red-600 dark:text-red-400 flex items-center gap-2 font-medium"
+      >
+        <UIcon name="i-heroicons-exclamation-triangle" class="w-4 h-4" />
+        {{ t('raid.overview.cluster_critical_hint') }}
+      </p>
     </div>
 
     <!-- Onglet RAID Matériel -->
@@ -447,6 +491,12 @@ import type { MdDetectionItem, RaidActionableItem } from '~/types/raid'
 import type { ClusterMdPreflightAction, PreflightBlockerRef, RaidRiskLevel } from '~/types/raid'
 import { raidDetectionNavigateKey } from '~/composables/useRaidDetectionNavigate'
 import { buildLvmRaidSummary } from '~/utils/lvm-overview-summary'
+import type { ClusterAttentionResponse } from '~/types/cluster-admin'
+import {
+  buildClusterRaidAlertCard,
+  buildPerSanRaidPageHealth,
+  clusterAttentionPointsForOverview,
+} from '~/utils/cluster-raid-page-health'
 
 definePageMeta({ layout: 'default', ssr: false })
 
@@ -458,24 +508,21 @@ const { data: san } = await useFetch<SanSummary>(`/api/admin/sans/${sanId}`)
 const isReadOnly = computed(() => san.value?.readOnly ?? false)
 const isClusteredSan = computed(() => Boolean(san.value?.clusterId))
 
-const clusterStorageAttention = ref<import('~/types/cluster-admin').ClusterAttentionPoint[]>([])
+const clusterAttention = ref<ClusterAttentionResponse | null>(null)
 
-async function fetchClusterStorageAttention() {
+async function fetchClusterAttention() {
   const clusterId = san.value?.clusterId
   if (!clusterId) {
-    clusterStorageAttention.value = []
+    clusterAttention.value = null
     return
   }
   try {
-    const res = await $fetch<import('~/types/cluster-admin').ClusterAttentionResponse>(
+    clusterAttention.value = await $fetch<ClusterAttentionResponse>(
       '/api/cluster/attention',
       { query: { clusterId, includeMd: 'true' } },
     )
-    clusterStorageAttention.value = (res.attentionPoints ?? []).filter(
-      p => p.category === 'storage_md' && p.severity !== 'info',
-    )
   } catch {
-    clusterStorageAttention.value = []
+    clusterAttention.value = null
   }
 }
 
@@ -508,25 +555,33 @@ const softwareCockpit = computed(() =>
     stoppedAssemblable: partitionedStopped.value.assemblable,
     stoppedOrphan: partitionedStopped.value.orphanOrIncomplete,
     showEmptyMdState: showSoftwareEmpty.value,
-    clusterStorageAttention: isClusteredSan.value ? clusterStorageAttention.value : undefined,
+    clusterAttention: isClusteredSan.value ? clusterAttention.value : null,
     t: (key, params) => t(key, params ?? {}),
   }),
 )
 
-function cockpitHealthToRaidHealth(h: import('~/types/raid').RaidCockpitHealth): import('~/types/raid').RaidHealth {
-  switch (h) {
-    case 'healthy': return 'ok'
-    case 'warning': return 'warning'
-    case 'critical': return 'critical'
-    default: return 'unknown'
-  }
-}
+const perSanHealth = computed(() =>
+  buildPerSanRaidPageHealth({
+    localRaidHealth: raid.globalHealth,
+    cockpit: softwareCockpit.value.status,
+    clusterAttention: clusterAttention.value,
+    isClustered: isClusteredSan.value,
+  }),
+)
 
-const pageRaidHealth = computed((): import('~/types/raid').RaidHealth => {
-  if (isClusteredSan.value && raid.overview) {
-    return cockpitHealthToRaidHealth(softwareCockpit.value.status.health)
-  }
-  return raid.globalHealth
+const pageRaidHealth = computed(() => perSanHealth.value.pageHealth)
+
+const clusterAlertCard = computed(() =>
+  buildClusterRaidAlertCard(clusterAttention.value, sanId),
+)
+
+const clusterOverviewAlerts = computed(() =>
+  clusterAttentionPointsForOverview(clusterAttention.value),
+)
+
+const lvmClusterStorageHint = computed(() => {
+  if (!isClusteredSan.value || !perSanHealth.value.isClusterCritical) return ''
+  return t('raid.overview.lvm_cluster_storage_critical') as string
 })
 
 function advancedCleanupMembersForStopped(paths: string[]) {
@@ -1366,7 +1421,7 @@ async function manualRefreshRaid() {
   await Promise.all([
     raid.fetchOverview(true),
     lvm.fetchOverview(true),
-    fetchClusterStorageAttention(),
+    fetchClusterAttention(),
   ])
   await raid.fetchOperations()
 }
@@ -1408,7 +1463,7 @@ function onVisibilityChange() {
 
 onMounted(() => {
   bindRaidPage(sanId)
-  void fetchClusterStorageAttention()
+  void fetchClusterAttention()
   if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', onVisibilityChange)
   }
@@ -1416,7 +1471,7 @@ onMounted(() => {
 
 watch(
   () => san.value?.clusterId,
-  () => { void fetchClusterStorageAttention() },
+  () => { void fetchClusterAttention() },
 )
 
 onUnmounted(() => {

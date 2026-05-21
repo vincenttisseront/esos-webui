@@ -241,6 +241,27 @@
       "auto_refresh_active": "Auto-refresh active",
       "auto_refresh_failed": "RAID progress auto-refresh was stopped"
     },
+    "page_health": {
+      "local": "Local",
+      "cluster": "Cluster",
+      "warning": "Warning",
+      "critical": "Critical",
+      "rebuilding": "Rebuild",
+      "unknown": "Unknown"
+    },
+    "overview": {
+      "local_alerts_title": "Local alerts ({count})",
+      "cluster_alerts_title": "Cluster alerts ({count})",
+      "no_local_alerts": "No local alerts detected",
+      "cluster_critical_hint": "Cluster critical — cluster storage requires attention.",
+      "lvm_cluster_storage_critical": "Local LVM complete — cluster storage remains critical.",
+      "cluster_alert": {
+        "title": "Cluster storage — {cluster}",
+        "nodes": "Affected nodes: {nodes}",
+        "open_cluster": "Cluster administration",
+        "open_peer_raid": "Peer node RAID"
+      }
+    },
     "cockpit": {
       "status": {
         "title": "Cluster RAID status"

@@ -1,4 +1,5 @@
-import type { ClusterAttentionPoint } from '~/types/cluster-admin'
+import type { ClusterAttentionPoint, ClusterAttentionResponse } from '~/types/cluster-admin'
+import { raidRelevantClusterAttentionPoints } from '~/utils/cluster-raid-page-health'
 import type {
   MdArray,
   RaidGroupedActionableItem,
@@ -40,6 +41,8 @@ export function buildRaidSoftwareCockpitViewModel(input: {
   showEmptyMdState: boolean
   t: RaidCockpitTranslate
   clusterStorageAttention?: ClusterAttentionPoint[]
+  /** Full `/api/cluster/attention` payload (preferred — same source as Administration). */
+  clusterAttention?: ClusterAttentionResponse | null
 }): RaidSoftwareCockpitViewModel {
   const {
     overview,
@@ -49,15 +52,22 @@ export function buildRaidSoftwareCockpitViewModel(input: {
     stoppedOrphan,
     showEmptyMdState,
     t,
+    clusterAttention,
     clusterStorageAttention,
   } = input
+
+  const attentionPoints = clusterAttention
+    ? raidRelevantClusterAttentionPoints(clusterAttention)
+    : (clusterStorageAttention ?? [])
 
   const status = buildRaidClusterHealthViewModel({
     overview,
     currentSanId,
     isClustered,
     t,
-    clusterStorageAttention,
+    clusterStorageAttention: attentionPoints,
+    clusterAttentionHealth: clusterAttention?.health,
+    clusterStorageOverall: clusterAttention?.storageOverall,
   })
 
   const activeArrays: MdArray[] = overview?.mdArrays ?? []
