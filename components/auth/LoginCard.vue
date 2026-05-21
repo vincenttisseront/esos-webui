@@ -91,7 +91,7 @@
           v-if="activeMode === 'local'"
           :id="panelId('local')"
           key="local"
-          class="space-y-5"
+          :class="formFieldStackClass"
           role="tabpanel"
           :aria-labelledby="availableModes.length > 1 ? tabId('local') : undefined"
           autocomplete="on"
@@ -106,36 +106,30 @@
             </p>
           </div>
 
-          <UFormGroup :label="t('auth.login.local_username_label')">
-            <UInput
+          <AppFormField :label="t('auth.login.local_username_label')">
+            <AppTextInput
               v-model="username"
               name="username"
               type="text"
               :placeholder="t('auth.login.local_username_placeholder')"
               autocomplete="username"
-              size="lg"
-              class="w-full"
-              :ui="inputUi"
-              :disabled="submitting"
+              :loading="submitting"
               autofocus
             />
-          </UFormGroup>
+          </AppFormField>
 
-          <UFormGroup :label="t('auth.login.password')">
-            <UInput
+          <AppFormField :label="t('auth.login.local_password_label')">
+            <AppTextInput
               v-model="password"
               name="password"
               type="password"
               :placeholder="t('auth.login.local_password_placeholder')"
               autocomplete="current-password"
-              size="lg"
-              class="w-full"
-              :ui="inputUi"
-              :disabled="submitting"
+              :loading="submitting"
             />
-          </UFormGroup>
+          </AppFormField>
 
-          <div class="flex justify-end">
+          <div class="flex justify-end pt-0.5">
             <button
               type="button"
               class="rounded text-sm font-medium text-blue-700 underline-offset-2 hover:text-blue-800 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 disabled:opacity-50"
@@ -162,7 +156,7 @@
           v-else-if="activeMode === 'ldap'"
           :id="panelId('ldap')"
           key="ldap"
-          class="space-y-5"
+          :class="formFieldStackClass"
           role="tabpanel"
           :aria-labelledby="availableModes.length > 1 ? tabId('ldap') : undefined"
           autocomplete="on"
@@ -177,34 +171,28 @@
             </p>
           </div>
 
-          <UFormGroup :label="t('auth.login.ldap_username_label')">
-            <UInput
+          <AppFormField :label="t('auth.login.ldap_username_label')">
+            <AppTextInput
               v-model="ldapUsername"
               name="username"
               type="text"
               :placeholder="t('auth.login.ldap_username_placeholder')"
               autocomplete="username"
-              size="lg"
-              class="w-full"
-              :ui="inputUi"
-              :disabled="ldapSubmitting"
+              :loading="ldapSubmitting"
               autofocus
             />
-          </UFormGroup>
+          </AppFormField>
 
-          <UFormGroup :label="t('auth.login.password')">
-            <UInput
+          <AppFormField :label="t('auth.login.ldap_password_label')">
+            <AppTextInput
               v-model="ldapPassword"
               name="password"
               type="password"
               :placeholder="t('auth.login.ldap_password_placeholder')"
               autocomplete="current-password"
-              size="lg"
-              class="w-full"
-              :ui="inputUi"
-              :disabled="ldapSubmitting"
+              :loading="ldapSubmitting"
             />
-          </UFormGroup>
+          </AppFormField>
 
           <UButton
             type="submit"
@@ -260,6 +248,8 @@
 </template>
 
 <script setup lang="ts">
+import { formFieldStackClass } from '~/utils/form-field-styles'
+
 type ModeId = 'local' | 'ldap' | 'oidc'
 
 export type LoginProviderOption = {
@@ -357,10 +347,6 @@ const activeIcon = computed(() => {
       return 'i-heroicons-key'
   }
 })
-
-const inputUi = {
-  base: 'h-12 bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/30',
-}
 
 const oidcLoginUrl = computed(() =>
   props.providers.find((p) => p.key === 'oidc')?.loginUrl ?? '/api/auth/oidc/login',
