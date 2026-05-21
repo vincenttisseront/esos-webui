@@ -1,5 +1,5 @@
-import { requireSanIdQuery } from '../../utils/san-query'
-import { assertFsWritable } from '../../utils/fs-api-helpers'
+import { requireSanIdQuery } from '../../../utils/san-query'
+import { assertFsWritable } from '../../../utils/fs-api-helpers'
 import {
   assertClusteredSanAllowsFsMutation,
   executeClusterFsCreate,
