@@ -950,7 +950,8 @@ describe('RAID18b – payload frontend création MD', () => {
     expect(source).toContain('function resetExecutionState()')
     expect(source).toContain('function resetPlanAndExecutionState()')
     expect(source).toContain('function executionPlanSignature')
-    expect(source).toContain('Tentative #{{ executionAttemptId }} démarrée à')
+    expect(source).toContain("t('raid.wizard.attempt_started'")
+    expect(source).toContain('formatAttemptStarted(executionStartedAt)')
     expect(source).toContain('executionNodeResults.value = result.clusterExecution.nodeResults')
   })
 
@@ -958,7 +959,7 @@ describe('RAID18b – payload frontend création MD', () => {
     const source = readFileSync(new URL('../components/raid/CreateMdArrayWizard.vue', import.meta.url), 'utf8')
     const endpoint = readFileSync(new URL('../server/api/raid/software/arrays.post.ts', import.meta.url), 'utf8')
 
-    expect(source).toContain('Tentative #{{ executionAttemptId }} démarrée à')
+    expect(source).toContain("t('raid.wizard.attempt_started'")
     expect(source).toContain('function executionCommandForNode')
     expect(source).toContain('submitError && !executionNodeResults.length')
     expect(source).toContain('command: typeof errorData.command === \'string\' ? errorData.command : executionCommandForNode(node)')
@@ -971,7 +972,7 @@ describe('RAID18b – payload frontend création MD', () => {
     const source = readFileSync(new URL('../components/raid/CreateMdArrayWizard.vue', import.meta.url), 'utf8')
     const submitBlock = source.slice(source.indexOf('async function submit'), source.indexOf('function resetExecutionState'))
 
-    expect(source).toContain('Terminé')
+    expect(source).toContain("t('raid.wizard.steps.create_done')")
     expect(source).toContain('v-else-if="step === 4"')
     expect(source).toContain('function finishViewArray')
     expect(source).toContain('function finishClose')
