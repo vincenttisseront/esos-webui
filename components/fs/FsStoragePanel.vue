@@ -12,6 +12,22 @@
     />
 
     <UAlert
+      v-if="fs.partialRefresh && partialScannerErrors.length"
+      color="amber"
+      variant="soft"
+      :title="t('storage.fs.refresh.partial_title')"
+    >
+      <details class="mt-1 text-xs">
+        <summary class="cursor-pointer select-none opacity-90">{{ t('storage.fs.refresh.partial_details') }}</summary>
+        <ul class="mt-2 list-disc pl-4 space-y-1 font-mono">
+          <li v-for="(e, i) in partialScannerErrors" :key="i">
+            <span class="font-semibold">{{ e.scanner }}</span>: {{ e.message }}
+          </li>
+        </ul>
+      </details>
+    </UAlert>
+
+    <UAlert
       v-if="fs.error"
       color="amber"
       variant="soft"
@@ -353,8 +369,17 @@ const summaryCounts = computed(() =>
     lunMappings: 0,
   },
 )
+const partialScannerErrors = computed(() =>
+  fs.partialErrors.length
+    ? fs.partialErrors
+    : fs.overview?.errors ?? [],
+)
+
 const actionableScanWarnings = computed(() =>
-  filterActionableScanWarnings(fs.overview?.scanWarnings ?? []),
+  filterActionableScanWarnings([
+    ...(fs.overview?.scanWarnings ?? []),
+    ...(fs.overview?.warnings ?? []),
+  ]),
 )
 const diagnostics = computed(() => fs.diagnostics)
 
@@ -367,7 +392,7 @@ const summaryStatus = computed(() =>
     fileioView: fileioView.value,
     fetchError: fs.error,
     actionableWarnings: actionableScanWarnings.value,
-    hasStaleData: fs.hasStaleData,
+    hasStaleData: fs.hasStaleData || fs.partialRefresh,
   }),
 )
 

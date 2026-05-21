@@ -337,6 +337,7 @@ export function buildFsDiagnostics(params: {
   fileioCount: number
   lunCount: number
   sysfsDeviceCount: number
+  vdiskFileCount?: number
   backends: FsBackendRef[]
   vdiskScanRoots: string[]
   warnings: string[]
@@ -361,6 +362,7 @@ export function buildFsDiagnostics(params: {
       lunMappings: params.lunCount,
       sysfsDevices: params.sysfsDeviceCount,
     },
+    vdiskFiles: params.vdiskFileCount,
     candidates: {
       total: params.backends.length,
       eligible: params.backends.filter(b => b.eligible).length,

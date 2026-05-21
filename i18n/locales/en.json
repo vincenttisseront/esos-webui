@@ -2214,6 +2214,8 @@
       },
       "refresh": {
         "incomplete_title": "Refresh incomplete",
+        "partial_title": "Partial refresh",
+        "partial_details": "Failed scanners",
         "technical_details": "Technical details",
         "stale_title": "Stale data",
         "stale_body": "Showing data from the last successful scan ({time})."

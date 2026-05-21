@@ -6,9 +6,11 @@ import type {
   FsBackendCandidate,
   FsOverview,
   FsPreflightResult,
+  FsScanError,
 } from '~/types/filesystem'
 import type { ClusterFsExecutionRequest } from '~/server/utils/fs-cluster-execution'
 import { buildFsFileioViewModel } from '~/utils/fs-fileio-view'
+import { mergeFsOverview } from '~/utils/fs-overview-merge'
 
 export const useFsStore = defineStore('fs', {
   state: () => ({
@@ -18,6 +20,8 @@ export const useFsStore = defineStore('fs', {
     error: null as string | null,
     lastEndpoint: '/api/fs/overview' as string,
     lastRefresh: null as Date | null,
+    partialRefresh: false,
+    partialErrors: [] as FsScanError[],
     sanId: null as string | null,
     clusterId: null as string | null,
   }),
@@ -57,16 +61,22 @@ export const useFsStore = defineStore('fs', {
     async fetchOverview(refresh = false) {
       this.loading = true
       this.lastEndpoint = '/api/fs/overview'
+      const prior = this.overview
       try {
         const data = await $fetch<FsOverview>(this.lastEndpoint, {
           query: { ...this.query(), ...(refresh ? { refresh: '1' } : {}) },
         })
-        this.overview = data
-        this.candidates = data.candidates ?? data.backends ?? []
+        const merged = mergeFsOverview(prior, data)
+        this.overview = merged
+        this.candidates = merged.candidates ?? merged.backends ?? []
         this.lastRefresh = new Date()
         this.error = null
+        this.partialErrors = data.errors ?? []
+        this.partialRefresh = Boolean(data.partial)
       } catch (e: any) {
         this.error = e?.data?.message ?? e?.message ?? 'Erreur filesystem'
+        this.partialRefresh = false
+        this.partialErrors = []
         // Keep previous overview for stale display
       } finally {
         this.loading = false

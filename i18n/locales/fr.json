@@ -2214,6 +2214,8 @@
       },
       "refresh": {
         "incomplete_title": "Rafraîchissement incomplet",
+        "partial_title": "Rafraîchissement partiel",
+        "partial_details": "Scanners en échec",
         "technical_details": "Détails techniques",
         "stale_title": "Données affichées depuis le dernier scan réussi",
         "stale_body": "Données du dernier scan réussi ({time})."

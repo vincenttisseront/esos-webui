@@ -110,6 +110,11 @@ export interface FsResourceLink {
   relation: FsResourceRelation
 }
 
+export interface FsScanError {
+  scanner: string
+  message: string
+}
+
 export interface FsDetectionDiagnostics {
   mountCounts: {
     findmnt: number
@@ -126,6 +131,7 @@ export interface FsDetectionDiagnostics {
     lunMappings: number
     sysfsDevices: number
   }
+  vdiskFiles?: number
   candidates: {
     total: number
     eligible: number
@@ -148,6 +154,12 @@ export interface FsOverview {
   tools: FsToolsInfo
   nextAction: FsNextActionHint
   scanWarnings: string[]
+  /** Non-fatal scanner notices (also surfaced as `warnings` in API docs). */
+  warnings?: string[]
+  /** Fatal per-scanner failures; overview may still be `partial`. */
+  errors?: FsScanError[]
+  /** True when one or more scanners failed but some inventory was collected. */
+  partial?: boolean
   /** @deprecated use backends — kept for wizard compatibility */
   candidates?: FsBackendCandidate[]
 }

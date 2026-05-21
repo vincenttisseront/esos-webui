@@ -19,11 +19,13 @@ vi.mock('../server/utils/lvm-overview.service', () => ({
   collectLvmOverview: vi.fn().mockResolvedValue({ pvs: [], vgs: [], lvs: [] }),
 }))
 
+const readScstConfigMock = vi.fn().mockResolvedValue({
+  handlers: [],
+  drivers: [],
+})
+
 vi.mock('../server/utils/scst-config-reader', () => ({
-  readScstConfig: vi.fn().mockResolvedValue({
-    handlers: [],
-    drivers: [],
-  }),
+  readScstConfig: (...args: unknown[]) => readScstConfigMock(...args),
 }))
 
 vi.mock('../server/utils/fs-candidates', () => ({
@@ -68,6 +70,51 @@ describe('collectFsOverview', () => {
     expect(overview.nextAction.kind).toBe('create_vdisk')
     expect(overview.backends).toBeDefined()
     expect(overview.diagnostics).toBeDefined()
+    expect(overview.partial).toBeFalsy()
+  })
+
+  it('returns partial overview with SCST data when mounts scanner fails', async () => {
+    readScstConfigMock.mockResolvedValueOnce({
+      handlers: [{
+        name: 'vdisk_fileio',
+        devices: [{
+          name: 'LINUX',
+          filename: '/mnt/vdisks/linux',
+          attrs: {},
+        }],
+      }],
+      drivers: [{
+        name: 'iscsi',
+        targets: [{
+          name: '21:00:00:24:ff:91:60:bc',
+          enabled: true,
+          groups: [{
+            name: 'default',
+            luns: [{ id: 0, device: 'LINUX', readOnly: false }],
+            initiators: [],
+          }],
+          luns: [],
+        }],
+      }],
+    })
+
+    const manager = {
+      isReady: () => true,
+      exec: vi.fn(async (cmd: string) => {
+        if (cmd.includes('findmnt')) {
+          throw new Error('Channel open failure: open failed')
+        }
+        return { stdout: '', stderr: '', exitCode: 0 }
+      }),
+    }
+
+    const overview = await collectFsOverview(manager as any)
+
+    expect(overview.partial).toBe(true)
+    expect(overview.errors?.some(e => e.scanner === 'mounts')).toBe(true)
+    expect(overview.fileioDevices.length).toBeGreaterThanOrEqual(1)
+    expect(overview.lunMappings.length).toBeGreaterThanOrEqual(1)
+    expect(overview.diagnostics.scst.fileioDevices).toBeGreaterThanOrEqual(1)
   })
 })
 

@@ -28,8 +28,9 @@ import {
   parseLsblkMounts,
   buildMountRow,
 } from '~/utils/fs-overview-parser'
-import type { FileSystemMount, FsBackendCandidate, FsOverview, FsToolsInfo, VDiskFile } from '~/types/filesystem'
+import type { FileSystemMount, FsBackendCandidate, FsOverview, FsScanError, FsToolsInfo, VDiskFile } from '~/types/filesystem'
 import type { SSHSessionManager } from './ssh-session-manager'
+import { collectScannerErrors, FS_SCANNER_FALLBACKS, runFsScanner } from './fs-scanner-runner'
 
 const VDISK_GLOB = '*.img'
 
@@ -232,17 +233,32 @@ export async function collectFsOverview(manager?: SSHSessionManager): Promise<Fs
   const ssh = manager ?? getActiveSSHManager()
   const scanWarnings: string[] = []
 
-  const [tools, scstIndex, scstConfigRaw, mountResult, raid, lvm, sysfsFileio] = await Promise.all([
-    probeTools(ssh),
-    readScstDeviceIndex(ssh),
-    readScstConfig(ssh).catch(() => ({ handlers: [], drivers: [] })),
-    collectMounts(ssh),
-    collectRaidOverview(ssh),
-    collectLvmOverview(ssh),
-    readScstSysfsFileioMap(ssh),
+  const toolsR = await runFsScanner('tools', FS_SCANNER_FALLBACKS.tools, () => probeTools(ssh))
+  const scstIndexR = await runFsScanner('scst_index', FS_SCANNER_FALLBACKS.scstIndex, () => readScstDeviceIndex(ssh))
+  const scstConfigR = await runFsScanner('scst_config', FS_SCANNER_FALLBACKS.scstConfig, () => readScstConfig(ssh))
+  const mountR = await runFsScanner('mounts', FS_SCANNER_FALLBACKS.mounts, () => collectMounts(ssh))
+  const raidR = await runFsScanner('raid', FS_SCANNER_FALLBACKS.raid, () => collectRaidOverview(ssh))
+  const lvmR = await runFsScanner('lvm', FS_SCANNER_FALLBACKS.lvm, () => collectLvmOverview(ssh))
+  const sysfsR = await runFsScanner('scst_sysfs', FS_SCANNER_FALLBACKS.sysfsFileio, () => readScstSysfsFileioMap(ssh))
+
+  const scannerErrors: FsScanError[] = collectScannerErrors([
+    toolsR,
+    scstIndexR,
+    scstConfigR,
+    mountR,
+    raidR,
+    lvmR,
+    sysfsR,
   ])
 
-  const scstConfig = scstConfigRaw
+  const tools = toolsR.value
+  const scstIndex = scstIndexR.value
+  const scstConfig = scstConfigR.value as Awaited<ReturnType<typeof readScstConfig>>
+  const mountResult = mountR.value
+  const raid = raidR.value as Awaited<ReturnType<typeof collectRaidOverview>>
+  const lvm = lvmR.value as Awaited<ReturnType<typeof collectLvmOverview>>
+  const sysfsFileio = sysfsR.value
+
   const scstConfigBytes = scstConfig.handlers.length + scstConfig.drivers.length
 
   scanWarnings.push(...mountResult.warnings)
@@ -250,14 +266,18 @@ export async function collectFsOverview(manager?: SSHSessionManager): Promise<Fs
 
   const lunMappings = collectLunMappingsFromConfig(scstConfig)
   const lunDeviceNames = deviceNamesMappedInLuns(lunMappings)
-  let fileioDevices = collectFileioDevicesFromConfig(scstConfig, lunDeviceNames, sysfsFileio)
+  const fileioDevices = collectFileioDevicesFromConfig(scstConfig, lunDeviceNames, sysfsFileio)
   const fileioFilenames = fileioFilenamesFromDevices(fileioDevices)
 
   const index = buildPathAliasIndex(raid.blockDevices)
   const enriched = enrichMountsWithRolesAndLinks(mounts, fileioFilenames, index)
   mounts = enriched.mounts
 
-  const vdiskFiles = await buildVdiskInventory(ssh, mounts, scstIndex.pathToDevices, lunDeviceNames, fileioDevices)
+  const vdiskR = await runFsScanner('vdisk_files', [] as VDiskFile[], () =>
+    buildVdiskInventory(ssh, mounts, scstIndex.pathToDevices, lunDeviceNames, fileioDevices),
+  )
+  if (vdiskR.error) scannerErrors.push(vdiskR.error)
+  const vdiskFiles = vdiskR.value
 
   const inventory = buildFsBackendsAndLinks({
     raid,
@@ -292,6 +312,7 @@ export async function collectFsOverview(manager?: SSHSessionManager): Promise<Fs
     fileioCount: fileioDevices.length,
     lunCount: lunMappings.length,
     sysfsDeviceCount: sysfsFileio.size,
+    vdiskFileCount: vdiskFiles.length,
     backends,
     vdiskScanRoots,
     warnings: scanWarnings,
@@ -306,6 +327,8 @@ export async function collectFsOverview(manager?: SSHSessionManager): Promise<Fs
     displayName: b.displayName,
   }))
 
+  const partial = scannerErrors.length > 0
+
   const overview: FsOverview = {
     scannedAt: Date.now(),
     mounts,
@@ -318,6 +341,9 @@ export async function collectFsOverview(manager?: SSHSessionManager): Promise<Fs
     tools,
     nextAction: { kind: 'none', messageKey: 'storage.fs.next.none' },
     scanWarnings,
+    warnings: [...scanWarnings],
+    errors: scannerErrors,
+    partial,
     candidates,
   }
 

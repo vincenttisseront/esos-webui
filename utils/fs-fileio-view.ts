@@ -6,6 +6,7 @@ import type {
   VDiskFile,
 } from '~/types/filesystem'
 import { buildFsProvisioningSteps } from '~/utils/fs-provisioning-chain'
+import { buildFsDisplayCounts } from '~/utils/fs-display-counts'
 import { fileioRelevantMounts } from '~/utils/fs-mount-classifier'
 import type { ProvisioningStepView } from '~/utils/lvm-provisioning-chain'
 
@@ -30,7 +31,7 @@ export function buildFsFileioViewModel(overview: FsOverview | null): FsFileioVie
   if (!overview) return null
 
   const filesystems = fileioRelevantMounts(overview.mounts)
-  const { vdiskFiles, fileioDevices, lunMappings, diagnostics } = overview
+  const { vdiskFiles, fileioDevices, lunMappings } = overview
 
   return {
     filesystems,
@@ -38,12 +39,7 @@ export function buildFsFileioViewModel(overview: FsOverview | null): FsFileioVie
     fileioDevices,
     lunMappings,
     chain: buildFsProvisioningSteps(overview),
-    counts: {
-      filesystems: diagnostics?.mountCounts?.fileioData ?? filesystems.length,
-      vdiskFiles: vdiskFiles.length,
-      fileioDevices: diagnostics?.scst?.fileioDevices ?? fileioDevices.length,
-      lunMappings: diagnostics?.scst?.lunMappings ?? lunMappings.length,
-    },
+    counts: buildFsDisplayCounts(overview),
   }
 }
 
