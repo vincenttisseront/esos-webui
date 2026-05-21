@@ -419,7 +419,14 @@ export async function buildUpgradeReadinessReport(input: {
 
   const nodes = await Promise.all(members.map(m => assessNodeReadiness(m, members)))
   const overall = aggregateOverallLevel(nodes)
-  const summary = buildSummaryCodes(nodes, overall)
+  const { buildUpgradeVersionAvailability, versionSummaryCodes } = await import(
+    './upgrade-version-availability',
+  )
+  const versionAvailability = await buildUpgradeVersionAvailability(nodes)
+  const summary = [
+    ...versionSummaryCodes(versionAvailability),
+    ...buildSummaryCodes(nodes, overall),
+  ]
 
   const scope =
     members.length === 1
@@ -436,5 +443,6 @@ export async function buildUpgradeReadinessReport(input: {
     overall,
     summary,
     nodes,
+    versionAvailability,
   }
 }

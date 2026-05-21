@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { cleanVersion, compareSemver } from '../server/utils/semver'
+import { cleanVersion, compareSemver, compareSemverOrder, relativeSemver } from '../server/utils/semver'
 
 describe('semver utils', () => {
   it('DEP01 - cleanVersion strips caret', () => {
@@ -28,5 +28,16 @@ describe('semver utils', () => {
 
   it('DEP07 - compareSemver returns unknown on invalid', () => {
     expect(compareSemver('invalid', '3.0.0')).toBe('unknown')
+  })
+
+  it('DEP08 - relativeSemver detects ahead', () => {
+    expect(relativeSemver('4.4.1', '4.4.0')).toBe('ahead')
+    expect(compareSemver('4.4.1', '4.4.0')).toBe('up-to-date')
+  })
+
+  it('DEP09 - compareSemverOrder orders versions', () => {
+    expect(compareSemverOrder('4.4.0', '4.4.1')).toBe(-1)
+    expect(compareSemverOrder('4.4.1', '4.4.1')).toBe(0)
+    expect(compareSemverOrder('5.0.0', '4.9.9')).toBe(1)
   })
 })

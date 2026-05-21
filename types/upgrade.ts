@@ -27,12 +27,48 @@ export interface UpgradeNodeReadiness {
   cluster?: UpgradeNodeClusterInfo
 }
 
+export type UpgradeNodeVersionStatus =
+  | 'up-to-date'
+  | 'upgrade-available'
+  | 'ahead-of-release'
+  | 'on-master'
+  | 'not-comparable'
+
+export type UpgradeVersionAvailabilityOverall =
+  | 'up-to-date'
+  | 'upgrade-available'
+  | 'mixed'
+  | 'not-comparable'
+  | 'github-unavailable'
+  | 'on-master'
+
+export type UpgradeVersionDiffKind = 'major' | 'minor' | 'patch'
+
+export interface UpgradeVersionAvailabilityNode {
+  sanId: string
+  label: string
+  status: UpgradeNodeVersionStatus
+  installed: InstalledESOSVersion
+  diff: UpgradeVersionDiffKind | null
+  behindCount?: number
+}
+
+export interface UpgradeVersionAvailability {
+  githubOk: boolean
+  githubError?: 'rate_limit' | 'network' | 'http_error' | 'no_semver_tags'
+  githubMessage?: string
+  latestStable: { version: string; name: string; downloadUrl: string } | null
+  overall: UpgradeVersionAvailabilityOverall
+  nodes: UpgradeVersionAvailabilityNode[]
+}
+
 export interface UpgradeReadinessReport {
   scannedAt: number
   scope: { type: 'san' | 'cluster'; id: string; label: string }
   overall: UpgradeReadinessLevel
   summary: string[]
   nodes: UpgradeNodeReadiness[]
+  versionAvailability: UpgradeVersionAvailability
 }
 
 export type UpgradePlanStepKind =

@@ -1888,7 +1888,46 @@
         "blocked_readonly": "SAN en lecture seule — désactivez la protection dans Administration → SANs.",
         "blocked_ssh": "Connexion SSH requise.",
         "blocked_tmp": "Espace /tmp insuffisant (≥ 5 GiB requis).",
-        "blocked_cluster": "État cluster ou pair invalide."
+        "blocked_cluster": "État cluster ou pair invalide.",
+        "version_up_to_date": "ESOS installé correspond à la dernière release stable GitHub.",
+        "version_upgrade_available": "Une release stable ESOS plus récente est disponible sur GitHub.",
+        "version_mixed": "Les nœuds du cluster n'ont pas la même version par rapport à la dernière release.",
+        "version_on_master": "Build de développement (master) — comparaison avec les releases GitHub non applicable.",
+        "version_not_comparable": "La version installée ne peut pas être comparée aux releases GitHub.",
+        "version_github_unavailable": "Impossible de vérifier la dernière release GitHub (paquet manuel toujours possible)."
+      },
+      "version": {
+        "title": "Version vs GitHub",
+        "up_to_date": {
+          "title": "ESOS est à jour",
+          "detail": "Installé {installed} — dernière stable {latest}"
+        },
+        "upgrade_available": {
+          "title": "Mise à niveau disponible"
+        },
+        "behind_count": "{count} versions en retard",
+        "download": "Télécharger {version} (.zip)",
+        "changelog": "Voir les changements",
+        "mixed": {
+          "title": "Versions cluster hétérogènes"
+        },
+        "on_master": {
+          "title": "Build de développement non comparable",
+          "detail": "Build master installé. Dernière stable GitHub : {latest}. Utilisez un paquet manuel pour la mise à niveau."
+        },
+        "github_unavailable": {
+          "title": "Impossible de vérifier les releases GitHub",
+          "detail": "Vérifiez la connectivité réseau ou le jeton GitHub API. Vous pouvez toujours envoyer un paquet manuellement.",
+          "rate_limit": "Limite de débit GitHub API atteinte. Réessayez plus tard ou configurez NUXT_GITHUB_TOKEN."
+        },
+        "not_comparable": "Version installée non comparable avec GitHub (build inconnu ou non semver).",
+        "node_status": {
+          "up-to-date": "À jour",
+          "upgrade-available": "Mise à niveau disponible",
+          "ahead-of-release": "En avance sur la release",
+          "on-master": "Build master",
+          "not-comparable": "Non comparable"
+        }
       },
       "checks": {
         "ssh_connected": "Connexion SSH",
@@ -1908,6 +1947,7 @@
       "package": {
         "admin_only": "Réservé aux administrateurs.",
         "blocked_hint": "Corrigez les blocages dans l'onglet Préparation ou désactivez la lecture seule.",
+        "up_to_date_hint": "ESOS est déjà à la dernière release stable. Le staging de paquet est optionnel ; consultez la documentation pour les vérifications opérationnelles.",
         "choose_file": "Fichier ESOS (.zip, .tar.gz)",
         "sha256": "SHA-256 (optionnel)",
         "expected_version": "Version cible (optionnel)",

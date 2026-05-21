@@ -1,9 +1,26 @@
 import { withCache } from './cache'
+import { parseSemver, compareSemverOrder } from './semver'
 import type { GitHubTag } from './types'
 
 const GITHUB_API    = 'https://api.github.com/repos/quantum/esos'
 const FETCH_TIMEOUT = 10_000
 const CACHE_TTL     = 6 * 60 * 60 * 1000 // 6h
+
+const SEMVER_TAG_RE = /^(\d+\.\d+\.\d+)$/
+
+export type GitHubReleaseErrorCode =
+  | 'rate_limit'
+  | 'network'
+  | 'http_error'
+  | 'no_semver_tags'
+
+export interface GitHubReleaseResolveResult {
+  ok: boolean
+  latest: GitHubTag | null
+  error?: GitHubReleaseErrorCode
+  httpStatus?: number
+  message?: string
+}
 
 function getBaseHeaders(): Record<string, string> {
   const token = process.env.NUXT_GITHUB_TOKEN ?? ''
@@ -24,9 +41,138 @@ async function fetchWithTimeout(url: string): Promise<Response> {
   }
 }
 
+export function isSemverTagName(name: string): boolean {
+  return SEMVER_TAG_RE.test(cleanTagName(name))
+}
+
+export function cleanTagName(name: string): string {
+  return name.replace(/^v/i, '').trim()
+}
+
+export function filterSemverTags(tags: GitHubTag[]): GitHubTag[] {
+  return tags.filter(t => isSemverTagName(t.name))
+}
+
+export function sortSemverTagsDesc(tags: GitHubTag[]): GitHubTag[] {
+  return [...tags].sort((a, b) => {
+    const order = compareSemverOrder(b.name, a.name)
+    if (order === null) return 0
+    return order
+  })
+}
+
+export function pickLatestSemverTag(tags: GitHubTag[]): GitHubTag | null {
+  const semver = sortSemverTagsDesc(filterSemverTags(tags))
+  return semver[0] ?? null
+}
+
+function classifyFetchError(err: unknown, res?: Response): GitHubReleaseResolveResult {
+  if (res?.status === 403) {
+    return {
+      ok: false,
+      latest: null,
+      error: 'rate_limit',
+      httpStatus: 403,
+      message: 'GitHub API rate limit',
+    }
+  }
+  if (res && !res.ok) {
+    return {
+      ok: false,
+      latest: null,
+      error: 'http_error',
+      httpStatus: res.status,
+      message: `GitHub HTTP ${res.status}`,
+    }
+  }
+  const msg = err instanceof Error ? err.message : 'Network error'
+  return {
+    ok: false,
+    latest: null,
+    error: 'network',
+    message: msg,
+  }
+}
+
+function tagFromReleaseName(tagName: string): GitHubTag | null {
+  const name = cleanTagName(tagName)
+  if (!parseSemver(name)) return null
+  return {
+    name,
+    sha:         '',
+    publishedAt: null,
+    zipUrl:      '',
+    tarUrl:      '',
+    downloadUrl: buildDownloadUrl(name),
+  }
+}
+
+async function fetchLatestFromReleasesApi(): Promise<GitHubReleaseResolveResult> {
+  try {
+    const res = await fetchWithTimeout(`${GITHUB_API}/releases/latest`)
+    if (!res.ok) {
+      if (res.status === 404) {
+        return { ok: false, latest: null, error: 'http_error', httpStatus: 404, message: 'No releases' }
+      }
+      return classifyFetchError(undefined, res)
+    }
+    const data = await res.json() as { tag_name?: string }
+    const tagName = data?.tag_name
+    if (!tagName) {
+      return { ok: false, latest: null, error: 'http_error', message: 'Missing tag_name' }
+    }
+    const latest = tagFromReleaseName(tagName)
+    if (!latest) {
+      return { ok: false, latest: null, error: 'no_semver_tags', message: `Non-semver release tag: ${tagName}` }
+    }
+    return { ok: true, latest }
+  } catch (err) {
+    return classifyFetchError(err)
+  }
+}
+
+async function fetchLatestFromTagsApi(): Promise<GitHubReleaseResolveResult> {
+  try {
+    const res = await fetchWithTimeout(`${GITHUB_API}/tags?per_page=100`)
+    if (!res.ok) return classifyFetchError(undefined, res)
+
+    const raw: Array<{
+      name: string
+      commit: { sha: string; url: string }
+      zipball_url: string
+      tarball_url: string
+    }> = await res.json()
+
+    const tags: GitHubTag[] = []
+    for (let i = 0; i < raw.length; i += 5) {
+      const batch    = raw.slice(i, i + 5)
+      const enriched = await Promise.all(batch.map(enrichTag))
+      tags.push(...enriched)
+    }
+
+    const latest = pickLatestSemverTag(tags)
+    if (!latest) {
+      return { ok: false, latest: null, error: 'no_semver_tags', message: 'No semver tags found' }
+    }
+    return { ok: true, latest }
+  } catch (err) {
+    return classifyFetchError(err)
+  }
+}
+
+export async function resolveLatestStableRelease(): Promise<GitHubReleaseResolveResult> {
+  return withCache('esos-github-latest-stable', CACHE_TTL, async () => {
+    const fromRelease = await fetchLatestFromReleasesApi()
+    if (fromRelease.ok && fromRelease.latest) return fromRelease
+    const fromTags = await fetchLatestFromTagsApi()
+    if (fromTags.ok && fromTags.latest) return fromTags
+    return fromTags.ok ? fromTags : (fromRelease.error ? fromRelease : fromTags)
+  })
+}
+
 export async function fetchESOSTags(): Promise<GitHubTag[]> {
   return withCache('esos-github-tags', CACHE_TTL, async () => {
-    const res = await fetchWithTimeout(`${GITHUB_API}/tags?per_page=30`)
+    const res = await fetchWithTimeout(`${GITHUB_API}/tags?per_page=100`)
     if (!res.ok) {
       console.warn(`[esos-github] GitHub API error ${res.status} — returning empty tag list`)
       return []
@@ -39,7 +185,6 @@ export async function fetchESOSTags(): Promise<GitHubTag[]> {
       tarball_url: string
     }> = await res.json()
 
-    // Récupérer les dates de commit en parallèle par batch de 5
     const tags: GitHubTag[] = []
     for (let i = 0; i < raw.length; i += 5) {
       const batch    = raw.slice(i, i + 5)
@@ -47,7 +192,7 @@ export async function fetchESOSTags(): Promise<GitHubTag[]> {
       tags.push(...enriched)
     }
 
-    return tags
+    return sortSemverTagsDesc(filterSemverTags(tags))
   })
 }
 
@@ -57,6 +202,7 @@ async function enrichTag(raw: {
   zipball_url: string
   tarball_url: string
 }): Promise<GitHubTag> {
+  const name = cleanTagName(raw.name)
   let publishedAt: string | null = null
 
   try {
@@ -68,12 +214,12 @@ async function enrichTag(raw: {
   } catch { /* best effort */ }
 
   return {
-    name:        raw.name,
+    name,
     sha:         raw.commit.sha.slice(0, 7),
     publishedAt,
     zipUrl:      raw.zipball_url,
     tarUrl:      raw.tarball_url,
-    downloadUrl: buildDownloadUrl(raw.name),
+    downloadUrl: buildDownloadUrl(name),
   }
 }
 

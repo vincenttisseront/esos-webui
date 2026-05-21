@@ -37,6 +37,8 @@
     </div>
 
     <template v-else-if="upgradeStore.readiness">
+      <UpgradeVersionCompareCard :availability="upgradeStore.readiness.versionAvailability" />
+
       <UAlert
         :color="overallColor"
         variant="soft"

@@ -7,6 +7,7 @@ export default defineEventHandler(async (event) => {
   if (query.refresh === '1') {
     invalidateCacheKey('esos-version-report')
     invalidateCacheKey('esos-github-tags')
+    invalidateCacheKey('esos-github-latest-stable')
   }
 
   return buildVersionReport()

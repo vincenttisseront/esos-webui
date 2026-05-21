@@ -2,7 +2,7 @@ import { getActiveSSHManager } from './ssh-runtime'
 import { withCache } from './cache'
 import { compareSemver } from './semver'
 import type { InstalledESOSVersion, BuildOption, GitHubTag, ESOSVersionDiff, ESOSVersionReport } from './types'
-import { fetchESOSTags } from './esos-github'
+import { fetchESOSTags, pickLatestSemverTag } from './esos-github'
 
 const BUILD_OPTIONS: Record<string, string> = {
   d: 'Debug (symboles non strippés)',
@@ -74,7 +74,8 @@ export function computeVersionDiff(
     return { diff: 'unknown', behindCount: 0 }
   }
 
-  const latestTag = tags[0]
+  const latestTag = pickLatestSemverTag(tags)
+  if (!latestTag) return { diff: 'unknown', behindCount: 0 }
   const diff      = compareSemver(installed.version, latestTag.name)
 
   const installedParts = installed.version.split('.').map(Number)
@@ -102,7 +103,7 @@ export async function buildVersionReport(): Promise<ESOSVersionReport> {
     return {
       scannedAt:    Date.now(),
       installed,
-      latestStable: tags[0] ?? null,
+      latestStable: pickLatestSemverTag(tags),
       allTags:      tags,
       diff,
       behindCount,

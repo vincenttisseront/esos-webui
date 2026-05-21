@@ -7,6 +7,12 @@
       :title="t('admin.upgrade.package.admin_only')"
     />
     <UAlert
+      v-else-if="versionUpToDate"
+      color="green"
+      variant="soft"
+      :title="t('admin.upgrade.package.up_to_date_hint')"
+    />
+    <UAlert
       v-else-if="blocked"
       color="red"
       variant="soft"
@@ -84,6 +90,7 @@
 const props = defineProps<{
   sanId: string
   blocked: boolean
+  versionUpToDate?: boolean
 }>()
 
 const { t } = useEsosI18n()
@@ -128,6 +135,13 @@ async function remove() {
   if (!props.sanId) return
   await upgradeStore.removePackage(props.sanId)
 }
+
+watch(
+  () => upgradeStore.readiness?.versionAvailability?.latestStable?.version,
+  (ver) => {
+    if (ver && !expectedVersion.value.trim()) expectedVersion.value = ver
+  },
+)
 
 watch(
   () => props.sanId,

@@ -2,6 +2,10 @@ import { defineStore } from 'pinia'
 import type { UpgradePlan, UpgradePackageStatus, UpgradeReadinessReport } from '~/types/upgrade'
 
 export const useUpgradeStore = defineStore('upgrade', {
+  getters: {
+    versionAvailability: state => state.readiness?.versionAvailability ?? null,
+  },
+
   state: () => ({
     readiness: null as UpgradeReadinessReport | null,
     readinessLoading: false,

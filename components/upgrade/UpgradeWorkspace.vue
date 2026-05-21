@@ -20,7 +20,11 @@
     </div>
 
     <div v-show="activeSubTab === 'package'">
-      <UpgradePackageUpload :san-id="packageSanId" :blocked="packageBlocked" />
+      <UpgradePackageUpload
+        :san-id="packageSanId"
+        :blocked="packageBlocked"
+        :version-up-to-date="versionUpToDate"
+      />
     </div>
 
     <div v-show="activeSubTab === 'plan'">
@@ -104,10 +108,17 @@ const visibleSubTabs = computed(() => {
 
 const packageSanId = computed(() => props.sanId)
 
+const versionAvailability = computed(() => upgradeStore.readiness?.versionAvailability ?? null)
+
+const versionUpToDate = computed(
+  () => versionAvailability.value?.overall === 'up-to-date',
+)
+
 const packageBlocked = computed(() => {
   if (sanSelector.isEffectiveReadOnly.value) return true
   const r = upgradeStore.readiness
-  return r?.overall === 'blocked'
+  if (r?.overall === 'blocked') return true
+  return versionUpToDate.value
 })
 
 function setSubTab(tab: UpgradeSubTab) {
@@ -125,7 +136,9 @@ function generatePlan() {
   if (!p) return
   void upgradeStore.generatePlan({
     ...p,
-    targetVersion: versionStore.report?.latestStable?.name,
+    targetVersion:
+      versionAvailability.value?.latestStable?.version
+      ?? versionStore.report?.latestStable?.name,
     packageStagingId: upgradeStore.packageStatus?.stagingId,
   })
 }
