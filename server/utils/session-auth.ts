@@ -34,9 +34,25 @@ export function extractSessionTokenFromCookieHeader(
     const idx = part.indexOf('=')
     if (idx === -1) continue
     const name  = part.slice(0, idx).trim()
-    const value = part.slice(idx + 1).trim()
-    if (name === cookieName && value.length > 0) return value
+    let value   = part.slice(idx + 1).trim()
+    if (name === cookieName && value.length > 0) {
+      try {
+        value = decodeURIComponent(value)
+      } catch { /* use raw */ }
+      return value
+    }
   }
+  return undefined
+}
+
+/** Read Cookie header from Node IncomingMessage (WS upgrade). */
+export function readCookieHeaderFromIncomingMessage(
+  req: { headers?: { cookie?: string | string[] } } | undefined,
+): string | undefined {
+  if (!req?.headers) return undefined
+  const c = req.headers.cookie
+  if (typeof c === 'string') return c
+  if (Array.isArray(c)) return c.join('; ')
   return undefined
 }
 
@@ -97,4 +113,22 @@ export async function authenticateSessionFromToken(
 /** Batch 2B.6 — terminal WS: admin and operator only (not viewer). */
 export function isTerminalWebSocketRoleAllowed(role: UserRole): boolean {
   return role === 'admin' || role === 'operator'
+}
+
+export function terminalWsCloseReasonFromFailure(failure: SessionAuthFailure): string {
+  return `esos:${failure.code}`
+}
+
+export function terminalWsUserMessageFromFailure(failure: SessionAuthFailure): string {
+  switch (failure.code) {
+    case 'inactive':
+      return 'Droits insuffisants.'
+    case 'missing_token':
+    case 'invalid_token':
+    case 'user_not_found':
+    case 'session_revoked':
+      return 'Session expirée. Reconnectez-vous.'
+    default:
+      return 'Session expirée. Reconnectez-vous.'
+  }
 }

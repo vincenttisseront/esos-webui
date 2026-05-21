@@ -7,7 +7,13 @@ import {
   authenticateSessionFromToken,
   extractSessionTokenFromCookieHeader,
   isTerminalWebSocketRoleAllowed,
+  readCookieHeaderFromIncomingMessage,
+  terminalWsCloseReasonFromFailure,
+  terminalWsUserMessageFromFailure,
+  type AuthenticatedSessionUser,
 } from '~/server/utils/session-auth'
+import { consumeWsTerminalTicket } from '~/server/utils/ws-terminal-ticket'
+import { getUserById } from '~/server/db/repositories/user.repository'
 
 const WS_POLICY_VIOLATION = 1008
 
@@ -53,11 +59,114 @@ function auditTerminalOpen(entry: Record<string, unknown>) {
   console.log('[WS Terminal][audit]', JSON.stringify(entry))
 }
 
-function closePolicy(peer: any, reason: string, ansi?: string) {
+function closePolicy(peer: any, closeReason: string, userMessage: string) {
   try {
-    if (ansi) peer.send(ansi)
-    peer.close(WS_POLICY_VIOLATION, reason)
+    peer.send(`\x1b[33m${userMessage}\x1b[0m\r\n`)
+    peer.close(WS_POLICY_VIOLATION, closeReason)
   } catch { /* ignore */ }
+}
+
+function parseTerminalQuery(req: IncomingMessage | undefined): { sanId: string; ticket: string } {
+  const rawUrl = req?.url ?? ''
+  try {
+    const u = new URL(rawUrl, 'http://localhost')
+    return {
+      sanId:  (u.searchParams.get('sanId') ?? '').trim(),
+      ticket: (u.searchParams.get('ticket') ?? '').trim(),
+    }
+  } catch {
+    const q = rawUrl.includes('?') ? rawUrl.split('?').slice(1).join('?') : ''
+    const params = new URLSearchParams(q)
+    return {
+      sanId:  (params.get('sanId') ?? '').trim(),
+      ticket: (params.get('ticket') ?? '').trim(),
+    }
+  }
+}
+
+async function resolveTerminalUser(
+  cookieHeader: string | undefined,
+  ticket: string,
+  sanId: string,
+): Promise<
+  | { ok: true; user: AuthenticatedSessionUser; via: 'cookie' | 'ticket' }
+  | { ok: false; closeReason: string; userMessage: string; audit: Record<string, unknown> }
+> {
+  const token = extractSessionTokenFromCookieHeader(cookieHeader, SESSION_COOKIE.name)
+  const auth    = await authenticateSessionFromToken(token)
+
+  if (auth.ok) {
+    if (!isTerminalWebSocketRoleAllowed(auth.user.role)) {
+      return {
+        ok: false,
+        closeReason: 'esos:forbidden',
+        userMessage: 'Droits insuffisants.',
+        audit: {
+          outcome: 'forbidden',
+          userId:  auth.user.id,
+          username: auth.user.username,
+          role:    auth.user.role,
+          sanId,
+          detail:  'terminal_role',
+        },
+      }
+    }
+    return { ok: true, user: auth.user, via: 'cookie' }
+  }
+
+  const consumed = consumeWsTerminalTicket(ticket, sanId)
+  if (consumed.ok) {
+    const row = await getUserById(consumed.userId)
+    if (!row || !row.active) {
+      return {
+        ok: false,
+        closeReason: 'esos:invalid_ticket',
+        userMessage: 'Session expirée. Reconnectez-vous.',
+        audit: { outcome: 'invalid_ticket', userId: consumed.userId, sanId, detail: 'user_inactive' },
+      }
+    }
+    const role = row.role as AuthenticatedSessionUser['role']
+    if (!isTerminalWebSocketRoleAllowed(role)) {
+      return {
+        ok: false,
+        closeReason: 'esos:forbidden',
+        userMessage: 'Droits insuffisants.',
+        audit: {
+          outcome: 'forbidden',
+          userId: row.id,
+          username: row.username,
+          role,
+          sanId,
+          detail: 'terminal_role',
+        },
+      }
+    }
+    return {
+      ok: true,
+      user: {
+        id:             row.id,
+        username:       row.username,
+        role,
+        sessionVersion: row.sessionVersion,
+      },
+      via: 'ticket',
+    }
+  }
+
+  const forbidden = auth.failure.code === 'inactive'
+  return {
+    ok: false,
+    closeReason: forbidden ? 'esos:forbidden' : terminalWsCloseReasonFromFailure(auth.failure),
+    userMessage: forbidden ? 'Droits insuffisants.' : terminalWsUserMessageFromFailure(auth.failure),
+    audit: {
+      outcome: forbidden ? 'forbidden' : 'unauthorized',
+      userId:  undefined,
+      username: undefined,
+      role:    undefined,
+      sanId,
+      detail:  ticket ? 'cookie_and_ticket_failed' : auth.failure.code,
+    },
+  }
 }
 
 async function openAndAttach(
@@ -105,46 +214,18 @@ async function openAndAttach(
 
 export default defineWebSocketHandler({
   async open(peer) {
-    const req     = peer.request as IncomingMessage | undefined
-    const cookieHeader = typeof req?.headers?.cookie === 'string' ? req.headers.cookie : undefined
-    const token        = extractSessionTokenFromCookieHeader(cookieHeader, SESSION_COOKIE.name)
-    const auth         = await authenticateSessionFromToken(token)
+    const req          = peer.request as IncomingMessage | undefined
+    const cookieHeader = readCookieHeaderFromIncomingMessage(req)
+    const { sanId, ticket } = parseTerminalQuery(req)
 
-    if (!auth.ok) {
-      const forbidden = auth.failure.code === 'inactive'
-      auditTerminalOpen({
-        outcome: forbidden ? 'forbidden' : 'unauthorized',
-        userId:  undefined,
-        username: undefined,
-        role:    undefined,
-        sanId:   undefined,
-        detail:  auth.failure.code,
-      })
-      const reason = forbidden ? 'Forbidden' : 'Unauthorized'
-      const ansi   = `\x1b[31m${reason}\x1b[0m\r\n`
-      closePolicy(peer, reason, ansi)
+    const resolved = await resolveTerminalUser(cookieHeader, ticket, sanId)
+    if (!resolved.ok) {
+      auditTerminalOpen(resolved.audit)
+      closePolicy(peer, resolved.closeReason, resolved.userMessage)
       return
     }
 
-    const { id: userId, username, role } = auth.user
-
-    if (!isTerminalWebSocketRoleAllowed(role)) {
-      auditTerminalOpen({
-        outcome: 'forbidden',
-        userId,
-        username,
-        role,
-        sanId: undefined,
-        detail: 'terminal_role',
-      })
-      closePolicy(peer, 'Forbidden', '\x1b[31mForbidden\x1b[0m\r\n')
-      return
-    }
-
-    const rawUrl = req?.url ?? ''
-    const params = new URLSearchParams(rawUrl.includes('?') ? rawUrl.split('?').slice(1).join('?') : '')
-    const rawSan = params.get('sanId')
-    const sanId  = typeof rawSan === 'string' ? rawSan.trim() : ''
+    const { id: userId, username, role } = resolved.user
 
     if (!sanId) {
       auditTerminalOpen({
@@ -156,14 +237,11 @@ export default defineWebSocketHandler({
         detail: 'missing_or_empty_sanId',
       })
       console.warn('[WS Terminal] rejected open — missing or empty sanId')
-      try {
-        peer.send('\x1b[31msanId query parameter is required (non-empty)\x1b[0m\r\n')
-        peer.close(1013, 'sanId required')
-      } catch { /* ignore */ }
+      closePolicy(peer, 'esos:san_id_required', 'SAN introuvable pour ce terminal.')
       return
     }
 
-    console.log('[WS Terminal] open —', rawUrl, '| sanId:', sanId, '| user:', username)
+    console.log('[WS Terminal] open —', req?.url ?? '', '| sanId:', sanId, '| user:', username, '| via:', resolved.via)
 
     let manager: SSHSessionManager
     try {
@@ -178,10 +256,7 @@ export default defineWebSocketHandler({
         detail: (err as Error).message,
       })
       console.error('[WS Terminal] manager not found:', (err as Error).message)
-      try {
-        peer.send(`\x1b[31m${(err as Error).message}\x1b[0m\r\n`)
-        peer.close(1013, 'SAN not found')
-      } catch { /* ignore */ }
+      closePolicy(peer, 'esos:san_not_found', 'SSH non connecté pour ce SAN. Réessayez depuis la page SAN.')
       return
     }
 
@@ -195,10 +270,7 @@ export default defineWebSocketHandler({
         sanId,
         detail: manager.getStatus(),
       })
-      try {
-        peer.send('\x1b[31mError: SSH not connected. Retry in a few seconds.\x1b[0m\r\n')
-        peer.close(1013, 'SSH not ready')
-      } catch { /* ignore */ }
+      closePolicy(peer, 'esos:ssh_not_ready', 'SSH du SAN pas prêt. Attendez « SSH connecté » puis reconnectez.')
       return
     }
 
@@ -208,7 +280,7 @@ export default defineWebSocketHandler({
       username,
       role,
       sanId,
-      detail: 'pending_shell',
+      detail: `pending_shell:${resolved.via}`,
     })
 
     // Shell opened lazily on first message so we get the correct terminal dimensions

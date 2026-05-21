@@ -11,12 +11,16 @@
         :disabled="wsStatus === 'connecting'"
         @click="reconnect"
       >
-        Reconnecter
+        {{ t('terminal.ws.reconnect') }}
       </UButton>
     </div>
 
     <p v-if="missingSanId" class="text-sm text-amber-600 dark:text-amber-400 shrink-0">
-      Identifiant SAN manquant — impossible d’ouvrir la console.
+      {{ t('terminal.ws.errors.san_missing') }}
+    </p>
+
+    <p v-if="authError" class="text-sm text-red-600 dark:text-red-400 shrink-0">
+      {{ authError }}
     </p>
 
     <div
@@ -28,37 +32,52 @@
 
 <script setup lang="ts">
 import '@xterm/xterm/css/xterm.css'
+import {
+  buildTerminalWsUrl,
+  terminalHttpErrorKind,
+  terminalWsCloseI18nKey,
+} from '~/utils/terminal-ws-client'
 
 const props = defineProps<{ sanId: string }>()
+
+const { t } = useEsosI18n()
 
 const missingSanId = computed(() => !props.sanId?.trim())
 
 type WSStatus = 'idle' | 'connecting' | 'open' | 'closed' | 'error'
 const wsStatus = ref<WSStatus>('idle')
+const authError = ref<string | null>(null)
+
 const statusLabel = computed<string>(() => ({
-  idle:       'Non connecté',
-  connecting: 'Connexion…',
-  open:       'Connecté à ESOS',
-  closed:     'Déconnecté',
-  error:      'Erreur de connexion',
+  idle:       t('terminal.ws.status.idle') as string,
+  connecting: t('terminal.ws.status.connecting') as string,
+  open:       t('terminal.ws.status.open') as string,
+  closed:     t('terminal.ws.status.closed') as string,
+  error:      t('terminal.ws.status.error') as string,
 }[wsStatus.value]))
 
 const termContainer = ref<HTMLElement | null>(null)
 
-let term:          import('@xterm/xterm').Terminal    | null = null
-let fitAddon:      import('@xterm/addon-fit').FitAddon | null = null
-let socket:        WebSocket                          | null = null
+let term:           import('@xterm/xterm').Terminal    | null = null
+let fitAddon:       import('@xterm/addon-fit').FitAddon | null = null
+let socket:         WebSocket                          | null = null
 let resizeObserver: ResizeObserver                   | null = null
 
+function writeTerminalLine(msg: string, color: 'yellow' | 'red' = 'yellow') {
+  const code = color === 'red' ? '31' : '33'
+  term?.write(`\r\n\x1b[${code}m${msg}\x1b[0m\r\n`)
+}
+
 async function connect() {
+  authError.value = null
   if (!props.sanId?.trim()) {
     wsStatus.value = 'error'
     return
   }
   if (!termContainer.value) return
 
-  const { Terminal }     = await import('@xterm/xterm')
-  const { FitAddon }     = await import('@xterm/addon-fit')
+  const { Terminal }      = await import('@xterm/xterm')
+  const { FitAddon }      = await import('@xterm/addon-fit')
   const { WebLinksAddon } = await import('@xterm/addon-web-links')
 
   term?.dispose()
@@ -77,28 +96,49 @@ async function connect() {
   await nextTick()
   fitAddon.fit()
 
-  const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
-  const url   = `${proto}://${window.location.host}/ws/terminal?sanId=${encodeURIComponent(props.sanId)}`
   wsStatus.value = 'connecting'
+
+  let ticket = ''
+  try {
+    const res = await $fetch<{ ticket: string }>(
+      `/api/san/${encodeURIComponent(props.sanId)}/terminal/ws-ticket`,
+    )
+    ticket = res.ticket
+  } catch (err: unknown) {
+    const status = (err as { statusCode?: number }).statusCode
+    const kind   = status ? terminalHttpErrorKind(status) : 'ticket_failed'
+    const key    = `terminal.ws.errors.${kind}` as const
+    authError.value = t(key) as string
+    writeTerminalLine(authError.value, 'red')
+    wsStatus.value = 'error'
+    return
+  }
+
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const url   = buildTerminalWsUrl({
+    host:     window.location.host,
+    protocol: proto,
+    sanId:    props.sanId.trim(),
+    ticket,
+  })
+
   socket = new WebSocket(url)
 
   socket.addEventListener('open', () => {
     wsStatus.value = 'open'
-    // Premier message : dimensions réelles de xterm.js
-    // Le serveur n'ouvrira le shell SSH qu'après réception de ce message,
-    // évitant ainsi tout resize post-connect qui ferait planter la TUI ESOS
     socket!.send(JSON.stringify({ type: 'init', cols: term!.cols, rows: term!.rows }))
   })
   socket.addEventListener('message', (ev) => {
     term?.write(typeof ev.data === 'string' ? ev.data : '')
   })
-  socket.addEventListener('close', () => {
+  socket.addEventListener('close', (ev) => {
     wsStatus.value = 'closed'
-    term?.write('\r\n[connection closed]\r\n')
+    const key = terminalWsCloseI18nKey(ev.code, ev.reason)
+    writeTerminalLine(t(key) as string, 'yellow')
   })
   socket.addEventListener('error', () => {
     wsStatus.value = 'error'
-    term?.write('\r\n\x1b[31m[WebSocket error]\x1b[0m\r\n')
+    writeTerminalLine(t('terminal.ws.errors.websocket_error') as string, 'red')
   })
 
   term.onData((data) => {

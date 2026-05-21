@@ -63,6 +63,7 @@ export const READ_ROUTE_PERMISSIONS: RoutePermission[] = [
   [/^\/api\/lvm\//, ['GET'], ['admin', 'operator', 'viewer']],
   [/^\/api\/fs\//, ['POST', 'PATCH', 'PUT', 'DELETE'], ['admin', 'operator']],
   [/^\/api\/fs\//, ['GET'], ['admin', 'operator', 'viewer']],
+  [/^\/api\/san\/[^/]+\/terminal\/ws-ticket$/, ['GET'], ['admin', 'operator']],
   [/^\/api\/san\/[^/]+\/system-config/, ['GET'], ['admin', 'operator']],
   [/^\/api\/san\//, ['POST', 'PATCH', 'PUT', 'DELETE'], ['admin', 'operator']],
 

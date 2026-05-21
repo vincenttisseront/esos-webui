@@ -2541,5 +2541,27 @@
         "label": "Volume"
       }
     }
+  },
+  "terminal": {
+    "ws": {
+      "reconnect": "Reconnecter",
+      "status": {
+        "idle": "Non connecté",
+        "connecting": "Connexion…",
+        "open": "Terminal actif",
+        "closed": "Déconnecté",
+        "error": "Erreur de connexion"
+      },
+      "errors": {
+        "session_expired": "Session expirée. Reconnectez-vous.",
+        "forbidden": "Droits insuffisants pour ouvrir le terminal.",
+        "san_missing": "Identifiant SAN manquant — impossible d’ouvrir la console.",
+        "san_not_connected": "SSH non connecté pour ce SAN (distinct d’un problème de session).",
+        "ssh_not_ready": "SSH du SAN pas encore prêt. Attendez « SSH connecté » puis reconnectez.",
+        "connection_closed": "Connexion fermée.",
+        "websocket_error": "Erreur WebSocket.",
+        "ticket_failed": "Impossible d’obtenir l’accès au terminal."
+      }
+    }
   }
 }
