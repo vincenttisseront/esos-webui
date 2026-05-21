@@ -2,7 +2,7 @@ import { getRouterParam } from 'h3'
 import { issueWsTerminalTicket } from '../../../../utils/ws-terminal-ticket'
 import { isTerminalWebSocketRoleAllowed } from '../../../../utils/session-auth'
 
-export default defineEventHandler((event) => {
+export default defineEventHandler(async (event) => {
   const user = event.context.user
   if (!user) {
     throw createError({ statusCode: 401, message: 'Non authentifié' })
@@ -16,6 +16,6 @@ export default defineEventHandler((event) => {
     throw createError({ statusCode: 400, message: 'sanId requis' })
   }
 
-  const ticket = issueWsTerminalTicket(user.id, sanId)
+  const ticket = await issueWsTerminalTicket(user.id, sanId)
   return { ticket, expiresInSec: 30 }
 })

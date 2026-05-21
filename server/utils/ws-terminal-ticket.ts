@@ -1,43 +1,57 @@
 /**
- * One-time WebSocket tickets for /ws/terminal when Cookie is not forwarded (e.g. nginx /ws/ block).
+ * Short-lived signed tickets for /ws/terminal (stateless — works behind load balancers).
  */
-import { randomBytes } from 'node:crypto'
+import { SignJWT, jwtVerify, type JWTPayload } from 'jose'
 
-const TTL_MS = 30_000
+const PURPOSE = 'ws_terminal'
+const TTL     = '30s'
 
-type TicketEntry = {
-  userId:  string
+interface WsTerminalTicketPayload extends JWTPayload {
   sanId:   string
-  expires: number
+  purpose: typeof PURPOSE
 }
 
-const tickets = new Map<string, TicketEntry>()
-
-export function issueWsTerminalTicket(userId: string, sanId: string): string {
-  const ticket = randomBytes(24).toString('hex')
-  tickets.set(ticket, {
-    userId,
-    sanId,
-    expires: Date.now() + TTL_MS,
-  })
-  return ticket
+function getSecret(): Uint8Array {
+  const key = process.env.NUXT_JWT_SECRET
+  if (!key || key.length < 32) {
+    throw new Error('NUXT_JWT_SECRET manquant ou trop court pour les tickets terminal WS')
+  }
+  return new TextEncoder().encode(key)
 }
 
-export function consumeWsTerminalTicket(
+export async function issueWsTerminalTicket(userId: string, sanId: string): Promise<string> {
+  return new SignJWT({ sanId, purpose: PURPOSE })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setSubject(userId)
+    .setIssuedAt()
+    .setExpirationTime(TTL)
+    .sign(getSecret())
+}
+
+export type WsTerminalTicketVerifyResult =
+  | { ok: true; userId: string }
+  | { ok: false; reason: 'missing' | 'invalid' | 'expired' | 'san_mismatch' | 'purpose' }
+
+export async function verifyWsTerminalTicket(
   ticket: string | null | undefined,
   sanId: string,
-): { ok: true; userId: string } | { ok: false } {
+): Promise<WsTerminalTicketVerifyResult> {
   const t = (ticket ?? '').trim()
-  if (!t) return { ok: false }
-  const entry = tickets.get(t)
-  if (!entry) return { ok: false }
-  tickets.delete(t)
-  if (entry.expires < Date.now()) return { ok: false }
-  if (entry.sanId !== sanId) return { ok: false }
-  return { ok: true, userId: entry.userId }
+  if (!t) return { ok: false, reason: 'missing' }
+
+  try {
+    const { payload } = await jwtVerify<WsTerminalTicketPayload>(t, getSecret())
+    if (payload.purpose !== PURPOSE) return { ok: false, reason: 'purpose' }
+    const sub = payload.sub
+    if (!sub) return { ok: false, reason: 'invalid' }
+    if ((payload.sanId ?? '').trim() !== sanId.trim()) return { ok: false, reason: 'san_mismatch' }
+    return { ok: true, userId: sub }
+  } catch (err) {
+    const msg = (err as Error).message ?? ''
+    if (/expired|exp/i.test(msg)) return { ok: false, reason: 'expired' }
+    return { ok: false, reason: 'invalid' }
+  }
 }
 
-/** Test helper */
-export function clearWsTerminalTickets(): void {
-  tickets.clear()
-}
+/** @deprecated no-op — tickets are stateless JWTs */
+export function clearWsTerminalTickets(): void { /* noop */ }

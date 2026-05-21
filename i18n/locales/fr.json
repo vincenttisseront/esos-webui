@@ -2560,7 +2560,11 @@
         "ssh_not_ready": "SSH du SAN pas encore prêt. Attendez « SSH connecté » puis reconnectez.",
         "connection_closed": "Connexion fermée.",
         "websocket_error": "Erreur WebSocket.",
-        "ticket_failed": "Impossible d’obtenir l’accès au terminal."
+        "ticket_failed": "Impossible d’obtenir l’accès au terminal.",
+        "ticket_rejected": "Ticket refusé ou expiré. Cliquez sur Reconnecter.",
+        "upgrade_failed": "Échec de la montée WebSocket (proxy ou pare-feu). Vérifiez la configuration /ws.",
+        "proxy_failure": "Connexion WebSocket impossible (réseau ou reverse proxy).",
+        "backend_closed": "Le serveur a fermé la connexion terminal."
       }
     }
   }

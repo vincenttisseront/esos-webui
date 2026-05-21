@@ -12,7 +12,7 @@ import {
   terminalWsUserMessageFromFailure,
   type AuthenticatedSessionUser,
 } from '~/server/utils/session-auth'
-import { consumeWsTerminalTicket } from '~/server/utils/ws-terminal-ticket'
+import { verifyWsTerminalTicket } from '~/server/utils/ws-terminal-ticket'
 import { getUserById } from '~/server/db/repositories/user.repository'
 
 const WS_POLICY_VIOLATION = 1008
@@ -55,8 +55,12 @@ function getPoolManagerOrThrow(sanId: string): SSHSessionManager {
   return mgr
 }
 
-function auditTerminalOpen(entry: Record<string, unknown>) {
+function auditTerminal(entry: Record<string, unknown>) {
   console.log('[WS Terminal][audit]', JSON.stringify(entry))
+}
+
+function logTerminalConnect(entry: Record<string, unknown>) {
+  console.log('[WS Terminal][connect]', JSON.stringify(entry))
 }
 
 function closePolicy(peer: any, closeReason: string, userMessage: string) {
@@ -89,7 +93,7 @@ async function resolveTerminalUser(
   ticket: string,
   sanId: string,
 ): Promise<
-  | { ok: true; user: AuthenticatedSessionUser; via: 'cookie' | 'ticket' }
+  | { ok: true; user: AuthenticatedSessionUser; via: 'cookie' | 'ticket'; ticketValidation?: string }
   | { ok: false; closeReason: string; userMessage: string; audit: Record<string, unknown> }
 > {
   const token = extractSessionTokenFromCookieHeader(cookieHeader, SESSION_COOKIE.name)
@@ -108,21 +112,28 @@ async function resolveTerminalUser(
           role:    auth.user.role,
           sanId,
           detail:  'terminal_role',
+          ticketValidation: ticket ? 'skipped_cookie_auth' : 'no_ticket',
         },
       }
     }
     return { ok: true, user: auth.user, via: 'cookie' }
   }
 
-  const consumed = consumeWsTerminalTicket(ticket, sanId)
-  if (consumed.ok) {
-    const row = await getUserById(consumed.userId)
+  const ticketCheck = await verifyWsTerminalTicket(ticket, sanId)
+  if (ticketCheck.ok) {
+    const row = await getUserById(ticketCheck.userId)
     if (!row || !row.active) {
       return {
         ok: false,
         closeReason: 'esos:invalid_ticket',
-        userMessage: 'Session expirée. Reconnectez-vous.',
-        audit: { outcome: 'invalid_ticket', userId: consumed.userId, sanId, detail: 'user_inactive' },
+        userMessage: 'Ticket refusé. Reconnectez le terminal.',
+        audit: {
+          outcome: 'invalid_ticket',
+          userId: ticketCheck.userId,
+          sanId,
+          detail: 'user_inactive',
+          ticketValidation: 'user_inactive',
+        },
       }
     }
     const role = row.role as AuthenticatedSessionUser['role']
@@ -138,6 +149,7 @@ async function resolveTerminalUser(
           role,
           sanId,
           detail: 'terminal_role',
+          ticketValidation: 'forbidden_role',
         },
       }
     }
@@ -150,21 +162,27 @@ async function resolveTerminalUser(
         sessionVersion: row.sessionVersion,
       },
       via: 'ticket',
+      ticketValidation: 'ok',
     }
   }
 
   const forbidden = auth.failure.code === 'inactive'
   return {
     ok: false,
-    closeReason: forbidden ? 'esos:forbidden' : terminalWsCloseReasonFromFailure(auth.failure),
-    userMessage: forbidden ? 'Droits insuffisants.' : terminalWsUserMessageFromFailure(auth.failure),
+    closeReason: forbidden ? 'esos:forbidden' : (ticket ? 'esos:invalid_ticket' : terminalWsCloseReasonFromFailure(auth.failure)),
+    userMessage: forbidden
+      ? 'Droits insuffisants.'
+      : ticket
+        ? 'Ticket refusé ou expiré. Cliquez sur Reconnecter.'
+        : terminalWsUserMessageFromFailure(auth.failure),
     audit: {
-      outcome: forbidden ? 'forbidden' : 'unauthorized',
+      outcome: forbidden ? 'forbidden' : (ticket ? 'ticket_rejected' : 'unauthorized'),
       userId:  undefined,
       username: undefined,
       role:    undefined,
       sanId,
-      detail:  ticket ? 'cookie_and_ticket_failed' : auth.failure.code,
+      detail:  ticket ? `cookie_${auth.failure.code}_ticket_${ticketCheck.reason}` : auth.failure.code,
+      ticketValidation: ticket ? ticketCheck.reason : 'absent',
     },
   }
 }
@@ -217,10 +235,20 @@ export default defineWebSocketHandler({
     const req          = peer.request as IncomingMessage | undefined
     const cookieHeader = readCookieHeaderFromIncomingMessage(req)
     const { sanId, ticket } = parseTerminalQuery(req)
+    const pathOnly     = (req?.url ?? '').split('?')[0] || '/ws/terminal'
+
+    logTerminalConnect({
+      path:          pathOnly,
+      sanId:         sanId || undefined,
+      ticketPresent: Boolean(ticket),
+      cookiePresent: Boolean(cookieHeader),
+      remote:        req?.socket?.remoteAddress,
+    })
 
     const resolved = await resolveTerminalUser(cookieHeader, ticket, sanId)
     if (!resolved.ok) {
-      auditTerminalOpen(resolved.audit)
+      auditTerminal(resolved.audit)
+      console.warn('[WS Terminal] auth rejected —', JSON.stringify(resolved.audit))
       closePolicy(peer, resolved.closeReason, resolved.userMessage)
       return
     }
@@ -228,7 +256,7 @@ export default defineWebSocketHandler({
     const { id: userId, username, role } = resolved.user
 
     if (!sanId) {
-      auditTerminalOpen({
+      auditTerminal({
         outcome: 'san_id_required',
         userId,
         username,
@@ -241,13 +269,13 @@ export default defineWebSocketHandler({
       return
     }
 
-    console.log('[WS Terminal] open —', req?.url ?? '', '| sanId:', sanId, '| user:', username, '| via:', resolved.via)
+    console.log('[WS Terminal] open accepted —', pathOnly, '| sanId:', sanId, '| user:', username, '| role:', role, '| via:', resolved.via, '| ticket:', resolved.ticketValidation ?? 'n/a')
 
     let manager: SSHSessionManager
     try {
       manager = getPoolManagerOrThrow(sanId)
     } catch (err) {
-      auditTerminalOpen({
+      auditTerminal({
         outcome: 'san_not_found',
         userId,
         username,
@@ -262,7 +290,7 @@ export default defineWebSocketHandler({
 
     console.log('[WS Terminal] manager status:', manager.getStatus())
     if (!manager.isReady()) {
-      auditTerminalOpen({
+      auditTerminal({
         outcome: 'ssh_not_ready',
         userId,
         username,
@@ -274,13 +302,14 @@ export default defineWebSocketHandler({
       return
     }
 
-    auditTerminalOpen({
+    auditTerminal({
       outcome: 'accepted',
       userId,
       username,
       role,
       sanId,
       detail: `pending_shell:${resolved.via}`,
+      ticketValidation: resolved.ticketValidation,
     })
 
     // Shell opened lazily on first message so we get the correct terminal dimensions
@@ -341,8 +370,11 @@ export default defineWebSocketHandler({
     shell.write(raw)
   },
 
-  close(peer) {
+  close(peer, details) {
     const key   = peer as unknown as object
+    const code  = details?.code ?? 0
+    const reason = details?.reason ?? ''
+    console.log('[WS Terminal][close]', JSON.stringify({ code, reason: String(reason).slice(0, 120) }))
     const shell = peerShells.get(key)
     if (shell && !shell.destroyed) {
       try { shell.signal('HUP') } catch { /* signal may not be supported */ }

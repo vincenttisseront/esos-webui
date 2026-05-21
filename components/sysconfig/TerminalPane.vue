@@ -34,8 +34,8 @@
 import '@xterm/xterm/css/xterm.css'
 import {
   buildTerminalWsUrl,
+  classifyTerminalWsClose,
   terminalHttpErrorKind,
-  terminalWsCloseI18nKey,
 } from '~/utils/terminal-ws-client'
 
 const props = defineProps<{ sanId: string }>()
@@ -123,22 +123,37 @@ async function connect() {
   })
 
   socket = new WebSocket(url)
+  let wasEverOpen = false
 
   socket.addEventListener('open', () => {
+    wasEverOpen = true
     wsStatus.value = 'open'
+    authError.value = null
     socket!.send(JSON.stringify({ type: 'init', cols: term!.cols, rows: term!.rows }))
   })
   socket.addEventListener('message', (ev) => {
     term?.write(typeof ev.data === 'string' ? ev.data : '')
   })
   socket.addEventListener('close', (ev) => {
-    wsStatus.value = 'closed'
-    const key = terminalWsCloseI18nKey(ev.code, ev.reason)
-    writeTerminalLine(t(key) as string, 'yellow')
+    wsStatus.value = wasEverOpen ? 'closed' : 'error'
+    const key = classifyTerminalWsClose({
+      code: ev.code,
+      reason: ev.reason,
+      wasEverOpen,
+    })
+    const msg = t(key) as string
+    authError.value = msg
+    writeTerminalLine(msg, wasEverOpen ? 'yellow' : 'red')
   })
   socket.addEventListener('error', () => {
-    wsStatus.value = 'error'
-    writeTerminalLine(t('terminal.ws.errors.websocket_error') as string, 'red')
+    if (!wasEverOpen) {
+      wsStatus.value = 'error'
+      if (!authError.value) {
+        const msg = t('terminal.ws.errors.proxy_failure') as string
+        authError.value = msg
+        writeTerminalLine(msg, 'red')
+      }
+    }
   })
 
   term.onData((data) => {

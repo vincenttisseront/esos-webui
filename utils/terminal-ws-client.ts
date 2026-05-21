@@ -11,6 +11,10 @@ export type TerminalWsUiErrorKind =
   | 'connection_closed'
   | 'websocket_error'
   | 'ticket_failed'
+  | 'ticket_rejected'
+  | 'upgrade_failed'
+  | 'proxy_failure'
+  | 'backend_closed'
 
 const CLOSE_REASON_PREFIX = 'esos:'
 
@@ -48,9 +52,9 @@ export function terminalWsCloseI18nKey(code: number, reason: string): string {
       case 'ssh_not_ready':
         return 'terminal.ws.errors.ssh_not_ready'
       case 'invalid_ticket':
-        return 'terminal.ws.errors.session_expired'
+        return 'terminal.ws.errors.ticket_rejected'
       default:
-        break
+        return 'terminal.ws.errors.backend_closed'
     }
   }
   if (code === 1008 && /unauthorized/i.test(r)) {
@@ -60,6 +64,32 @@ export function terminalWsCloseI18nKey(code: number, reason: string): string {
     return 'terminal.ws.errors.forbidden'
   }
   return 'terminal.ws.errors.connection_closed'
+}
+
+/**
+ * Classify close when the browser/proxy may strip the close reason (common behind Traefik/nginx).
+ */
+export function classifyTerminalWsClose(params: {
+  code: number
+  reason: string
+  wasEverOpen: boolean
+}): string {
+  const { code, reason, wasEverOpen } = params
+  const mapped = terminalWsCloseI18nKey(code, reason)
+  if (mapped !== 'terminal.ws.errors.connection_closed') return mapped
+
+  if (!wasEverOpen) {
+    if (code === 1006 || code === 1005 || code === 0) {
+      return 'terminal.ws.errors.upgrade_failed'
+    }
+    if (code === 1008) {
+      return 'terminal.ws.errors.ticket_rejected'
+    }
+    return 'terminal.ws.errors.proxy_failure'
+  }
+
+  if (code === 1008) return 'terminal.ws.errors.backend_closed'
+  return mapped
 }
 
 export function terminalHttpErrorKind(status: number): TerminalWsUiErrorKind {

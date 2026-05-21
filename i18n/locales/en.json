@@ -2560,7 +2560,11 @@
         "ssh_not_ready": "SAN SSH not ready yet. Wait for “SSH connected” then reconnect.",
         "connection_closed": "Connection closed.",
         "websocket_error": "WebSocket error.",
-        "ticket_failed": "Could not obtain terminal access."
+        "ticket_failed": "Could not obtain terminal access.",
+        "ticket_rejected": "Ticket rejected or expired. Click Reconnect.",
+        "upgrade_failed": "WebSocket upgrade failed (proxy or firewall). Check /ws routing.",
+        "proxy_failure": "WebSocket connection failed (network or reverse proxy).",
+        "backend_closed": "The server closed the terminal connection."
       }
     }
   }
