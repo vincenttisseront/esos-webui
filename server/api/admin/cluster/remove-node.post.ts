@@ -16,7 +16,9 @@ import { syncClusterNodesFromSans } from '../../../db/repositories/cluster.repos
  */
 export default defineEventHandler(async (event) => {
   const user = event.context.user
-  if (!user || user.role !== 'admin') throw createError({ statusCode: 403, message: 'Forbidden' })
+  if (!user || user.role !== 'admin') {
+    throw createError({ statusCode: 403, message: 'Forbidden', data: { code: 'rbac.forbidden' } })
+  }
 
   const body = await readBody<{ nodeId: string; primaryNodeId?: string; clusterId?: string; skipDb?: boolean }>(event)
   if (!body.nodeId) throw createError({ statusCode: 400, message: 'nodeId requis' })

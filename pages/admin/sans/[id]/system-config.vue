@@ -11,7 +11,7 @@
           color="gray"
         />
         <SectionTitle
-          :title="`Config système — ${san?.label ?? sanId}`"
+          :title="t('admin.sysconfig.page.title', { label: san?.label ?? sanId }) as string"
           icon="i-heroicons-wrench-screwdriver"
           :description="san ? `${san.host}:${san.port} · ${san.username}` : ''"
         />
@@ -24,7 +24,7 @@
           size="sm"
           color="gray"
           variant="outline"
-          label="Actualiser"
+          :label="t('admin.sysconfig.page.refresh') as string"
           :loading="loading"
           @click="reload"
         />
@@ -37,7 +37,7 @@
       color="red"
       variant="subtle"
       icon="i-heroicons-x-circle"
-      title="SAN introuvable"
+      :title="t('admin.sysconfig.page.san_not_found') as string"
       :description="sanError"
     />
 
@@ -48,8 +48,8 @@
         color="red"
         variant="subtle"
         icon="i-heroicons-lock-closed"
-        title="SAN en lecture seule"
-        description="Ce SAN est protégé contre les modifications depuis l'interface web. Pour activer l'édition, allez dans Administration → SANs et désactivez la protection."
+        :title="t('admin.sysconfig.page.readonly_title') as string"
+        :description="t('admin.sysconfig.page.readonly_desc') as string"
       />
 
       <!-- Spinner premier chargement -->
@@ -65,8 +65,8 @@
         >
           <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-blue-500 shrink-0 animate-spin" />
           <div>
-            <p class="text-sm font-semibold text-blue-800">Connexion SSH en cours…</p>
-            <p class="text-xs text-blue-600 mt-0.5">Attente de la reconnexion au SAN. La page se mettra à jour automatiquement.</p>
+            <p class="text-sm font-semibold text-blue-800">{{ t('admin.sysconfig.page.ssh_connecting_title') }}</p>
+            <p class="text-xs text-blue-600 mt-0.5">{{ t('admin.sysconfig.page.ssh_connecting_desc') }}</p>
           </div>
         </div>
 
@@ -77,29 +77,28 @@
         >
           <UIcon name="i-heroicons-server" class="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-semibold text-red-800">Connexion SSH indisponible</p>
+            <p class="text-sm font-semibold text-red-800">{{ t('admin.sysconfig.page.ssh_down_title') }}</p>
             <p class="text-xs text-red-600 mt-1">
-              Impossible de lire la configuration. Vérifiez la connexion SSH dans les paramètres admin.
-              Les formulaires restent accessibles pour préparer les modifications.
+              {{ t('admin.sysconfig.page.ssh_down_desc') }}
             </p>
             <div class="flex gap-2 mt-3">
               <UButton
                 size="xs" color="red" variant="outline"
                 icon="i-heroicons-key"
-                label="Paramètres SSH"
+                :label="t('admin.sysconfig.page.ssh_settings') as string"
                 to="/admin/sans"
               />
               <UButton
                 size="xs" color="gray" variant="outline"
                 icon="i-heroicons-arrow-path"
-                label="Réessayer la connexion"
+                :label="t('admin.sysconfig.page.retry_ssh') as string"
                 :loading="retrying"
                 @click="retrySSH"
               />
               <UButton
                 size="xs" color="orange" variant="outline"
                 icon="i-heroicons-pencil"
-                :label="editingHost ? 'Annuler' : 'Changer l\'adresse IP'"
+                :label="(editingHost ? t('admin.sysconfig.page.cancel_edit_ip') : t('admin.sysconfig.page.change_ip')) as string"
                 @click="editingHost = !editingHost"
               />
             </div>
@@ -107,7 +106,7 @@
             <!-- Formulaire inline changement d'adresse -->
             <div v-if="editingHost" class="mt-4 p-3 bg-white border border-red-200 rounded-lg">
               <p class="text-xs font-semibold text-gray-600 mb-3">
-                Mettre à jour l'adresse IP du SAN dans l'application
+                {{ t('admin.sysconfig.page.update_ip_hint') }}
               </p>
               <div class="flex items-center gap-2">
                 <div class="flex rounded-md shadow-sm ring-1 ring-gray-300 overflow-hidden flex-1">
@@ -128,7 +127,7 @@
                 <UButton
                   size="sm"
                   icon="i-heroicons-check"
-                  label="Enregistrer et reconnecter"
+                  :label="t('admin.sysconfig.page.save_reconnect') as string"
                   :loading="savingHost"
                   :disabled="!editHostForm.host"
                   @click="updateHost"
@@ -260,9 +259,9 @@
 
         <!-- Bottom bar -->
         <div class="flex items-center justify-end gap-3 text-sm text-gray-500 pt-2">
-          <span>Dernière lecture {{ lastReadLabel }}</span>
+          <span>{{ t('admin.sysconfig.page.last_read') }} {{ lastReadLabel }}</span>
           <UButton
-            label="Actualiser"
+            :label="t('admin.sysconfig.page.refresh') as string"
             icon="i-heroicons-arrow-path"
             variant="ghost"
             size="sm"
@@ -280,6 +279,8 @@ import type { SystemConfigResponse } from '~/server/utils/types'
 import type { SanSummary }           from '~/server/db/repositories/san.repository'
 
 definePageMeta({ layout: 'default' })
+
+const { t, tError } = useEsosI18n()
 
 const route = useRoute()
 const sanId = route.params.id as string
@@ -428,7 +429,7 @@ async function updateHost() {
     await new Promise(r => setTimeout(r, 2_000))
     await reload()
   } catch (err: any) {
-    hostSaveError.value = err?.data?.statusMessage ?? err?.message ?? 'Erreur'
+    hostSaveError.value = tError(err as Parameters<typeof tError>[0])
   } finally {
     savingHost.value = false
   }
@@ -437,12 +438,12 @@ async function updateHost() {
 onMounted(reload)
 
 const tabs = computed(() => [
-  { key: 'network',  label: 'Réseau',       icon: 'i-heroicons-globe-alt',       sectionStatus: config.value?.network.status },
-  { key: 'datetime', label: 'Date & Heure', icon: 'i-heroicons-clock',            sectionStatus: config.value?.dateTime.status },
-  { key: 'smtp',     label: 'Mail SMTP',    icon: 'i-heroicons-envelope',         sectionStatus: config.value?.smtp.status },
-  { key: 'users',    label: 'Utilisateurs', icon: 'i-heroicons-users',             sectionStatus: undefined },
-  { key: 'system',   label: 'Système',      icon: 'i-heroicons-computer-desktop', sectionStatus: config.value?.hostname.status },
-  { key: 'terminal', label: 'Terminal',     icon: 'i-heroicons-command-line',     sectionStatus: undefined },
+  { key: 'network',  label: t('admin.sysconfig.page.tabs.network'),       icon: 'i-heroicons-globe-alt',       sectionStatus: config.value?.network.status },
+  { key: 'datetime', label: t('admin.sysconfig.page.tabs.datetime'),      icon: 'i-heroicons-clock',            sectionStatus: config.value?.dateTime.status },
+  { key: 'smtp',     label: t('admin.sysconfig.page.tabs.smtp'),          icon: 'i-heroicons-envelope',         sectionStatus: config.value?.smtp.status },
+  { key: 'users',    label: t('admin.sysconfig.page.tabs.users'),         icon: 'i-heroicons-users',             sectionStatus: undefined },
+  { key: 'system',   label: t('admin.sysconfig.page.tabs.system'),        icon: 'i-heroicons-computer-desktop', sectionStatus: config.value?.hostname.status },
+  { key: 'terminal', label: t('admin.sysconfig.page.tabs.terminal'),      icon: 'i-heroicons-command-line',     sectionStatus: undefined },
 ])
 
 const visibleTabs = computed(() => {
@@ -472,7 +473,9 @@ watch(() => route.query.tab, (tab) => {
 const lastReadLabel = computed(() => {
   if (!loadedAt.value) return '—'
   const s = Math.round((Date.now() - loadedAt.value) / 1000)
-  return s < 5 ? "à l'instant" : `il y a ${s}s`
+  return s < 5
+    ? (t('admin.sysconfig.page.relative_now') as string)
+    : (t('admin.sysconfig.page.relative_ago', { seconds: s }) as string)
 })
 
 // ── Valeurs par défaut pour formulaires vides ─────────────────────────────────

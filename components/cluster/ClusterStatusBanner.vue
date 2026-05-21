@@ -7,7 +7,6 @@
       'bg-amber-50 border-amber-200':  overview.mode === 'unconfigured' || overview.mode === 'resyncing' || (!overview.healthy && overview.mode !== 'degraded' && overview.mode !== 'split-brain'),
     }"
   >
-    <!-- Icône état -->
     <div
       class="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
       :class="{
@@ -19,22 +18,20 @@
       <UIcon :name="statusIcon" class="w-5 h-5" :class="statusIconColor" />
     </div>
 
-    <!-- Infos -->
     <div class="flex-1">
       <p class="text-sm font-semibold" :class="statusTextColor">{{ statusLabel }}</p>
       <p class="text-xs mt-0.5" :class="statusSubColor">
-        {{ overview.nodes.length }} nœud(s) · Mode : {{ modeLabelMap[overview.mode] }}
+        {{ t('cluster.status_banner.nodes_mode', { count: overview.nodes.length, mode: modeLabel }) }}
       </p>
     </div>
 
-    <!-- Bouton sync -->
     <UButton
       v-if="overview.mode !== 'unconfigured' && syncNodeIds.length > 0"
       icon="i-heroicons-arrow-path"
       size="sm"
       color="gray"
       variant="outline"
-      label="Synchroniser"
+      :label="t('cluster.status_banner.sync')"
       :loading="cluster.syncing"
       @click="cluster.sync(syncNodeIds)"
     />
@@ -46,17 +43,23 @@ import type { ClusterOverview } from '~/server/utils/types'
 
 const props   = defineProps<{ overview: ClusterOverview }>()
 const cluster = useClusterStore()
+const { t }   = useEsosI18n()
 
 const syncNodeIds = computed(() => props.overview.nodes.map(n => n.nodeId))
 
-const modeLabelMap: Record<ClusterOverview['mode'], string> = {
-  'active-passive': 'Active/Passive',
-  'active-active':  'Active/Active',
-  'unconfigured':   'Non configuré',
-  'degraded':       'Dégradé',
-  'resyncing':      'Resync DRBD',
-  'split-brain':    'Split-brain',
+function clusterModeKey(mode: ClusterOverview['mode']): string {
+  const map: Record<string, string> = {
+    'active-passive': 'cluster.modes.active_passive',
+    'active-active':  'cluster.modes.active_active',
+    'unconfigured':   'cluster.modes.unconfigured',
+    'degraded':       'cluster.modes.degraded',
+    'resyncing':      'cluster.modes.resyncing',
+    'split-brain':    'cluster.modes.split_brain',
+  }
+  return map[mode] ?? mode
 }
+
+const modeLabel = computed(() => t(clusterModeKey(props.overview.mode)))
 
 const statusIcon = computed(() =>
   props.overview.healthy ? 'i-heroicons-check-circle' : 'i-heroicons-exclamation-circle',
@@ -67,9 +70,9 @@ const statusIconColor = computed(() =>
   : 'text-amber-600',
 )
 const statusLabel = computed(() =>
-  props.overview.healthy ? 'Cluster opérationnel'
-  : props.overview.mode === 'unconfigured' ? 'Cluster non configuré'
-  : 'Cluster dégradé ou hors ligne',
+  props.overview.healthy ? t('cluster.status_banner.operational')
+  : props.overview.mode === 'unconfigured' ? t('cluster.status_banner.unconfigured')
+  : t('cluster.status_banner.degraded'),
 )
 const statusTextColor = computed(() =>
   props.overview.healthy ? 'text-green-800'

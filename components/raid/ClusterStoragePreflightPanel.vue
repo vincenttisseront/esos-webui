@@ -1,27 +1,27 @@
 <template>
   <div class="space-y-3">
     <UAlert
-      :title="preflight.ok ? 'Préflight stockage cluster validé' : 'Préflight stockage cluster bloquant'"
-      :description="preflight.ok ? 'Les nœuds du cluster ont été comparés avec succès. L’exécution destructive utilisera le flux multi-nœud et les mappings validés.' : 'Le stockage cluster n’est pas prêt pour cette opération. Corrigez les blocages avant de continuer.'"
+      :title="preflight.ok ? t('raid.cluster_preflight.ok_title') : t('raid.cluster_preflight.blocked_title')"
+      :description="preflight.ok ? t('raid.cluster_preflight.ok_description') : t('raid.cluster_preflight.blocked_description')"
       :color="preflight.ok ? 'green' : 'red'"
       :icon="preflight.ok ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'"
     />
     <UAlert
-      title="Changement stockage cluster-aware"
-      description="Sync config ne crée pas les partitions, superblocks MD, métadonnées LVM ni block devices sur les nœuds pairs. Cette opération écrit directement sur chaque nœud avec le mapping validé."
+      :title="t('raid.cluster_preflight.cluster_write_title')"
+      :description="t('raid.cluster_preflight.cluster_write_description')"
       color="amber"
       icon="i-heroicons-exclamation-triangle"
     />
 
     <div v-if="preflight.syncLimitations.length" class="rounded border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-      <p class="font-semibold mb-1">Limites de Sync config</p>
+      <p class="font-semibold mb-1">{{ t('raid.cluster_preflight.sync_limits_title') }}</p>
       <ul class="list-disc pl-4 space-y-0.5">
         <li v-for="item in preflight.syncLimitations" :key="item">{{ item }}</li>
       </ul>
     </div>
 
     <div v-if="preflight.blockers.length" class="space-y-1">
-      <p class="text-xs font-semibold text-red-600 uppercase tracking-wide">Blocages cluster</p>
+      <p class="text-xs font-semibold text-red-600 uppercase tracking-wide">{{ t('raid.cluster_preflight.blockers_title') }}</p>
       <div
         v-for="blocker in preflight.blockers"
         :key="blocker"
@@ -51,7 +51,7 @@
     </div>
 
     <div v-if="preflight.warnings.length" class="space-y-1">
-      <p class="text-xs font-semibold text-amber-600 uppercase tracking-wide">Avertissements cluster</p>
+      <p class="text-xs font-semibold text-amber-600 uppercase tracking-wide">{{ t('raid.cluster_preflight.warnings_title') }}</p>
       <div
         v-for="warning in preflight.warnings"
         :key="warning"
@@ -65,11 +65,11 @@
       <table class="w-full text-xs">
         <thead class="bg-gray-50 text-left text-gray-500 uppercase tracking-wide">
           <tr>
-            <th class="px-3 py-2">Nœud</th>
-            <th class="px-3 py-2">Rôle</th>
-            <th class="px-3 py-2">SSH</th>
-            <th class="px-3 py-2">Outils</th>
-            <th class="px-3 py-2">Block devices</th>
+            <th class="px-3 py-2">{{ t('raid.cluster_preflight.table_node') }}</th>
+            <th class="px-3 py-2">{{ t('raid.cluster_preflight.table_role') }}</th>
+            <th class="px-3 py-2">{{ t('raid.cluster_preflight.table_ssh') }}</th>
+            <th class="px-3 py-2">{{ t('raid.cluster_preflight.table_tools') }}</th>
+            <th class="px-3 py-2">{{ t('raid.cluster_preflight.table_block_devices') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -77,10 +77,10 @@
             <td class="px-3 py-2 font-medium text-gray-800">{{ node.label }}</td>
             <td class="px-3 py-2 text-gray-600">{{ node.role ?? '—' }}</td>
             <td class="px-3 py-2" :class="node.sshReady ? 'text-green-600' : 'text-red-600'">
-              {{ node.sshReady ? 'connecté' : 'indisponible' }}
+              {{ node.sshReady ? t('raid.cluster_preflight.ssh_connected') : t('raid.cluster_preflight.ssh_unavailable') }}
             </td>
             <td class="px-3 py-2 text-gray-600">
-              <span v-if="node.tools">mdadm {{ node.tools.mdadm ? 'OK' : 'KO' }}, parted {{ node.tools.parted ? 'OK' : 'KO' }}, sfdisk {{ node.tools.sfdisk ? 'OK' : 'KO' }}</span>
+              <span v-if="node.tools">{{ t('raid.cluster_preflight.tools_line', { mdadm: node.tools.mdadm ? 'OK' : 'KO', parted: node.tools.parted ? 'OK' : 'KO', sfdisk: node.tools.sfdisk ? 'OK' : 'KO' }) }}</span>
               <span v-else>—</span>
             </td>
             <td class="px-3 py-2 text-gray-600">{{ node.blockDevices.length }}</td>
@@ -93,11 +93,11 @@
       <table class="w-full text-xs">
         <thead class="bg-gray-50 text-left text-gray-500 uppercase tracking-wide">
           <tr>
-            <th class="px-3 py-2">Source</th>
-            <th class="px-3 py-2">Nœud cible</th>
-            <th class="px-3 py-2">Cible</th>
-            <th class="px-3 py-2">Confiance</th>
-            <th class="px-3 py-2">Évidence</th>
+            <th class="px-3 py-2">{{ t('raid.cluster_preflight.mapping_source') }}</th>
+            <th class="px-3 py-2">{{ t('raid.cluster_preflight.mapping_target_node') }}</th>
+            <th class="px-3 py-2">{{ t('raid.cluster_preflight.mapping_target') }}</th>
+            <th class="px-3 py-2">{{ t('raid.cluster_preflight.mapping_confidence') }}</th>
+            <th class="px-3 py-2">{{ t('raid.cluster_preflight.mapping_evidence') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -111,7 +111,7 @@
             <td class="px-3 py-2 text-gray-600">
               {{ mapping.evidence.join(', ') || mapping.blockers.join(', ') || mapping.warnings.join(', ') || '—' }}
               <span v-if="mapping.candidates?.length" class="block text-amber-600">
-                Mapping manuel requis : {{ mapping.candidates.length }} candidat(s)
+                {{ t('raid.cluster_preflight.mapping_manual_required', { count: mapping.candidates.length }) }}
               </span>
             </td>
           </tr>

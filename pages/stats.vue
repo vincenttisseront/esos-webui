@@ -16,10 +16,10 @@ const activeTab = computed({
   set: (v) => router.replace({ query: { ...route.query, tab: v } }),
 })
 
-const tabs = [
-  { key: 'io',   label: 'I/O Temps réel', icon: 'i-heroicons-chart-bar'   },
-  { key: 'perf', label: 'Performance',     icon: 'i-heroicons-bolt'         },
-]
+const tabs = computed(() => [
+  { key: 'io',   label: t('monitoring.stats.tab_io'), icon: 'i-heroicons-chart-bar'   },
+  { key: 'perf', label: t('monitoring.stats.tab_perf'), icon: 'i-heroicons-bolt'         },
+])
 
 // Perf-agent ciblé sur le SAN effectif (inclut le primaire quand un cluster est sélectionné)
 watch(
@@ -58,7 +58,7 @@ const lastRefreshLabel = computed(() => {
 const lastSampleLabel = computed(() => {
   const latest = perf.devices.reduce((max, d) => Math.max(max, d.lastSampleAt), 0)
   if (!latest) return ''
-  return `Dernier sample : ${new Date(latest).toLocaleTimeString()}`
+  return t('monitoring.stats.last_sample', { time: new Date(latest).toLocaleTimeString() })
 })
 
 async function selectDevice(device: string) {
@@ -79,8 +79,8 @@ async function onSystemChange() {
     <!-- En-tête global -->
     <header class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold">Stats</h1>
-        <p class="text-sm text-gray-500">Monitoring I/O et métriques perf-agent</p>
+        <h1 class="text-2xl font-bold">{{ t('monitoring.stats.title') }}</h1>
+        <p class="text-sm text-gray-500">{{ t('monitoring.stats.subtitle') }}</p>
       </div>
     </header>
 
@@ -110,7 +110,7 @@ async function onSystemChange() {
           <UBadge :color="ssh.isReady ? 'green' : 'red'" size="xs">
             {{ t(ssh.statusKey) }}
           </UBadge>
-          <span class="text-xs text-gray-400">Dernière lecture : {{ lastRefreshLabel }}</span>
+          <span class="text-xs text-gray-400">{{ t('monitoring.stats.last_read', { time: lastRefreshLabel }) }}</span>
         </div>
         <UButton
           variant="ghost"
@@ -127,8 +127,8 @@ async function onSystemChange() {
         color="orange"
         variant="soft"
         icon="i-heroicons-exclamation-triangle"
-        title="SSH non disponible"
-        description="Les statistiques I/O nécessitent une connexion SSH active vers le serveur ESOS."
+        :title="t('monitoring.stats.ssh_unavailable_title')"
+        :description="t('monitoring.stats.ssh_unavailable_desc')"
       />
 
       <!-- Alerte erreur -->
@@ -157,7 +157,7 @@ async function onSystemChange() {
             v-model="perf.selectedSystem"
             :options="[]"
             size="sm"
-            placeholder="Système"
+            :placeholder="t('monitoring.stats.system_placeholder')"
             class="w-40"
             @change="onSystemChange"
           />
@@ -184,29 +184,29 @@ async function onSystemChange() {
         v-if="perf.service && !perf.service.running"
         color="orange"
         icon="i-heroicons-exclamation-triangle"
-        title="Agent de performance arrêté"
-        description="Aucune nouvelle métrique n'est collectée. Configurez l'agent depuis la page SANs."
-        :actions="[{ label: 'Aller aux SANs', to: '/admin/sans' }]"
+        :title="t('monitoring.stats.agent_stopped_title')"
+        :description="t('monitoring.stats.agent_stopped_desc')"
+        :actions="[{ label: t('monitoring.stats.go_to_sans'), to: '/admin/sans' }]"
       />
       <UAlert
         v-if="!perf.isConfigured"
         color="blue"
         icon="i-heroicons-information-circle"
-        title="Agent non configuré"
-        description="Configurez le DBURI et les block devices pour activer la collecte de performances."
-        :actions="[{ label: 'Configurer', to: '/admin/sans' }]"
+        :title="t('monitoring.stats.agent_not_configured_title')"
+        :description="t('monitoring.stats.agent_not_configured_desc')"
+        :actions="[{ label: t('monitoring.stats.configure'), to: '/admin/sans' }]"
       />
       <UAlert
         v-if="perf.hasStaleDevices && !perf.loading"
         color="orange"
         icon="i-heroicons-clock"
-        description="Certains devices n'ont pas été mis à jour depuis plus de 15 minutes."
+        :description="t('monitoring.stats.stale_devices')"
       />
       <UAlert
         v-if="perf.series && perf.series.points.length === 0 && !perf.loading"
         color="gray"
         icon="i-heroicons-chart-bar"
-        :description="`Aucun sample pour la fenêtre ${perf.selectedWindow}. Essayez une fenêtre plus large ou vérifiez que l'agent est actif.`"
+        :description="t('monitoring.stats.no_samples', { window: perf.selectedWindow })"
       />
       <UAlert
         v-if="perf.error"
@@ -237,7 +237,7 @@ async function onSystemChange() {
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
           <div class="flex items-center justify-between mb-3">
             <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-200">
-              Débit I/O
+              {{ t('monitoring.stats.throughput_title') }}
               <span v-if="perf.selectedDevice" class="font-mono text-primary-500 ml-1">{{ perf.selectedDevice }}</span>
             </h2>
             <span class="text-xs text-gray-400">{{ perf.selectedWindow }}</span>
@@ -249,11 +249,11 @@ async function onSystemChange() {
 
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
           <div class="flex items-center justify-between mb-3">
-            <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-200">Latence moyenne</h2>
+            <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-200">{{ t('monitoring.stats.latency_title') }}</h2>
             <div class="flex gap-3 text-xs text-gray-400">
-              <span class="text-green-600">● &lt;10 ms normal</span>
-              <span class="text-orange-500">● 10–50 ms attention</span>
-              <span class="text-red-600">● &gt;50 ms critique</span>
+              <span class="text-green-600">{{ t('monitoring.stats.latency_normal') }}</span>
+              <span class="text-orange-500">{{ t('monitoring.stats.latency_warning') }}</span>
+              <span class="text-red-600">{{ t('monitoring.stats.latency_critical') }}</span>
             </div>
           </div>
           <ClientOnly>
@@ -263,7 +263,7 @@ async function onSystemChange() {
 
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-            <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-200">Tous les devices</h2>
+            <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-200">{{ t('monitoring.stats.all_devices') }}</h2>
           </div>
           <PerfDeviceTable
             :devices="perf.devices"
@@ -276,14 +276,14 @@ async function onSystemChange() {
       <!-- Empty state -->
       <div v-else-if="!perf.loading" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-10 text-center space-y-3">
         <UIcon name="i-heroicons-chart-bar" class="w-12 h-12 text-gray-300 mx-auto" />
-        <p class="text-gray-500 font-medium">Aucune métrique disponible</p>
+        <p class="text-gray-500 font-medium">{{ t('monitoring.stats.empty_title') }}</p>
         <ul class="text-sm text-gray-400 space-y-1 text-left max-w-sm mx-auto list-disc pl-5">
-          <li>Vérifiez que l'agent perf-agent est en cours d'exécution</li>
-          <li>Vérifiez que le DBURI est correct et la base accessible</li>
-          <li>Vérifiez que des block devices sont sélectionnés</li>
-          <li>L'agent doit avoir collecté au moins un échantillon</li>
+          <li>{{ t('monitoring.stats.empty_check_agent') }}</li>
+          <li>{{ t('monitoring.stats.empty_check_dburi') }}</li>
+          <li>{{ t('monitoring.stats.empty_check_devices') }}</li>
+          <li>{{ t('monitoring.stats.empty_check_sample') }}</li>
         </ul>
-        <UButton to="/admin/sans" size="sm" color="primary" variant="soft" label="Configurer depuis les SANs" />
+        <UButton to="/admin/sans" size="sm" color="primary" variant="soft" :label="t('monitoring.stats.configure_from_sans')" />
       </div>
     </template>
 

@@ -576,6 +576,8 @@ function buildAlerts(
     const assemblable = stoppedMdArrays.filter(a => a.stoppedState === 'assemblable').length
     alerts.push({
       severity: 'info',
+      code: assemblable > 0 ? 'stopped_md_with_assemblable' : 'stopped_md_detected',
+      params: { count: stoppedMdArrays.length, assemblable },
       message: assemblable > 0
         ? `${stoppedMdArrays.length} tableau(x) MD arrêté(s) détecté(s) (${assemblable} assemblable(s))`
         : `${stoppedMdArrays.length} tableau(x) MD arrêté(s) détecté(s) sur ce nœud`,
@@ -602,6 +604,8 @@ function buildAlerts(
     const labelList = duplicatedLabels.map(([l]) => l).join(', ')
     alerts.push({
       severity: 'warning',
+      code: 'esos_labels_duplicated',
+      params: { labelList, diskList },
       message: `Labels ESOS dupliqués détectés (${labelList}) sur ${diskList}. blkid -L peut pointer vers l'un ou l'autre de façon non déterministe. Toute procédure automatisée devra demander confirmation.`,
     })
   }
@@ -610,12 +614,16 @@ function buildAlerts(
     if (arr.state === 'degraded' || arr.state === 'failed') {
       alerts.push({
         severity: arr.state === 'failed' ? 'critical' : 'critical',
+        code: 'md_array_bad_state',
+        params: { path: arr.path, state: arr.state },
         message: `Array ${arr.path} est en état ${arr.state}`,
       })
     }
     if (arr.state === 'recovering' || arr.state === 'resync') {
       alerts.push({
         severity: 'warning',
+        code: 'md_array_resync',
+        params: { path: arr.path, state: arr.state, percent: arr.progress?.percent ?? 0 },
         message: `Array ${arr.path} : ${arr.state} en cours (${arr.progress?.percent ?? 0}%)`,
       })
     }
@@ -625,29 +633,55 @@ function buildAlerts(
     if (ctrl.managementMode === 'read_only_limited') {
       alerts.push({
         severity: 'warning',
+        code: 'hw_read_only_limited',
+        params: { model: ctrl.model },
         message: `Contrôleur RAID matériel détecté (${ctrl.model}), mais perccli/storcli est absent. Gestion RAID matérielle limitée à la lecture kernel.`,
       })
       continue
     }
     if (ctrl.health === 'critical') {
-      alerts.push({ severity: 'critical', message: `Contrôleur RAID ${ctrl.model} : état critique` })
+      alerts.push({
+        severity: 'critical',
+        code: 'hw_controller_critical',
+        params: { model: ctrl.model },
+        message: `Contrôleur RAID ${ctrl.model} : état critique`,
+      })
     } else if (ctrl.health === 'warning') {
-      alerts.push({ severity: 'warning', message: `Contrôleur RAID ${ctrl.model} : avertissement` })
+      alerts.push({
+        severity: 'warning',
+        code: 'hw_controller_warning',
+        params: { model: ctrl.model },
+        message: `Contrôleur RAID ${ctrl.model} : avertissement`,
+      })
     }
     for (const ld of ctrl.logicalDrives) {
       if (ld.state === 'degraded' || ld.state === 'rebuilding') {
-        alerts.push({ severity: 'critical', message: `Volume logique ${ld.id} (${ctrl.model}) : ${ld.state}` })
+        alerts.push({
+          severity: 'critical',
+          code: 'hw_logical_drive_state',
+          params: { id: ld.id, model: ctrl.model, state: ld.state },
+          message: `Volume logique ${ld.id} (${ctrl.model}) : ${ld.state}`,
+        })
       }
     }
     for (const pd of ctrl.physicalDrives) {
       if (pd.state === 'failed') {
-        alerts.push({ severity: 'critical', message: `Disque physique slot ${pd.slot} (${ctrl.model}) : failed` })
+        alerts.push({
+          severity: 'critical',
+          code: 'hw_physical_drive_failed',
+          params: { slot: pd.slot, model: ctrl.model },
+          message: `Disque physique slot ${pd.slot} (${ctrl.model}) : failed`,
+        })
       }
     }
   }
 
   if (mdArrays.length === 0 && !tools.mdadm) {
-    alerts.push({ severity: 'info', message: 'mdadm non disponible sur ce nœud ESOS' })
+    alerts.push({
+      severity: 'info',
+      code: 'mdadm_unavailable',
+      message: 'mdadm non disponible sur ce nœud ESOS',
+    })
   }
 
   return alerts

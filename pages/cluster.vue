@@ -14,12 +14,10 @@
         />
         <div>
           <h1 class="text-2xl font-bold text-gray-900">
-            {{ selected ? selected.name : 'Cluster HA' }}
+            {{ selected ? selected.name : t('cluster.page.title_ha') }}
           </h1>
           <p class="text-sm text-gray-500 mt-1">
-            {{ selected
-              ? 'État Pacemaker / Corosync · Ressources cluster · Groupes ALUA'
-              : 'Sélectionnez un cluster pour accéder à son monitoring' }}
+            {{ selected ? t('cluster.page.subtitle_detail') : t('cluster.page.subtitle_list') }}
           </p>
         </div>
       </div>
@@ -30,7 +28,7 @@
           icon="i-heroicons-wrench-screwdriver"
           color="gray"
           variant="outline"
-          label="Configurer"
+          :label="t('cluster.page.configure')"
         />
         <template v-if="selected">
           <UButton
@@ -38,7 +36,7 @@
             icon="i-heroicons-arrow-path-rounded-square"
             color="gray"
             variant="outline"
-            label="Synchroniser"
+            :label="t('cluster.page.sync')"
             :loading="syncing"
             @click="syncCluster"
           />
@@ -46,7 +44,7 @@
             icon="i-heroicons-arrow-path"
             color="gray"
             variant="soft"
-            label="Actualiser"
+            :label="t('cluster.page.refresh')"
             :loading="detailLoading"
             @click="loadDetail"
           />
@@ -59,16 +57,16 @@
 
       <div v-if="listLoading" class="flex items-center justify-center py-16 text-gray-400">
         <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin mr-3" />
-        Chargement des clusters…
+        {{ t('cluster.page.loading_clusters') }}
       </div>
 
       <div v-else-if="clusters.length === 0" class="rounded-xl border border-blue-200 bg-blue-50 px-6 py-8 flex flex-col items-center gap-4 text-center">
         <UIcon name="i-heroicons-server-stack" class="w-12 h-12 text-blue-300" />
         <div>
-          <p class="text-base font-semibold text-blue-900">Aucun cluster HA configuré</p>
-          <p class="text-sm text-blue-700 mt-1">Initialisez un cluster via l'assistant de configuration.</p>
+          <p class="text-base font-semibold text-blue-900">{{ t('cluster.page.empty_title') }}</p>
+          <p class="text-sm text-blue-700 mt-1">{{ t('cluster.page.empty_desc') }}</p>
         </div>
-        <UButton to="/admin/cluster" icon="i-heroicons-wrench-screwdriver" label="Configurer le cluster" color="primary" />
+        <UButton to="/admin/cluster" icon="i-heroicons-wrench-screwdriver" :label="t('cluster.page.empty_cta')" color="primary" />
       </div>
 
       <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -86,7 +84,7 @@
               <ClusterHealthBadge :health="listAttentionMap[c.id]?.health" />
             </div>
             <span class="text-[11px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium border border-blue-100 shrink-0">
-              {{ c.nodes.length }} nœud{{ c.nodes.length > 1 ? 's' : '' }}
+              {{ t('cluster.page.nodes_count', { count: c.nodes.length }) }}
             </span>
           </div>
 
@@ -106,14 +104,14 @@
               >{{ n.host }}</span>
               <span class="ml-auto px-1.5 py-0.5 rounded font-medium"
                 :class="n.clusterRole === 'primary' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'">
-                {{ n.clusterRole === 'primary' ? 'Primaire' : 'Secondaire' }}
+                {{ n.clusterRole === 'primary' ? t('cluster.roles.primary') : t('cluster.roles.secondary') }}
               </span>
             </div>
           </div>
 
           <!-- CTA -->
           <div class="pt-1 flex justify-end">
-            <UButton size="xs" color="blue" variant="soft" icon="i-heroicons-arrow-right" trailing label="Voir le monitoring" @click.stop="select(c)" />
+            <UButton size="xs" color="blue" variant="soft" icon="i-heroicons-arrow-right" trailing :label="t('cluster.page.view_monitoring')" @click.stop="select(c)" />
           </div>
         </div>
       </div>
@@ -125,7 +123,7 @@
 
       <div v-if="detailLoading && !overview" class="flex items-center justify-center py-16 text-gray-400">
         <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin mr-3" />
-        Chargement du statut cluster…
+        {{ t('cluster.page.loading_status') }}
       </div>
 
       <template v-else-if="overview">
@@ -167,12 +165,12 @@
         <ClusterModeInfo :mode="overview.mode" />
 
         <p class="text-xs text-gray-400 text-right">
-          Dernière lecture : {{ new Date(overview.scannedAt).toLocaleTimeString('fr-FR') }}
+          {{ t('cluster.page.last_read', { time: new Date(overview.scannedAt).toLocaleTimeString() }) }}
         </p>
       </template>
 
       <div v-else-if="detailError" class="rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
-        <p class="font-semibold">Erreur de chargement</p>
+        <p class="font-semibold">{{ t('cluster.page.load_error_title') }}</p>
         <p class="mt-1">{{ detailError }}</p>
       </div>
 
@@ -204,10 +202,10 @@ const { handleAttentionAction } = useClusterAttentionAction({
         method: 'POST',
         body: { clusterId },
       })
-      useAppToast().success('Synchronisation réussie', result.output.slice(0, 120))
+      useAppToast().success(t('cluster.toasts.sync_success'), result.output.slice(0, 120))
       await loadDetail()
     } catch (err: any) {
-      useAppToast().error('Erreur de synchronisation', err?.data?.message ?? 'Erreur')
+      useAppToast().error(t('cluster.toasts.sync_error'), err?.data?.message ?? t('cluster.toasts.unknown_error'))
     } finally {
       syncing.value = false
     }
@@ -289,7 +287,7 @@ async function loadDetail() {
       storageConsistency.value = null
     }
   } catch (err: any) {
-    detailError.value = err?.data?.message ?? 'Erreur de chargement'
+    detailError.value = err?.data?.message ?? t('cluster.toasts.fetch_status_error')
   } finally {
     detailLoading.value = false
   }
@@ -345,10 +343,10 @@ async function syncCluster() {
       ? { clusterId: cid }
       : { nodeIds: selected.value.nodes.map(n => n.id) }
     const result  = await $fetch<{ output: string }>('/api/cluster/sync', { method: 'POST', body })
-    useAppToast().success('Synchronisation réussie', result.output.slice(0, 120))
+    useAppToast().success(t('cluster.toasts.sync_success'), result.output.slice(0, 120))
     await loadDetail()
   } catch (err: any) {
-    useAppToast().error('Erreur de synchronisation', err?.data?.message ?? 'Erreur inconnue')
+    useAppToast().error(t('cluster.toasts.sync_error'), err?.data?.message ?? t('cluster.toasts.unknown_error'))
   } finally {
     syncing.value = false
   }

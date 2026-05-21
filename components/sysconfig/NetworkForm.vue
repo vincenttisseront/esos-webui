@@ -3,46 +3,42 @@
     <template #header>
       <div class="flex items-center gap-2">
         <UIcon name="i-heroicons-globe-alt" class="text-gray-500 size-5" />
-        <span class="font-semibold text-gray-800">Configuration réseau</span>
+        <span class="font-semibold text-gray-800">{{ t('admin.sysconfig.network.title') }}</span>
       </div>
     </template>
 
     <div class="space-y-6">
-      <!-- Warning banner -->
       <UAlert
         color="amber"
         variant="subtle"
         icon="i-heroicons-exclamation-triangle"
-        title="Attention"
-        description="Modifier la configuration réseau peut interrompre la connexion SSH. Cliquez sur « Redémarrer réseau » uniquement lorsque vous êtes prêt."
+        :title="t('admin.sysconfig.network.warn_title') as string"
+        :description="t('admin.sysconfig.network.warn_desc') as string"
       />
 
-      <!-- Pending restart banner -->
       <UAlert
         v-if="pendingSave"
         color="orange"
         variant="solid"
         icon="i-heroicons-arrow-path"
-        title="Configuration enregistrée — redémarrage réseau requis"
-        description="Les modifications ont été écrites sur le SAN mais ne sont pas encore actives. Cliquez sur « Redémarrer réseau » pour les appliquer."
+        :title="t('admin.sysconfig.network.pending_title') as string"
+        :description="t('admin.sysconfig.network.pending_desc') as string"
       />
 
-      <!-- Gateway / DNS / Search domain -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <UFormField label="Passerelle par défaut">
+        <UFormField :label="t('admin.sysconfig.network.gateway') as string">
           <UInput v-model="form.gateway" placeholder="192.168.1.1" :disabled="isDisabled" />
         </UFormField>
 
-        <UFormField label="DNS (séparés par des virgules)">
+        <UFormField :label="t('admin.sysconfig.network.dns') as string">
           <UInput v-model="nameserversStr" placeholder="8.8.8.8, 1.1.1.1" :disabled="isDisabled" />
         </UFormField>
 
-        <UFormField label="Domaine de recherche">
+        <UFormField :label="t('admin.sysconfig.network.search_domain') as string">
           <UInput v-model="form.searchDomain" placeholder="example.com" :disabled="isDisabled" />
         </UFormField>
       </div>
 
-      <!-- Interface cards -->
       <div
         v-for="iface in form.interfaces"
         :key="iface.index"
@@ -68,7 +64,7 @@
               v-model="iface.useDHCP"
               :disabled="isDisabled"
             />
-            DHCP
+            {{ t('admin.sysconfig.network.dhcp') }}
           </label>
           <label class="flex items-center gap-2 text-sm cursor-pointer">
             <input
@@ -78,24 +74,24 @@
               v-model="iface.useDHCP"
               :disabled="isDisabled"
             />
-            Statique
+            {{ t('admin.sysconfig.network.static') }}
           </label>
         </div>
 
         <div v-if="!iface.useDHCP" class="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <UFormField label="Adresse IP">
+          <UFormField :label="t('admin.sysconfig.network.ip') as string">
             <UInput v-model="iface.ipAddress" placeholder="192.168.1.10" :disabled="isDisabled" />
           </UFormField>
-          <UFormField label="Masque">
+          <UFormField :label="t('admin.sysconfig.network.netmask') as string">
             <UInput v-model="iface.netmask" placeholder="255.255.255.0" :disabled="isDisabled" />
           </UFormField>
-          <UFormField label="Broadcast">
+          <UFormField :label="t('admin.sysconfig.network.broadcast') as string">
             <UInput v-model="iface.broadcast" placeholder="192.168.1.255" :disabled="isDisabled" />
           </UFormField>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
-          <UFormField label="MTU">
+          <UFormField :label="t('admin.sysconfig.network.mtu') as string">
             <UInput
               v-model.number="iface.mtu"
               type="number"
@@ -103,7 +99,7 @@
               :disabled="isDisabled"
             />
           </UFormField>
-          <UFormField v-if="iface.useDHCP" label="Timeout DHCP (s)">
+          <UFormField v-if="iface.useDHCP" :label="t('admin.sysconfig.network.dhcp_timeout') as string">
             <UInput
               v-model.number="iface.dhcpTimeout"
               type="number"
@@ -118,7 +114,7 @@
     <template #footer>
       <div class="flex items-center justify-between">
         <UButton
-          label="Redémarrer réseau"
+          :label="t('admin.sysconfig.network.restart') as string"
           icon="i-heroicons-arrow-path"
           color="amber"
           variant="outline"
@@ -127,7 +123,7 @@
           @click="restartNetwork"
         />
         <UButton
-          label="Enregistrer"
+          :label="t('admin.sysconfig.network.save') as string"
           icon="i-heroicons-check"
           :loading="saving"
           :disabled="props.disabled"
@@ -139,9 +135,11 @@
 </template>
 
 <script setup lang="ts">
-import type { NetworkGeneralConfig, NetworkInterfaceConfig } from '~/server/utils/types'
+import type { NetworkGeneralConfig } from '~/server/utils/types'
 import { useAppToast } from '~/composables/useAppToast'
 import { useNetworkPendingRestart } from '~/composables/useNetworkPendingRestart'
+
+const { t, tError } = useEsosI18n()
 
 const props = defineProps<{
   sanId:     string
@@ -181,10 +179,12 @@ async function save() {
       body: { ...form },
     })
     markPending(props.sanId, props.sanLabel ?? props.sanId)
-    toast.success('Configuration réseau enregistrée', 'Cliquez sur « Redémarrer réseau » pour appliquer.')
-    // Ne pas émettre saved ici — le rechargement démonterait ce composant et perdrait pendingSave
-  } catch (err: any) {
-    toast.error('Échec', err?.data?.message ?? String(err))
+    toast.success(
+      t('admin.sysconfig.network.toast_saved_title') as string,
+      t('admin.sysconfig.network.toast_saved_desc') as string,
+    )
+  } catch (err: unknown) {
+    toast.error(t('common.failure') as string, tError(err as Parameters<typeof tError>[0]))
   } finally {
     saving.value = false
   }
@@ -194,15 +194,14 @@ async function restartNetwork() {
   restarting.value = true
   try {
     await $fetch(`/api/san/${props.sanId}/system-config/network/restart`, { method: 'POST' })
-    // Le restart a été lancé côté serveur. La DB a été mise à jour avec la nouvelle IP
-    // et le pool SSH est en cours de reconnexion. On efface le pending maintenant :
-    // si SSH revient = la config est appliquée, si elle ne revient pas = l'utilisateur
-    // verra la bannière SSH down et pourra corriger.
     clearPending(props.sanId)
-    toast.success('Redémarrage réseau lancé', 'La connexion SSH peut mettre quelques secondes à se rétablir.')
+    toast.success(
+      t('admin.sysconfig.network.toast_restart_title') as string,
+      t('admin.sysconfig.network.toast_restart_desc') as string,
+    )
     emit('restarted')
-  } catch (err: any) {
-    toast.error('Échec du redémarrage', err?.data?.message ?? String(err))
+  } catch (err: unknown) {
+    toast.error(t('admin.sysconfig.network.toast_restart_fail') as string, tError(err as Parameters<typeof tError>[0]))
   } finally {
     restarting.value = false
   }

@@ -668,7 +668,12 @@ export interface RaidOverviewResponse {
   mdArrays: MdArray[]
   stoppedMdArrays: StoppedMdArray[]
   blockDevices: RaidBlockDevice[]
-  alerts: Array<{ severity: 'info' | 'warning' | 'critical'; message: string }>
+  alerts: Array<{
+    severity: 'info' | 'warning' | 'critical'
+    message: string
+    code?: string
+    params?: Record<string, string | number>
+  }>
   mdDetection: MdDetectionSummary
   clusterMdDetection?: MdDetectionSummary[]
 }

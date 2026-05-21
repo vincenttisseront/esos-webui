@@ -3,7 +3,7 @@
     <template #header>
       <div class="flex items-center gap-2">
         <UIcon name="i-heroicons-envelope" class="text-gray-500 size-5" />
-        <span class="font-semibold text-gray-800">Configuration SMTP (sSMTP)</span>
+        <span class="font-semibold text-gray-800">{{ t('admin.sysconfig.smtp.title') }}</span>
       </div>
     </template>
 
@@ -11,18 +11,18 @@
 
       <!-- Serveur -->
       <div>
-        <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Serveur</p>
+        <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">{{ t('admin.sysconfig.smtp.section_server') }}</p>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <UFormField
-            label="Destinataire des alertes"
-            hint="Adresse qui reçoit les emails envoyés à root"
+            :label="t('admin.sysconfig.smtp.alert_email') as string"
+            :hint="t('admin.sysconfig.smtp.alert_email_hint') as string"
           >
             <UInput v-model="form.alertEmail" placeholder="alerts@example.com" class="w-full" :disabled="isDisabled" />
           </UFormField>
 
           <UFormField
-            label="Serveur SMTP"
-            hint="Adresse et port du relais (ex : smtp.example.com:587)"
+            :label="t('admin.sysconfig.smtp.mail_hub') as string"
+            :hint="t('admin.sysconfig.smtp.mail_hub_hint') as string"
           >
             <UInput v-model="form.mailHub" placeholder="smtp.example.com:587" class="w-full" :disabled="isDisabled" />
           </UFormField>
@@ -31,23 +31,23 @@
 
       <!-- Authentification -->
       <div>
-        <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Authentification</p>
+        <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">{{ t('admin.sysconfig.smtp.section_auth') }}</p>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <UFormField label="Utilisateur">
+          <UFormField :label="t('admin.sysconfig.smtp.auth_user') as string">
             <UInput v-model="form.authUser" placeholder="user@example.com" class="w-full" :disabled="isDisabled" />
           </UFormField>
 
-          <UFormField label="Mot de passe">
+          <UFormField :label="t('admin.sysconfig.smtp.auth_pass') as string">
             <UInput
               v-model="form.authPass"
               type="password"
-              placeholder="Laisser vide pour conserver l'actuel"
+              :placeholder="t('admin.sysconfig.smtp.auth_pass_placeholder') as string"
               class="w-full"
               :disabled="isDisabled"
             />
           </UFormField>
 
-          <UFormField label="Méthode d'authentification">
+          <UFormField :label="t('admin.sysconfig.smtp.auth_method') as string">
             <USelect
               v-model="form.authMethod"
               :items="authMethods"
@@ -61,26 +61,26 @@
 
       <!-- Chiffrement & options -->
       <div>
-        <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Chiffrement &amp; options</p>
+        <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">{{ t('admin.sysconfig.smtp.section_tls') }}</p>
         <div class="rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-800">
           <label class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50" :class="{ 'opacity-50 pointer-events-none': isDisabled }">
             <div>
-              <p class="text-sm font-medium text-gray-800 dark:text-gray-100">TLS</p>
-              <p class="text-xs text-gray-400">Chiffrement TLS (port 465)</p>
+              <p class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ t('admin.sysconfig.smtp.tls') }}</p>
+              <p class="text-xs text-gray-400">{{ t('admin.sysconfig.smtp.tls_hint') }}</p>
             </div>
             <UToggle v-model="form.useTLS" :disabled="isDisabled" />
           </label>
           <label class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50" :class="{ 'opacity-50 pointer-events-none': isDisabled }">
             <div>
-              <p class="text-sm font-medium text-gray-800 dark:text-gray-100">STARTTLS</p>
-              <p class="text-xs text-gray-400">Upgrade de la connexion vers TLS (port 587)</p>
+              <p class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ t('admin.sysconfig.smtp.starttls') }}</p>
+              <p class="text-xs text-gray-400">{{ t('admin.sysconfig.smtp.starttls_hint') }}</p>
             </div>
             <UToggle v-model="form.useSTARTTLS" :disabled="isDisabled" />
           </label>
           <label class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50" :class="{ 'opacity-50 pointer-events-none': isDisabled }">
             <div>
-              <p class="text-sm font-medium text-gray-800 dark:text-gray-100">FromLineOverride</p>
-              <p class="text-xs text-gray-400">Utiliser l'adresse From: de l'application plutôt que l'adresse système</p>
+              <p class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ t('admin.sysconfig.smtp.from_override') }}</p>
+              <p class="text-xs text-gray-400">{{ t('admin.sysconfig.smtp.from_override_hint') }}</p>
             </div>
             <UToggle v-model="form.fromOverride" :disabled="isDisabled" />
           </label>
@@ -92,8 +92,8 @@
         <UAlert
           :color="testResult.ok ? 'green' : 'red'"
           :icon="testResult.ok ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'"
-          :title="testResult.ok ? 'Email envoyé avec succès' : 'Échec de l\'envoi'"
-          :description="testResult.ok ? `Destinataire : ${testResult.recipient}` : testResult.error"
+          :title="(testResult.ok ? t('admin.sysconfig.smtp.test_ok') : t('admin.sysconfig.smtp.test_fail')) as string"
+          :description="testResult.ok ? (t('admin.sysconfig.smtp.test_recipient', { recipient: testResult.recipient }) as string) : testResult.error"
           variant="subtle"
         />
       </div>
@@ -103,7 +103,7 @@
     <template #footer>
       <div class="flex items-center justify-between">
         <UButton
-          label="Envoyer un email test"
+          :label="t('admin.sysconfig.smtp.send_test') as string"
           icon="i-heroicons-paper-airplane"
           variant="outline"
           color="gray"
@@ -112,7 +112,7 @@
           @click="sendTest"
         />
         <UButton
-          label="Enregistrer"
+          :label="t('common.actions.save') as string"
           icon="i-heroicons-check"
           :loading="saving"
           :disabled="props.disabled"
@@ -145,7 +145,7 @@ const emit = defineEmits<{
 
 const toast = useAppToast()
 
-const { t } = useEsosI18n()
+const { t, tError } = useEsosI18n()
 
 const authMethods = computed(() =>
   smtpAuthMethodSelectItems({
@@ -184,10 +184,10 @@ async function save() {
         authMethod: toBackendSmtpAuthMethod(form.authMethod),
       },
     })
-    toast.success('Configuration SMTP enregistrée')
+    toast.success(t('admin.sysconfig.smtp.toast_saved') as string)
     emit('saved')
-  } catch (err: any) {
-    toast.error('Échec', err?.data?.message ?? String(err))
+  } catch (err: unknown) {
+    toast.error(t('common.failure') as string, tError(err as Parameters<typeof tError>[0]))
   } finally {
     saving.value = false
   }
@@ -202,8 +202,9 @@ async function sendTest() {
       { method: 'POST' }
     )
     testResult.value = result
-  } catch (err: any) {
-    testResult.value = { ok: false, error: err?.data?.error ?? err?.data?.message ?? String(err) }
+  } catch (err: unknown) {
+    const e = err as { data?: { error?: string; message?: string }; message?: string }
+    testResult.value = { ok: false, error: e?.data?.error ?? e?.data?.message ?? e?.message ?? String(err) }
   } finally {
     testing.value = false
   }

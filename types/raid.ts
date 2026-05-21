@@ -2,6 +2,12 @@
  * Types client pour le module RAID Management (SDD v3.12).
  * Re-export des interfaces partagées entre frontend et server.
  */
+/** Locale message reference for RAID UI (translate with t(code, params)). */
+export interface RaidI18nMessage {
+  code: string
+  params?: Record<string, string | number>
+}
+
 export type RaidBackendType = 'hardware' | 'software_md'
 export type RaidVendor = 'lsi_megaraid' | 'dell_perc' | 'adaptec_aacraid' | 'unknown'
 export type RaidHealth = 'ok' | 'warning' | 'critical' | 'rebuilding' | 'unknown'
@@ -923,7 +929,12 @@ export interface RaidOverviewResponse {
   mdArrays: MdArray[]
   stoppedMdArrays: StoppedMdArray[]
   blockDevices: RaidBlockDevice[]
-  alerts: Array<{ severity: 'info' | 'warning' | 'critical'; message: string }>
+  alerts: Array<{
+    severity: 'info' | 'warning' | 'critical'
+    message: string
+    code?: string
+    params?: Record<string, string | number>
+  }>
   mdDetection: MdDetectionSummary
   clusterMdDetection?: MdDetectionSummary[]
 }

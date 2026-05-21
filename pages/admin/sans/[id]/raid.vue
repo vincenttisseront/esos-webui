@@ -12,7 +12,7 @@
         />
         <UIcon name="i-heroicons-circle-stack" class="w-6 h-6 text-purple-500" />
         <div>
-          <h1 class="text-xl font-semibold text-gray-900 dark:text-gray-100">Gestion RAID</h1>
+          <h1 class="text-xl font-semibold text-gray-900 dark:text-gray-100">{{ t('raid.page.title') }}</h1>
           <p class="text-sm text-gray-500">{{ san?.label ?? sanId }}</p>
         </div>
         <RaidPerSanHealthBadges
@@ -24,7 +24,7 @@
       </div>
       <div class="flex items-center gap-2">
         <span v-if="raid.overview" class="text-xs text-gray-600 dark:text-gray-400">
-          Scan : {{ new Date(raid.overview.scannedAt).toLocaleTimeString() }}
+          {{ t('raid.page.scan_at', { time: new Date(raid.overview.scannedAt).toLocaleTimeString() }) }}
         </span>
         <span
           v-if="raid.autoRefreshActive"
@@ -41,7 +41,7 @@
           :loading="raid.loading || raid.polling"
           @click="manualRefreshRaid"
         >
-          Rafraîchir
+          {{ t('raid.page.refresh') }}
         </UButton>
       </div>
     </div>
@@ -52,8 +52,8 @@
     <div v-if="raid.criticalAlerts.length" class="space-y-2">
       <UAlert
         v-for="alert in raid.criticalAlerts"
-        :key="alert.message"
-        :title="alert.message"
+        :key="alert.code ?? alert.message"
+        :title="tRaidAlert(alert)"
         color="red"
         icon="i-heroicons-x-circle"
         variant="soft"
@@ -63,7 +63,7 @@
     <!-- Chargement initial -->
     <div v-if="raid.loading && !raid.overview" class="text-center py-16 text-gray-500">
       <UIcon name="i-heroicons-arrow-path" class="animate-spin w-8 h-8 mb-2 mx-auto" />
-      <p>Scan RAID en cours…</p>
+      <p>{{ t('raid.page.scan_in_progress') }}</p>
     </div>
 
     <!-- Erreur -->
@@ -97,7 +97,7 @@
     <div v-if="activeTab === 'overview' && raid.overview" class="space-y-4">
       <!-- Outils disponibles -->
       <UCard>
-        <template #header><h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Outils détectés</h3></template>
+        <template #header><h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('raid.page.tools_detected') }}</h3></template>
         <div class="flex flex-wrap gap-3">
           <div
             v-for="(available, tool) in raid.tools"
@@ -119,7 +119,7 @@
         <UCard>
           <div class="text-center py-2">
             <div class="text-3xl font-bold text-gray-900 dark:text-gray-100">{{ raid.controllers.length }}</div>
-            <div class="text-sm text-gray-500 mt-1">Contrôleurs matériels</div>
+            <div class="text-sm text-gray-500 mt-1">{{ t('raid.page.hw_controllers') }}</div>
           </div>
         </UCard>
         <UCard>
@@ -131,7 +131,7 @@
         <UCard>
           <div class="text-center py-2">
             <div class="text-3xl font-bold text-gray-900 dark:text-gray-100">{{ raid.blockDevices.length }}</div>
-            <div class="text-sm text-gray-500 mt-1">Block devices</div>
+            <div class="text-sm text-gray-500 mt-1">{{ t('raid.page.block_devices') }}</div>
           </div>
         </UCard>
         <UCard>
@@ -204,8 +204,8 @@
         </h3>
         <UAlert
           v-for="a in raid.allAlerts"
-          :key="a.message"
-          :title="a.message"
+          :key="a.code ?? a.message"
+          :title="tRaidAlert(a)"
           :color="a.severity === 'critical' ? 'red' : a.severity === 'warning' ? 'amber' : 'blue'"
           :icon="a.severity === 'critical' ? 'i-heroicons-x-circle' : 'i-heroicons-exclamation-triangle'"
           variant="soft"
@@ -243,13 +243,13 @@
           icon="i-heroicons-plus"
           @click="openHwWizard()"
         >
-          Créer volume RAID matériel
+          {{ t('raid.page.create_hw_volume') }}
         </UButton>
       </div>
       <div v-if="!raid.controllers.length" class="text-center py-8 text-gray-500">
         <UIcon name="i-heroicons-cpu-chip" class="w-10 h-10 mx-auto mb-2 opacity-30" />
-        <p>Aucun contrôleur RAID matériel détecté</p>
-        <p class="text-xs mt-1">StorCLI, PercCLI, MegaCLI, arcconf non disponibles et aucun contrôleur détecté via lspci.</p>
+        <p>{{ t('raid.page.hw_empty') }}</p>
+        <p class="text-xs mt-1">{{ t('raid.page.hw_empty_hint') }}</p>
       </div>
       <UCard v-for="ctrl in raid.controllers" :key="ctrl.id">
         <RaidControllerCard
@@ -332,10 +332,10 @@
     <!-- Onglet Block Devices -->
     <div v-else-if="activeTab === 'devices' && raid.overview" class="space-y-3">
       <div class="flex items-center gap-3">
-        <UInput v-model="deviceFilter" placeholder="Filtrer…" size="sm" class="max-w-xs" />
+        <UInput v-model="deviceFilter" :placeholder="t('raid.page.filter_placeholder')" size="sm" class="max-w-xs" />
         <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
           <input v-model="showOnlyEligible" type="checkbox" class="accent-blue-500" />
-          Éligibles seulement
+          {{ t('raid.page.eligible_only') }}
         </label>
         <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
           <input v-model="showMdMetadataOnly" type="checkbox" class="accent-blue-500" />
@@ -351,7 +351,7 @@
     <div v-else-if="activeTab === 'ops'" class="space-y-3">
       <div v-if="!raid.operations.length" class="text-center py-8 text-gray-500">
         <UIcon name="i-heroicons-queue-list" class="w-10 h-10 mx-auto mb-2 opacity-30" />
-        <p>Aucune opération RAID enregistrée</p>
+        <p>{{ t('raid.page.ops_empty') }}</p>
       </div>
       <UCard
         v-for="op in raid.operations"
@@ -377,7 +377,7 @@
               icon="i-heroicons-stop"
               @click="cancelOp(op.id)"
             >
-              Annuler
+              {{ t('raid.page.cancel') }}
             </UButton>
           </div>
           <RaidOperationTimeline v-if="op.steps.length" :steps="op.steps" />
@@ -402,10 +402,10 @@
         </div>
         <div class="px-5 py-4 space-y-3">
           <p v-if="stoppedInspectLabel" class="text-sm text-gray-600 dark:text-gray-400 font-mono">{{ stoppedInspectLabel }}</p>
-          <pre class="text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-3 overflow-x-auto whitespace-pre-wrap text-gray-700 dark:text-gray-300">{{ stoppedInspectText || '(aucune sortie mdadm --examine)' }}</pre>
+          <pre class="text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-3 overflow-x-auto whitespace-pre-wrap text-gray-700 dark:text-gray-300">{{ stoppedInspectText || t('raid.page.inspect_no_output') }}</pre>
           <div class="flex justify-end">
             <UButton size="sm" color="gray" variant="soft" icon="i-heroicons-clipboard-document" @click="copyStoppedInspect">
-              Copier
+              {{ t('raid.page.inspect_copy') }}
             </UButton>
           </div>
         </div>
@@ -422,14 +422,14 @@
         <div class="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-200 dark:border-gray-700">
           <h2 class="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
             <UIcon name="i-heroicons-magnifying-glass" class="w-5 h-5 text-gray-400" />
-            Diagnostic RAID matériel
+            {{ t('raid.page.diagnostic_hw_title') }}
           </h2>
           <UButton icon="i-heroicons-x-mark" color="gray" variant="ghost" size="sm" @click="showDiagnostic = false" />
         </div>
         <div class="px-5 py-4 space-y-4">
           <div v-if="diagnosticLoading" class="text-center py-8 text-gray-400">
             <UIcon name="i-heroicons-arrow-path" class="animate-spin w-6 h-6 mx-auto mb-2" />
-            Collecte en cours…
+            {{ t('raid.page.diagnostic_collecting') }}
           </div>
           <template v-else-if="diagnosticData">
             <!-- Résumé mode contrôleur (données parsées) -->
@@ -464,7 +464,7 @@
             <!-- Sections brutes -->
             <div v-for="(value, key) in diagnosticSections" :key="key" class="space-y-1">
               <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ key }}</p>
-              <pre class="text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-3 overflow-x-auto whitespace-pre-wrap text-gray-700 dark:text-gray-300">{{ value || '(vide)' }}</pre>
+              <pre class="text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-3 overflow-x-auto whitespace-pre-wrap text-gray-700 dark:text-gray-300">{{ value || t('raid.page.diagnostic_empty') }}</pre>
             </div>
           </template>
         </div>
@@ -490,6 +490,7 @@ import {
   stoppedMemberPaths,
   suggestDefaultMdName,
 } from '~/utils/stopped-md'
+import { translateRaidI18n } from '~/utils/raid-i18n'
 import {
   allMdDetectionItems,
   hasAnyMdStateVisible,
@@ -541,18 +542,18 @@ async function fetchClusterAttention() {
 
 const raid = useRaidStore()
 const lvm = useLvmStore()
-const { t } = useEsosI18n()
+const { t, tRaidAlert } = useEsosI18n()
 const toast = useAppToast()
 
-const tabs = [
-  { key: 'overview', label: 'Aperçu',           icon: 'i-heroicons-chart-bar' },
-  { key: 'hardware', label: 'RAID Matériel',     icon: 'i-heroicons-cpu-chip' },
-  { key: 'software', label: 'RAID Logiciel (MD)', icon: 'i-heroicons-server-stack' },
-  { key: 'lvm',      label: t('lvm.tab.title'),  icon: 'i-heroicons-square-3-stack-3d' },
-  { key: 'fs',       label: t('storage.fs.tab.title'), icon: 'i-heroicons-folder' },
-  { key: 'devices',  label: 'Block Devices',     icon: 'i-heroicons-circle-stack' },
-  { key: 'ops',      label: 'Opérations',        icon: 'i-heroicons-queue-list' },
-]
+const tabs = computed(() => [
+  { key: 'overview', label: t('raid.page.tab.overview'), icon: 'i-heroicons-chart-bar' },
+  { key: 'hardware', label: t('raid.page.tab.hardware'), icon: 'i-heroicons-cpu-chip' },
+  { key: 'software', label: t('raid.page.tab.software'), icon: 'i-heroicons-server-stack' },
+  { key: 'lvm', label: t('lvm.tab.title'), icon: 'i-heroicons-square-3-stack-3d' },
+  { key: 'fs', label: t('storage.fs.tab.title'), icon: 'i-heroicons-folder' },
+  { key: 'devices', label: t('raid.page.tab.devices'), icon: 'i-heroicons-circle-stack' },
+  { key: 'ops', label: t('raid.page.tab.ops'), icon: 'i-heroicons-queue-list' },
+])
 const activeTab = ref('overview')
 const highlightedArrayPath = ref<string | null>(null)
 const highlightedDevicePath = ref<string | null>(null)
@@ -854,13 +855,13 @@ const diagnosticSections = computed(() => {
   if (!diagnosticData.value) return {}
   const d = diagnosticData.value
   return {
-    'Mode contrôleur (perccli/storcli)': d.ctrlMode,
-    'lspci (contrôleurs PCI)': d.lspci,
-    'lsmod (modules kernel)': d.lsmod,
-    'dmesg (messages RAID)': d.dmesg,
-    'lsscsi (volumes SCSI)': d.lsscsi,
-    'CLI disponibles (which)': d.whichCli,
-    'Chemins directs détectés': d.directPaths,
+    [t('raid.page.diagnostic_section.ctrl_mode')]: d.ctrlMode,
+    [t('raid.page.diagnostic_section.lspci')]: d.lspci,
+    [t('raid.page.diagnostic_section.lsmod')]: d.lsmod,
+    [t('raid.page.diagnostic_section.dmesg')]: d.dmesg,
+    [t('raid.page.diagnostic_section.lsscsi')]: d.lsscsi,
+    [t('raid.page.diagnostic_section.which_cli')]: d.whichCli,
+    [t('raid.page.diagnostic_section.direct_paths')]: d.directPaths,
   }
 })
 
@@ -868,7 +869,13 @@ const diagnosticSections = computed(() => {
 const ctrlModeLabel = computed(() => {
   const m = diagnosticCtrl.value?.controllerMode?.mode
   if (!m) return null
-  return { raid: 'Mode RAID', hba: 'Mode HBA / IT', mixed: 'Mode Mixte RAID+HBA', unknown: 'Mode inconnu' }[m] ?? m
+  const modeKey: Record<string, string> = {
+    raid: 'raid.page.ctrl_mode.raid',
+    hba: 'raid.page.ctrl_mode.hba',
+    mixed: 'raid.page.ctrl_mode.mixed',
+    unknown: 'raid.page.ctrl_mode.unknown',
+  }
+  return t(modeKey[m] ?? modeKey.unknown)
 })
 
 const ctrlModeColor = computed(() => {
@@ -880,8 +887,12 @@ const ctrlModeColor = computed(() => {
 const ctrlConfidenceLabel = computed(() => {
   const c = diagnosticCtrl.value?.controllerMode?.confidence
   if (!c) return null
-  return { high: 'confiance haute', medium: 'confiance moyenne', low: 'confiance faible' }[c] ?? c
+  return t(`raid.page.ctrl_confidence.${c}`)
 })
+
+function raidErr(err: unknown): string {
+  return translateRaidI18n(extractFetchError(err), t)
+}
 
 // Stopped MD inspect / assemble / zero
 const stoppedInspectOpen = ref(false)
@@ -977,7 +988,7 @@ async function handleZeroStoppedMd(arr: StoppedMdArray) {
         toast.warning(t('raid.stopped_md.toast_preflight_blocked'), preflight.blockers[0])
       }
     } catch (err: unknown) {
-      toast.error(t('raid.stopped_md.toast_action_failed'), extractFetchError(err))
+      toast.error(t('raid.stopped_md.toast_action_failed'), raidErr(err))
       return
     }
 
@@ -1035,7 +1046,7 @@ async function handleZeroStoppedMd(arr: StoppedMdArray) {
         } else if (result.warnings.length) {
           toast.warning(t('raid.stopped_md.toast_zero_partial'), result.warnings.join(' · '))
         } else {
-          toast.warning(t('raid.stopped_md.toast_action_failed'), extractFetchError({ message: 'Vérification incomplète' }))
+          toast.warning(t('raid.stopped_md.toast_action_failed'), t('raid.stopped_md.verification_incomplete'))
         }
         return
       }
@@ -1046,14 +1057,14 @@ async function handleZeroStoppedMd(arr: StoppedMdArray) {
       const errorResults = getZeroCleanupErrorResults(err)
       if (errorResults.length && errorResults.some(r => r.diagnostics?.recommendedAction === 'advanced_wipe_signatures' || isRaidCleanupFailureResult(r))) {
         applyFailedBasicCleanupResults(errorResults)
-        toast.warning(t('raid.stopped_md.toast_advanced_cleanup_available'), extractFetchError(err))
+        toast.warning(t('raid.stopped_md.toast_advanced_cleanup_available'), raidErr(err))
         if (errorResults.some(r => r.diagnostics?.recommendedAction === 'advanced_wipe_signatures')) {
           await showZeroCleanupDiagnosticsModal(errorResults)
         }
         await raid.fetchOverview(true)
         return
       }
-      toast.error(t('raid.stopped_md.toast_action_failed'), extractFetchError(err))
+      toast.error(t('raid.stopped_md.toast_action_failed'), raidErr(err))
     }
   } finally {
     stoppedMdActionKey.value = null
@@ -1131,7 +1142,7 @@ async function handleWipeMdSignatures(diagnosticsResults: ZeroMdSuperblockPartit
       return
     }
   } catch (err: unknown) {
-    toast.error(t('raid.stopped_md.toast_action_failed'), extractFetchError(err))
+    toast.error(t('raid.stopped_md.toast_action_failed'), raidErr(err))
     return
   }
 
@@ -1195,14 +1206,14 @@ async function handleWipeMdSignatures(diagnosticsResults: ZeroMdSuperblockPartit
     const errorResults = getZeroCleanupErrorResults(err)
     if (errorResults.length && errorResults.some(r => r.diagnostics?.recommendedAction === 'advanced_wipe_signatures' || isRaidCleanupFailureResult(r))) {
       applyFailedBasicCleanupResults(errorResults)
-      toast.warning(t('raid.stopped_md.toast_advanced_cleanup_available'), extractFetchError(err))
+      toast.warning(t('raid.stopped_md.toast_advanced_cleanup_available'), raidErr(err))
       if (errorResults.some(r => r.diagnostics?.recommendedAction === 'advanced_wipe_signatures')) {
         await showZeroCleanupDiagnosticsModal(errorResults)
       }
       await raid.fetchOverview(true)
       return
     }
-    toast.error(t('raid.stopped_md.toast_action_failed'), extractFetchError(err))
+    toast.error(t('raid.stopped_md.toast_action_failed'), raidErr(err))
   }
 }
 
@@ -1213,7 +1224,7 @@ function handleInspectStoppedMd(arr: StoppedMdArray) {
     .filter((raw): raw is string => Boolean(raw))
   stoppedInspectText.value = chunks.length
     ? chunks.join('\n\n---\n\n')
-    : arr.members.map(m => `${m.path}:\n(aucune métadonnée examine en cache)`).join('\n\n')
+    : arr.members.map(m => t('raid.stopped_md.inspect_member_no_examine', { path: m.path })).join('\n\n')
   stoppedInspectOpen.value = true
 }
 
@@ -1246,7 +1257,7 @@ async function handleAssembleStoppedMd(arr: StoppedMdArray) {
         toast.warning(t('raid.stopped_md.toast_preflight_blocked'), preflight.blockers[0])
       }
     } catch (err: unknown) {
-      toast.error(t('raid.stopped_md.toast_action_failed'), extractFetchError(err))
+      toast.error(t('raid.stopped_md.toast_action_failed'), raidErr(err))
       return
     }
 
@@ -1295,7 +1306,7 @@ async function handleAssembleStoppedMd(arr: StoppedMdArray) {
       await scrollToHighlightedArray(path)
     } catch (err: unknown) {
       if (isModalDismiss(err)) return
-      toast.error(t('raid.stopped_md.toast_action_failed'), extractFetchError(err))
+      toast.error(t('raid.stopped_md.toast_action_failed'), raidErr(err))
     }
   } finally {
     stoppedMdActionKey.value = null
@@ -1314,7 +1325,7 @@ async function handleStopMd(arr: MdArray) {
       return
     }
   } catch (err: unknown) {
-    toast.error(t('raid.stopped_md.toast_action_failed'), extractFetchError(err))
+    toast.error(t('raid.stopped_md.toast_action_failed'), raidErr(err))
     return
   }
 
@@ -1364,8 +1375,8 @@ async function handleDeleteHwLd(ctrl: HardwareRaidController, ld: HardwareRaidLo
     const confirmation = await openModal({
       component: Modal,
       props: {
-        title: 'Supprimer le volume logique matériel',
-        description: `Suppression du volume ${ld.id}. TOUTES LES DONNÉES SERONT EFFACÉES.`,
+        title: t('raid.page.delete_hw_ld_title'),
+        description: t('raid.page.delete_hw_ld_description', { id: ld.id }),
         riskLevel: 'destructive',
         confirmationPhrase: phrase || undefined,
         preflight,

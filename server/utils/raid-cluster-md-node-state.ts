@@ -11,6 +11,7 @@ import {
   getActiveUuidConflict as getActiveUuidConflictShared,
   mdArrayToActiveSnapshot,
   resolveClusterMdStorageMode,
+  translateSymmetryIssue,
   type ClusterMdStorageMode,
 } from '../../utils/cluster-md-symmetry'
 import type {
@@ -304,7 +305,7 @@ export function buildStopRecoveryAssessment(
     const forArray = symmetry.find(s => s.arrayName === arrayName)
     if (forArray) {
       structurallySymmetric = forArray.structurallySymmetric
-      for (const issue of forArray.structuralIssues) warnings.push(issue.message)
+      for (const issue of forArray.structuralIssues) warnings.push(translateSymmetryIssue(issue))
     }
   }
 

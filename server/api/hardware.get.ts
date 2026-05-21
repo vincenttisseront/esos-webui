@@ -12,7 +12,11 @@ export default defineEventHandler(async (event) => {
   const run = async () => {
     const manager = getActiveSSHManager()
     if (!manager?.isReady()) {
-      throw createError({ statusCode: 503, statusMessage: 'SSH not connected' })
+      throw createError({
+        statusCode: 503,
+        statusMessage: 'SSH not connected',
+        data: { code: 'ssh.not_connected' },
+      })
     }
     return readHardwareOverview()
   }

@@ -1,28 +1,23 @@
 <template>
   <div class="space-y-5">
     <div>
-      <h3 class="font-semibold text-gray-800">Configuration des services cluster</h3>
-      <p class="text-sm text-gray-500 mt-1">
-        Suivez les étapes dans l'ordre sur chaque nœud. Corosync doit être démarré avant Pacemaker.
-      </p>
+      <h3 class="font-semibold text-gray-800">{{ t('cluster.services_setup.title') }}</h3>
+      <p class="text-sm text-gray-500 mt-1">{{ t('cluster.services_setup.intro') }}</p>
     </div>
 
-    <!-- Avertissement SCST -->
     <UAlert
       color="amber"
       variant="soft"
       icon="i-heroicons-exclamation-triangle"
-      title="SCST doit être désactivé dans rc.conf"
-      description="En mode cluster, c'est Pacemaker (ocf:esos:scst) qui démarre SCST. rc.scst_enable doit être à NO."
+      :title="t('cluster.services_setup.scst_alert_title')"
+      :description="t('cluster.services_setup.scst_alert_desc')"
     />
 
-    <!-- Un panneau par nœud -->
     <div
       v-for="node in props.nodes"
       :key="node.id"
       class="rounded-lg border border-gray-200 overflow-hidden"
     >
-      <!-- En-tête nœud -->
       <div class="px-4 py-2.5 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
         <p class="text-sm font-medium text-gray-700">
           {{ node.label }}
@@ -33,14 +28,13 @@
             v-if="nodeReady(node.id)"
             class="flex items-center gap-1 text-xs text-green-600 font-medium"
           >
-            <UIcon name="i-heroicons-check-circle" class="w-4 h-4" /> Prêt
+            <UIcon name="i-heroicons-check-circle" class="w-4 h-4" /> {{ t('cluster.services_setup.ready') }}
           </span>
-          <span v-else class="text-xs text-gray-400">En attente…</span>
+          <span v-else class="text-xs text-gray-400">{{ t('cluster.services_setup.waiting') }}</span>
         </div>
       </div>
 
       <div class="p-4 space-y-3">
-        <!-- Étapes ordonnées -->
         <div class="space-y-2">
           <div
             v-for="(step, idx) in getSteps(node.id)"
@@ -52,7 +46,6 @@
                             'bg-gray-50 border border-gray-200 opacity-50'
             ]"
           >
-            <!-- Numéro / check -->
             <div
               class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
               :class="[
@@ -65,7 +58,6 @@
               <span v-else>{{ idx + 1 }}</span>
             </div>
 
-            <!-- Libellé -->
             <div class="flex-1 min-w-0">
               <p class="text-sm font-medium" :class="step.done ? 'text-green-700' : step.active ? 'text-blue-800' : 'text-gray-400'">
                 {{ step.label }}
@@ -73,13 +65,12 @@
               <p v-if="!step.done && step.hint" class="text-xs text-gray-400 mt-0.5">{{ step.hint }}</p>
             </div>
 
-            <!-- Bouton action / état vérification -->
             <span
               v-if="verifying[`${node.id}:${step.key}`]"
               class="flex items-center gap-1 text-xs text-blue-600 font-medium shrink-0"
             >
               <UIcon name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
-              Vérification…
+              {{ t('cluster.services_setup.verifying') }}
             </span>
             <UButton
               v-else-if="!step.done"
@@ -99,7 +90,6 @@
           </div>
         </div>
 
-        <!-- Sortie terminal -->
         <div
           v-if="lastOutput[node.id] && !nodeReady(node.id)"
           class="rounded bg-gray-900 text-green-400 text-xs p-2.5 font-mono max-h-24 overflow-y-auto whitespace-pre-wrap"
@@ -107,17 +97,16 @@
       </div>
     </div>
 
-    <!-- Actions globales -->
     <div class="flex items-center gap-2">
       <UButton
         v-if="allReady"
-        label="Services prêts — Continuer"
+        :label="t('cluster.services_setup.continue')"
         icon="i-heroicons-arrow-right"
         trailing
         @click="emit('services-ready')"
       />
       <UButton
-        label="Rafraîchir le statut"
+        :label="t('cluster.services_setup.refresh_status')"
         icon="i-heroicons-arrow-path"
         color="gray"
         variant="ghost"
@@ -126,26 +115,22 @@
       />
     </div>
 
-    <!-- Bloc DRBD / Pacemaker (§9) -->
     <UDivider class="my-1" />
     <div class="rounded-lg bg-blue-50 border border-blue-200 px-4 py-3 space-y-3">
       <div class="flex items-start gap-2">
         <UIcon name="i-heroicons-information-circle" class="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
         <div>
-          <p class="text-sm font-semibold text-blue-800">DRBD et Pacemaker</p>
+          <p class="text-sm font-semibold text-blue-800">{{ t('cluster.services_setup.drbd_title') }}</p>
           <p class="text-xs text-blue-600 mt-0.5">
-            Quand Pacemaker gère DRBD (via le RA <code class="bg-blue-100 px-1 rounded">ocf:linbit:drbd</code>),
-            le service autonome <code class="bg-blue-100 px-1 rounded">rc.drbd</code> doit rester
-            <strong>désactivé</strong> (<code class="bg-blue-100 px-1 rounded">rc.drbd_enable=NO</code>).
-            Pacemaker démarre et arrête DRBD lui-même.
+            {{ t('cluster.services_setup.drbd_body') }}
           </p>
         </div>
       </div>
 
       <div class="flex items-center justify-between text-sm">
         <div>
-          <p class="text-blue-800 font-medium">Mode standalone DRBD</p>
-          <p class="text-xs text-blue-500 mt-0.5">Active <code class="bg-blue-100 px-1 rounded">rc.drbd_enable=YES</code> sur tous les nœuds</p>
+          <p class="text-blue-800 font-medium">{{ t('cluster.services_setup.drbd_standalone_title') }}</p>
+          <p class="text-xs text-blue-500 mt-0.5">{{ t('cluster.services_setup.drbd_standalone_hint') }}</p>
         </div>
         <USwitch
           v-model="drbdStandalone"
@@ -160,8 +145,8 @@
         color="amber"
         variant="soft"
         icon="i-heroicons-exclamation-triangle"
-        title="Mode standalone activé"
-        description="rc.drbd_enable=YES désactive la gestion Pacemaker de DRBD. À utiliser uniquement pour des tests ou une configuration sans cluster."
+        :title="t('cluster.services_setup.drbd_standalone_alert_title')"
+        :description="t('cluster.services_setup.drbd_standalone_alert_desc')"
         size="sm"
       />
     </div>
@@ -191,6 +176,7 @@ interface NodeStatus {
 
 const props = defineProps<{ nodes: NodeInfo[] }>()
 const emit  = defineEmits<{ (e: 'services-ready'): void }>()
+const { t } = useEsosI18n()
 
 const pending       = ref<Record<string, boolean>>({})
 const verifying     = ref<Record<string, boolean>>({})
@@ -205,22 +191,18 @@ function nodeReady(nodeId: string): boolean {
   return !!(s?.corosyncRunning && s?.pacemakerRunning)
 }
 
-/**
- * Les 4 étapes ordonnées pour un nœud.
- * Chaque étape n'est active que si la précédente est terminée.
- */
 function getSteps(nodeId: string): Step[] {
   const s = nodeStatus.value[nodeId] ?? {
     corosyncEnabled: false, corosyncRunning: false,
     pacemakerEnabled: false, pacemakerRunning: false,
   }
 
-  const steps: Step[] = [
+  return [
     {
       key:     'corosync:enable',
-      label:   'Activer Corosync au démarrage',
-      action:  'Activer',
-      hint:    'rc.corosync_enable="YES" dans rc.conf',
+      label:   t('cluster.services_setup.steps.corosync_enable'),
+      action:  t('cluster.services_setup.actions.enable'),
+      hint:    t('cluster.services_setup.steps.corosync_enable_hint'),
       done:    s.corosyncEnabled,
       active:  !s.corosyncEnabled,
       service: 'corosync',
@@ -228,9 +210,9 @@ function getSteps(nodeId: string): Step[] {
     },
     {
       key:     'corosync:start',
-      label:   'Démarrer Corosync',
-      action:  'Démarrer',
-      hint:    'Doit être activé (étape 1) d\'abord',
+      label:   t('cluster.services_setup.steps.corosync_start'),
+      action:  t('cluster.services_setup.actions.start'),
+      hint:    t('cluster.services_setup.steps.corosync_start_hint'),
       done:    s.corosyncRunning,
       active:  s.corosyncEnabled && !s.corosyncRunning,
       service: 'corosync',
@@ -238,9 +220,9 @@ function getSteps(nodeId: string): Step[] {
     },
     {
       key:     'pacemaker:enable',
-      label:   'Activer Pacemaker au démarrage',
-      action:  'Activer',
-      hint:    'Corosync doit tourner (étape 2) d\'abord',
+      label:   t('cluster.services_setup.steps.pacemaker_enable'),
+      action:  t('cluster.services_setup.actions.enable'),
+      hint:    t('cluster.services_setup.steps.pacemaker_enable_hint'),
       done:    s.pacemakerEnabled,
       active:  s.corosyncRunning && !s.pacemakerEnabled,
       service: 'pacemaker',
@@ -248,17 +230,15 @@ function getSteps(nodeId: string): Step[] {
     },
     {
       key:     'pacemaker:start',
-      label:   'Démarrer Pacemaker',
-      action:  'Démarrer',
-      hint:    'Doit être activé (étape 3) d\'abord',
+      label:   t('cluster.services_setup.steps.pacemaker_start'),
+      action:  t('cluster.services_setup.actions.start'),
+      hint:    t('cluster.services_setup.steps.pacemaker_start_hint'),
       done:    s.pacemakerRunning,
       active:  s.pacemakerEnabled && !s.pacemakerRunning,
       service: 'pacemaker',
       act:     'start',
     },
   ]
-
-  return steps
 }
 
 async function runStep(nodeId: string, step: Step) {
@@ -271,31 +251,26 @@ async function runStep(nodeId: string, step: Step) {
       method: 'POST',
       body:   { nodeId, service: step.service, action: step.act },
     })
-    lastOutput.value[nodeId] = res.output.trim().slice(0, 400) || '(succès)'
+    lastOutput.value[nodeId] = res.output.trim().slice(0, 400) || t('cluster.services_setup.success_output')
 
-    // Vérification effective : polling jusqu'à ce que l'état corresponde (max 15s)
     pending.value[key]   = false
     verifying.value[key] = true
     const confirmed = await pollUntilDone(nodeId, step)
     if (confirmed) {
-      // Étape confirmée — on vide l'output pour ne pas polluer l'étape suivante
       lastOutput.value[nodeId] = ''
     } else {
-      lastOutput.value[nodeId] += '\n⚠️ Délai dépassé — la tâche n\'a pas pu être confirmée. Vérifiez manuellement.'
+      lastOutput.value[nodeId] += `\n${t('cluster.services_setup.poll_timeout')}`
     }
   } catch (err: any) {
-    lastOutput.value[nodeId] = `Erreur : ${err?.data?.message ?? String(err)}`
+    lastOutput.value[nodeId] = t('cluster.services_setup.error_prefix', {
+      message: err?.data?.message ?? String(err),
+    })
   } finally {
     pending.value[key]   = false
     verifying.value[key] = false
   }
 }
 
-/**
- * Interroge /api/cluster/status toutes les 2s jusqu'à 15s pour vérifier
- * que l'action est bien reflétée dans l'état réel du nœud.
- * Retourne true si confirmé, false si timeout.
- */
 async function pollUntilDone(nodeId: string, step: Step): Promise<boolean> {
   const deadline = Date.now() + 15_000
   while (Date.now() < deadline) {
@@ -335,8 +310,6 @@ async function refreshStatus() {
 
 onMounted(refreshStatus)
 
-// ─── Toggle DRBD standalone ───────────────────────────────────────────────────
-
 const drbdStandalone = ref(false)
 const togglingDRBD   = ref(false)
 
@@ -352,15 +325,14 @@ async function toggleDRBD(value: boolean) {
         body:   { nodeId: node.id, service: 'drbd', action },
       })
     } catch (err: any) {
-      errors.push(`${node.label}: ${err?.data?.message ?? 'Erreur'}`)
+      errors.push(`${node.label}: ${err?.data?.message ?? t('cluster.toasts.unknown_error')}`)
     }
   }))
 
   if (errors.length > 0) {
-    useAppToast().error('Erreur toggle DRBD', errors.join(' | '))
-    drbdStandalone.value = !value  // revert
+    useAppToast().error(t('cluster.toasts.drbd_toggle_error'), errors.join(' | '))
+    drbdStandalone.value = !value
   }
   togglingDRBD.value = false
 }
 </script>
-

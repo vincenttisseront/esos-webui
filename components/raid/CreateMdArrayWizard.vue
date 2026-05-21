@@ -5,7 +5,7 @@
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
           <UIcon name="i-heroicons-server-stack" class="w-5 h-5 text-blue-500" />
-          <h3 class="font-semibold text-gray-900">Étape {{ step + 1 }}/{{ steps.length }} — {{ t('raid.create_md.title') }}</h3>
+          <h3 class="font-semibold text-gray-900">{{ t('raid.wizard.step_header', { current: step + 1, total: steps.length, title: t('raid.create_md.title') }) }}</h3>
         </div>
       </div>
       <!-- Stepper -->
@@ -62,7 +62,7 @@
           {{ t('raid.create_md.no_eligible_members') }}
         </p>
         <p v-else class="text-xs text-gray-500">
-          Sélectionnées : {{ form.devices.length }}
+          {{ t('raid.wizard.selected_partitions', { count: form.devices.length }) }}
         </p>
       </div>
 
@@ -127,16 +127,16 @@
       <div v-else-if="step === 2" class="space-y-3">
         <div v-if="preflightLoading" class="text-sm text-gray-500 flex items-center gap-2 py-4">
           <UIcon name="i-heroicons-arrow-path" class="animate-spin w-4 h-4" />
-          Analyse en cours…
+          {{ t('raid.wizard.preflight_analyzing') }}
         </div>
         <RaidPreflightPanel v-else-if="preflightResult" :preflight="preflightResult" :on-navigate-detection="props.onNavigateDetection" />
         <div v-if="preflightResult?.commandPreview" class="space-y-1">
-          <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Commande prévue</p>
+          <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">{{ t('raid.wizard.command_preview') }}</p>
           <pre class="text-xs bg-gray-50 border border-gray-200 rounded p-3 max-h-64 overflow-auto font-mono text-gray-700">{{ preflightResult.commandPreview }}</pre>
         </div>
         <div v-if="clusterPreflightLoading" class="text-sm text-gray-500 flex items-center gap-2 py-2">
           <UIcon name="i-heroicons-arrow-path" class="animate-spin w-4 h-4" />
-          Préflight stockage cluster en cours…
+          {{ t('raid.wizard.cluster_preflight_loading') }}
         </div>
         <ClusterStoragePreflightPanel v-else-if="clusterPreflightResult" :preflight="clusterPreflightResult" :on-navigate-detection="props.onNavigateDetection" />
         <CreateMdPeerCleanupPanel
@@ -240,22 +240,22 @@
         </div>
         <UAlert
           v-if="clusterPreflightError"
-          title="Préflight stockage cluster échoué"
+          :title="t('raid.wizard.cluster_preflight_failed')"
           :description="clusterPreflightError"
           color="red"
           icon="i-heroicons-x-circle"
         />
         <UAlert
           v-else-if="clusterPreflightState === 'unavailable'"
-          title="Préflight stockage cluster indisponible"
-          description="Le préflight local est validé, mais le préflight cluster n'a pas retourné de résultat. La suite reste bloquée pour éviter une écriture sur un seul nœud."
+          :title="t('raid.wizard.cluster_preflight_unavailable_title')"
+          :description="t('raid.wizard.cluster_preflight_unavailable_description')"
           color="amber"
           icon="i-heroicons-exclamation-triangle"
         />
         <UAlert
           v-if="preflightResult && !preflightResult.ok"
-          title="Opération bloquée"
-          description="Corrigez les erreurs ci-dessus avant de continuer."
+          :title="t('raid.wizard.operation_blocked_title')"
+          :description="t('raid.wizard.operation_blocked_description')"
           color="red"
           icon="i-heroicons-x-circle"
         />
@@ -265,7 +265,7 @@
       <div v-else-if="step === 3" class="space-y-4">
         <RaidPreflightPanel v-if="preflightResult" :preflight="preflightResult" :on-navigate-detection="props.onNavigateDetection" />
         <div v-if="preflightResult?.commandPreview" class="space-y-1">
-          <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Commande prévue</p>
+          <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">{{ t('raid.wizard.command_preview') }}</p>
           <pre class="text-xs bg-gray-50 border border-gray-200 rounded p-3 max-h-64 overflow-auto font-mono text-gray-700">{{ preflightResult.commandPreview }}</pre>
         </div>
         <ClusterStoragePreflightPanel v-if="clusterPreflightResult" :preflight="clusterPreflightResult" :on-navigate-detection="props.onNavigateDetection" />
@@ -311,7 +311,7 @@
         <div v-if="executionNodeResults.length" class="space-y-2">
           <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">{{ t('raid.create_md.cluster_execution.status_title') }}</p>
           <p v-if="executionStartedAt" class="text-xs text-gray-500">
-            Tentative #{{ executionAttemptId }} démarrée à {{ formatAttemptStarted(executionStartedAt) }}
+            {{ t('raid.wizard.attempt_started', { id: executionAttemptId, time: formatAttemptStarted(executionStartedAt) }) }}
           </p>
           <div
             v-for="node in executionNodeResults"
@@ -341,7 +341,7 @@
 
         <div v-if="preflightResult?.requiredConfirmation" class="space-y-2">
           <p class="text-sm text-gray-600">
-            Saisissez exactement
+            {{ t('raid.wizard.confirm_phrase_intro') }}
             <code class="text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded font-mono text-xs">
               {{ preflightResult.requiredConfirmation }}
             </code>
@@ -352,7 +352,7 @@
 
         <label class="flex items-start gap-3 cursor-pointer">
           <input type="checkbox" v-model="understood" class="mt-0.5 accent-red-500" />
-          <span class="text-sm text-gray-600">Je comprends que cette opération modifie la configuration de stockage.</span>
+          <span class="text-sm text-gray-600">{{ t('raid.wizard.understood_storage_change') }}</span>
         </label>
 
         <p v-if="submitError && !executionNodeResults.length" class="text-sm text-red-600">{{ submitError }}</p>
@@ -410,7 +410,7 @@
         :disabled="busy"
         @click="handleBackOrCancel"
       >
-        {{ step === 0 ? 'Annuler' : step === 4 ? t('raid.create_md.close') : 'Retour' }}
+        {{ step === 0 ? t('raid.wizard.cancel') : step === 4 ? t('raid.create_md.close') : t('raid.wizard.back') }}
       </UButton>
       <UButton
         v-if="step === 4"
@@ -426,7 +426,7 @@
         :disabled="!canNext || busy"
         @click="handleNext"
       >
-        Suivant
+        {{ t('raid.wizard.next') }}
       </UButton>
       <UButton
         v-else-if="step === 3"
@@ -462,7 +462,13 @@ const emit = defineEmits<{
 const raid = useRaidStore()
 const { t } = useEsosI18n()
 
-const steps = ['Partitions', 'Nom & RAID', 'Pré-vérification', 'Confirmation', 'Terminé']
+const steps = computed(() => [
+  t('raid.wizard.steps.create_partitions'),
+  t('raid.wizard.steps.create_name_raid'),
+  t('raid.wizard.steps.create_preflight'),
+  t('raid.wizard.steps.create_confirm'),
+  t('raid.wizard.steps.create_done'),
+])
 const step = ref(0)
 const busy = ref(false)
 const understood = ref(false)
@@ -556,9 +562,9 @@ const duplicateMappingKeys = computed(() => {
 const canRerunClusterPreflightWithMappings = computed(() =>
   manualMappingComplete.value && duplicateMappingKeys.value.size === 0 && !clusterPreflightLoading.value,
 )
-const mdEmptyMembersMessage = 'Commande MD invalide : aucune partition membre transmise.'
+const mdEmptyMembersMessage = computed(() => t('raid.wizard.md_empty_members'))
 const mdadmInteractiveConfirmPrompt = 'Continue creating array?'
-const mdadmInteractiveConfirmMessage = 'mdadm is waiting for interactive confirmation; non-interactive mode is required.'
+const mdadmInteractiveConfirmMessage = computed(() => t('raid.wizard.mdadm_interactive_confirm'))
 const executionPlanRows = computed(() => executionPlan.value?.nodeResults ?? [])
 const peerSuperblockCleanupGroups = computed(() =>
   clusterPreflightResult.value && props.sourceSanId
@@ -714,7 +720,7 @@ async function runPreflight() {
       await requestExecutionPlan(payload, [])
     }
   } catch (err: any) {
-    if (preflightResult.value) clusterPreflightError.value = err?.data?.statusMessage ?? err.message ?? 'Préflight stockage cluster indisponible'
+    if (preflightResult.value) clusterPreflightError.value = err?.data?.statusMessage ?? err.message ?? t('raid.wizard.cluster_preflight_unavailable_title')
     else preflightResult.value = null
   } finally {
     preflightLoading.value = false
@@ -760,7 +766,7 @@ async function runClusterPreflight(payload: Record<string, unknown>, diskMapping
       await requestExecutionPlan(payload, diskMappings)
     }
   } catch (err: any) {
-    clusterPreflightError.value = err?.data?.statusMessage ?? err.message ?? 'Préflight stockage cluster indisponible'
+    clusterPreflightError.value = err?.data?.statusMessage ?? err.message ?? t('raid.wizard.cluster_preflight_unavailable_title')
     executionPlan.value = null
   } finally {
     clusterPreflightLoading.value = false
@@ -789,7 +795,7 @@ async function requestExecutionPlan(payload: Record<string, unknown>, diskMappin
     activeExecutionPlanSignature.value = executionPlanSignature(executionPlan.value)
     resetExecutionState()
   } catch (err: any) {
-    executionPlanError.value = err?.data?.statusMessage ?? err.message ?? mdEmptyMembersMessage
+    executionPlanError.value = err?.data?.statusMessage ?? err.message ?? mdEmptyMembersMessage.value
   }
 }
 
@@ -843,7 +849,7 @@ async function submit() {
     const errorData = err?.data?.data ?? err?.data ?? {}
     const nodeErrorMessage = typeof errorData.statusMessage === 'string'
       ? errorData.statusMessage
-      : (err?.data?.statusMessage ?? err.message ?? 'Erreur lors de la création')
+      : (err?.data?.statusMessage ?? err.message ?? t('raid.wizard.create_error'))
     submitError.value = nodeErrorMessage
     const failedExecution = err?.data?.data?.clusterExecution ?? err?.data?.clusterExecution
     if (failedExecution?.nodeResults && nodeResultsSignature(failedExecution.nodeResults) === attemptPlanSignature) {

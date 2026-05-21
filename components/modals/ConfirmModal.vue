@@ -14,13 +14,13 @@
         color="gray"
         variant="outline"
         size="sm"
-        :label="cancelLabel ?? 'Annuler'"
+        :label="cancelText"
         @click="$emit('cancel')"
       />
       <UButton
         :color="intent === 'danger' ? 'red' : 'primary'"
         size="sm"
-        :label="confirmLabel ?? 'Confirmer'"
+        :label="confirmText"
         @click="$emit('confirm')"
       />
     </template>
@@ -28,12 +28,18 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+const { t } = useEsosI18n()
+
+const props = defineProps<{
   title:         string
   message:       string
   confirmLabel?: string
   cancelLabel?:  string
   intent?:       'neutral' | 'danger'
 }>()
+
+const cancelText = computed(() => props.cancelLabel ?? (t('common.actions.cancel') as string))
+const confirmText = computed(() => props.confirmLabel ?? (t('common.actions.confirm') as string))
+
 defineEmits(['confirm', 'cancel'])
 </script>

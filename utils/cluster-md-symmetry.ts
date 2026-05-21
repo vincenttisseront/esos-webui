@@ -3,7 +3,8 @@
  * local_symmetric: independent mdadm --create per node (UUIDs may differ).
  * shared_identity: same MD identity on all nodes (UUIDs must match).
  */
-import type { ClusterMdUuidConflict } from '~/types/raid'
+import type { ClusterMdUuidConflict, RaidI18nMessage } from '~/types/raid'
+import { translateRaidI18n, type RaidTranslateFn } from '~/utils/raid-i18n'
 
 export type ClusterMdStorageMode = 'local_symmetric' | 'shared_identity'
 
@@ -49,7 +50,46 @@ export interface LocalSymmetricStructuralIssue {
   arrayName: string
   kind: LocalSymmetricIssueKind
   severity: 'warning' | 'critical'
-  message: string
+  code: string
+  params?: Record<string, string | number>
+}
+
+export function symmetryIssueDedupKey(issue: LocalSymmetricStructuralIssue): string {
+  return `${issue.code}::${JSON.stringify(issue.params ?? {})}`
+}
+
+function symmetryIssueEnglishFallback(issue: Pick<LocalSymmetricStructuralIssue, 'code' | 'params'>): string {
+  const p = issue.params ?? {}
+  switch (issue.code) {
+    case 'raid.symmetry.missing_on_peer':
+      return `${p.arrayName}: active on this node, absent or inactive on ${p.peerLabel}`
+    case 'raid.symmetry.raid_level':
+      return `${p.arrayName}: different RAID level (${p.localLevel} vs ${p.peerLevel} on ${p.peerLabel})`
+    case 'raid.symmetry.raid_devices':
+      return `${p.arrayName}: different RAID device count (${p.localCount} vs ${p.peerCount} on ${p.peerLabel})`
+    case 'raid.symmetry.active_devices':
+      return `${p.arrayName}: different active devices (${p.localActive}/${p.localTotal} vs ${p.peerActive}/${p.peerTotal} on ${p.peerLabel})`
+    case 'raid.symmetry.member_count':
+      return `${p.arrayName}: different member count (${p.localCount} vs ${p.peerCount} on ${p.peerLabel})`
+    case 'raid.symmetry.state':
+      return `${p.arrayName}: different state (${p.localState} vs ${p.peerState} on ${p.peerLabel})`
+    case 'raid.symmetry.size':
+      return `${p.arrayName}: different size across nodes on ${p.peerLabel}`
+    case 'raid.symmetry.failed_devices':
+      return `${p.arrayName}: different failed devices (${p.localFailed} vs ${p.peerFailed} on ${p.peerLabel})`
+    case 'raid.symmetry.uuid_mismatch_shared_identity':
+      return `Different MD UUIDs on active nodes for ${p.arrayName}: ${p.uuids} — not the same array`
+    default:
+      return issue.code
+  }
+}
+
+export function translateSymmetryIssue(
+  issue: Pick<LocalSymmetricStructuralIssue, 'code' | 'params'>,
+  t?: RaidTranslateFn,
+): string {
+  if (t) return translateRaidI18n({ code: issue.code, params: issue.params }, t)
+  return symmetryIssueEnglishFallback(issue)
 }
 
 export interface ArraySymmetryResult {
@@ -191,7 +231,13 @@ function compareSnapshotsForArray(
         arrayName,
         kind: 'raid_level',
         severity: 'warning',
-        message: `${arrayName} : niveau RAID différent (${reference.raidLevel} vs ${s.raidLevel} sur ${node.label})`,
+        code: 'raid.symmetry.raid_level',
+        params: {
+          arrayName,
+          localLevel: reference.raidLevel,
+          peerLevel: s.raidLevel,
+          peerLabel: node.label,
+        },
       })
     }
     if (reference.raidDevices != null && s.raidDevices != null && reference.raidDevices !== s.raidDevices) {
@@ -199,7 +245,13 @@ function compareSnapshotsForArray(
         arrayName,
         kind: 'raid_devices',
         severity: 'warning',
-        message: `${arrayName} : nombre de disques RAID différent (${reference.raidDevices} vs ${s.raidDevices} sur ${node.label})`,
+        code: 'raid.symmetry.raid_devices',
+        params: {
+          arrayName,
+          localCount: reference.raidDevices,
+          peerCount: s.raidDevices,
+          peerLabel: node.label,
+        },
       })
     }
     if (reference.activeDevices != null && s.activeDevices != null && reference.activeDevices !== s.activeDevices) {
@@ -207,7 +259,15 @@ function compareSnapshotsForArray(
         arrayName,
         kind: 'active_devices',
         severity: 'warning',
-        message: `${arrayName} : disques actifs différents (${reference.activeDevices}/${reference.raidDevices} vs ${s.activeDevices}/${s.raidDevices} sur ${node.label})`,
+        code: 'raid.symmetry.active_devices',
+        params: {
+          arrayName,
+          localActive: reference.activeDevices,
+          localTotal: reference.raidDevices ?? reference.activeDevices,
+          peerActive: s.activeDevices,
+          peerTotal: s.raidDevices ?? s.activeDevices,
+          peerLabel: node.label,
+        },
       })
     }
     if (reference.memberCount != null && s.memberCount != null && reference.memberCount !== s.memberCount) {
@@ -215,7 +275,13 @@ function compareSnapshotsForArray(
         arrayName,
         kind: 'member_count',
         severity: 'warning',
-        message: `${arrayName} : nombre de membres différent (${reference.memberCount} vs ${s.memberCount} sur ${node.label})`,
+        code: 'raid.symmetry.member_count',
+        params: {
+          arrayName,
+          localCount: reference.memberCount,
+          peerCount: s.memberCount,
+          peerLabel: node.label,
+        },
       })
     }
     if (healthBucket(reference.state) !== healthBucket(s.state)) {
@@ -223,7 +289,13 @@ function compareSnapshotsForArray(
         arrayName,
         kind: 'state',
         severity: 'warning',
-        message: `${arrayName} : état différent (${reference.state} vs ${s.state} sur ${node.label})`,
+        code: 'raid.symmetry.state',
+        params: {
+          arrayName,
+          localState: reference.state,
+          peerState: s.state,
+          peerLabel: node.label,
+        },
       })
     }
     if (!sizeWithinTolerance(reference.sizeBytes, s.sizeBytes)) {
@@ -231,7 +303,8 @@ function compareSnapshotsForArray(
         arrayName,
         kind: 'size',
         severity: 'warning',
-        message: `${arrayName} : taille différente entre nœuds sur ${node.label}`,
+        code: 'raid.symmetry.size',
+        params: { arrayName, peerLabel: node.label },
       })
     }
     const refFailed = reference.failedDevices ?? 0
@@ -241,7 +314,13 @@ function compareSnapshotsForArray(
         arrayName,
         kind: 'failed_devices',
         severity: 'warning',
-        message: `${arrayName} : disques en échec différents (${refFailed} vs ${nodeFailed} sur ${node.label})`,
+        code: 'raid.symmetry.failed_devices',
+        params: {
+          arrayName,
+          localFailed: refFailed,
+          peerFailed: nodeFailed,
+          peerLabel: node.label,
+        },
       })
     }
   }
@@ -292,7 +371,8 @@ export function findLocalSymmetricStructuralIssues(input: {
           arrayName,
           kind: 'missing_on_peer',
           severity: 'critical',
-          message: `${arrayName} : actif sur ce nœud, absent ou inactif sur ${peer.nodeLabel}`,
+          code: 'raid.symmetry.missing_on_peer',
+          params: { arrayName, peerLabel: peer.nodeLabel },
         })
       }
     }
@@ -301,7 +381,7 @@ export function findLocalSymmetricStructuralIssues(input: {
       for (const peer of input.peerSnapshots) {
         if (peer.nodeSanId === input.currentSanId) continue
         const peerHas = peer.activeMdArrays?.some(a => a.name === arrayName && isActiveSnapshot(a))
-        if (!peerHas && !structuralIssues.some(i => i.kind === 'missing_on_peer' && i.message.includes(peer.nodeLabel))) {
+        if (!peerHas && !structuralIssues.some(i => i.kind === 'missing_on_peer' && i.params?.peerLabel === peer.nodeLabel)) {
           const peerActiveElsewhere = peer.activeMdArrays?.some(a => isActiveSnapshot(a))
           if (!peerActiveElsewhere || !peer.activeMdArrays?.find(a => a.name === arrayName)) {
             structuralIssues.push({
@@ -323,7 +403,7 @@ export function findLocalSymmetricStructuralIssues(input: {
       ? { arrayName, uniqueUuids: uuidInfo.uniqueUuids, conflict: { arrayName, nodes: uuidInfo.nodes } }
       : undefined
 
-    const deduped = [...new Map(structuralIssues.map(i => [i.message, i])).values()]
+    const deduped = [...new Map(structuralIssues.map(i => [symmetryIssueDedupKey(i), i])).values()]
     results.push({
       arrayName,
       structurallySymmetric: deduped.length === 0,
@@ -391,7 +471,8 @@ export function assessClusterArraySymmetry(input: {
         arrayName: m.arrayName,
         kind: 'raid_level',
         severity: 'warning',
-        message: `UUID MD différents entre nœuds actifs pour ${m.arrayName} : ${m.uniqueUuids.join(', ')} — ce ne sont pas le même tableau`,
+        code: 'raid.symmetry.uuid_mismatch_shared_identity',
+        params: { arrayName: m.arrayName, uuids: m.uniqueUuids.join(', ') },
       }],
       uuidMismatch: m,
     }))
@@ -399,7 +480,12 @@ export function assessClusterArraySymmetry(input: {
   return findLocalSymmetricStructuralIssues(input)
 }
 
-/** True when message is only a cross-node MD UUID mismatch (not structural). */
+/** True when issue is only a cross-node MD UUID mismatch (not structural). */
+export function isMdUuidMismatchIssue(issue: Pick<LocalSymmetricStructuralIssue, 'code'>): boolean {
+  return issue.code === 'raid.symmetry.uuid_mismatch_shared_identity'
+}
+
+/** @deprecated Prefer isMdUuidMismatchIssue on structural issue codes. */
 export function isMdUuidMismatchMessage(message: string): boolean {
   return message.includes('UUID MD différents')
     || message.toLowerCase().includes('different md uuid')

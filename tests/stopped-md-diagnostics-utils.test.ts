@@ -15,7 +15,14 @@ describe('stopped-md diagnostics helpers', () => {
       message: 'HTTP fallback',
       data: { message: 'Métadonnées MD encore détectées', statusMessage: 'MD metadata still present' },
     }
-    expect(extractFetchError(err)).toBe('Métadonnées MD encore détectées')
+    expect(extractFetchError(err)).toEqual({
+      code: 'raid.stopped_md.error_detail',
+      params: { detail: 'Métadonnées MD encore détectées' },
+    })
+  })
+
+  it('extractFetchError returns unknown_error when no detail', () => {
+    expect(extractFetchError({})).toEqual({ code: 'raid.stopped_md.unknown_error' })
   })
 
   it('getZeroCleanupErrorResults reads results from flat error data', () => {
@@ -54,7 +61,10 @@ describe('stopped-md diagnostics helpers', () => {
     expect(results).toHaveLength(1)
     expect(results[0].partition).toBe('/dev/sda1')
     expect(results[0].diagnostics?.recommendedAction).toBe('advanced_wipe_signatures')
-    expect(extractFetchError(err)).toBe('Métadonnées MD encore détectées')
+    expect(extractFetchError(err)).toEqual({
+      code: 'raid.stopped_md.error_detail',
+      params: { detail: 'Métadonnées MD encore détectées' },
+    })
     expect(hasAdvancedWipeAvailable(err)).toBe(true)
   })
 
@@ -82,7 +92,7 @@ describe('stopped-md diagnostics helpers', () => {
     expect(hasAdvancedWipeAvailable({})).toBe(false)
   })
 
-  it('formatDiagnosticsSummary lists detection sources', () => {
+  it('formatDiagnosticsSummary lists detection source codes', () => {
     const d: PartitionMetadataDiagnostics = {
       partition: '/dev/sda1',
       zeroSuperblock: { command: 'z', exitCode: 0, stdout: '', stderr: '', success: true },
@@ -99,9 +109,8 @@ describe('stopped-md diagnostics helpers', () => {
       recommendedAction: 'advanced_wipe_signatures',
     }
     const summary = formatDiagnosticsSummary(d)
-    expect(summary).toContain('/dev/sda1')
-    expect(summary).toContain('wipefs')
-    expect(summary).toContain('linux_raid_member')
+    expect(summary[0]?.code).toBe('raid.stopped_md.diagnostics_summary.still_detected')
+    expect(summary.some(line => line.code === 'raid.stopped_md.diagnostics_summary.wipefs_raid')).toBe(true)
   })
 
   it('formatDiagnosticsSummary notes non-MD signatures when MD removed', () => {
@@ -120,7 +129,9 @@ describe('stopped-md diagnostics helpers', () => {
       detectionSources: { mdadmExamine: false, wipefs: false, blkid: false },
       recommendedAction: 'none',
     }
-    expect(formatDiagnosticsSummary(d)).toContain('non-RAID')
-    expect(formatDiagnosticsSummary(d)).toContain('vfat')
+    expect(formatDiagnosticsSummary(d)).toEqual([{
+      code: 'raid.stopped_md.diagnostics_summary.md_removed_non_md',
+      params: { partition: '/dev/sda1', types: 'vfat' },
+    }])
   })
 })

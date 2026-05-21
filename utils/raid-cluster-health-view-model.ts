@@ -24,6 +24,7 @@ import {
   localSymmetricUuidTechnicalLine,
   mdArrayToActiveSnapshot,
   resolveClusterMdStorageMode,
+  translateSymmetryIssue,
 } from '~/utils/cluster-md-symmetry'
 import type { ClusterAttentionPoint, ClusterAttentionResponse, ClusterHealth } from '~/types/cluster-admin'
 import {
@@ -370,8 +371,9 @@ function buildClusterSymmetryItems(
       && (localArr.state === 'clean' || localArr.state === 'active')
       && localArr.failedDevices === 0
     for (const issue of result.structuralIssues) {
-      const peerLabel = issue.message.match(/sur (.+)$/)?.[1]
-      const peer = clusterPeers.find(p => p.nodeLabel === peerLabel)
+      const peerLabel = typeof issue.params?.peerLabel === 'string' ? issue.params.peerLabel : undefined
+      const peer = peerLabel ? clusterPeers.find(p => p.nodeLabel === peerLabel) : undefined
+      const issueText = translateSymmetryIssue(issue, t)
       items.push({
         id: `cluster_structural:${result.arrayName}:${issue.kind}`,
         severity: issue.severity,
@@ -380,14 +382,14 @@ function buildClusterSymmetryItems(
         impact: localHealthy
           ? t('raid.cockpit.item.cluster_structural_mismatch.impact_local_ok')
           : t('raid.cockpit.item.cluster_structural_mismatch.impact'),
-        recommendation: issue.message,
+        recommendation: issueText,
         primaryActionLabel: peer
           ? t('raid.cockpit.item.cluster_structural_mismatch.action_peer', { label: peer.nodeLabel })
           : t('raid.cockpit.item.cluster_structural_mismatch.action'),
         primaryActionTarget: peer
           ? { type: 'navigate', tab: 'software', sanId: peer.nodeSanId }
           : { type: 'scroll', tab: 'software', anchor: 'raid-software-active', modal: 'cluster_recovery', arrayName: result.arrayName },
-        details: [issue.message],
+        details: [issueText],
       })
     }
   }

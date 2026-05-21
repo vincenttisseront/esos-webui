@@ -1,24 +1,15 @@
 <template>
   <div class="space-y-4">
     <div>
-      <h3 class="font-semibold text-gray-800">Vérification des prérequis</h3>
-      <p class="text-sm text-gray-500 mt-1">
-        Vérifie que les outils cluster (Pacemaker, Corosync, crmsh) sont disponibles sur chaque nœud,
-        et que les horloges sont synchronisées (requis pour <code class="bg-gray-100 px-1 rounded font-mono text-xs">conf_sync.sh</code>).
-      </p>
+      <h3 class="font-semibold text-gray-800">{{ t('cluster.prereq.title') }}</h3>
+      <p class="text-sm text-gray-500 mt-1">{{ t('cluster.prereq.intro') }}</p>
     </div>
 
-    <!-- Avertissement volumes / sessions -->
     <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 flex items-start gap-2">
       <UIcon name="i-heroicons-exclamation-triangle" class="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
       <div class="text-xs text-amber-700 space-y-1">
-        <p class="font-semibold">Impact sur les sessions iSCSI en cours</p>
-        <p>
-          La configuration SCST (<code class="bg-amber-100 px-1 rounded">scst.conf</code>) et les volumes sont
-          <strong>préservés</strong>. Cependant, lors du démarrage de Pacemaker (étape 2), les sessions iSCSI
-          actives seront <strong>interrompues brièvement</strong> le temps que la ressource
-          <code class="bg-amber-100 px-1 rounded">ocf:esos:scst</code> redémarre SCST.
-        </p>
+        <p class="font-semibold">{{ t('cluster.prereq.iscsi_impact_title') }}</p>
+        <p>{{ t('cluster.prereq.iscsi_impact_body') }}</p>
       </div>
     </div>
 
@@ -32,10 +23,9 @@
           {{ node.label }} — <span class="font-mono text-gray-400">{{ node.host }}</span>
         </p>
         <div class="space-y-1.5">
-          <!-- Skeleton pendant le chargement -->
           <div v-if="!nodeChecks[node.id]" class="flex items-center gap-2 text-sm text-gray-400">
             <span class="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-            Vérification en cours…
+            {{ t('cluster.prereq.checking') }}
           </div>
 
           <div
@@ -50,14 +40,13 @@
             />
             <span :class="check.ok ? 'text-gray-700' : 'text-red-600 font-medium'">{{ check.label }}</span>
 
-            <!-- Bouton de correction inline pour SCST -->
             <template v-if="!check.ok && check.label.includes('SCST')">
               <UButton
                 size="2xs"
                 color="amber"
                 variant="soft"
                 :loading="fixing[node.id]"
-                label="Corriger"
+                :label="t('cluster.prereq.fix')"
                 icon="i-heroicons-wrench"
                 class="ml-auto shrink-0"
                 @click="fixScst(node.id)"
@@ -72,7 +61,6 @@
       </div>
     </div>
 
-    <!-- Message après correction SCST -->
     <div
       v-if="fixMessage"
       class="rounded-lg border p-2.5 text-xs flex items-center gap-2"
@@ -88,13 +76,13 @@
     <div class="flex gap-2">
       <UButton
         v-if="allOk"
-        label="Prérequis validés — Continuer"
+        :label="t('cluster.prereq.validated_continue')"
         icon="i-heroicons-arrow-right"
         trailing
         @click="emit('all-ok')"
       />
       <UButton
-        label="Relancer la vérification"
+        :label="t('cluster.prereq.rerun')"
         icon="i-heroicons-arrow-path"
         color="gray"
         :loading="loading"
@@ -110,6 +98,7 @@ interface Check    { label: string; ok: boolean; detail: string }
 
 const props = defineProps<{ nodes: NodeInfo[] }>()
 const emit  = defineEmits<{ (e: 'all-ok'): void }>()
+const { t } = useEsosI18n()
 
 const loading    = ref(false)
 const fixing     = ref<Record<string, boolean>>({})
@@ -137,7 +126,11 @@ async function runChecks() {
     }
   } catch (err: any) {
     for (const n of props.nodes) {
-      nodeChecks.value[n.id] = [{ label: 'Erreur API', ok: false, detail: err?.data?.message ?? String(err) }]
+      nodeChecks.value[n.id] = [{
+        label: t('cluster.prereq.api_error'),
+        ok: false,
+        detail: err?.data?.message ?? String(err),
+      }]
     }
   } finally {
     loading.value = false
@@ -146,10 +139,6 @@ async function runChecks() {
   if (allOk.value) emit('all-ok')
 }
 
-/**
- * Correction SCST : passe rc.scst_enable="NO" dans /etc/rc.conf via l'API service.
- * Ne stoppe PAS le service en cours → sessions iSCSI non interrompues ici.
- */
 async function fixScst(nodeId: string) {
   fixing.value[nodeId] = true
   fixMessage.value     = null
@@ -160,14 +149,13 @@ async function fixScst(nodeId: string) {
     })
     fixMessage.value = {
       ok:   true,
-      text: 'rc.scst_enable="NO" appliqué — relancez la vérification pour confirmer.',
+      text: t('cluster.prereq.fix_success'),
     }
-    // Relance automatique des checks après correction
     await runChecks()
   } catch (err: any) {
     fixMessage.value = {
       ok:   false,
-      text: `Échec de la correction : ${err?.data?.message ?? String(err)}`,
+      text: t('cluster.prereq.fix_failed', { message: err?.data?.message ?? String(err) }),
     }
   } finally {
     fixing.value[nodeId] = false

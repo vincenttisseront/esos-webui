@@ -33,7 +33,7 @@
         v-if="closable"
         class="text-gray-400 hover:text-gray-600 transition-colors ml-4 shrink-0 -mt-1 -mr-1 p-1 rounded-lg hover:bg-gray-100"
         @click="$emit('cancel')"
-        aria-label="Fermer"
+        :aria-label="t('common.actions.close') as string"
       >
         <UIcon name="i-heroicons-x-mark" class="w-4 h-4" />
       </button>
@@ -53,6 +53,8 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+
+const { t } = useEsosI18n()
 
 const props = defineProps<{
   title:     string

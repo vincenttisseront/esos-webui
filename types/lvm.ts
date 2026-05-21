@@ -105,6 +105,8 @@ export interface LvmCandidateDevice {
 export interface LvmAlert {
   severity: 'info' | 'warning' | 'critical'
   message: string
+  code?: string
+  params?: Record<string, string | number>
 }
 
 export interface LvmNodeSnapshot {

@@ -43,8 +43,8 @@
     <div v-if="criticalAlerts.length" class="space-y-2" role="alert">
       <UAlert
         v-for="alert in criticalAlerts"
-        :key="alert.message"
-        :title="alert.message"
+        :key="alert.code ?? alert.message"
+        :title="tRaidAlert(alert)"
         color="red"
         icon="i-heroicons-x-circle"
         variant="soft"
@@ -202,7 +202,7 @@ defineEmits<{
   'navigate-md-detection': [item: MdDetectionItem]
 }>()
 
-const { t } = useEsosI18n()
+const { t, tRaidAlert } = useEsosI18n()
 
 function mdArrayDomId(arr: MdArray): string {
   return `md-array-${arr.name}`

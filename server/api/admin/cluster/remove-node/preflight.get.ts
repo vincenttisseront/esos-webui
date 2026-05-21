@@ -11,7 +11,7 @@ import { buildClusterStorageConsistency } from '../../../../utils/cluster-storag
 export default defineEventHandler(async (event) => {
   const user = event.context.user
   if (!user || user.role !== 'admin') {
-    throw createError({ statusCode: 403, message: 'Forbidden' })
+    throw createError({ statusCode: 403, message: 'Forbidden', data: { code: 'rbac.forbidden' } })
   }
 
   const query = getQuery(event)

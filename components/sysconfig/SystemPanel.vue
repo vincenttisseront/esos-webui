@@ -3,24 +3,22 @@
     <template #header>
       <div class="flex items-center gap-2">
         <UIcon name="i-heroicons-computer-desktop" class="text-gray-500 size-5" />
-        <span class="font-semibold text-gray-800">Système</span>
+        <span class="font-semibold text-gray-800">{{ t('admin.sysconfig.system.title') }}</span>
       </div>
     </template>
 
     <div class="space-y-6">
-      <!-- Hostname summary (passed from parent) -->
       <div v-if="fqdn" class="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-600">
-        FQDN actuel : <span class="font-mono font-semibold text-gray-800">{{ fqdn }}</span>
+        {{ t('admin.sysconfig.system.fqdn_current') }} :
+        <span class="font-mono font-semibold text-gray-800">{{ fqdn }}</span>
       </div>
 
-      <!-- Power actions -->
       <div class="border border-gray-200 rounded-lg p-4 space-y-4">
-        <p class="text-sm font-semibold text-gray-700">Actions système</p>
+        <p class="text-sm font-semibold text-gray-700">{{ t('admin.sysconfig.system.actions_title') }}</p>
 
         <div class="flex flex-col sm:flex-row gap-3">
-          <!-- Reboot -->
           <UButton
-            label="Redémarrer"
+            :label="t('admin.sysconfig.system.reboot') as string"
             icon="i-heroicons-arrow-path"
             color="amber"
             variant="outline"
@@ -30,9 +28,8 @@
             @click="onReboot"
           />
 
-          <!-- Power off -->
           <UButton
-            label="Éteindre"
+            :label="t('admin.sysconfig.system.poweroff') as string"
             icon="i-heroicons-power"
             color="red"
             variant="outline"
@@ -44,7 +41,7 @@
         </div>
 
         <p class="text-xs text-gray-400">
-          Ces actions sont immédiatement transmises au SAN sélectionné. La connexion SSH sera interrompue.
+          {{ t('admin.sysconfig.system.actions_hint') }}
         </p>
       </div>
     </div>
@@ -53,7 +50,9 @@
 
 <script setup lang="ts">
 import { modalPasswordConfirm } from '~/composables/useModal'
-import { useAppToast }          from '~/composables/useAppToast'
+import { useAppToast } from '~/composables/useAppToast'
+
+const { t, tError } = useEsosI18n()
 
 const props = defineProps<{
   sanId:    string
@@ -67,9 +66,9 @@ const poweringOff = ref(false)
 
 async function onReboot() {
   const password = await modalPasswordConfirm({
-    title:        'Redémarrer le SAN ?',
-    message:      'Le SAN va redémarrer. La connexion SSH sera temporairement perdue.',
-    confirmLabel: 'Redémarrer',
+    title:        t('admin.sysconfig.system.confirm_reboot_title') as string,
+    message:      t('admin.sysconfig.system.confirm_reboot_msg') as string,
+    confirmLabel: t('admin.sysconfig.system.reboot') as string,
     intent:       'danger',
   })
   if (!password) return
@@ -80,9 +79,12 @@ async function onReboot() {
       method: 'POST',
       body:   { action: 'reboot', password },
     })
-    toast.success('Redémarrage initié', 'La reconnexion peut prendre quelques minutes.')
-  } catch (err: any) {
-    toast.error('Échec', err?.data?.message ?? String(err))
+    toast.success(
+      t('admin.sysconfig.system.toast_reboot') as string,
+      t('admin.sysconfig.system.toast_reboot_desc') as string,
+    )
+  } catch (err: unknown) {
+    toast.error(t('common.failure') as string, tError(err as Parameters<typeof tError>[0]))
   } finally {
     rebooting.value = false
   }
@@ -90,9 +92,9 @@ async function onReboot() {
 
 async function onPowerOff() {
   const password = await modalPasswordConfirm({
-    title:        'Éteindre le SAN ?',
-    message:      'Cette action va éteindre le SAN. Il ne redémarrera pas automatiquement.',
-    confirmLabel: 'Éteindre',
+    title:        t('admin.sysconfig.system.confirm_poweroff_title') as string,
+    message:      t('admin.sysconfig.system.confirm_poweroff_msg') as string,
+    confirmLabel: t('admin.sysconfig.system.poweroff') as string,
     intent:       'danger',
   })
   if (!password) return
@@ -103,9 +105,9 @@ async function onPowerOff() {
       method: 'POST',
       body:   { action: 'poweroff', password },
     })
-    toast.success('Extinction initiée')
-  } catch (err: any) {
-    toast.error('Échec', err?.data?.message ?? String(err))
+    toast.success(t('admin.sysconfig.system.toast_poweroff') as string)
+  } catch (err: unknown) {
+    toast.error(t('common.failure') as string, tError(err as Parameters<typeof tError>[0]))
   } finally {
     poweringOff.value = false
   }

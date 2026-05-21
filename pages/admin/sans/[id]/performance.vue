@@ -12,9 +12,9 @@
           color="gray"
         />
         <div>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Agent de performance</h1>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ t('admin.sans.performance.title') }}</h1>
           <p class="text-sm text-gray-500 mt-1">
-            {{ san?.label ?? sanId }} — Configuration et pilotage du service ESOS perf-agent
+            {{ t('admin.sans.performance.subtitle', { label: san?.label ?? sanId }) }}
           </p>
         </div>
       </div>
@@ -23,7 +23,7 @@
         <UBadge
           v-if="perf.service"
           :color="perf.service.enabledOnBoot ? 'green' : 'gray'"
-          :label="perf.service.enabledOnBoot ? 'Boot: Activé' : 'Boot: Désactivé'"
+          :label="perf.service.enabledOnBoot ? t('admin.sans.performance.boot_enabled') : t('admin.sans.performance.boot_disabled')"
           size="xs"
         />
       </div>
@@ -42,7 +42,7 @@
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
       <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2">
         <UIcon name="i-heroicons-cog-6-tooth" class="w-4 h-4" />
-        Contrôle du service
+        {{ t('admin.sans.performance.service_control') }}
       </h2>
 
       <div class="flex flex-wrap gap-2">
@@ -60,7 +60,7 @@
       </div>
 
       <div class="flex items-center gap-3">
-        <label class="text-sm text-gray-600 dark:text-gray-400">Démarrage automatique</label>
+        <label class="text-sm text-gray-600 dark:text-gray-400">{{ t('admin.sans.performance.autostart') }}</label>
         <UToggle
           :model-value="perf.service?.enabledOnBoot ?? false"
           :disabled="perf.serviceLoading"
@@ -79,20 +79,20 @@
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
       <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2">
         <UIcon name="i-heroicons-circle-stack" class="w-4 h-4" />
-        Base de données
+        {{ t('admin.sans.performance.db_title') }}
       </h2>
 
       <div v-if="perf.config" class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
         <div>
-          <p class="text-xs text-gray-400">Type</p>
+          <p class="text-xs text-gray-400">{{ t('admin.sans.performance.db_type') }}</p>
           <p class="font-medium capitalize">{{ perf.config.dbType }}</p>
         </div>
         <div class="col-span-2">
-          <p class="text-xs text-gray-400">URI (masqué)</p>
+          <p class="text-xs text-gray-400">{{ t('admin.sans.performance.db_uri') }}</p>
           <p class="font-mono text-xs truncate">{{ perf.config.dburiMasked || '—' }}</p>
         </div>
         <div>
-          <p class="text-xs text-gray-400">Base</p>
+          <p class="text-xs text-gray-400">{{ t('admin.sans.performance.db_name') }}</p>
           <p class="font-medium">{{ perf.config.dbName || '—' }}</p>
         </div>
       </div>
@@ -105,8 +105,8 @@
       <div class="flex items-center justify-between">
         <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2">
           <UIcon name="i-heroicons-document-text" class="w-4 h-4" />
-          Configuration /etc/perf-agent.con
-          <UBadge v-if="!perf.config?.rawExists" color="orange" label="Fichier absent" size="xs" />
+          {{ t('admin.sans.performance.config_file') }}
+          <UBadge v-if="!perf.config?.rawExists" color="orange" :label="t('admin.sans.performance.file_missing')" size="xs" />
         </h2>
         <UButton
           size="xs"
@@ -135,12 +135,12 @@
       </div>
 
       <div class="flex justify-end gap-2">
-        <UButton size="sm" color="gray" variant="ghost" label="Annuler" @click="resetForm" />
+        <UButton size="sm" color="gray" variant="ghost" :label="t('admin.sans.performance.cancel')" @click="resetForm" />
         <UButton
           size="sm"
           color="primary"
           icon="i-heroicons-check"
-          label="Sauvegarder"
+          :label="t('admin.sans.performance.save')"
           :loading="perf.configLoading"
           @click="saveConfig"
         />
@@ -151,9 +151,9 @@
         v-if="perf.service?.running && savedOnce"
         color="orange"
         icon="i-heroicons-exclamation-triangle"
-        title="Redémarrage recommandé"
-        description="La configuration a été modifiée. Redémarrez l'agent pour appliquer les changements."
-        :actions="[{ label: 'Redémarrer', click: () => doServiceAction('restart') }]"
+        :title="t('admin.sans.performance.restart_recommended_title')"
+        :description="t('admin.sans.performance.restart_recommended_desc')"
+        :actions="[{ label: t('admin.sans.performance.restart_action'), click: () => doServiceAction('restart') }]"
       />
     </div>
 
@@ -161,15 +161,15 @@
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 space-y-3">
       <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2">
         <UIcon name="i-heroicons-archive-box" class="w-4 h-4" />
-        Compaction et rétention
+        {{ t('admin.sans.performance.compaction_title') }}
       </h2>
 
       <div class="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-        <p>ESOS compacte automatiquement les données via <code class="font-mono text-xs bg-gray-100 dark:bg-gray-900 px-1 py-0.5 rounded">croncompact.py</code> :</p>
+        <p>{{ t('admin.sans.performance.compaction_intro') }} <code class="font-mono text-xs bg-gray-100 dark:bg-gray-900 px-1 py-0.5 rounded">croncompact.py</code> :</p>
         <ul class="list-disc pl-5 space-y-0.5 text-xs">
-          <li>Jour précédent → samples toutes les 15 min, conservés 7 jours</li>
-          <li>J-7 → samples horaires, jusqu'à 31 jours</li>
-          <li>J-31 → 1 sample journalier, long terme</li>
+          <li>{{ t('admin.sans.performance.compaction_day') }}</li>
+          <li>{{ t('admin.sans.performance.compaction_week') }}</li>
+          <li>{{ t('admin.sans.performance.compaction_month') }}</li>
         </ul>
       </div>
 
@@ -177,11 +177,11 @@
         v-if="!compactionActive"
         color="orange"
         icon="i-heroicons-exclamation-triangle"
-        description="La compaction ESOS semble désactivée. La base peut grossir rapidement si aucun mécanisme externe de purge n'est configuré."
+        :description="t('admin.sans.performance.compaction_disabled')"
       />
       <div v-else class="flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
         <UIcon name="i-heroicons-check-circle" class="w-4 h-4" />
-        <span>Compaction active</span>
+        <span>{{ t('admin.sans.performance.compaction_active') }}</span>
         <code v-if="compactionLine" class="text-xs font-mono text-gray-500 ml-2">{{ compactionLine }}</code>
       </div>
     </div>
@@ -195,8 +195,8 @@
         <p class="text-sm text-gray-600">{{ confirmModal.message }}</p>
         <template #footer>
           <div class="flex justify-end gap-2">
-            <UButton color="gray" variant="ghost" label="Annuler" @click="confirmModal.open = false" />
-            <UButton color="red" label="Confirmer" @click="confirmModal.confirm()" />
+            <UButton color="gray" variant="ghost" :label="t('admin.sans.performance.confirm_cancel')" @click="confirmModal.open = false" />
+            <UButton color="red" :label="t('admin.sans.performance.confirm_ok')" @click="confirmModal.confirm()" />
           </div>
         </template>
       </UCard>
@@ -217,6 +217,7 @@ const sanId = route.params.id as string
 const { data: san } = await useFetch<SanSummary>(`/api/admin/sans/${sanId}`)
 
 const perf = usePerfStore()
+const { t } = useEsosI18n()
 const savedOnce = ref(false)
 const blockDevicesLoading = ref(false)
 const compactionActive = ref(false)
@@ -264,11 +265,11 @@ const confirmModal = reactive({
   confirm: () => {},
 })
 
-const serviceActions = [
-  { value: 'start' as PerfServiceAction, label: 'Démarrer', icon: 'i-heroicons-play', color: 'green' as const, variant: 'soft' as const },
-  { value: 'stop' as PerfServiceAction, label: 'Arrêter', icon: 'i-heroicons-stop', color: 'red' as const, variant: 'soft' as const },
-  { value: 'restart' as PerfServiceAction, label: 'Redémarrer', icon: 'i-heroicons-arrow-path', color: 'orange' as const, variant: 'soft' as const },
-]
+const serviceActions = computed(() => [
+  { value: 'start' as PerfServiceAction, label: t('admin.sans.performance.action_start'), icon: 'i-heroicons-play', color: 'green' as const, variant: 'soft' as const },
+  { value: 'stop' as PerfServiceAction, label: t('admin.sans.performance.action_stop'), icon: 'i-heroicons-stop', color: 'red' as const, variant: 'soft' as const },
+  { value: 'restart' as PerfServiceAction, label: t('admin.sans.performance.action_restart'), icon: 'i-heroicons-arrow-path', color: 'orange' as const, variant: 'soft' as const },
+])
 
 async function doServiceAction(action: PerfServiceAction) {
   const needsConfirm =
@@ -277,10 +278,10 @@ async function doServiceAction(action: PerfServiceAction) {
 
   if (needsConfirm) {
     await new Promise<void>((resolve) => {
-      confirmModal.title = action === 'stop' ? 'Arrêter l\'agent ?' : 'Redémarrer l\'agent ?'
+      confirmModal.title = action === 'stop' ? t('admin.sans.performance.stop_title') : t('admin.sans.performance.restart_title')
       confirmModal.message = action === 'stop'
-        ? 'La collecte de métriques sera interrompue.'
-        : 'L\'agent sera brièvement indisponible.'
+        ? t('admin.sans.performance.stop_message')
+        : t('admin.sans.performance.restart_message')
       confirmModal.confirm = () => { confirmModal.open = false; resolve() }
       confirmModal.open = true
     })
@@ -292,8 +293,8 @@ async function doServiceAction(action: PerfServiceAction) {
 async function toggleBoot(enabled: boolean) {
   if (!enabled && perf.service?.enabledOnBoot) {
     await new Promise<void>((resolve) => {
-      confirmModal.title = 'Désactiver le démarrage automatique ?'
-      confirmModal.message = 'L\'agent ne démarrera plus automatiquement au prochain redémarrage.'
+      confirmModal.title = t('admin.sans.performance.disable_boot_title')
+      confirmModal.message = t('admin.sans.performance.disable_boot_message')
       confirmModal.confirm = () => { confirmModal.open = false; resolve() }
       confirmModal.open = true
     })
@@ -303,10 +304,25 @@ async function toggleBoot(enabled: boolean) {
 
 // ── Utils ────────────────────────────────────────────────────────────────────
 function fmtUptime(sec: number): string {
-  if (sec >= 86400) return `${Math.floor(sec / 86400)}j ${Math.floor((sec % 86400) / 3600)}h`
-  if (sec >= 3600) return `${Math.floor(sec / 3600)}h ${Math.floor((sec % 3600) / 60)}m`
-  if (sec >= 60) return `${Math.floor(sec / 60)}m ${sec % 60}s`
-  return `${sec}s`
+  if (sec >= 86400) {
+    return t('admin.sans.performance.uptime_days', {
+      d: Math.floor(sec / 86400),
+      h: Math.floor((sec % 86400) / 3600),
+    })
+  }
+  if (sec >= 3600) {
+    return t('admin.sans.performance.uptime_hours', {
+      h: Math.floor(sec / 3600),
+      m: Math.floor((sec % 3600) / 60),
+    })
+  }
+  if (sec >= 60) {
+    return t('admin.sans.performance.uptime_minutes', {
+      m: Math.floor(sec / 60),
+      s: sec % 60,
+    })
+  }
+  return t('admin.sans.performance.uptime_seconds', { s: sec })
 }
 
 // ── Lifecycle — contexte SAN ──────────────────────────────────────────────────

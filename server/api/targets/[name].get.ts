@@ -5,7 +5,11 @@ import type { Target } from '~/types/esos'
 export default defineEventHandler(async (event): Promise<Target> => {
   const raw = getRouterParam(event, 'name')
   if (!raw) {
-    throw createError({ statusCode: 400, statusMessage: 'Missing target name' })
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Missing target name',
+      data: { code: 'targets.missing_name' },
+    })
   }
   const name = decodeURIComponent(raw)
 

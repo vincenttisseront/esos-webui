@@ -73,11 +73,16 @@ async function scstFilenamesByPath(manager: SSHSessionManager): Promise<Map<stri
 function buildAlerts(tools: LvmToolsInfo, clusteredVg: boolean): LvmAlert[] {
   const alerts: LvmAlert[] = []
   if (!tools.pvs || !tools.vgs || !tools.lvs) {
-    alerts.push({ severity: 'warning', message: 'Outils LVM incomplets sur ce nœud (pvs/vgs/lvs)' })
+    alerts.push({
+      severity: 'warning',
+      code: 'tools_incomplete',
+      message: 'Outils LVM incomplets sur ce nœud (pvs/vgs/lvs)',
+    })
   }
   if (clusteredVg) {
     alerts.push({
       severity: 'warning',
+      code: 'clustered_vg_unsupported',
       message: 'Volume group clusterisé (clvmd) détecté — gestion partagée non supportée par la WebUI',
     })
   }

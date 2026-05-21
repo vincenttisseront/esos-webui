@@ -2,6 +2,7 @@
 const admin     = useAdminStore()
 const authStore = useAuthStore()
 const depsStore = useDepsStore()
+const { t }     = useEsosI18n()
 
 onMounted(() => {
   admin.fetchAll()
@@ -41,11 +42,11 @@ function formatDate(s: string): string {
   <div class="p-6 space-y-6 max-w-4xl mx-auto">
     <header class="flex items-start justify-between gap-3">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Administration</h1>
-        <p class="text-sm text-gray-500 mt-1">Configuration de l'application ESOS WebUI</p>
+        <h1 class="text-2xl font-bold text-gray-900">{{ t('admin.index.title') }}</h1>
+        <p class="text-sm text-gray-500 mt-1">{{ t('admin.index.subtitle') }}</p>
       </div>
       <UButton to="/admin/dependencies" color="gray" variant="soft" icon="i-heroicons-cube">
-        Dependances
+        {{ t('admin.index.dependencies') }}
         <UBadge
           v-if="depsStore.majorCount > 0"
           :label="String(depsStore.majorCount)"
@@ -57,21 +58,21 @@ function formatDate(s: string): string {
     </header>
 
     <div v-if="admin.loading" class="flex items-center justify-center py-16 text-gray-400">
-      <span class="text-2xl mr-3 animate-spin">↻</span> Chargement…
+      <span class="text-2xl mr-3 animate-spin">↻</span> {{ t('admin.index.loading') }}
     </div>
 
     <template v-else>
 
       <!-- Section 0 : SANs ESOS -->
-      <AdminSection title="Serveurs ESOS (SANs)" icon="i-heroicons-server-stack">
+      <AdminSection :title="t('admin.index.sans_section')" icon="i-heroicons-server-stack">
         <div class="flex items-center justify-between gap-4">
           <div class="flex items-center gap-3">
             <p class="text-sm text-gray-500">
-              Associez cette console à un ou plusieurs serveurs ESOS via SSH.
+              {{ t('admin.index.sans_desc') }}
             </p>
             <UBadge
               v-if="sansCount > 0"
-              :label="`${sansCount} SAN${sansCount > 1 ? 's' : ''} configuré${sansCount > 1 ? 's' : ''}`"
+              :label="t('admin.index.sans_count', { count: sansCount })"
               color="green"
               variant="soft"
             />
@@ -80,7 +81,7 @@ function formatDate(s: string): string {
             <UButton
               v-if="sansCount > 0"
               icon="i-heroicons-list-bullet"
-              label="Gérer les SANs"
+              :label="t('admin.index.manage_sans')"
               color="gray"
               variant="soft"
               to="/admin/sans"
@@ -88,7 +89,7 @@ function formatDate(s: string): string {
             <UButton
               v-if="authStore.user?.role !== 'viewer'"
               icon="i-heroicons-plus"
-              label="Ajouter un SAN"
+              :label="t('admin.index.add_san')"
               to="/admin/sans"
             />
           </div>
@@ -99,15 +100,15 @@ function formatDate(s: string): string {
       <AdminSSHSettingsForm v-if="admin.sshForm" />
 
       <!-- Section 2b : Seuils d'alerte (admin) -->
-      <AdminSection v-if="authStore.user?.role === 'admin'" title="Seuils d'alerte" icon="i-heroicons-bell-alert">
+      <AdminSection v-if="authStore.user?.role === 'admin'" :title="t('admin.index.alert_thresholds_section')" icon="i-heroicons-bell-alert">
         <div class="flex items-center justify-between gap-4">
           <p class="text-sm text-gray-500">
-            Volumes, sessions SCST (strict / multipathing, grâce) et alertes ports FC.
+            {{ t('admin.index.alert_thresholds_desc') }}
           </p>
           <UButton
             to="/admin/alert-thresholds"
             icon="i-heroicons-adjustments-horizontal"
-            label="Configurer"
+            :label="t('admin.index.configure')"
             color="gray"
             variant="soft"
           />
@@ -115,15 +116,15 @@ function formatDate(s: string): string {
       </AdminSection>
 
       <!-- Fournisseurs d’authentification (admin) -->
-      <AdminSection v-if="authStore.user?.role === 'admin'" title="Authentification externe" icon="i-heroicons-shield-check">
+      <AdminSection v-if="authStore.user?.role === 'admin'" :title="t('admin.index.auth_providers_section')" icon="i-heroicons-shield-check">
         <div class="flex items-center justify-between gap-4">
           <p class="text-sm text-gray-500">
-            LDAP, OpenID Connect (PKCE) et politique MFA côté IdP.
+            {{ t('admin.index.auth_providers_desc') }}
           </p>
           <UButton
             to="/admin/auth-providers"
             icon="i-heroicons-key"
-            label="Configurer"
+            :label="t('admin.index.configure')"
             color="gray"
             variant="soft"
           />
@@ -134,24 +135,24 @@ function formatDate(s: string): string {
       <AdminCollectorSettings v-if="admin.collector" />
 
       <!-- Section 3 : Cluster HA -->
-      <AdminSection title="Cluster HA (Pacemaker / Corosync)" icon="i-heroicons-server-stack">
+      <AdminSection :title="t('admin.index.cluster_section')" icon="i-heroicons-server-stack">
         <div class="flex items-center justify-between gap-4">
           <p class="text-sm text-gray-500">
-            Configurez et supervisez votre cluster Pacemaker / Corosync via l'assistant dédié.
+            {{ t('admin.index.cluster_desc') }}
           </p>
           <div class="flex items-center gap-2 shrink-0">
             <UButton
               v-if="authStore.user?.role === 'admin'"
               to="/admin/cluster"
               icon="i-heroicons-wrench-screwdriver"
-              label="Configurer"
+              :label="t('admin.index.configure')"
               color="gray"
               variant="soft"
             />
             <UButton
               to="/cluster"
               icon="i-heroicons-chart-bar"
-              label="Monitoring"
+              :label="t('admin.index.monitoring')"
               color="primary"
               variant="soft"
             />
@@ -160,14 +161,14 @@ function formatDate(s: string): string {
       </AdminSection>
 
       <!-- Section 4 : Compte administrateur -->
-      <AdminSection title="Compte Administrateur" icon="i-heroicons-user-circle">
+      <AdminSection :title="t('admin.index.admin_account_section')" icon="i-heroicons-user-circle">
         <div class="space-y-4">
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm font-medium text-gray-800">{{ authStore.user?.username ?? '—' }}</p>
               <p class="text-xs text-gray-400">
-                Dernière connexion :
-                {{ authStore.user?.lastLoginAt ? formatDate(authStore.user.lastLoginAt) : 'inconnue' }}
+                {{ t('admin.index.last_login') }}
+                {{ authStore.user?.lastLoginAt ? formatDate(authStore.user.lastLoginAt) : t('admin.index.last_login_unknown') }}
               </p>
             </div>
             <UButton
@@ -175,13 +176,12 @@ function formatDate(s: string): string {
               variant="soft"
               icon="i-heroicons-key"
               to="/admin/change-password"
-              label="Changer le mot de passe"
+              :label="t('admin.index.change_password')"
             />
           </div>
 
-          <!-- Historique des 5 dernières connexions -->
           <div v-if="recentLogins.length > 0">
-            <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Historique récent</p>
+            <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">{{ t('admin.index.login_history') }}</p>
             <ul class="space-y-1">
               <li
                 v-for="ev in recentLogins"
@@ -195,7 +195,7 @@ function formatDate(s: string): string {
                 <span class="font-mono">{{ formatDate(ev.at) }}</span>
                 <span class="text-gray-400">{{ ev.ip ?? '—' }}</span>
                 <span :class="ev.success ? 'text-green-600' : 'text-red-600'">
-                  {{ ev.success ? 'Succès' : 'Échec' }}
+                  {{ ev.success ? t('admin.index.login_success') : t('admin.index.login_failure') }}
                 </span>
               </li>
             </ul>

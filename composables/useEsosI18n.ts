@@ -13,11 +13,23 @@
 //   tError(err) // -> traduit `data.code` si présent, sinon `data.message`/`message`
 
 import type { Composer } from 'vue-i18n'
+import { API_ERROR_CODE_I18N_ALIASES } from '~/server/utils/i18n-error-codes'
 
 type ApiError = {
   data?: { code?: string; message?: string }
   message?: string
 } | null | undefined
+
+/** Resolve `data.code` to a vue-i18n key (errors.* or alias). */
+export function apiErrorCodeToI18nKey(code: string): string {
+  if (code in API_ERROR_CODE_I18N_ALIASES) {
+    return API_ERROR_CODE_I18N_ALIASES[code]!
+  }
+  if (code === 'san.read_only') {
+    return 'storage.readonly.errors.san_read_only'
+  }
+  return `errors.${code}`
+}
 
 export function useEsosI18n() {
   const i18n = useI18n() as Composer
@@ -31,10 +43,34 @@ export function useEsosI18n() {
   function tError(err: ApiError, fallback = i18n.t('errors.auth.generic') as string): string {
     const data = err?.data
     if (data?.code) {
-      const key = `errors.${data.code}`
+      const key = apiErrorCodeToI18nKey(data.code)
       if (i18n.te(key)) return i18n.t(key) as string
     }
     return data?.message ?? err?.message ?? fallback
+  }
+
+  function tRaidAlert(alert: { code?: string; params?: Record<string, unknown>; message: string }): string {
+    if (alert.code) {
+      const key = `raid.alerts.${alert.code}`
+      if (i18n.te(key)) {
+        return alert.params
+          ? (i18n.t(key, alert.params) as string)
+          : (i18n.t(key) as string)
+      }
+    }
+    return alert.message
+  }
+
+  function tLvmAlert(alert: { code?: string; params?: Record<string, unknown>; message: string }): string {
+    if (alert.code) {
+      const key = `lvm.alerts.${alert.code}`
+      if (i18n.te(key)) {
+        return alert.params
+          ? (i18n.t(key, alert.params) as string)
+          : (i18n.t(key) as string)
+      }
+    }
+    return alert.message
   }
 
   async function setLocale(code: string) {
@@ -49,5 +85,7 @@ export function useEsosI18n() {
     setLocale,
     tWithFallback,
     tError,
+    tRaidAlert,
+    tLvmAlert,
   }
 }

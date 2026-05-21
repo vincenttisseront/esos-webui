@@ -22,7 +22,6 @@ export const useClusterStore = defineStore('cluster', {
     clusterName:   (s) => s.overview?.clusterName ?? null,
     clusterId:     (s) => s.overview?.clusterId   ?? null,
     isDegraded:    (s) => s.overview?.mode === 'degraded',
-    // Nœuds actifs connus dans l'overview (pour le wizard)
     clusterNodes:  (s) => s.overview?.nodes.map(n => ({
       id:    n.nodeId,
       label: n.hostname ?? n.nodeId,
@@ -32,6 +31,7 @@ export const useClusterStore = defineStore('cluster', {
 
   actions: {
     async fetch(nodeIds?: string[], clusterId?: string) {
+      const { t } = useEsosI18n()
       if (clusterId) {
         this.activeClusterId = clusterId
         this.activeNodeIds = nodeIds?.length ? nodeIds : null
@@ -48,14 +48,14 @@ export const useClusterStore = defineStore('cluster', {
             ? { nodeIds: this.activeNodeIds.join(',') }
             : null
         if (!query) {
-          this.error = 'Impossible de charger le statut cluster (clusterId ou nodeIds requis).'
+          this.error = t('cluster.toasts.fetch_status_missing')
           return
         }
         this.overview = await $fetch<ClusterOverview>('/api/cluster/status', { query })
         if (this.overview.clusterId) this.activeClusterId = this.overview.clusterId
         this.error = null
       } catch (err: any) {
-        this.error = err?.data?.message ?? 'Erreur lors du chargement du statut cluster'
+        this.error = err?.data?.message ?? t('cluster.toasts.fetch_status_error')
       } finally {
         this.loading = false
       }
@@ -65,15 +65,15 @@ export const useClusterStore = defineStore('cluster', {
       await this.fetch(nodeIds, clusterId)
     },
 
-    /** Sync via clusterId when known, else nodeIds. */
     async sync(explicitNodeIds?: string[], explicitClusterId?: string) {
+      const { t } = useEsosI18n()
       const clusterId = explicitClusterId ?? this.activeClusterId ?? this.overview?.clusterId ?? null
       const nodeIds = explicitNodeIds?.length ? explicitNodeIds : this.activeNodeIds ?? []
 
       if (!clusterId && !nodeIds.length) {
         useAppToast().error(
-          'Synchronisation impossible',
-          'Aucun cluster ou nœud cible connu.',
+          t('cluster.toasts.sync_impossible_title'),
+          t('cluster.toasts.sync_impossible_body'),
         )
         return
       }
@@ -85,19 +85,23 @@ export const useClusterStore = defineStore('cluster', {
           method: 'POST',
           body,
         })
-        useAppToast().success('Synchronisation réussie', result.output.slice(0, 120))
+        useAppToast().success(t('cluster.toasts.sync_success'), result.output.slice(0, 120))
         await this.fetch(nodeIds.length ? nodeIds : undefined, clusterId ?? undefined)
       } catch (err: any) {
-        useAppToast().error('Erreur de synchronisation', err?.data?.message ?? 'Erreur inconnue')
+        useAppToast().error(
+          t('cluster.toasts.sync_error'),
+          err?.data?.message ?? t('cluster.toasts.unknown_error'),
+        )
       } finally {
         this.syncing = false
       }
     },
 
     async toggleService(nodeId: string, service: 'corosync' | 'pacemaker', action: 'start' | 'stop') {
+      const { t } = useEsosI18n()
       const confirmed = await modalConfirm({
-        title:   `${action === 'start' ? 'Démarrer' : 'Arrêter'} ${service}`,
-        message: `Confirmer l'action "${action}" sur le service ${service} du nœud ${nodeId} ?`,
+        title:   t(action === 'start' ? 'cluster.toasts.service_confirm_start_title' : 'cluster.toasts.service_confirm_stop_title', { service }),
+        message: t('cluster.toasts.service_confirm_message', { action, service, nodeId }),
         intent:  action === 'stop' ? 'danger' : 'neutral',
       })
       if (!confirmed) return
@@ -107,18 +111,26 @@ export const useClusterStore = defineStore('cluster', {
           method: 'POST',
           body:   { nodeId, service, action },
         })
-        useAppToast().success(`${service} ${action === 'start' ? 'démarré' : 'arrêté'}`)
+        useAppToast().success(
+          action === 'start'
+            ? t('cluster.toasts.service_started', { service })
+            : t('cluster.toasts.service_stopped', { service }),
+        )
         await this.fetch(this.activeNodeIds ?? undefined)
       } catch (err: any) {
-        useAppToast().error(`Erreur sur ${service}`, err?.data?.message ?? 'Erreur inconnue')
+        useAppToast().error(
+          t('cluster.toasts.service_error', { service }),
+          err?.data?.message ?? t('cluster.toasts.unknown_error'),
+        )
       }
     },
 
     startPolling(intervalMs = 15_000) {
+      const { t } = useEsosI18n()
       if (!useAuthStore().isAuthenticated) return
       this.stopPolling()
       if (!this.activeClusterId && !this.activeNodeIds?.length) {
-        this.error = 'Polling cluster impossible. Appelez fetch() d’abord.'
+        this.error = t('cluster.toasts.polling_error')
         return
       }
       this.fetch(this.activeNodeIds ?? undefined, this.activeClusterId ?? undefined)

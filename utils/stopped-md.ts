@@ -1,5 +1,6 @@
 import type {
   PartitionMetadataDiagnostics,
+  RaidI18nMessage,
   RaidOverviewResponse,
   StoppedMdArray,
   ZeroMdSuperblockPartitionResult,
@@ -93,7 +94,7 @@ export function isModalDismiss(err: unknown): boolean {
   return err instanceof Error && err.message === 'dismissed'
 }
 
-export function extractFetchError(err: unknown): string {
+export function extractFetchError(err: unknown): RaidI18nMessage {
   const payload = getFetchErrorData(err)
   const e = err as {
     data?: { message?: string; statusMessage?: string }
@@ -101,13 +102,16 @@ export function extractFetchError(err: unknown): string {
     statusMessage?: string
   }
   const payloadMessage = typeof payload.message === 'string' ? payload.message : undefined
-  return payloadMessage
+  const detail = payloadMessage
     ?? e?.data?.message
     ?? e?.message
     ?? (typeof payload.statusMessage === 'string' ? payload.statusMessage : undefined)
     ?? e?.data?.statusMessage
     ?? e?.statusMessage
-    ?? 'Erreur inconnue'
+  if (typeof detail === 'string' && detail.length > 0) {
+    return { code: 'raid.stopped_md.error_detail', params: { detail } }
+  }
+  return { code: 'raid.stopped_md.unknown_error' }
 }
 
 export function getZeroCleanupErrorResults(err: unknown): ZeroMdSuperblockPartitionResult[] {
@@ -137,25 +141,43 @@ export function isRaidCleanupFailureResult(r: ZeroMdSuperblockPartitionResult): 
   return !partitionMdMetadataRemoved(r)
 }
 
-export function formatDiagnosticsSummary(diagnostics: PartitionMetadataDiagnostics): string {
+export function formatDiagnosticsSummary(diagnostics: PartitionMetadataDiagnostics): RaidI18nMessage[] {
   if (diagnostics.mdMetadataRemoved && diagnostics.remainingNonMdSignatures?.length) {
-    return `${diagnostics.partition} : métadonnées MD supprimées. Signature(s) non-RAID : ${diagnostics.remainingNonMdSignatures.join(', ')}`
+    return [{
+      code: 'raid.stopped_md.diagnostics_summary.md_removed_non_md',
+      params: {
+        partition: diagnostics.partition,
+        types: diagnostics.remainingNonMdSignatures.join(', '),
+      },
+    }]
   }
-  const lines = [`${diagnostics.partition} : métadonnées encore détectées.`]
+  const lines: RaidI18nMessage[] = [{
+    code: 'raid.stopped_md.diagnostics_summary.still_detected',
+    params: { partition: diagnostics.partition },
+  }]
   if (diagnostics.detectionSources.mdadmExamine) {
-    lines.push('- mdadm --examine : superblock détecté')
+    lines.push({ code: 'raid.stopped_md.diagnostics_summary.mdadm_examine' })
   }
   if (diagnostics.detectionSources.wipefs && diagnostics.wipefsProbe.signatures.length) {
-    lines.push(`- wipefs -n (RAID) : ${diagnostics.wipefsProbe.signatures.join(', ')}`)
+    lines.push({
+      code: 'raid.stopped_md.diagnostics_summary.wipefs_raid',
+      params: { signatures: diagnostics.wipefsProbe.signatures.join(', ') },
+    })
   }
   if (diagnostics.detectionSources.blkid && diagnostics.blkidProbe.types.length) {
-    lines.push(`- blkid (RAID) : ${diagnostics.blkidProbe.types.join(', ')}`)
+    lines.push({
+      code: 'raid.stopped_md.diagnostics_summary.blkid_raid',
+      params: { types: diagnostics.blkidProbe.types.join(', ') },
+    })
   }
   const raidTypes = diagnostics.remainingRaidSignatureTypes ?? diagnostics.remainingSignatureTypes
   if (raidTypes.length) {
-    lines.push(`Signatures RAID restantes : ${raidTypes.join(', ')}`)
+    lines.push({
+      code: 'raid.stopped_md.diagnostics_summary.remaining_raid',
+      params: { types: raidTypes.join(', ') },
+    })
   }
-  return lines.join('\n')
+  return lines
 }
 
 export function advancedCleanupMembersForArray(

@@ -1,40 +1,35 @@
 <template>
   <div class="space-y-5">
     <div>
-      <h3 class="font-semibold text-gray-800">Finalisation du cluster</h3>
-      <p class="text-sm text-gray-500 mt-1">
-        Attribution des rôles et enregistrement de la configuration cluster en base.
-      </p>
+      <h3 class="font-semibold text-gray-800">{{ t('cluster.finalize.title') }}</h3>
+      <p class="text-sm text-gray-500 mt-1">{{ t('cluster.finalize.intro') }}</p>
     </div>
 
-    <!-- Nom du cluster -->
     <div class="space-y-1.5">
-      <label class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Nom du cluster</label>
+      <label class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ t('cluster.finalize.name_label') }}</label>
       <UInput
         v-model="clusterName"
-        placeholder="ex: cluster-prod, cluster-paris…"
+        :placeholder="t('cluster.finalize.name_placeholder')"
         icon="i-heroicons-tag"
         :disabled="saving"
         class="max-w-sm"
       />
-      <p v-if="!clusterName.trim()" class="text-xs text-amber-500">Un nom est requis pour identifier ce cluster.</p>
+      <p v-if="!clusterName.trim()" class="text-xs text-amber-500">{{ t('cluster.finalize.name_required') }}</p>
     </div>
 
-    <!-- Warning nœuds retirés -->
     <div v-if="props.removedNodes?.length" class="rounded-lg border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
       <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
       <div class="text-sm text-amber-800 space-y-1">
-        <p class="font-semibold">{{ props.removedNodes.length }} nœud{{ props.removedNodes.length > 1 ? 's' : '' }} sera{{ props.removedNodes.length > 1 ? 'ont' : '' }} retiré{{ props.removedNodes.length > 1 ? 's' : '' }} du cluster</p>
+        <p class="font-semibold">{{ t('cluster.finalize.removed_title', { count: props.removedNodes.length }) }}</p>
         <ul class="list-disc list-inside text-xs space-y-0.5">
           <li v-for="n in props.removedNodes" :key="n.id" class="font-medium">{{ n.label }} <span class="font-mono font-normal">({{ n.host }})</span></li>
         </ul>
-        <p class="text-xs text-amber-600 mt-1">Corosync et Pacemaker seront arrêtés sur ces nœuds. La configuration corosync.conf peut nécessiter une mise à jour manuelle si le nœud figure dans la nodelist.</p>
+        <p class="text-xs text-amber-600 mt-1">{{ t('cluster.finalize.removed_hint') }}</p>
       </div>
     </div>
 
-    <!-- Attribution des rôles -->
     <div class="space-y-3">
-      <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Rôles des nœuds</p>
+      <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ t('cluster.finalize.roles_label') }}</p>
       <div
         v-for="node in props.nodes"
         :key="node.id"
@@ -53,7 +48,7 @@
             @click="setRole(node.id, 'primary')"
           >
             <UIcon name="i-heroicons-star" class="w-3.5 h-3.5" />
-            Primaire
+            {{ t('cluster.finalize.role_primary') }}
           </button>
           <button
             type="button"
@@ -63,7 +58,7 @@
             @click="setRole(node.id, 'secondary')"
           >
             <UIcon name="i-heroicons-arrow-path-rounded-square" class="w-3.5 h-3.5" />
-            Secondaire
+            {{ t('cluster.finalize.role_secondary') }}
           </button>
         </div>
       </div>
@@ -74,7 +69,6 @@
       </p>
     </div>
 
-    <!-- Vérification état cluster -->
     <div v-if="clusterState" class="rounded-lg border p-4 space-y-3" :class="clusterState.healthy ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50'">
       <div class="flex items-center gap-2">
         <UIcon
@@ -83,7 +77,7 @@
           :class="clusterState.healthy ? 'text-green-500' : 'text-amber-500'"
         />
         <p class="text-sm font-medium" :class="clusterState.healthy ? 'text-green-800' : 'text-amber-800'">
-          {{ clusterState.healthy ? 'Cluster opérationnel' : 'Cluster partiellement opérationnel' }}
+          {{ clusterState.healthy ? t('cluster.finalize.operational') : t('cluster.finalize.partial') }}
         </p>
         <span class="ml-auto text-xs px-2 py-0.5 rounded-full" :class="clusterState.healthy ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'">
           {{ modeLabel(clusterState.mode) }}
@@ -105,7 +99,6 @@
 
     <UAlert v-if="saveError" color="red" variant="soft" :title="saveError" />
 
-    <!-- Erreur de validation des rôles -->
     <UAlert
       v-if="roleError && props.nodes.length > 0"
       color="amber"
@@ -113,18 +106,17 @@
       :title="roleError"
     />
 
-    <!-- Aucun nœud reçu — diagnostic -->
     <UAlert
       v-if="props.nodes.length === 0"
       color="red"
       variant="soft"
-      title="Aucun nœud sélectionné"
-      description="Retournez à l'étape 1 pour sélectionner les nœuds du cluster."
+      :title="t('cluster.finalize.no_nodes_title')"
+      :description="t('cluster.finalize.no_nodes_desc')"
     />
 
     <div class="flex items-center gap-3">
       <UButton
-        label="Enregistrer et terminer"
+        :label="t('cluster.finalize.save_finish')"
         icon="i-heroicons-check"
         color="green"
         :loading="saving"
@@ -132,7 +124,7 @@
         @click="finalize"
       />
       <UButton
-        label="Vérifier l'état cluster"
+        :label="t('cluster.finalize.check_state')"
         icon="i-heroicons-arrow-path"
         color="gray"
         variant="ghost"
@@ -148,6 +140,7 @@ interface NodeInfo { id: string; label: string; host: string }
 
 const props = defineProps<{ nodes: NodeInfo[]; initialClusterId?: string | null; initialClusterName?: string | null; removedNodes?: NodeInfo[] }>()
 const emit  = defineEmits<{ (e: 'finalized'): void }>()
+const { t } = useEsosI18n()
 
 const roles       = ref<Record<string, 'primary' | 'secondary'>>({})
 const clusterName = ref(props.initialClusterName ?? '')
@@ -155,10 +148,8 @@ const saving      = ref(false)
 const checking    = ref(false)
 const saveError   = ref<string | null>(null)
 const clusterState = ref<any>(null)
-const { success: toastSuccess, error: toastError } = useAppToast()
+const { success: toastSuccess } = useAppToast()
 
-// Attribue automatiquement : premier nœud = primary, reste = secondary
-// Utilise watch pour réagir si nodes arrive après le montage
 watch(() => props.nodes, (nodes) => {
   if (nodes.length && !Object.keys(roles.value).length) {
     nodes.forEach((n, i) => {
@@ -167,7 +158,6 @@ watch(() => props.nodes, (nodes) => {
   }
 }, { immediate: true })
 
-// Pré-remplit le nom depuis l'API si pas déjà connu via le prop
 watch(clusterState, (state) => {
   if (state?.clusterName && !props.initialClusterName && !clusterName.value) {
     clusterName.value = state.clusterName
@@ -178,8 +168,8 @@ onMounted(() => { if (props.nodes.length) checkState() })
 
 const roleError = computed(() => {
   const primaries = props.nodes.filter(n => roles.value[n.id] === 'primary')
-  if (primaries.length === 0) return 'Désignez au moins un nœud primaire.'
-  if (primaries.length > 1)  return 'Un seul nœud peut être primaire.'
+  if (primaries.length === 0) return t('cluster.finalize.role_error_none')
+  if (primaries.length > 1)  return t('cluster.finalize.role_error_many')
   return null
 })
 
@@ -193,14 +183,21 @@ function nodeLabel(nodeId: string, fallback: string): string {
   return props.nodes.find(n => n.id === nodeId)?.label || (fallback === 'localhost' ? nodeId : fallback)
 }
 
-const MODE_LABELS: Record<string, string> = {
-  'unconfigured':  'Sans ressources',
-  'active-passive': 'Actif-passif',
-  'active-active':  'Actif-actif',
-  'degraded':       'Dégradé',
+function clusterModeKey(mode: string): string {
+  const map: Record<string, string> = {
+    'unconfigured':  'cluster.modes.unconfigured',
+    'active-passive': 'cluster.modes.active_passive',
+    'active-active':  'cluster.modes.active_active',
+    'degraded':       'cluster.modes.degraded',
+    'resyncing':      'cluster.modes.resyncing',
+    'split-brain':    'cluster.modes.split_brain',
+  }
+  return map[mode] ?? mode
 }
+
 function modeLabel(mode: string): string {
-  return MODE_LABELS[mode] ?? mode
+  const key = clusterModeKey(mode)
+  return key.startsWith('cluster.') ? t(key) : mode
 }
 
 async function checkState() {
@@ -224,7 +221,6 @@ async function finalize() {
   const primaryNode = props.nodes.find(n => roles.value[n.id] === 'primary')
 
   try {
-    // 1. Créer ou réutiliser/renommer le cluster
     let clusterId: string = props.initialClusterId ?? clusterState.value?.clusterId ?? ''
     if (!clusterId) {
       const result = await $fetch<{ id: string }>('/api/admin/clusters', {
@@ -239,7 +235,6 @@ async function finalize() {
       })
     }
 
-    // 2. Affecter les nœuds au cluster
     await Promise.all(props.nodes.map(n =>
       $fetch(`/api/admin/sans/${n.id}/cluster`, {
         method: 'PATCH',
@@ -251,9 +246,8 @@ async function finalize() {
         },
       }),
     ))
-    // 3. Retirer les nœuds supprimés de la DB (garanti) + cleanup SSH best-effort
+
     if (props.removedNodes?.length) {
-      // Reset DB immédiat (ne peut pas échouer silencieusement)
       await Promise.all(
         props.removedNodes.map(n =>
           $fetch(`/api/admin/sans/${n.id}/cluster`, {
@@ -262,7 +256,6 @@ async function finalize() {
           }),
         ),
       )
-      // Cleanup SSH best-effort (stop corosync/pacemaker + crm node delete)
       Promise.allSettled(
         props.removedNodes.map(n =>
           $fetch('/api/admin/cluster/remove-node', {
@@ -273,7 +266,10 @@ async function finalize() {
       )
     }
 
-    toastSuccess('Cluster enregistré', `"${clusterName.value.trim()}" a été configuré avec ${props.nodes.length} nœud(s).`)
+    toastSuccess(
+      t('cluster.finalize.saved_title'),
+      t('cluster.finalize.saved_body', { name: clusterName.value.trim(), count: props.nodes.length }),
+    )
     emit('finalized')
   } catch (err: any) {
     saveError.value = err?.data?.message ?? String(err)

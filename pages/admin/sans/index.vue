@@ -2,9 +2,9 @@
   <div class="p-6 space-y-6">
     <header class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold">Administration des SANs</h1>
+        <h1 class="text-2xl font-bold">{{ t('admin.sans.page.title') }}</h1>
         <p class="text-sm text-gray-500">
-          {{ isViewer ? 'Visualisation des serveurs ESOS connectés.' : 'Gestion des serveurs ESOS connectés.' }}
+          {{ isViewer ? t('admin.sans.page.subtitle_viewer') : t('admin.sans.page.subtitle_admin') }}
         </p>
       </div>
       <UButton
@@ -13,7 +13,7 @@
         icon="i-heroicons-plus"
         @click="showForm = !showForm"
       >
-        {{ showForm ? 'Annuler' : 'Ajouter un SAN' }}
+        {{ showForm ? t('admin.sans.page.cancel') : t('admin.sans.page.add_san') }}
       </UButton>
     </header>
 
@@ -22,7 +22,7 @@
       <template #header>
         <div class="flex items-center gap-2">
           <UIcon name="i-heroicons-server-stack" class="w-5 h-5 text-primary-500" />
-          <h2 class="font-semibold">Nouveau SAN</h2>
+          <h2 class="font-semibold">{{ t('admin.sans.page.new_san') }}</h2>
         </div>
       </template>
 
@@ -30,13 +30,13 @@
 
         <!-- Identité -->
         <div>
-          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Identité</p>
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">{{ t('admin.sans.page.section_identity') }}</p>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <UFormGroup label="Label" required>
+            <UFormGroup :label="t('admin.sans.page.label')" required>
               <UInput v-model="form.label" placeholder="esos-prod-01" icon="i-heroicons-tag" />
             </UFormGroup>
-            <UFormGroup label="Description">
-              <UInput v-model="form.description" placeholder="Optionnel" />
+            <UFormGroup :label="t('admin.sans.page.description')">
+              <UInput v-model="form.description" :placeholder="t('admin.sans.page.optional')" />
             </UFormGroup>
           </div>
         </div>
@@ -45,11 +45,11 @@
 
         <!-- Connexion -->
         <div>
-          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Connexion SSH</p>
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">{{ t('admin.sans.page.section_ssh') }}</p>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="space-y-1.5">
               <label class="block text-sm font-medium text-gray-700">
-                Hôte <span class="text-red-500">*</span>
+                {{ t('admin.sans.page.host') }} <span class="text-red-500">*</span>
               </label>
               <div class="flex rounded-md shadow-sm ring-1 ring-inset ring-gray-300 focus-within:ring-2 focus-within:ring-primary-500 bg-white overflow-hidden h-9">
                 <span class="flex items-center pl-3 pr-2 text-gray-400 border-r border-gray-200 shrink-0">
@@ -70,7 +70,7 @@
                 />
               </div>
             </div>
-            <UFormGroup label="Utilisateur SSH" required>
+            <UFormGroup :label="t('admin.sans.page.ssh_user')" required>
               <UInput v-model="form.username" placeholder="root" icon="i-heroicons-user" />
             </UFormGroup>
           </div>
@@ -80,7 +80,7 @@
 
         <!-- Authentification -->
         <div>
-          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Authentification</p>
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">{{ t('admin.sans.page.section_auth') }}</p>
 
           <div class="flex rounded-lg overflow-hidden border border-gray-200 w-fit mb-4">
             <button
@@ -90,7 +90,7 @@
               @click="form.authType = 'key'"
             >
               <UIcon name="i-heroicons-key" class="w-4 h-4" />
-              Clé SSH
+              {{ t('admin.sans.page.auth_key') }}
             </button>
             <button
               type="button"
@@ -99,15 +99,15 @@
               @click="form.authType = 'password'"
             >
               <UIcon name="i-heroicons-lock-closed" class="w-4 h-4" />
-              Mot de passe
+              {{ t('admin.sans.page.auth_password') }}
             </button>
           </div>
 
           <UFormGroup
             v-if="form.authType === 'key'"
-            label="Clé privée (PEM ou OpenSSH)"
+            :label="t('admin.sans.page.private_key')"
             required
-            hint="Contenu du fichier id_rsa ou id_ed25519"
+            :hint="t('admin.sans.page.private_key_hint')"
           >
             <UTextarea
               v-model="form.privateKey"
@@ -119,7 +119,7 @@
 
           <UFormGroup
             v-if="form.authType === 'password'"
-            label="Mot de passe"
+            :label="t('admin.sans.page.password')"
             required
             class="max-w-xs"
           >
@@ -131,7 +131,7 @@
 
         <!-- Options -->
         <div>
-          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Options</p>
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">{{ t('admin.sans.page.section_options') }}</p>
           <label class="flex items-center gap-3 cursor-pointer select-none group w-fit">
             <input
               id="form-web-edit"
@@ -142,7 +142,7 @@
               class="w-4 h-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500 cursor-pointer"
             />
             <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">
-              Permettre l'édition depuis l'interface web
+              {{ t('admin.sans.page.allow_web_edit') }}
             </span>
           </label>
         </div>
@@ -150,16 +150,16 @@
         <UAlert v-if="formError" color="red" variant="soft" :title="formError" />
 
         <div class="flex justify-end gap-2 pt-1 border-t border-gray-100">
-          <UButton variant="ghost" color="gray" type="button" @click="resetForm">Réinitialiser</UButton>
-          <UButton type="submit" :loading="creating" color="primary" icon="i-heroicons-plus">Créer</UButton>
+          <UButton variant="ghost" color="gray" type="button" @click="resetForm">{{ t('admin.sans.page.reset') }}</UButton>
+          <UButton type="submit" :loading="creating" color="primary" icon="i-heroicons-plus">{{ t('admin.sans.page.create') }}</UButton>
         </div>
       </form>
     </UCard>
 
     <!-- Chargement initial -->
-    <div v-if="pending && !sans?.length" class="text-gray-400 py-8 text-center">Chargement…</div>
+    <div v-if="pending && !sans?.length" class="text-gray-400 py-8 text-center">{{ t('admin.sans.page.loading') }}</div>
     <div v-else-if="!sans?.length" class="text-gray-400 py-8 text-center">
-      Aucun SAN déclaré. Créez-en un avec le bouton ci-dessus.
+      {{ t('admin.sans.page.empty') }}
     </div>
 
     <template v-else>
@@ -179,7 +179,7 @@
         <div class="flex items-center justify-between">
           <h2 class="text-base font-semibold text-gray-700 flex items-center gap-2">
             <UIcon name="i-heroicons-server-stack" class="w-4 h-4 text-indigo-500" />
-            Clusters HA
+            {{ t('admin.sans.page.ha_clusters') }}
           </h2>
           <UButton variant="ghost" icon="i-heroicons-arrow-path" :loading="pending" size="xs" @click="refresh()" />
         </div>
@@ -225,7 +225,7 @@
         <div class="flex items-center justify-between" :class="clusterGroups.length ? 'mt-2' : ''">
           <h2 class="text-base font-semibold text-gray-700 flex items-center gap-2">
             <UIcon name="i-heroicons-server" class="w-4 h-4 text-gray-400" />
-            SANs autonomes
+            {{ t('admin.sans.page.standalone_sans') }}
           </h2>
           <UButton v-if="!clusterGroups.length" variant="ghost" icon="i-heroicons-arrow-path" :loading="pending" size="xs" @click="refresh()" />
         </div>
@@ -465,11 +465,11 @@ watch(clusterGroups, (groups) => {
 
 function liveStatusLabel(s: SSHStatus | undefined): string {
   switch (s) {
-    case 'connected':    return 'Connecté'
-    case 'connecting':   return 'Connexion…'
-    case 'reconnecting': return 'Reconnexion…'
-    case 'error':        return 'Erreur'
-    default:             return 'Non initialisé'
+    case 'connected':    return t('admin.sans.page.ssh_connected')
+    case 'connecting':   return t('admin.sans.page.ssh_connecting')
+    case 'reconnecting': return t('admin.sans.page.ssh_reconnecting')
+    case 'error':        return t('admin.sans.page.ssh_error')
+    default:             return t('admin.sans.page.ssh_uninitialized')
   }
 }
 
@@ -568,7 +568,7 @@ async function onCreate() {
     await refreshAll()
   } catch (err: unknown) {
     const e = err as { statusMessage?: string; message?: string }
-    formError.value = e.statusMessage || e.message || 'Erreur inconnue'
+    formError.value = e.statusMessage || e.message || t('admin.sans.page.unknown_error')
   } finally {
     creating.value = false
   }
@@ -588,8 +588,8 @@ async function onToggleReadOnly(san: SanRow) {
   } catch (err: unknown) {
     const e = err as { statusMessage?: string; message?: string }
     await modalAlert({
-      title:   'Erreur',
-      message: e.statusMessage || e.message || 'Erreur inconnue',
+      title:   t('admin.sans.page.toggle_error'),
+      message: e.statusMessage || e.message || t('admin.sans.page.unknown_error'),
       level:   'error',
     })
   } finally {
@@ -648,8 +648,8 @@ async function onDelete(id: string) {
     return
   }
   const confirmed = await modalConfirm({
-    title:   'Supprimer ce SAN ?',
-    message: 'La connexion SSH sera fermée.',
+    title:   t('admin.sans.page.delete_san_title'),
+    message: t('admin.sans.page.delete_san_message'),
     intent:  'danger',
   })
   if (!confirmed) return
@@ -659,8 +659,8 @@ async function onDelete(id: string) {
   } catch (err: unknown) {
     const e = err as { statusMessage?: string; message?: string }
     await modalAlert({
-      title:   'Suppression échouée',
-      message: e.statusMessage || e.message || 'Erreur inconnue',
+      title:   t('admin.sans.page.delete_failed'),
+      message: e.statusMessage || e.message || t('admin.sans.page.unknown_error'),
       level:   'error',
     })
   }
@@ -687,7 +687,7 @@ async function runSanTest(id: string): Promise<{ success: boolean; lines: Termin
   const san = sans.value?.find(s => s.id === id)
   const ts = () => new Date().toLocaleTimeString('fr-FR', { hour12: false })
   const lines: TerminalLine[] = []
-  lines.push({ ts: ts(), level: 'info', text: `Connexion SSH vers ${san?.host}:${san?.port ?? 22}…` })
+  lines.push({ ts: ts(), level: 'info', text: t('admin.sans.page.test_ssh_to', { host: san?.host, port: san?.port ?? 22 }) })
   try {
     const res = await $fetch<{
       success: boolean
@@ -698,16 +698,16 @@ async function runSanTest(id: string): Promise<{ success: boolean; lines: Termin
       code?: number
     }>(`/api/admin/sans/${id}/test`)
 
-    lines.push({ ts: ts(), level: 'info', text: `Status SSH : ${res.status}` })
-    if (res.stdout?.trim()) lines.push({ ts: ts(), level: 'ok',  text: `stdout : ${res.stdout.trim()}` })
-    if (res.stderr?.trim()) lines.push({ ts: ts(), level: 'err', text: `stderr : ${res.stderr.trim()}` })
-    if (res.error)          lines.push({ ts: ts(), level: 'err', text: `Erreur : ${res.error}` })
-    if (res.code !== undefined) lines.push({ ts: ts(), level: res.code === 0 ? 'ok' : 'err', text: `Exit code : ${res.code}` })
-    lines.push({ ts: ts(), level: res.success ? 'ok' : 'err', text: res.success ? 'Test réussi' : 'Test échoué' })
+    lines.push({ ts: ts(), level: 'info', text: t('admin.sans.page.test_ssh_status', { status: res.status }) })
+    if (res.stdout?.trim()) lines.push({ ts: ts(), level: 'ok',  text: t('admin.sans.page.test_stdout', { text: res.stdout.trim() }) })
+    if (res.stderr?.trim()) lines.push({ ts: ts(), level: 'err', text: t('admin.sans.page.test_stderr', { text: res.stderr.trim() }) })
+    if (res.error)          lines.push({ ts: ts(), level: 'err', text: t('admin.sans.page.test_error', { text: res.error }) })
+    if (res.code !== undefined) lines.push({ ts: ts(), level: res.code === 0 ? 'ok' : 'err', text: t('admin.sans.page.test_exit_code', { code: res.code }) })
+    lines.push({ ts: ts(), level: res.success ? 'ok' : 'err', text: res.success ? t('admin.sans.page.test_ok') : t('admin.sans.page.test_failed') })
     return { success: res.success, lines }
   } catch (err: unknown) {
     const e = err as { statusMessage?: string; message?: string }
-    lines.push({ ts: ts(), level: 'err', text: `Erreur : ${e.statusMessage || e.message || 'Erreur inconnue'}` })
+    lines.push({ ts: ts(), level: 'err', text: t('admin.sans.page.test_error', { text: e.statusMessage || e.message || t('admin.sans.page.unknown_error') }) })
     return { success: false, lines }
   }
 }
@@ -720,8 +720,8 @@ async function onReconnect(id: string) {
   } catch (err: unknown) {
     const e = err as { statusMessage?: string; message?: string }
     await modalAlert({
-      title:   'Reconnexion échouée',
-      message: e.statusMessage || e.message || 'Erreur inconnue',
+      title:   t('admin.sans.page.reconnect_failed'),
+      message: e.statusMessage || e.message || t('admin.sans.page.unknown_error'),
       level:   'error',
     })
   } finally {
@@ -762,7 +762,7 @@ async function onClusterTestAll(clusterId: string) {
     testResult.value = {
       success,
       sanLabel: group.clusterName,
-      sanHost: `${group.sans.length} nœud${group.sans.length > 1 ? 's' : ''}`,
+      sanHost: t('cluster.page.nodes_count', { count: group.sans.length }),
       lines,
     }
   } finally {
@@ -781,10 +781,10 @@ async function onClusterReconnectAll(clusterId: string) {
     await refreshLiveStatuses()
     const failed = results.filter(r => r.status === 'rejected').length
     await modalAlert({
-      title: failed ? 'Reconnexion partielle' : 'Reconnexion lancée',
+      title: failed ? t('admin.sans.page.reconnect_partial_title') : t('admin.sans.page.reconnect_launched_title'),
       message: failed
-        ? `${failed} nœud(s) n'ont pas pu être reconnectés.`
-        : `Reconnexion lancée pour ${group.sans.length} nœud(s).`,
+        ? t('admin.sans.page.reconnect_partial_message', { count: failed })
+        : t('admin.sans.page.reconnect_launched_message', { count: group.sans.length }),
       level: failed ? 'warning' : 'info',
     })
   } finally {
@@ -803,15 +803,15 @@ async function onClusterSync(clusterId: string) {
     })
     await refreshClusterGroup(group)
     await modalAlert({
-      title: 'Synchronisation réussie',
-      message: result.output?.slice(0, 300) || 'conf_sync.sh exécuté sur le nœud primaire.',
+      title: t('admin.sans.page.sync_success_title'),
+      message: result.output?.slice(0, 300) || t('admin.sans.page.sync_success_message'),
       level: 'info',
     })
   } catch (err: unknown) {
     const e = err as { data?: { message?: string }; statusMessage?: string; message?: string }
     await modalAlert({
-      title: 'Synchronisation échouée',
-      message: e.data?.message || e.statusMessage || e.message || 'Erreur inconnue',
+      title: t('admin.sans.page.sync_failed_title'),
+      message: e.data?.message || e.statusMessage || e.message || t('admin.sans.page.unknown_error'),
       level: 'error',
     })
   } finally {
@@ -834,7 +834,14 @@ async function onClusterProbe(clusterId: string) {
     ])
     groupOverviewMap[clusterId] = overview
     await fetchGroupAttention(group)
-    lines.push({ ts: ts(), level: overview.healthy ? 'ok' : 'err', text: `Mode : ${overview.mode}, santé : ${overview.healthy ? 'saine' : 'dégradée'}` })
+    lines.push({
+      ts: ts(),
+      level: overview.healthy ? 'ok' : 'err',
+      text: t('admin.sans.page.probe_mode_health', {
+        mode: overview.mode,
+        health: overview.healthy ? t('admin.sans.page.probe_health_ok') : t('admin.sans.page.probe_health_bad'),
+      }),
+    })
     for (const nodeResult of prereq) {
       const node = group.sans.find(n => n.id === nodeResult.sanId)
       lines.push({ ts: ts(), level: 'info', text: `--- ${node?.label ?? nodeResult.sanId} ---` })
@@ -845,7 +852,7 @@ async function onClusterProbe(clusterId: string) {
     testResult.value = {
       success: overview.healthy && lines.every(line => line.level !== 'err'),
       sanLabel: group.clusterName,
-      sanHost: 'Probe cluster',
+      sanHost: t('admin.sans.page.probe_cluster_host'),
       lines,
     }
   } catch (err: unknown) {
@@ -853,8 +860,8 @@ async function onClusterProbe(clusterId: string) {
     testResult.value = {
       success: false,
       sanLabel: group.clusterName,
-      sanHost: 'Probe cluster',
-      lines: [{ ts: ts(), level: 'err', text: e.data?.message || e.statusMessage || e.message || 'Erreur inconnue' }],
+      sanHost: t('admin.sans.page.probe_cluster_host'),
+      lines: [{ ts: ts(), level: 'err', text: e.data?.message || e.statusMessage || e.message || t('admin.sans.page.unknown_error') }],
     }
   } finally {
     probing[clusterId] = false

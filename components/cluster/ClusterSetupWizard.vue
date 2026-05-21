@@ -1,9 +1,8 @@
 <template>
   <div class="space-y-5">
 
-    <!-- Stepper -->
     <div class="flex items-center">
-      <template v-for="(step, i) in STEPS" :key="i">
+      <template v-for="(step, i) in steps" :key="i">
         <div
           class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
           :class="stepCls(i)"
@@ -17,13 +16,11 @@
           </span>
           {{ step }}
         </div>
-        <div v-if="i < STEPS.length - 1" class="flex-1 h-px bg-gray-200 mx-1 min-w-[12px]" />
+        <div v-if="i < steps.length - 1" class="flex-1 h-px bg-gray-200 mx-1 min-w-[12px]" />
       </template>
     </div>
 
-    <!-- Contenu -->
     <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-      <!-- Étape 0 : Sélection des nœuds -->
       <ClusterNodeSelector
         v-if="current === 0"
         @nodes-selected="onNodesSelected"
@@ -58,28 +55,27 @@
       />
     </div>
 
-    <!-- Navigation -->
     <div class="flex justify-between">
       <UButton
         v-if="current > 0"
         color="gray" variant="ghost"
         icon="i-heroicons-arrow-left"
-        label="Précédent"
+        :label="t('cluster.wizard.prev')"
         @click="current--"
       />
       <div class="flex-1" />
       <UButton
         v-if="current === 4 && stepState[4] === 'done'"
         icon="i-heroicons-check"
-        label="Terminer la configuration"
+        :label="t('cluster.wizard.finish_setup')"
         trailing
         color="green"
         @click="advance(4)"
       />
       <UButton
-        v-else-if="current < STEPS.length - 1 && current !== 4 && stepState[current] === 'done'"
+        v-else-if="current < steps.length - 1 && current !== 4 && stepState[current] === 'done'"
         icon="i-heroicons-arrow-right"
-        label="Suivant"
+        :label="t('cluster.wizard.next')"
         trailing
         @click="current++"
       />
@@ -92,8 +88,16 @@
 interface NodeInfo { id: string; label: string; host: string }
 
 const emit = defineEmits<{ (e: 'setup-complete'): void }>()
+const { t } = useEsosI18n()
 
-const STEPS = ['Nœuds', 'Prérequis', 'Services', 'Quorum', 'Sync', 'Finalisation']
+const steps = computed(() => [
+  t('cluster.wizard.step_nodes'),
+  t('cluster.wizard.step_prereq'),
+  t('cluster.wizard.step_services'),
+  t('cluster.wizard.step_quorum'),
+  t('cluster.wizard.step_sync'),
+  t('cluster.wizard.step_finalize'),
+])
 
 const current             = ref(0)
 const stepState           = ref<('pending' | 'done')[]>(['pending', 'pending', 'pending', 'pending', 'pending', 'pending'])
@@ -112,7 +116,7 @@ function onNodesSelected(nodes: NodeInfo[], clusterId: string | null, clusterNam
 
 function advance(step: number) {
   stepState.value[step] = 'done'
-  if (step < STEPS.length - 1) {
+  if (step < steps.value.length - 1) {
     current.value = step + 1
   } else {
     emit('setup-complete')

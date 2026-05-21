@@ -33,7 +33,6 @@ export const usePerfStore = defineStore('perf', {
     dbTestLoading: false,
     error: null as string | null,
     pollTimer: null as ReturnType<typeof setInterval> | null,
-    /** SAN ciblé pour toutes les requêtes (null = SAN effectif) */
     sanId: null as string | null,
   }),
 
@@ -56,6 +55,7 @@ export const usePerfStore = defineStore('perf', {
     },
 
     async fetchConfig() {
+      const { t } = useEsosI18n()
       this.configLoading = true
       try {
         this.config = await $fetch<PerfAgentConfig>('/api/perf/config', { query: this.query() })
@@ -63,13 +63,14 @@ export const usePerfStore = defineStore('perf', {
           this.selectedSystem = this.config.system
         }
       } catch (err: any) {
-        this.error = err?.data?.message ?? err.message ?? 'Erreur configuration'
+        this.error = err?.data?.message ?? err.message ?? t('monitoring.perf.errors.config')
       } finally {
         this.configLoading = false
       }
     },
 
     async saveConfig(update: import('~/server/utils/perf-agent-types').PerfAgentConfigUpdate) {
+      const { t } = useEsosI18n()
       this.configLoading = true
       this.error = null
       try {
@@ -80,7 +81,7 @@ export const usePerfStore = defineStore('perf', {
         })
         return true
       } catch (err: any) {
-        this.error = err?.data?.message ?? err.message ?? 'Erreur sauvegarde'
+        this.error = err?.data?.message ?? err.message ?? t('monitoring.perf.errors.save')
         return false
       } finally {
         this.configLoading = false
@@ -88,17 +89,19 @@ export const usePerfStore = defineStore('perf', {
     },
 
     async fetchService() {
+      const { t } = useEsosI18n()
       this.serviceLoading = true
       try {
         this.service = await $fetch<PerfAgentServiceStatus>('/api/perf/service', { query: this.query() })
       } catch (err: any) {
-        this.error = err?.data?.message ?? err.message ?? 'Erreur service'
+        this.error = err?.data?.message ?? err.message ?? t('monitoring.perf.errors.service')
       } finally {
         this.serviceLoading = false
       }
     },
 
     async serviceAction(action: PerfServiceAction) {
+      const { t } = useEsosI18n()
       this.serviceLoading = true
       this.error = null
       try {
@@ -108,7 +111,7 @@ export const usePerfStore = defineStore('perf', {
           query: this.query(),
         })
       } catch (err: any) {
-        this.error = err?.data?.message ?? err.message ?? `Erreur action ${action}`
+        this.error = err?.data?.message ?? err.message ?? t('monitoring.perf.errors.service_action', { action })
       } finally {
         this.serviceLoading = false
       }
@@ -136,6 +139,7 @@ export const usePerfStore = defineStore('perf', {
     },
 
     async fetchSummary() {
+      const { t } = useEsosI18n()
       if (!this.selectedSystem) return
       try {
         this.devices = await $fetch<PerfDeviceSummary[]>('/api/perf/summary', {
@@ -145,11 +149,12 @@ export const usePerfStore = defineStore('perf', {
           this.selectedDevice = this.devices[0].device
         }
       } catch (err: any) {
-        this.error = err?.data?.message ?? err.message ?? 'Erreur résumé'
+        this.error = err?.data?.message ?? err.message ?? t('monitoring.perf.errors.summary')
       }
     },
 
     async fetchSeries() {
+      const { t } = useEsosI18n()
       if (!this.selectedSystem || !this.selectedDevice) return
       try {
         this.series = await $fetch<PerfDeviceSeries>('/api/perf/series', {
@@ -161,7 +166,7 @@ export const usePerfStore = defineStore('perf', {
           },
         })
       } catch (err: any) {
-        this.error = err?.data?.message ?? err.message ?? 'Erreur séries'
+        this.error = err?.data?.message ?? err.message ?? t('monitoring.perf.errors.series')
       }
     },
 

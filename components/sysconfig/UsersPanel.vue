@@ -3,7 +3,7 @@
     <template #header>
       <div class="flex items-center gap-2">
         <UIcon name="i-heroicons-users" class="text-gray-500 size-5" />
-        <span class="font-semibold text-gray-800">Comptes utilisateurs</span>
+        <span class="font-semibold text-gray-800">{{ t('admin.sysconfig.users.title') }}</span>
       </div>
     </template>
 
@@ -12,10 +12,10 @@
       <div class="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div v-if="loading" class="flex items-center justify-center py-8 text-gray-400 gap-2">
           <UIcon name="i-heroicons-arrow-path" class="size-4 animate-spin" />
-          <span class="text-sm">Chargement…</span>
+          <span class="text-sm">{{ t('admin.sysconfig.users.loading') }}</span>
         </div>
         <div v-else-if="users.length === 0" class="py-8 text-center text-sm text-gray-400">
-          Aucun utilisateur non-système
+          {{ t('admin.sysconfig.users.empty') }}
         </div>
         <div v-else class="divide-y divide-gray-100 dark:divide-gray-800">
           <div
@@ -41,7 +41,7 @@
                     <UIcon name="i-heroicons-key" class="size-3" />
                     {{ user.lastPasswordChange }}
                   </span>
-                  <span v-else class="italic">clé: inconnue</span>
+                  <span v-else class="italic">{{ t('admin.sysconfig.users.key_unknown') }}</span>
                 </div>
               </div>
             </div>
@@ -60,9 +60,9 @@
 
       <!-- Add user form -->
       <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3">
-        <p class="text-xs font-medium text-gray-400 uppercase tracking-wide">Ajouter un utilisateur</p>
+        <p class="text-xs font-medium text-gray-400 uppercase tracking-wide">{{ t('admin.sysconfig.users.add_section') }}</p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <UFormField label="Nom d'utilisateur" :error="usernameError">
+          <UFormField :label="t('admin.sysconfig.users.username') as string" :error="usernameError">
             <UInput
               v-model="form.username"
               placeholder="nomutilisateur"
@@ -70,7 +70,7 @@
               :disabled="saving || props.disabled"
             />
           </UFormField>
-          <UFormField label="Mot de passe" :error="complexityError">
+          <UFormField :label="t('admin.sysconfig.users.password') as string" :error="complexityError">
             <UInput
               v-model="form.password"
               type="password"
@@ -93,7 +93,7 @@
               </p>
               <div class="grid gap-1 text-xs">
                 <div
-                  v-for="check in complexity.checks"
+                  v-for="check in localizedChecks"
                   :key="check.id"
                   class="flex items-center gap-1.5"
                   :class="check.ok ? 'text-green-700' : 'text-gray-400'"
@@ -107,7 +107,7 @@
               </div>
             </div>
           </UFormField>
-          <UFormField label="Confirmer le mot de passe" :error="confirmError">
+          <UFormField :label="t('admin.sysconfig.users.confirm_password') as string" :error="confirmError">
             <UInput
               v-model="form.passwordConfirm"
               type="password"
@@ -120,7 +120,7 @@
         </div>
         <div class="flex justify-end">
           <UButton
-            label="Créer l'utilisateur"
+            :label="t('admin.sysconfig.users.create') as string"
             icon="i-heroicons-plus"
             :loading="saving"
             :disabled="!canAdd || props.disabled"
@@ -151,6 +151,7 @@ const props = defineProps<{
   disabled?: boolean
 }>()
 
+const { t, tError } = useEsosI18n()
 const toast    = useAppToast()
 const loading  = ref(false)
 const saving   = ref(false)
@@ -165,12 +166,21 @@ const form = reactive({
 
 const complexity = computed(() => evaluatePasswordComplexity(form.password))
 
+const localizedChecks = computed(() =>
+  complexity.value.checks.map(check => ({
+    ...check,
+    label: t(`admin.sysconfig.users.policy_checks.${check.id}`),
+  })),
+)
+
 const complexityLabel = computed(() => {
   const score = complexity.value.score ?? 0
-  if (score <= 1) return 'Très faible'
-  if (score === 2) return 'Faible'
-  if (score === 3) return 'Correct'
-  return complexity.value.isValid ? 'Fort' : 'Correct'
+  if (score <= 1) return t('admin.sysconfig.users.strength_very_weak')
+  if (score === 2) return t('admin.sysconfig.users.strength_weak')
+  if (score === 3) return t('admin.sysconfig.users.strength_fair')
+  return complexity.value.isValid
+    ? t('admin.sysconfig.users.strength_ok')
+    : t('admin.sysconfig.users.strength_fair')
 })
 
 function complexityColor(step: number): string {
@@ -184,7 +194,7 @@ function complexityColor(step: number): string {
 
 const complexityError = computed(() => {
   if (!form.password || complexity.value.isValid) return undefined
-  return 'Le mot de passe ne respecte pas la complexité requise'
+  return t('admin.sysconfig.users.policy_error') as string
 })
 
 const canAdd = computed(() =>
@@ -196,13 +206,13 @@ const canAdd = computed(() =>
 
 const usernameError = computed(() => {
   if (!form.username) return undefined
-  if (!/^[a-z][a-z0-9_-]*$/.test(form.username)) return 'Lettres minuscules, chiffres, _ ou - uniquement'
+  if (!/^[a-z][a-z0-9_-]*$/.test(form.username)) return t('admin.sysconfig.users.err_username_chars') as string
   return undefined
 })
 
 const confirmError = computed(() => {
   if (!form.passwordConfirm) return undefined
-  if (form.password !== form.passwordConfirm) return 'Les mots de passe ne correspondent pas'
+  if (form.password !== form.passwordConfirm) return t('admin.sysconfig.users.err_password_mismatch') as string
   return undefined
 })
 
@@ -211,8 +221,8 @@ async function fetchUsers() {
   try {
     const data = await $fetch<{ users: EsosUser[] }>(`/api/san/${props.sanId}/system-config/users`)
     users.value = data.users
-  } catch (err: any) {
-    toast.error('Erreur', err?.data?.message ?? String(err))
+  } catch (err: unknown) {
+    toast.error(t('common.failure') as string, tError(err as Parameters<typeof tError>[0]))
   } finally {
     loading.value = false
   }
@@ -226,13 +236,13 @@ async function onAdd() {
       method: 'POST',
       body:   { username: form.username.trim(), password: form.password },
     })
-    toast.success(`Utilisateur "${form.username}" créé`)
+    toast.success(t('admin.sysconfig.users.toast_created', { username: form.username }) as string)
     form.username = ''
     form.password = ''
     form.passwordConfirm = ''
     await fetchUsers()
-  } catch (err: any) {
-    toast.error('Échec', err?.data?.message ?? String(err))
+  } catch (err: unknown) {
+    toast.error(t('common.failure') as string, tError(err as Parameters<typeof tError>[0]))
   } finally {
     saving.value = false
   }
@@ -240,9 +250,9 @@ async function onAdd() {
 
 async function onDelete(username: string) {
   const ok = await modalDestructive({
-    title:        `Supprimer "${username}" ?`,
-    message:      `Le compte utilisateur et son répertoire personnel seront définitivement supprimés.`,
-    confirmLabel: 'Supprimer',
+    title:        t('admin.sysconfig.users.delete_title', { username }) as string,
+    message:      t('admin.sysconfig.users.confirm_delete_msg') as string,
+    confirmLabel: t('admin.sysconfig.users.delete_confirm_label') as string,
     inputConfirm: username,
   })
   if (!ok) return
@@ -252,10 +262,10 @@ async function onDelete(username: string) {
     await $fetch(`/api/san/${props.sanId}/system-config/users/${username}`, {
       method: 'DELETE',
     })
-    toast.success(`Utilisateur "${username}" supprimé`)
+    toast.success(t('admin.sysconfig.users.toast_deleted', { username }) as string)
     await fetchUsers()
-  } catch (err: any) {
-    toast.error('Échec', err?.data?.message ?? String(err))
+  } catch (err: unknown) {
+    toast.error(t('common.failure') as string, tError(err as Parameters<typeof tError>[0]))
   } finally {
     deleting.value = null
   }

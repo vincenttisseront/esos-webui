@@ -5,7 +5,7 @@
     <UAlert
       v-for="(alert, i) in lvm.alerts"
       :key="i"
-      :title="alert.message"
+      :title="tLvmAlert(alert)"
       :color="alert.severity === 'critical' ? 'red' : 'amber'"
       variant="soft"
     />
@@ -443,7 +443,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{ 'navigate-block-devices': [] }>()
 
-const { t } = useEsosI18n()
+const { t, tLvmAlert } = useEsosI18n()
 const lvm = useLvmStore()
 const { open: openModal } = useAppModal()
 
