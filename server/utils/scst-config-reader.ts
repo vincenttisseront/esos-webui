@@ -1,5 +1,6 @@
 import { getActiveSSHManager } from './ssh-runtime'
 import { parseScstConfSafe } from './scst-conf-parser'
+import type { SSHSessionManager } from './ssh-session-manager'
 import { readAllSessions, readTargetsEnabled } from './sysfs-reader'
 import { withCache } from './cache'
 import { isSystemDriver } from '~/types/esos'
@@ -16,11 +17,10 @@ function scstConfPath(): string {
 
 const OVERVIEW_TTL_MS = 5_000
 
-export async function readScstConfig(): Promise<ScstConfig> {
-  const ssh = getActiveSSHManager()
+export async function readScstConfig(manager?: SSHSessionManager): Promise<ScstConfig> {
+  const ssh = manager ?? getActiveSSHManager()
   const path = scstConfPath()
-  // `cat` returns empty if the file is missing; we tolerate that.
-  const result = await ssh.exec(`cat '${path}' 2>/dev/null || true`)
+  const result = await ssh.exec(`cat '${path}' 2>/dev/null || true`, 15_000)
   return parseScstConfSafe(result.stdout)
 }
 

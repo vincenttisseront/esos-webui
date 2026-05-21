@@ -8,6 +8,11 @@ export type VdiskAllocMode = 'fallocate' | 'dd'
 export type PartitionStrategy = 'none' | 'gpt'
 export type MountStatus = 'mounted' | 'unmounted' | 'unknown'
 export type MountHealth = 'ok' | 'degraded' | 'full'
+export type FsMountRole = 'fileio_data' | 'system' | 'other'
+export type FsBackendSource = 'hw_raid' | 'md' | 'lvm_lv' | 'disk'
+export type VdiskFileSource = 'scan' | 'scst_config' | 'scst_sysfs'
+export type FsResourceKind = 'backend' | 'mount' | 'vdisk' | 'fileio' | 'lun'
+export type FsResourceRelation = 'backs' | 'hosts' | 'registers' | 'exposes'
 
 export interface FsToolsInfo {
   mkfs_xfs: boolean
@@ -22,6 +27,9 @@ export interface FsToolsInfo {
 export interface FileSystemMount {
   mountPoint: string
   backingDevice: string
+  backingPaths?: string[]
+  linkedBackendPath?: string
+  role?: FsMountRole
   partition?: string
   fsType: FsType | string
   label?: string
@@ -43,6 +51,8 @@ export interface VDiskFile {
   mountPoint: string
   scstDeviceNames: string[]
   mapped: boolean
+  source?: VdiskFileSource
+  fileioDeviceName?: string
 }
 
 export interface FileioDeviceRef {
@@ -51,6 +61,7 @@ export interface FileioDeviceRef {
   filename: string
   attrs: Record<string, string>
   mapped: boolean
+  sysfsPresent?: boolean
 }
 
 export interface ScstLunMappingRef {
@@ -81,15 +92,64 @@ export interface FsBackendCandidate {
   displayName?: string
 }
 
+/** Unified backend row (candidates + linkage metadata). */
+export interface FsBackendRef extends FsBackendCandidate {
+  source: FsBackendSource
+  hwLdId?: string
+  controllerLabel?: string
+  mountPoint?: string
+  scstDeviceNames?: string[]
+  signatures?: string[]
+}
+
+export interface FsResourceLink {
+  from: FsResourceKind
+  fromId: string
+  to: FsResourceKind
+  toId: string
+  relation: FsResourceRelation
+}
+
+export interface FsDetectionDiagnostics {
+  mountCounts: {
+    findmnt: number
+    lsblk: number
+    df: number
+    fileioData: number
+    system: number
+    other: number
+  }
+  scst: {
+    configBytes: number
+    handlers: number
+    fileioDevices: number
+    lunMappings: number
+    sysfsDevices: number
+  }
+  candidates: {
+    total: number
+    eligible: number
+    byKind: Partial<Record<FsBackendKind, number>>
+  }
+  vdiskScanRoots: string[]
+  excludedMounts: string[]
+  warnings: string[]
+}
+
 export interface FsOverview {
   scannedAt: number
   mounts: FileSystemMount[]
   vdiskFiles: VDiskFile[]
   fileioDevices: FileioDeviceRef[]
   lunMappings: ScstLunMappingRef[]
+  backends: FsBackendRef[]
+  links: FsResourceLink[]
+  diagnostics: FsDetectionDiagnostics
   tools: FsToolsInfo
   nextAction: FsNextActionHint
   scanWarnings: string[]
+  /** @deprecated use backends — kept for wizard compatibility */
+  candidates?: FsBackendCandidate[]
 }
 
 export interface FsPreflightResult {

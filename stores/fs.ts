@@ -24,6 +24,8 @@ export const useFsStore = defineStore('fs', {
     vdiskFiles: s => s.overview?.vdiskFiles ?? [],
     fileioDevices: s => s.overview?.fileioDevices ?? [],
     lunMappings: s => s.overview?.lunMappings ?? [],
+    backends: s => s.overview?.backends ?? [],
+    diagnostics: s => s.overview?.diagnostics,
     tools: s => s.overview?.tools,
   },
 
@@ -48,6 +50,7 @@ export const useFsStore = defineStore('fs', {
         this.overview = await $fetch<FsOverview>('/api/fs/overview', {
           query: { ...this.query(), ...(refresh ? { refresh: '1' } : {}) },
         })
+        this.candidates = this.overview?.candidates ?? this.overview?.backends ?? []
       } catch (e: any) {
         this.error = e?.data?.message ?? e?.message ?? 'Erreur filesystem'
       } finally {
@@ -56,6 +59,10 @@ export const useFsStore = defineStore('fs', {
     },
 
     async fetchCandidates(allowRawDisk = false) {
+      if (this.overview?.backends?.length) {
+        this.candidates = this.overview.backends
+        return
+      }
       this.candidates = await $fetch<FsBackendCandidate[]>('/api/fs/candidates', {
         query: { ...this.query(), ...(allowRawDisk ? { allowRawDisk: '1' } : {}) },
       })

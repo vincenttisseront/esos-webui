@@ -2191,7 +2191,14 @@
         "empty_candidates": "No eligible backends",
         "empty_vdisks": "No vdisk files found",
         "empty_fileio": "No FILEIO devices",
-        "empty_luns": "No LUN mappings"
+        "empty_luns": "No LUN mappings",
+        "backends_all_title": "Block backends (all)",
+        "no_eligible_summary": "No eligible backend ({total} detected, {eligible} eligible). See reasons below or open the Block Devices tab.",
+        "show_system_mounts": "Show system mounts (/mnt/root, …)",
+        "diagnostics_title": "Detection diagnostics",
+        "role_system": "system",
+        "role_fileio": "FILEIO data",
+        "filter_vdisk_mount": "Vdisks on this mount"
       },
       "next": {
         "title": "Recommended next step",

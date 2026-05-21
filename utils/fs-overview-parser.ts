@@ -1,4 +1,5 @@
-import type { FileSystemMount, FsType, MountHealth } from '~/types/filesystem'
+import type { FileSystemMount, FsMountRole, FsType, MountHealth } from '~/types/filesystem'
+import { classifyMountRole } from '~/utils/fs-mount-classifier'
 
 export const FS_TYPES = new Set(['xfs', 'ext4', 'ext3', 'ext2', 'btrfs'])
 
@@ -125,15 +126,19 @@ export function buildMountRow(
   m: { target: string; source: string; fstype: string },
   df: { totalBytes: number; usedBytes: number; availBytes: number } | undefined,
   source: FileSystemMount['source'],
+  options?: { role?: FsMountRole; fileioFilenames?: string[] },
 ): FileSystemMount {
   const totalBytes = df?.totalBytes ?? 0
   const freeBytes = df?.availBytes ?? 0
   const usedPct = totalBytes > 0
     ? Math.round(((df?.usedBytes ?? 0) / totalBytes) * 100)
     : 0
+  const role = options?.role ?? classifyMountRole(m.target, { fileioFilenames: options?.fileioFilenames })
   return {
     mountPoint: m.target,
     backingDevice: m.source,
+    backingPaths: [m.source],
+    role,
     fsType: normalizeFsType(m.fstype),
     totalBytes,
     freeBytes,

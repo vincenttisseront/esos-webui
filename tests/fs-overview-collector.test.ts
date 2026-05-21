@@ -4,28 +4,25 @@ import type { FsOverview } from '~/types/filesystem'
 
 vi.mock('../server/utils/scst-device-index', () => ({
   readScstDeviceIndex: vi.fn().mockResolvedValue({ pathToDevices: new Map() }),
+  readScstSysfsFileioMap: vi.fn().mockResolvedValue(new Map()),
+}))
+
+vi.mock('../server/utils/raid-overview.service', () => ({
+  collectRaidOverview: vi.fn().mockResolvedValue({
+    blockDevices: [],
+    mdArrays: [],
+    hardwareControllers: [],
+  }),
+}))
+
+vi.mock('../server/utils/lvm-overview.service', () => ({
+  collectLvmOverview: vi.fn().mockResolvedValue({ pvs: [], vgs: [], lvs: [] }),
 }))
 
 vi.mock('../server/utils/scst-config-reader', () => ({
   readScstConfig: vi.fn().mockResolvedValue({
-    handlers: [
-      {
-        name: 'vdisk_fileio',
-        devices: [{ name: 'vdisk01', filename: '/mnt/vdisks/fs01/disk.img', attrs: { nv_cache: '1' } }],
-      },
-    ],
-    drivers: [
-      {
-        name: 'iscsi',
-        targets: [
-          {
-            name: 'iqn.test',
-            groups: [{ name: 'grp1', luns: [{ id: 0, device: 'vdisk01', readOnly: false }] }],
-            luns: [],
-          },
-        ],
-      },
-    ],
+    handlers: [],
+    drivers: [],
   }),
 }))
 
@@ -67,9 +64,10 @@ describe('collectFsOverview', () => {
     const overview = await collectFsOverview(manager as any)
 
     expect(overview.mounts.some(m => m.mountPoint === '/mnt/vdisks/fs01')).toBe(true)
-    expect(overview.fileioDevices.some(d => d.name === 'vdisk01')).toBe(true)
-    expect(overview.lunMappings.some(l => l.deviceName === 'vdisk01')).toBe(true)
+    expect(overview.mounts.find(m => m.mountPoint === '/mnt/vdisks/fs01')?.role).toBe('fileio_data')
     expect(overview.nextAction.kind).toBe('create_vdisk')
+    expect(overview.backends).toBeDefined()
+    expect(overview.diagnostics).toBeDefined()
   })
 })
 
@@ -86,6 +84,7 @@ describe('computeFsNextAction integration', () => {
         usedPct: 0,
         mounted: true,
         status: 'mounted',
+        role: 'fileio_data',
         source: 'findmnt',
       }],
       vdiskFiles: [{
@@ -115,6 +114,16 @@ describe('computeFsNextAction integration', () => {
       tools: {} as any,
       nextAction: { kind: 'none', messageKey: 'storage.fs.next.none' },
       scanWarnings: [],
+      backends: [],
+      links: [],
+      diagnostics: {
+        mountCounts: { findmnt: 0, lsblk: 0, df: 0, fileioData: 1, system: 0, other: 0 },
+        scst: { configBytes: 0, handlers: 1, fileioDevices: 1, lunMappings: 1, sysfsDevices: 0 },
+        candidates: { total: 0, eligible: 0, byKind: {} },
+        vdiskScanRoots: [],
+        excludedMounts: [],
+        warnings: [],
+      },
     }
     const next = computeFsNextAction(overview)
     expect(['expose', 'none']).toContain(next.kind)

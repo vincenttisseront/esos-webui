@@ -325,6 +325,7 @@
         :cluster-id="san?.clusterId ?? undefined"
         :is-clustered="isClusteredSan"
         :read-only="isReadOnly"
+        @navigate-block-devices="onFsNavigateBlockDevices"
       />
     </div>
 
@@ -714,6 +715,11 @@ function goToDevicesForPath(path: string) {
   activeTab.value = 'devices'
   highlightedDevicePath.value = path
   deviceFilter.value = path.replace(/^\/dev\//, '')
+}
+
+function onFsNavigateBlockDevices(path?: string) {
+  if (path) goToDevicesForPath(path)
+  else activeTab.value = 'devices'
 }
 
 function peerRaidLink(peerSanId: string): string {

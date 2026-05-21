@@ -1,12 +1,22 @@
 import { getActiveSSHManager } from './ssh-runtime'
-import { readScstDeviceIndex } from './scst-device-index'
+import { readScstDeviceIndex, readScstSysfsFileioMap } from './scst-device-index'
 import { readScstConfig } from './scst-config-reader'
-import { collectFsBackendCandidates } from './fs-candidates'
+import { collectLvmOverview } from './lvm-overview.service'
+import { collectRaidOverview } from './raid-overview.service'
+import {
+  buildFsBackendsAndLinks,
+  buildFsDiagnostics,
+  buildFsResourceLinks,
+  buildPathAliasIndex,
+  enrichMountsWithRolesAndLinks,
+  vdiskMountRootsFromEnv,
+} from './fs-inventory-resolver'
 import { computeFsNextAction } from '~/utils/fs-provisioning-chain'
 import {
   collectFileioDevicesFromConfig,
   collectLunMappingsFromConfig,
   deviceNamesMappedInLuns,
+  fileioFilenamesFromDevices,
 } from '~/utils/fs-scst-inventory'
 import {
   mergeMountSources,
@@ -18,14 +28,13 @@ import {
   parseLsblkMounts,
   buildMountRow,
 } from '~/utils/fs-overview-parser'
-import type { FileSystemMount, FsOverview, FsToolsInfo, VDiskFile } from '~/types/filesystem'
+import type { FileSystemMount, FsBackendCandidate, FsOverview, FsToolsInfo, VDiskFile } from '~/types/filesystem'
 import type { SSHSessionManager } from './ssh-session-manager'
 
 const VDISK_GLOB = '*.img'
 
 export function vdiskMountRoots(): string[] {
-  const raw = process.env.ESOS_VDISK_MOUNT_ROOTS ?? '/mnt/vdisks'
-  return raw.split(',').map(s => s.trim()).filter(Boolean)
+  return vdiskMountRootsFromEnv()
 }
 
 async function probeTools(manager: SSHSessionManager): Promise<FsToolsInfo> {
@@ -63,10 +72,14 @@ async function dfForMount(
 async function collectMounts(manager: SSHSessionManager): Promise<{
   mounts: FileSystemMount[]
   warnings: string[]
+  findmntCount: number
+  lsblkCount: number
+  dfCount: number
 }> {
   const warnings: string[] = []
   const findmntJson = await manager.exec('findmnt -J 2>/dev/null || true', 15_000)
   let findmntRows = parseFindmntJson(findmntJson.stdout)
+  const findmntCount = findmntRows.length
   if (!findmntRows.length) {
     const findmntLo = await manager.exec(
       'findmnt -lo TARGET,SOURCE,FSTYPE 2>/dev/null | tail -n +2',
@@ -78,6 +91,7 @@ async function collectMounts(manager: SSHSessionManager): Promise<{
 
   const lsblk = await manager.exec('lsblk -J -b -f 2>/dev/null || true', 15_000)
   const lsblkRows = parseLsblkMounts(lsblk.stdout)
+  const lsblkCount = lsblkRows.length
 
   const dfRoots: Array<{ target: string; source: string; fstype: string }> = []
   for (const root of vdiskMountRoots()) {
@@ -88,6 +102,7 @@ async function collectMounts(manager: SSHSessionManager): Promise<{
       dfRoots.push({ target: root, source: root, fstype: 'xfs' })
     }
   }
+  const dfCount = dfRoots.length
 
   const merged = mergeMountSources([
     { rows: findmntRows, source: 'findmnt' },
@@ -115,11 +130,13 @@ async function collectMounts(manager: SSHSessionManager): Promise<{
   for (const m of mounts) {
     const entry = fstabMap.get(m.mountPoint)
     if (entry) m.fstabEntry = entry
-    const uuid = uuids.get(m.backingDevice)
-    if (uuid) m.uuid = uuid
+    for (const bp of m.backingPaths ?? [m.backingDevice]) {
+      const uuid = uuids.get(bp)
+      if (uuid) m.uuid = uuid
+    }
   }
 
-  return { mounts, warnings }
+  return { mounts, warnings, findmntCount, lsblkCount, dfCount }
 }
 
 function longestMountPrefix(path: string, mounts: FileSystemMount[]): string {
@@ -132,16 +149,63 @@ function longestMountPrefix(path: string, mounts: FileSystemMount[]): string {
   return best
 }
 
-async function scanVdiskFiles(
+async function statFileSize(manager: SSHSessionManager, path: string): Promise<number> {
+  const q = `'${path.replace(/'/g, `'\\''`)}'`
+  const r = await manager.exec(`stat -c '%s' ${q} 2>/dev/null || echo 0`, 5_000)
+  return Number.parseInt(r.stdout.trim(), 10) || 0
+}
+
+async function buildVdiskInventory(
   manager: SSHSessionManager,
   mounts: FileSystemMount[],
   pathToDevices: Map<string, string[]>,
   lunDeviceNames: Set<string>,
+  fileioDevices: Array<{ name: string; filename: string }>,
 ): Promise<VDiskFile[]> {
-  const roots = new Set<string>([...vdiskMountRoots(), ...mounts.map(m => m.mountPoint)])
   const files: VDiskFile[] = []
   const seen = new Set<string>()
 
+  const add = (entry: {
+    path: string
+    sizeBytes: number
+    source: VDiskFile['source']
+    fileioDeviceName?: string
+  }) => {
+    if (!entry.path || seen.has(entry.path)) return
+    seen.add(entry.path)
+    const fileName = entry.path.split('/').pop() ?? entry.path
+    const mountPoint = longestMountPrefix(entry.path, mounts) || vdiskMountRoots()[0] || '/'
+    const scstDeviceNames = pathToDevices.get(entry.path) ?? []
+    if (entry.fileioDeviceName && !scstDeviceNames.includes(entry.fileioDeviceName)) {
+      scstDeviceNames.push(entry.fileioDeviceName)
+    }
+    const mappedByPath = scstDeviceNames.length > 0
+    const mappedByLun = scstDeviceNames.some(n => lunDeviceNames.has(n))
+    files.push({
+      path: entry.path,
+      fileName,
+      sizeBytes: entry.sizeBytes,
+      mountPoint,
+      scstDeviceNames,
+      mapped: mappedByPath || mappedByLun,
+      source: entry.source,
+      fileioDeviceName: entry.fileioDeviceName,
+    })
+  }
+
+  for (const d of fileioDevices) {
+    if (!d.filename) continue
+    const size = await statFileSize(manager, d.filename)
+    add({ path: d.filename, sizeBytes: size, source: 'scst_config', fileioDeviceName: d.name })
+  }
+
+  for (const [path] of pathToDevices) {
+    if (!path.startsWith('/')) continue
+    const size = await statFileSize(manager, path)
+    add({ path, sizeBytes: size, source: 'scst_sysfs' })
+  }
+
+  const roots = new Set<string>([...vdiskMountRoots(), ...mounts.map(m => m.mountPoint)])
   for (const root of roots) {
     const q = `'${root.replace(/'/g, `'\\''`)}'`
     const cmd = [
@@ -156,22 +220,8 @@ async function scanVdiskFiles(
       const sp = t.lastIndexOf(' ')
       if (sp <= 0) continue
       const path = t.slice(0, sp).trim()
-      if (seen.has(path)) continue
-      seen.add(path)
       const sizeBytes = Number.parseInt(t.slice(sp + 1), 10) || 0
-      const fileName = path.split('/').pop() ?? path
-      const mountPoint = longestMountPrefix(path, mounts) || root
-      const scstDeviceNames = pathToDevices.get(path) ?? []
-      const mappedByPath = scstDeviceNames.length > 0
-      const mappedByLun = scstDeviceNames.some(n => lunDeviceNames.has(n))
-      files.push({
-        path,
-        fileName,
-        sizeBytes,
-        mountPoint,
-        scstDeviceNames,
-        mapped: mappedByPath || mappedByLun,
-      })
+      add({ path, sizeBytes, source: 'scan' })
     }
   }
 
@@ -182,21 +232,79 @@ export async function collectFsOverview(manager?: SSHSessionManager): Promise<Fs
   const ssh = manager ?? getActiveSSHManager()
   const scanWarnings: string[] = []
 
-  const [tools, scstIndex, scstConfig, mountResult] = await Promise.all([
+  const [tools, scstIndex, scstConfigRaw, mountResult, raid, lvm, sysfsFileio] = await Promise.all([
     probeTools(ssh),
     readScstDeviceIndex(ssh),
-    readScstConfig().catch(() => ({ handlers: [], drivers: [] })),
+    readScstConfig(ssh).catch(() => ({ handlers: [], drivers: [] })),
     collectMounts(ssh),
+    collectRaidOverview(ssh),
+    collectLvmOverview(ssh),
+    readScstSysfsFileioMap(ssh),
   ])
 
+  const scstConfig = scstConfigRaw
+  const scstConfigBytes = scstConfig.handlers.length + scstConfig.drivers.length
+
   scanWarnings.push(...mountResult.warnings)
-  const mounts = mountResult.mounts
+  let mounts = mountResult.mounts
 
   const lunMappings = collectLunMappingsFromConfig(scstConfig)
   const lunDeviceNames = deviceNamesMappedInLuns(lunMappings)
-  const fileioDevices = collectFileioDevicesFromConfig(scstConfig, lunDeviceNames)
+  let fileioDevices = collectFileioDevicesFromConfig(scstConfig, lunDeviceNames, sysfsFileio)
+  const fileioFilenames = fileioFilenamesFromDevices(fileioDevices)
 
-  const vdiskFiles = await scanVdiskFiles(ssh, mounts, scstIndex.pathToDevices, lunDeviceNames)
+  const index = buildPathAliasIndex(raid.blockDevices)
+  const enriched = enrichMountsWithRolesAndLinks(mounts, fileioFilenames, index)
+  mounts = enriched.mounts
+
+  const vdiskFiles = await buildVdiskInventory(ssh, mounts, scstIndex.pathToDevices, lunDeviceNames, fileioDevices)
+
+  const inventory = buildFsBackendsAndLinks({
+    raid,
+    lvm,
+    mounts,
+    pathToDevices: scstIndex.pathToDevices,
+    allowRawDisk: false,
+  })
+  const backends = inventory.backends
+
+  const resourceLinks = [
+    ...enriched.links,
+    ...inventory.links,
+    ...buildFsResourceLinks(
+      backends,
+      mounts,
+      vdiskFiles,
+      fileioDevices,
+      lunMappings,
+    ),
+  ]
+
+  const vdiskScanRoots = [...new Set([...vdiskMountRoots(), ...mounts.map(m => m.mountPoint)])]
+
+  const diagnostics = buildFsDiagnostics({
+    findmntCount: mountResult.findmntCount,
+    lsblkCount: mountResult.lsblkCount,
+    dfCount: mountResult.dfCount,
+    mounts,
+    scstConfigBytes,
+    scstHandlers: scstConfig.handlers.length,
+    fileioCount: fileioDevices.length,
+    lunCount: lunMappings.length,
+    sysfsDeviceCount: sysfsFileio.size,
+    backends,
+    vdiskScanRoots,
+    warnings: scanWarnings,
+  })
+
+  const candidates: FsBackendCandidate[] = backends.map(b => ({
+    path: b.path,
+    kind: b.kind,
+    sizeBytes: b.sizeBytes,
+    eligible: b.eligible,
+    reasons: b.reasons,
+    displayName: b.displayName,
+  }))
 
   const overview: FsOverview = {
     scannedAt: Date.now(),
@@ -204,21 +312,21 @@ export async function collectFsOverview(manager?: SSHSessionManager): Promise<Fs
     vdiskFiles,
     fileioDevices,
     lunMappings,
+    backends,
+    links: resourceLinks,
+    diagnostics,
     tools,
     nextAction: { kind: 'none', messageKey: 'storage.fs.next.none' },
     scanWarnings,
+    candidates,
   }
 
   overview.nextAction = computeFsNextAction(overview)
-
   return overview
 }
 
 export async function collectFsOverviewWithCandidates(
   manager?: SSHSessionManager,
-): Promise<FsOverview & { candidates: Awaited<ReturnType<typeof collectFsBackendCandidates>> }> {
-  const ssh = manager ?? getActiveSSHManager()
-  const overview = await collectFsOverview(ssh)
-  const candidates = await collectFsBackendCandidates(ssh)
-  return { ...overview, candidates }
+): Promise<FsOverview> {
+  return collectFsOverview(manager)
 }

@@ -1,4 +1,5 @@
 import type { FileSystemMount, FsNextActionHint, FsOverview, VDiskFile } from '~/types/filesystem'
+import { fileioRelevantMounts, pickPrimaryFileioMount } from '~/utils/fs-mount-classifier'
 import type { ProvisioningStepStatus, ProvisioningStepView } from '~/utils/lvm-provisioning-chain'
 
 export type FsProvisioningStepId = 'filesystem' | 'vdisk' | 'fileio' | 'expose'
@@ -9,14 +10,20 @@ const DEFAULT_NEXT: FsNextActionHint = {
 }
 
 export function computeFsNextAction(overview: FsOverview): FsNextActionHint {
-  const mounts = overview.mounts.filter(m => m.mounted && m.status === 'mounted')
+  const mounts = fileioRelevantMounts(
+    overview.mounts.filter(m => m.mounted && m.status === 'mounted'),
+  )
   if (!mounts.length) {
     return { kind: 'create_fs', messageKey: 'storage.fs.next.create_fs' }
   }
 
-  const primaryMount = pickPrimaryVdiskMount(mounts)
+  const primaryMount = pickPrimaryFileioMount(overview.mounts)
+  if (!primaryMount) {
+    return { kind: 'create_fs', messageKey: 'storage.fs.next.create_fs' }
+  }
+
   const vdisksOnMount = overview.vdiskFiles.filter(v => v.mountPoint === primaryMount.mountPoint)
-  if (!vdisksOnMount.length) {
+  if (!vdisksOnMount.length && !overview.fileioDevices.some(d => d.filename.startsWith(`${primaryMount.mountPoint}/`))) {
     return {
       kind: 'create_vdisk',
       messageKey: 'storage.fs.next.create_vdisk_in_mount',
@@ -25,48 +32,57 @@ export function computeFsNextAction(overview: FsOverview): FsNextActionHint {
     }
   }
 
-  const unmappedFile = vdisksOnMount.find(v => !v.mapped)
-  if (unmappedFile) {
+  const unmappedVdisk = overview.vdiskFiles.find(v => !v.mapped)
+  if (unmappedVdisk) {
     return {
       kind: 'bind_fileio',
       messageKey: 'storage.fs.next.bind_fileio',
-      messageParams: { path: unmappedFile.path },
+      messageParams: { path: unmappedVdisk.path },
+      mountPoint: primaryMount.mountPoint,
+    }
+  }
+  const unmappedFileio = overview.fileioDevices.find(d => !d.mapped && d.filename)
+  if (unmappedFileio) {
+    return {
+      kind: 'bind_fileio',
+      messageKey: 'storage.fs.next.bind_fileio',
+      messageParams: { path: unmappedFileio.filename },
       mountPoint: primaryMount.mountPoint,
     }
   }
 
   const fileioMapped = overview.fileioDevices.some(d => d.mapped)
-  if (fileioMapped || overview.lunMappings.length) {
-    return { kind: 'expose', messageKey: 'storage.fs.next.expose' }
+  const fileioLuns = overview.lunMappings.some(l =>
+    overview.fileioDevices.some(d => d.name === l.deviceName),
+  )
+  if (fileioMapped || fileioLuns) {
+    return fileioLuns
+      ? { kind: 'none', messageKey: 'storage.fs.next.complete' }
+      : { kind: 'expose', messageKey: 'storage.fs.next.expose' }
   }
 
   return { kind: 'none', messageKey: 'storage.fs.next.complete' }
-}
-
-function pickPrimaryVdiskMount(mounts: FileSystemMount[]): FileSystemMount {
-  const underVdisks = mounts.filter(m => m.mountPoint.startsWith('/mnt/vdisks'))
-  if (underVdisks.length) {
-    return underVdisks.sort((a, b) => a.mountPoint.localeCompare(b.mountPoint))[0]
-  }
-  return mounts[0]
 }
 
 function stepDetailForNextAction(
   overview: FsOverview,
   stepId: FsProvisioningStepId,
 ): string {
-  const mounts = overview.mounts
+  const dataMounts = fileioRelevantMounts(overview.mounts)
+  const primary = pickPrimaryFileioMount(overview.mounts)
   const vdisks = overview.vdiskFiles
   const fileio = overview.fileioDevices
-  const mappedLuns = overview.lunMappings
+  const mappedLuns = overview.lunMappings.filter(l =>
+    fileio.some(d => d.name === l.deviceName),
+  )
 
   switch (stepId) {
     case 'filesystem':
-      return mounts[0]?.mountPoint ?? '—'
+      return primary?.mountPoint ?? dataMounts[0]?.mountPoint ?? '—'
     case 'vdisk': {
       const next = overview.nextAction
       if (next.kind === 'create_vdisk' && next.mountPoint) return next.mountPoint
-      return vdisks[0]?.fileName ?? vdisks[0]?.path ?? '—'
+      return vdisks[0]?.fileName ?? vdisks[0]?.path ?? fileio[0]?.filename ?? '—'
     }
     case 'fileio':
       return fileio.find(d => d.mapped)?.name
@@ -87,25 +103,29 @@ export function buildFsProvisioningSteps(overview: FsOverview | null): Provision
     return buildFsProvisioningStepsEmpty()
   }
 
-  const mounts = overview.mounts.filter(m => m.mounted)
+  const dataMounts = fileioRelevantMounts(overview.mounts.filter(m => m.mounted))
   const vdisks = overview.vdiskFiles
   const fileioDevices = overview.fileioDevices
   const hasMappedFileio = fileioDevices.some(d => d.mapped) || vdisks.some(v => v.mapped)
   const unmappedVdisk = vdisks.find(v => !v.mapped)
   const unmappedFileio = fileioDevices.find(d => !d.mapped && d.filename)
+  const hasVdiskOrFileioPath = vdisks.length > 0 || fileioDevices.some(d => d.filename)
 
-  const fsStatus: ProvisioningStepStatus = mounts.length ? 'created' : 'missing'
-  const vdiskStatus: ProvisioningStepStatus = vdisks.length
-    ? (unmappedVdisk ? 'next' : 'created')
-    : mounts.length
+  const fsStatus: ProvisioningStepStatus = dataMounts.length ? 'created' : 'missing'
+  const vdiskStatus: ProvisioningStepStatus = hasVdiskOrFileioPath
+    ? (unmappedVdisk || unmappedFileio ? 'next' : 'created')
+    : dataMounts.length
       ? 'next'
       : 'missing'
   const fileioStatus: ProvisioningStepStatus = fileioDevices.length
     ? (hasMappedFileio && !unmappedFileio ? 'created' : unmappedVdisk || unmappedFileio ? 'next' : 'created')
-    : unmappedVdisk
+    : hasVdiskOrFileioPath
       ? 'next'
       : 'missing'
-  const exposeStatus: ProvisioningStepStatus = overview.lunMappings.length
+  const fileioLuns = overview.lunMappings.filter(l =>
+    fileioDevices.some(d => d.name === l.deviceName),
+  )
+  const exposeStatus: ProvisioningStepStatus = fileioLuns.length
     ? 'created'
     : hasMappedFileio
       ? 'next'
@@ -118,8 +138,8 @@ export function buildFsProvisioningSteps(overview: FsOverview | null): Provision
       id: 'filesystem',
       status: fsStatus,
       detail: stepDetailForNextAction(overview, 'filesystem'),
-      count: mounts.length || undefined,
-      hintKey: mounts.length ? undefined : 'storage.fs.chain.step.filesystem',
+      count: dataMounts.length || undefined,
+      hintKey: dataMounts.length ? undefined : 'storage.fs.chain.step.filesystem',
     },
     {
       id: 'vdisk',
@@ -141,7 +161,7 @@ export function buildFsProvisioningSteps(overview: FsOverview | null): Provision
       id: 'expose',
       status: exposeStatus,
       detail: stepDetailForNextAction(overview, 'expose'),
-      count: overview.lunMappings.length || undefined,
+      count: fileioLuns.length || undefined,
       hintKey: next.kind === 'expose' ? next.messageKey : undefined,
     },
   ]
@@ -149,10 +169,10 @@ export function buildFsProvisioningSteps(overview: FsOverview | null): Provision
 
 function buildFsProvisioningStepsEmpty(): ProvisioningStepView[] {
   return [
-    { id: 'filesystem' as any, status: 'missing', detail: '—', hintKey: 'storage.fs.chain.step.filesystem' },
-    { id: 'vdisk' as any, status: 'missing', detail: '—' },
-    { id: 'fileio' as any, status: 'missing', detail: '—' },
-    { id: 'expose' as any, status: 'missing', detail: '—' },
+    { id: 'filesystem', status: 'missing', detail: '—', hintKey: 'storage.fs.chain.step.filesystem' },
+    { id: 'vdisk', status: 'missing', detail: '—' },
+    { id: 'fileio', status: 'missing', detail: '—' },
+    { id: 'expose', status: 'missing', detail: '—' },
   ]
 }
 

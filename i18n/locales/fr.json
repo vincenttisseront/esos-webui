@@ -2191,7 +2191,14 @@
         "empty_candidates": "Aucun backend éligible",
         "empty_vdisks": "Aucun fichier vdisk",
         "empty_fileio": "Aucun device FILEIO",
-        "empty_luns": "Aucun mapping LUN"
+        "empty_luns": "Aucun mapping LUN",
+        "backends_all_title": "Backends bloc (tous)",
+        "no_eligible_summary": "Aucun backend éligible ({total} détectés, {eligible} éligibles). Voir les raisons ci-dessous ou l'onglet Périphériques bloc.",
+        "show_system_mounts": "Afficher les montages système (/mnt/root, …)",
+        "diagnostics_title": "Diagnostics de détection",
+        "role_system": "système",
+        "role_fileio": "données FILEIO",
+        "filter_vdisk_mount": "Vdisks sur ce montage"
       },
       "next": {
         "title": "Prochaine étape recommandée",

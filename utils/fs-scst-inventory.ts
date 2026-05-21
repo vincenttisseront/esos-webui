@@ -1,20 +1,46 @@
 import type { ScstConfig } from '~/types/esos'
 import type { FileioDeviceRef, ScstLunMappingRef } from '~/types/filesystem'
 
+export type ScstSysfsFileioEntry = {
+  name: string
+  filename: string
+  attrs: Record<string, string>
+}
+
 export function collectFileioDevicesFromConfig(
   config: ScstConfig,
   mappedDeviceNames: Set<string>,
+  sysfsByName?: Map<string, ScstSysfsFileioEntry>,
 ): FileioDeviceRef[] {
   const out: FileioDeviceRef[] = []
+  const seen = new Set<string>()
   for (const h of config.handlers) {
     if (h.name !== 'vdisk_fileio') continue
     for (const d of h.devices) {
+      seen.add(d.name)
+      const sysfs = sysfsByName?.get(d.name)
+      const attrs = { ...d.attrs, ...(sysfs?.attrs ?? {}) }
+      const filename = (d.filename || sysfs?.filename || '').trim()
       out.push({
         name: d.name,
         handler: 'vdisk_fileio',
-        filename: d.filename ?? '',
-        attrs: { ...d.attrs },
+        filename,
+        attrs,
         mapped: mappedDeviceNames.has(d.name),
+        sysfsPresent: !!sysfs,
+      })
+    }
+  }
+  if (sysfsByName) {
+    for (const [name, sysfs] of sysfsByName) {
+      if (seen.has(name)) continue
+      out.push({
+        name,
+        handler: 'vdisk_fileio',
+        filename: sysfs.filename,
+        attrs: sysfs.attrs,
+        mapped: mappedDeviceNames.has(name),
+        sysfsPresent: true,
       })
     }
   }
@@ -70,4 +96,8 @@ export function collectLunMappingsFromConfig(config: ScstConfig): ScstLunMapping
 
 export function deviceNamesMappedInLuns(lunMappings: ScstLunMappingRef[]): Set<string> {
   return new Set(lunMappings.map(l => l.deviceName))
+}
+
+export function fileioFilenamesFromDevices(devices: FileioDeviceRef[]): string[] {
+  return devices.map(d => d.filename).filter(Boolean)
 }

@@ -46,6 +46,16 @@ describe('fs-scst-inventory', () => {
     expect(fileio[0].attrs.nv_cache).toBe('1')
   })
 
+  it('merges sysfs nv_cache into attrs', () => {
+    const sysfs = new Map([
+      ['vd1', { name: 'vd1', filename: '/mnt/vdisks/fs01/a.img', attrs: { nv_cache: '2' } }],
+    ])
+    const fileio = collectFileioDevicesFromConfig(config, new Set(), sysfs)
+    expect(fileio[0].attrs.nv_cache).toBe('2')
+    const sysfsOnly = collectFileioDevicesFromConfig({ handlers: [], drivers: [] }, new Set(), sysfs)
+    expect(sysfsOnly[0].sysfsPresent).toBe(true)
+  })
+
   it('flattens LUN mappings', () => {
     const luns = collectLunMappingsFromConfig(config)
     expect(luns[0].lunId).toBe(2)
