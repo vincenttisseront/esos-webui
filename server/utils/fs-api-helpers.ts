@@ -2,7 +2,9 @@ import { createError } from 'h3'
 import { getActiveSSHManager, withSanContext } from './ssh-runtime'
 import { collectFsOverview } from './fs-overview.service'
 import { withCache, invalidateCacheKey } from './cache'
-import { getSanSummary } from '../db/repositories/san.repository'
+import { assertSanWritable } from './san-request-context'
+
+export { assertSanWritable as assertFsWritable }
 import type { FsOverview } from '~/types/filesystem'
 
 export function fsOverviewCacheKey(sanId: string): string {
@@ -34,9 +36,3 @@ export function invalidateFsCaches(sanId: string): void {
   invalidateCacheKey('overview')
 }
 
-export function assertFsWritable(sanId: string): void {
-  const san = getSanSummary(sanId)
-  if (san?.readOnly) {
-    throw createError({ statusCode: 403, statusMessage: 'SAN en lecture seule' })
-  }
-}

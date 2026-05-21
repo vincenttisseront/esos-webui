@@ -1,5 +1,7 @@
 <template>
   <div class="space-y-4">
+    <StorageReadOnlyBanner :read-only="readOnly" />
+
     <UAlert
       v-for="(alert, i) in lvm.alerts"
       :key="i"

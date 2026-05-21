@@ -1,6 +1,7 @@
 import { createError, getRouterParam, type H3Event } from 'h3'
 import { hasConfiguredSSH, withSanContext } from './ssh-runtime'
 import { requireSanIdQuery } from './san-query'
+import { assertSanWritable } from './san-request-context'
 
 export function decodeTargetParam(event: H3Event): string {
   const name = decodeURIComponent(getRouterParam(event, 'name') ?? '')
@@ -26,6 +27,7 @@ export async function requireScstMutationContext(
     throw createError({ statusCode: 503, message: 'SSH non configuré' })
   }
   const sanId = requireSanIdQuery(event)
+  assertSanWritable(sanId)
   try {
     return await withSanContext(sanId, fn)
   } catch (err: unknown) {

@@ -1973,6 +1973,12 @@
     }
   },
   "storage": {
+    "readonly": {
+      "banner": "Ce SAN est en lecture seule. Les actions de modification sont masquées.",
+      "errors": {
+        "san_read_only": "Ce SAN est en lecture seule. Désactivez la protection dans Administration → SANs pour autoriser les modifications."
+      }
+    },
     "targets": {
       "list": {
         "countLine": "{count} target(s)",
@@ -2178,9 +2184,23 @@
         "mounts_title": "Filesystems montés",
         "candidates_title": "Backends éligibles",
         "vdisks_title": "Fichiers vdisk",
+        "fileio_title": "Devices SCST FILEIO",
+        "luns_title": "Mappings LUN",
+        "scan_warnings": "Avertissements de scan",
         "empty_mounts": "Aucun montage XFS/EXT4 détecté",
         "empty_candidates": "Aucun backend éligible",
-        "empty_vdisks": "Aucun fichier vdisk"
+        "empty_vdisks": "Aucun fichier vdisk",
+        "empty_fileio": "Aucun device FILEIO",
+        "empty_luns": "Aucun mapping LUN"
+      },
+      "next": {
+        "title": "Prochaine étape recommandée",
+        "create_fs": "Créez un filesystem sur un backend bloc éligible.",
+        "create_vdisk_in_mount": "Créez un fichier vdisk dans {mountPoint}.",
+        "bind_fileio": "Enregistrez un device SCST FILEIO pour {path}.",
+        "expose": "Exposez le device aux clients via les groupes d'accès.",
+        "complete": "Chaîne FILEIO complète.",
+        "none": "Aucune action requise."
       },
       "chain": {
         "title": "Chaîne FILEIO",
@@ -2215,7 +2235,14 @@
         "path": "Chemin",
         "scst": "SCST",
         "mapped": "Mappé",
-        "unmapped": "Non mappé"
+        "unmapped": "Non mappé",
+        "device": "Device",
+        "filename": "Fichier",
+        "nv_cache": "nv_cache",
+        "target": "Target",
+        "group": "Groupe",
+        "lun": "LUN",
+        "handler": "Handler"
       },
       "wizard": {
         "back": "Retour",

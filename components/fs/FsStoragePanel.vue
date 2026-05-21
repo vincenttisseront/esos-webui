@@ -1,16 +1,37 @@
 <template>
   <div class="space-y-4">
+    <StorageReadOnlyBanner :read-only="readOnly" />
+
     <UAlert color="blue" variant="soft" :title="t('storage.fs.help.title')" :description="t('storage.fs.help.body')" />
+
+    <UAlert
+      v-if="nextActionText"
+      color="primary"
+      variant="soft"
+      :title="t('storage.fs.next.title')"
+      :description="nextActionText"
+    />
+
+    <UAlert
+      v-if="scanWarnings.length"
+      color="amber"
+      variant="soft"
+      :title="t('storage.fs.overview.scan_warnings')"
+    >
+      <ul class="text-xs list-disc pl-4">
+        <li v-for="(w, i) in scanWarnings" :key="i">{{ w }}</li>
+      </ul>
+    </UAlert>
 
     <FsProvisioningChain :steps="chainSteps" />
 
     <div class="flex flex-wrap gap-2 justify-between items-center">
-      <div class="flex flex-wrap gap-2">
+      <div v-if="!readOnly" class="flex flex-wrap gap-2">
         <UButton
           size="sm"
           color="primary"
           icon="i-heroicons-plus"
-          :disabled="readOnly || !eligibleCandidates.length"
+          :disabled="!eligibleCandidates.length"
           :title="!eligibleCandidates.length ? t('storage.fs.wizard.create_fs.no_backend') : undefined"
           @click="openCreateFsWizard"
         >
@@ -21,7 +42,7 @@
           color="primary"
           variant="soft"
           icon="i-heroicons-document-plus"
-          :disabled="readOnly || !fs.mounts.length"
+          :disabled="!fs.mounts.length"
           @click="openCreateVdiskWizard"
         >
           {{ t('storage.fs.actions.create_vdisk') }}
@@ -31,7 +52,7 @@
           color="primary"
           variant="soft"
           icon="i-heroicons-circle-stack"
-          :disabled="readOnly || !unmappedVdisks.length"
+          :disabled="!unmappedVdisks.length"
           @click="openFileioWizard"
         >
           {{ t('storage.fs.actions.bind_fileio') }}
@@ -47,6 +68,9 @@
       <UTable v-if="fs.mounts.length" :rows="fs.mounts" :columns="mountCols">
         <template #mountPoint-data="{ row }">
           <span class="font-mono text-xs">{{ row.mountPoint }}</span>
+        </template>
+        <template #health-data="{ row }">
+          <UBadge v-if="row.health" :color="healthColor(row.health)" size="xs" :label="row.health" />
         </template>
         <template #size-data="{ row }">
           {{ formatBytes(row.totalBytes) }} / {{ formatBytes(row.freeBytes) }} free
@@ -89,9 +113,9 @@
           />
         </template>
         <template #actions-data="{ row }">
-          <div class="flex gap-1">
+          <div v-if="!readOnly" class="flex gap-1">
             <UButton
-              v-if="!readOnly && !row.mapped"
+              v-if="!row.mapped"
               size="xs"
               color="primary"
               variant="ghost"
@@ -100,7 +124,7 @@
               {{ t('storage.fs.actions.bind_fileio') }}
             </UButton>
             <UButton
-              v-if="!readOnly && !row.mapped"
+              v-if="!row.mapped"
               size="xs"
               color="red"
               variant="ghost"
@@ -113,12 +137,54 @@
       </UTable>
       <p v-else class="text-sm text-gray-500">{{ t('storage.fs.overview.empty_vdisks') }}</p>
     </UCard>
+
+    <UCard>
+      <template #header>{{ t('storage.fs.overview.fileio_title') }}</template>
+      <UTable v-if="fileioDevices.length" :rows="fileioDevices" :columns="fileioCols">
+        <template #name-data="{ row }">
+          <span class="font-mono text-xs">{{ row.name }}</span>
+        </template>
+        <template #filename-data="{ row }">
+          <span class="font-mono text-xs break-all">{{ row.filename }}</span>
+        </template>
+        <template #nv_cache-data="{ row }">
+          {{ row.attrs.nv_cache ?? '—' }}
+        </template>
+        <template #mapped-data="{ row }">
+          <UBadge
+            :color="row.mapped ? 'green' : 'gray'"
+            size="xs"
+            :label="row.mapped ? t('storage.fs.table.mapped') : t('storage.fs.table.unmapped')"
+          />
+        </template>
+      </UTable>
+      <p v-else class="text-sm text-gray-500">{{ t('storage.fs.overview.empty_fileio') }}</p>
+    </UCard>
+
+    <UCard>
+      <template #header>{{ t('storage.fs.overview.luns_title') }}</template>
+      <UTable v-if="lunMappings.length" :rows="lunMappings" :columns="lunCols">
+        <template #targetName-data="{ row }">
+          <span class="font-mono text-xs">{{ row.targetName }}</span>
+        </template>
+        <template #groupName-data="{ row }">
+          <span class="text-xs">{{ row.groupName || '—' }}</span>
+        </template>
+        <template #filename-data="{ row }">
+          <span class="font-mono text-xs break-all">{{ row.filename || '—' }}</span>
+        </template>
+        <template #readOnly-data="{ row }">
+          <UBadge v-if="row.readOnly" color="amber" size="xs" :label="t('storage.targets.detail.readOnlyBadge')" />
+        </template>
+      </UTable>
+      <p v-else class="text-sm text-gray-500">{{ t('storage.fs.overview.empty_luns') }}</p>
+    </UCard>
   </div>
 </template>
 
 <script setup lang="ts">
 import { buildFsProvisioningSteps, formatBytes } from '~/utils/fs-provisioning-chain'
-import type { VDiskFile } from '~/types/filesystem'
+import type { MountHealth, VDiskFile } from '~/types/filesystem'
 
 const props = defineProps<{
   sanId: string
@@ -142,11 +208,21 @@ onMounted(async () => {
 const chainSteps = computed(() => buildFsProvisioningSteps(fs.overview))
 const eligibleCandidates = computed(() => fs.candidates.filter(c => c.eligible))
 const unmappedVdisks = computed(() => fs.vdiskFiles.filter(v => !v.mapped))
+const fileioDevices = computed(() => fs.fileioDevices)
+const lunMappings = computed(() => fs.lunMappings)
+const scanWarnings = computed(() => fs.overview?.scanWarnings ?? [])
+
+const nextActionText = computed(() => {
+  const action = fs.overview?.nextAction
+  if (!action?.messageKey || action.kind === 'none') return ''
+  return t(action.messageKey, action.messageParams ?? {}) as string
+})
 
 const mountCols = [
   { key: 'mountPoint', label: t('storage.fs.table.mount_point') },
   { key: 'backingDevice', label: t('storage.fs.table.backing') },
   { key: 'fsType', label: t('storage.fs.table.type') },
+  { key: 'health', label: '' },
   { key: 'size', label: t('storage.fs.table.size') },
   { key: 'actions', label: '' },
 ]
@@ -161,6 +237,27 @@ const vdiskCols = [
   { key: 'mapped', label: t('storage.fs.table.scst') },
   { key: 'actions', label: '' },
 ]
+const fileioCols = [
+  { key: 'name', label: t('storage.fs.table.device') },
+  { key: 'filename', label: t('storage.fs.table.filename') },
+  { key: 'nv_cache', label: t('storage.fs.table.nv_cache') },
+  { key: 'mapped', label: t('storage.fs.table.scst') },
+]
+const lunCols = [
+  { key: 'targetName', label: t('storage.fs.table.target') },
+  { key: 'groupName', label: t('storage.fs.table.group') },
+  { key: 'lunId', label: t('storage.fs.table.lun') },
+  { key: 'deviceName', label: t('storage.fs.table.device') },
+  { key: 'handler', label: t('storage.fs.table.handler') },
+  { key: 'filename', label: t('storage.fs.table.filename') },
+  { key: 'readOnly', label: '' },
+]
+
+function healthColor(h: MountHealth) {
+  if (h === 'full') return 'red'
+  if (h === 'degraded') return 'amber'
+  return 'green'
+}
 
 function wizardProps(extra: Record<string, unknown> = {}) {
   return {

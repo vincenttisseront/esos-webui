@@ -22,6 +22,8 @@ export const useFsStore = defineStore('fs', {
   getters: {
     mounts: s => s.overview?.mounts ?? [],
     vdiskFiles: s => s.overview?.vdiskFiles ?? [],
+    fileioDevices: s => s.overview?.fileioDevices ?? [],
+    lunMappings: s => s.overview?.lunMappings ?? [],
     tools: s => s.overview?.tools,
   },
 

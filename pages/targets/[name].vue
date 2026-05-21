@@ -1,5 +1,7 @@
 <template>
   <div class="space-y-6">
+    <StorageReadOnlyBanner :read-only="isEffectiveReadOnly" />
+
     <!-- Breadcrumb + actions -->
     <div class="flex items-center gap-3 flex-wrap justify-between">
       <div class="flex items-center gap-3 flex-wrap">

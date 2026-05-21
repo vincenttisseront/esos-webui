@@ -1,6 +1,27 @@
-import type { FileSystemMount, FsType } from '~/types/filesystem'
+import type { FileSystemMount, FsType, MountHealth } from '~/types/filesystem'
 
-const FS_TYPES = new Set(['xfs', 'ext4', 'ext3', 'ext2', 'btrfs'])
+export const FS_TYPES = new Set(['xfs', 'ext4', 'ext3', 'ext2', 'btrfs'])
+
+export function isFsMountPath(mountPoint: string): boolean {
+  if (!mountPoint.startsWith('/')) return false
+  if (mountPoint === '/' || mountPoint.startsWith('/proc') || mountPoint.startsWith('/sys')) {
+    return false
+  }
+  return true
+}
+
+export function normalizeFsType(fstype: string): FsType | string {
+  const t = fstype.trim().toLowerCase()
+  if (FS_TYPES.has(t)) return t as FsType
+  if (t === 'auto' || !t) return 'xfs'
+  return t
+}
+
+function mountHealth(usedPct: number): MountHealth | undefined {
+  if (usedPct >= 95) return 'full'
+  if (usedPct >= 85) return 'degraded'
+  return 'ok'
+}
 
 export function parseFindmntLines(stdout: string): Array<{
   target: string
@@ -16,56 +37,137 @@ export function parseFindmntLines(stdout: string): Array<{
     const target = parts[0]
     const source = parts[1]
     const fstype = parts[2]
-    if (!target.startsWith('/')) continue
+    if (!isFsMountPath(target)) continue
     if (!FS_TYPES.has(fstype) && fstype !== 'auto') continue
     out.push({ target, source, fstype })
   }
   return out
 }
 
-export function parseDfBytesLine(line: string, mountPoint: string): {
+/** Parse `findmnt -J` JSON (filesystems[].target, .source, .fstype). */
+export function parseFindmntJson(stdout: string): Array<{
+  target: string
+  source: string
+  fstype: string
+}> {
+  const out: Array<{ target: string; source: string; fstype: string }> = []
+  try {
+    const data = JSON.parse(stdout) as {
+      filesystems?: Array<{
+        target?: string
+        source?: string
+        fstype?: string
+      }>
+    }
+    for (const fs of data.filesystems ?? []) {
+      const target = fs.target?.trim() ?? ''
+      const source = fs.source?.trim() ?? ''
+      const fstype = fs.fstype?.trim() ?? ''
+      if (!isFsMountPath(target)) continue
+      if (fstype && !FS_TYPES.has(fstype) && fstype !== 'auto') continue
+      out.push({ target, source, fstype: fstype || 'xfs' })
+    }
+  } catch {
+    return out
+  }
+  return out
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function walkLsblk(node: any, acc: Array<{ mountpoint: string; path: string; fstype: string }>) {
+  const mp = node.mountpoint as string | null | undefined
+  const path = (node.path ?? `/dev/${node.name}`) as string
+  const fstype = (node.fstype ?? '') as string
+  if (mp && isFsMountPath(mp) && fstype && FS_TYPES.has(fstype)) {
+    acc.push({ mountpoint: mp, path, fstype })
+  }
+  for (const child of node.children ?? []) {
+    walkLsblk(child, acc)
+  }
+}
+
+export function parseLsblkMounts(stdout: string): Array<{
+  target: string
+  source: string
+  fstype: string
+}> {
+  const acc: Array<{ mountpoint: string; path: string; fstype: string }> = []
+  try {
+    const data = JSON.parse(stdout) as { blockdevices?: unknown[] }
+    for (const dev of data.blockdevices ?? []) {
+      walkLsblk(dev, acc)
+    }
+  } catch {
+    return []
+  }
+  return acc.map(r => ({
+    target: r.mountpoint,
+    source: r.path,
+    fstype: r.fstype,
+  }))
+}
+
+export function parseDfBytesLine(line: string): {
   totalBytes: number
   usedBytes: number
   availBytes: number
 } | null {
   const parts = line.trim().split(/\s+/)
   if (parts.length < 4) return null
-  const totalKb = Number.parseInt(parts[1], 10)
-  const usedKb = Number.parseInt(parts[2], 10)
-  const availKb = Number.parseInt(parts[3], 10)
-  if (Number.isNaN(totalKb)) return null
+  const total = Number.parseInt(parts[1], 10)
+  const used = Number.parseInt(parts[2], 10)
+  const avail = Number.parseInt(parts[3], 10)
+  if (Number.isNaN(total)) return null
+  return { totalBytes: total, usedBytes: used, availBytes: avail }
+}
+
+export function buildMountRow(
+  m: { target: string; source: string; fstype: string },
+  df: { totalBytes: number; usedBytes: number; availBytes: number } | undefined,
+  source: FileSystemMount['source'],
+): FileSystemMount {
+  const totalBytes = df?.totalBytes ?? 0
+  const freeBytes = df?.availBytes ?? 0
+  const usedPct = totalBytes > 0
+    ? Math.round(((df?.usedBytes ?? 0) / totalBytes) * 100)
+    : 0
   return {
-    totalBytes: totalKb * 1024,
-    usedBytes: usedKb * 1024,
-    availBytes: availKb * 1024,
+    mountPoint: m.target,
+    backingDevice: m.source,
+    fsType: normalizeFsType(m.fstype),
+    totalBytes,
+    freeBytes,
+    usedPct,
+    mounted: true,
+    status: 'mounted',
+    health: mountHealth(usedPct),
+    source,
   }
+}
+
+export function mergeMountSources(
+  sources: Array<{ rows: Array<{ target: string; source: string; fstype: string }>; source: FileSystemMount['source'] }>,
+): Map<string, { target: string; source: string; fstype: string; sourceKind: FileSystemMount['source'] }> {
+  const map = new Map<string, { target: string; source: string; fstype: string; sourceKind: FileSystemMount['source'] }>()
+  const order: FileSystemMount['source'][] = ['findmnt', 'lsblk', 'df']
+  for (const kind of order) {
+    const block = sources.find(s => s.source === kind)
+    if (!block) continue
+    for (const row of block.rows) {
+      if (!map.has(row.target)) {
+        map.set(row.target, { ...row, sourceKind: kind })
+      }
+    }
+  }
+  return map
 }
 
 export function mergeMountWithDf(
   findmnt: Array<{ target: string; source: string; fstype: string }>,
   dfByMount: Map<string, { totalBytes: number; usedBytes: number; availBytes: number }>,
+  source: FileSystemMount['source'] = 'findmnt',
 ): FileSystemMount[] {
-  const mounts: FileSystemMount[] = []
-  for (const m of findmnt) {
-    const df = dfByMount.get(m.target)
-    const totalBytes = df?.totalBytes ?? 0
-    const freeBytes = df?.availBytes ?? 0
-    const usedPct = totalBytes > 0
-      ? Math.round(((df?.usedBytes ?? 0) / totalBytes) * 100)
-      : 0
-    const fsType = (FS_TYPES.has(m.fstype) ? m.fstype : 'xfs') as FsType
-    mounts.push({
-      mountPoint: m.target,
-      backingDevice: m.source,
-      fsType,
-      totalBytes,
-      freeBytes,
-      usedPct,
-      mounted: true,
-      source: 'findmnt',
-    })
-  }
-  return mounts
+  return findmnt.map(m => buildMountRow(m, dfByMount.get(m.target), source))
 }
 
 export function parseFstabLines(content: string): Map<string, string> {

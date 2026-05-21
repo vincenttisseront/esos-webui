@@ -22,6 +22,7 @@ import {
   runVgRemove,
 } from './lvm-actions'
 import { invalidateCacheKey } from './cache'
+import { assertClusterNodesWritable } from './cluster-readonly'
 
 function invalidateStorageCaches(sanId: string) {
   invalidateCacheKey(`lvm-overview-${sanId}`)
@@ -372,6 +373,7 @@ export async function executeClusterLvmPlan(
   if (!clusterId) {
     throw createError({ statusCode: 400, statusMessage: 'clusterId requis' })
   }
+  assertClusterNodesWritable(clusterId)
 
   const inventories = clusterId
     ? await collectClusterLvmInventory(clusterId)

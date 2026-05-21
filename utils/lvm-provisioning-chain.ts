@@ -21,11 +21,12 @@ export type LvmNextActionKind =
   | 'readonly'
 
 export interface ProvisioningStepView {
-  id: ProvisioningStepId
+  id: ProvisioningStepId | string
   status: ProvisioningStepStatus
   detail: string
   count?: number
   hintKey?: string
+  messageParams?: Record<string, string>
   clusterProgress?: { ready: number; total: number; labelKey: string }
 }
 

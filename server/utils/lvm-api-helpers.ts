@@ -4,6 +4,7 @@ import { collectLvmOverview } from './lvm-overview.service'
 import { runLvmPreflight } from './lvm-preflight'
 import { withCache, invalidateCacheKey } from './cache'
 import { getSanSummary } from '../db/repositories/san.repository'
+import { assertSanWritable } from './san-request-context'
 import { assertClusteredSanAllowsLvmMutation } from './lvm-cluster-execution'
 import type { LvmPreflightRequest } from './lvm-types'
 
@@ -30,10 +31,8 @@ export async function requirePreflightOk(
   req: LvmPreflightRequest,
   clusterExecution?: LvmPreflightRequest['clusterExecution'],
 ): Promise<void> {
+  assertSanWritable(sanId)
   const san = getSanSummary(sanId)
-  if (san?.readOnly) {
-    throw createError({ statusCode: 403, statusMessage: 'SAN en lecture seule' })
-  }
   if (san?.clusterId && req.action !== 'bind_scst') {
     assertClusteredSanAllowsLvmMutation(sanId, clusterExecution)
   }

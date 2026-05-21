@@ -46,6 +46,8 @@
       </div>
     </div>
 
+    <StorageReadOnlyBanner :read-only="isReadOnly" />
+
     <!-- Alertes critiques -->
     <div v-if="raid.criticalAlerts.length" class="space-y-2">
       <UAlert

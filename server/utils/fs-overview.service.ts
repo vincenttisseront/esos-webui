@@ -1,17 +1,29 @@
 import { getActiveSSHManager } from './ssh-runtime'
 import { readScstDeviceIndex } from './scst-device-index'
+import { readScstConfig } from './scst-config-reader'
+import { collectFsBackendCandidates } from './fs-candidates'
+import { computeFsNextAction } from '~/utils/fs-provisioning-chain'
 import {
-  mergeMountWithDf,
+  collectFileioDevicesFromConfig,
+  collectLunMappingsFromConfig,
+  deviceNamesMappedInLuns,
+} from '~/utils/fs-scst-inventory'
+import {
+  mergeMountSources,
   parseBlkidUuid,
+  parseDfBytesLine,
+  parseFindmntJson,
   parseFindmntLines,
   parseFstabLines,
+  parseLsblkMounts,
+  buildMountRow,
 } from '~/utils/fs-overview-parser'
 import type { FileSystemMount, FsOverview, FsToolsInfo, VDiskFile } from '~/types/filesystem'
 import type { SSHSessionManager } from './ssh-session-manager'
 
 const VDISK_GLOB = '*.img'
 
-function vdiskMountRoots(): string[] {
+export function vdiskMountRoots(): string[] {
   const raw = process.env.ESOS_VDISK_MOUNT_ROOTS ?? '/mnt/vdisks'
   return raw.split(',').map(s => s.trim()).filter(Boolean)
 }
@@ -39,31 +51,64 @@ async function probeTools(manager: SSHSessionManager): Promise<FsToolsInfo> {
   }
 }
 
-async function collectMounts(manager: SSHSessionManager): Promise<FileSystemMount[]> {
-  const findmnt = await manager.exec(
-    "findmnt -lo TARGET,SOURCE,FSTYPE -t xfs,ext4,ext3 2>/dev/null | tail -n +2",
-    15_000,
-  )
-  const parsed = parseFindmntLines(findmnt.stdout)
+async function dfForMount(
+  manager: SSHSessionManager,
+  mountPoint: string,
+): Promise<{ totalBytes: number; usedBytes: number; availBytes: number } | undefined> {
+  const q = `'${mountPoint.replace(/'/g, `'\\''`)}'`
+  const df = await manager.exec(`df -B1 ${q} 2>/dev/null | tail -1`, 10_000)
+  return parseDfBytesLine(df.stdout.trim()) ?? undefined
+}
 
-  const dfByMount = new Map<string, { totalBytes: number; usedBytes: number; availBytes: number }>()
-  for (const m of parsed) {
-    const q = `'${m.target.replace(/'/g, `'\\''`)}'`
+async function collectMounts(manager: SSHSessionManager): Promise<{
+  mounts: FileSystemMount[]
+  warnings: string[]
+}> {
+  const warnings: string[] = []
+  const findmntJson = await manager.exec('findmnt -J 2>/dev/null || true', 15_000)
+  let findmntRows = parseFindmntJson(findmntJson.stdout)
+  if (!findmntRows.length) {
+    const findmntLo = await manager.exec(
+      'findmnt -lo TARGET,SOURCE,FSTYPE 2>/dev/null | tail -n +2',
+      15_000,
+    )
+    findmntRows = parseFindmntLines(findmntLo.stdout)
+    if (findmntRows.length) warnings.push('findmnt -J indisponible, repli sur findmnt -lo')
+  }
+
+  const lsblk = await manager.exec('lsblk -J -b -f 2>/dev/null || true', 15_000)
+  const lsblkRows = parseLsblkMounts(lsblk.stdout)
+
+  const dfRoots: Array<{ target: string; source: string; fstype: string }> = []
+  for (const root of vdiskMountRoots()) {
+    const q = `'${root.replace(/'/g, `'\\''`)}'`
     const df = await manager.exec(`df -B1 ${q} 2>/dev/null | tail -1`, 10_000)
-    const parts = df.stdout.trim().split(/\s+/)
-    if (parts.length >= 4) {
-      dfByMount.set(m.target, {
-        totalBytes: Number.parseInt(parts[1], 10) || 0,
-        usedBytes: Number.parseInt(parts[2], 10) || 0,
-        availBytes: Number.parseInt(parts[3], 10) || 0,
-      })
+    const parsed = parseDfBytesLine(df.stdout.trim())
+    if (parsed && parsed.totalBytes > 0) {
+      dfRoots.push({ target: root, source: root, fstype: 'xfs' })
     }
   }
 
+  const merged = mergeMountSources([
+    { rows: findmntRows, source: 'findmnt' },
+    { rows: lsblkRows, source: 'lsblk' },
+    { rows: dfRoots, source: 'df' },
+  ])
+
+  const dfByMount = new Map<string, { totalBytes: number; usedBytes: number; availBytes: number }>()
+  for (const mp of merged.keys()) {
+    const df = await dfForMount(manager, mp)
+    if (df) dfByMount.set(mp, df)
+  }
+
+  const mounts: FileSystemMount[] = []
+  for (const [, row] of merged) {
+    mounts.push(buildMountRow(row, dfByMount.get(row.target), row.sourceKind))
+  }
+  mounts.sort((a, b) => a.mountPoint.localeCompare(b.mountPoint))
+
   const fstabRead = await manager.exec('cat /etc/fstab 2>/dev/null || true', 10_000)
   const fstabMap = parseFstabLines(fstabRead.stdout)
-  const mounts = mergeMountWithDf(parsed, dfByMount)
-
   const blkid = await manager.exec('blkid 2>/dev/null || true', 15_000)
   const uuids = parseBlkidUuid(blkid.stdout)
 
@@ -74,16 +119,28 @@ async function collectMounts(manager: SSHSessionManager): Promise<FileSystemMoun
     if (uuid) m.uuid = uuid
   }
 
-  return mounts
+  return { mounts, warnings }
+}
+
+function longestMountPrefix(path: string, mounts: FileSystemMount[]): string {
+  let best = ''
+  for (const m of mounts) {
+    if (path.startsWith(`${m.mountPoint}/`) && m.mountPoint.length > best.length) {
+      best = m.mountPoint
+    }
+  }
+  return best
 }
 
 async function scanVdiskFiles(
   manager: SSHSessionManager,
   mounts: FileSystemMount[],
-  scstPaths: Map<string, string[]>,
+  pathToDevices: Map<string, string[]>,
+  lunDeviceNames: Set<string>,
 ): Promise<VDiskFile[]> {
   const roots = new Set<string>([...vdiskMountRoots(), ...mounts.map(m => m.mountPoint)])
   const files: VDiskFile[] = []
+  const seen = new Set<string>()
 
   for (const root of roots) {
     const q = `'${root.replace(/'/g, `'\\''`)}'`
@@ -99,37 +156,69 @@ async function scanVdiskFiles(
       const sp = t.lastIndexOf(' ')
       if (sp <= 0) continue
       const path = t.slice(0, sp).trim()
+      if (seen.has(path)) continue
+      seen.add(path)
       const sizeBytes = Number.parseInt(t.slice(sp + 1), 10) || 0
       const fileName = path.split('/').pop() ?? path
-      const mountPoint = mounts.find(m => path.startsWith(`${m.mountPoint}/`))?.mountPoint ?? root
-      const scstDeviceNames = scstPaths.get(path) ?? []
+      const mountPoint = longestMountPrefix(path, mounts) || root
+      const scstDeviceNames = pathToDevices.get(path) ?? []
+      const mappedByPath = scstDeviceNames.length > 0
+      const mappedByLun = scstDeviceNames.some(n => lunDeviceNames.has(n))
       files.push({
         path,
         fileName,
         sizeBytes,
         mountPoint,
         scstDeviceNames,
-        mapped: scstDeviceNames.length > 0,
+        mapped: mappedByPath || mappedByLun,
       })
     }
   }
 
-  return files
+  return files.sort((a, b) => a.path.localeCompare(b.path))
 }
 
 export async function collectFsOverview(manager?: SSHSessionManager): Promise<FsOverview> {
   const ssh = manager ?? getActiveSSHManager()
-  const [tools, scstIndex] = await Promise.all([
+  const scanWarnings: string[] = []
+
+  const [tools, scstIndex, scstConfig, mountResult] = await Promise.all([
     probeTools(ssh),
     readScstDeviceIndex(ssh),
+    readScstConfig().catch(() => ({ handlers: [], drivers: [] })),
+    collectMounts(ssh),
   ])
-  const mounts = await collectMounts(ssh)
-  const vdiskFiles = await scanVdiskFiles(ssh, mounts, scstIndex.pathToDevices)
 
-  return {
+  scanWarnings.push(...mountResult.warnings)
+  const mounts = mountResult.mounts
+
+  const lunMappings = collectLunMappingsFromConfig(scstConfig)
+  const lunDeviceNames = deviceNamesMappedInLuns(lunMappings)
+  const fileioDevices = collectFileioDevicesFromConfig(scstConfig, lunDeviceNames)
+
+  const vdiskFiles = await scanVdiskFiles(ssh, mounts, scstIndex.pathToDevices, lunDeviceNames)
+
+  const overview: FsOverview = {
     scannedAt: Date.now(),
     mounts,
     vdiskFiles,
+    fileioDevices,
+    lunMappings,
     tools,
+    nextAction: { kind: 'none', messageKey: 'storage.fs.next.none' },
+    scanWarnings,
   }
+
+  overview.nextAction = computeFsNextAction(overview)
+
+  return overview
+}
+
+export async function collectFsOverviewWithCandidates(
+  manager?: SSHSessionManager,
+): Promise<FsOverview & { candidates: Awaited<ReturnType<typeof collectFsBackendCandidates>> }> {
+  const ssh = manager ?? getActiveSSHManager()
+  const overview = await collectFsOverview(ssh)
+  const candidates = await collectFsBackendCandidates(ssh)
+  return { ...overview, candidates }
 }

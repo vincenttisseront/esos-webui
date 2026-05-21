@@ -1,8 +1,6 @@
 import { createError } from 'h3'
-import { and, eq } from 'drizzle-orm'
 import { getSanSummary } from '../db/repositories/san.repository'
-import { getDB } from '../db'
-import { sans } from '../db/schema'
+import { assertClusterNodesWritable, resolveClusterEnabledNodes } from './cluster-readonly'
 import { getSSHPool } from './ssh-pool'
 import { withSanContext } from './ssh-runtime'
 import { collectFsOverview } from './fs-overview.service'
@@ -24,14 +22,6 @@ export interface ClusterFsExecutionResult {
   success: boolean
   nodeResults: ClusterLvmNodeResult[]
   errors: string[]
-}
-
-function resolveClusterNodes(clusterId: string) {
-  return getDB()
-    .select({ id: sans.id, label: sans.label, readOnly: sans.readOnly })
-    .from(sans)
-    .where(and(eq(sans.clusterId, clusterId), eq(sans.clusterEnabled, true)))
-    .all()
 }
 
 export function assertClusteredSanAllowsFsMutation(
@@ -69,17 +59,13 @@ export async function executeClusterFsCreate(
   clusterId: string,
   payload: CreateFsPayload,
 ): Promise<ClusterFsExecutionResult> {
-  const nodes = resolveClusterNodes(clusterId)
+  assertClusterNodesWritable(clusterId)
+  const nodes = resolveClusterEnabledNodes(clusterId)
   const nodeResults: ClusterLvmNodeResult[] = []
   const errors: string[] = []
 
   for (const node of nodes) {
     const base: ClusterLvmNodeResult = { sanId: node.id, label: node.label, participation: 'failed' }
-    if (node.readOnly) {
-      errors.push(`${node.label}: lecture seule`)
-      nodeResults.push({ ...base, error: 'lecture seule' })
-      continue
-    }
     const pre = await runPreflightOnNode(node.id, { action: 'create_fs', payload })
     if (!pre.ok) {
       errors.push(`${node.label}: ${pre.blockers.join(', ')}`)
@@ -119,7 +105,8 @@ export async function executeClusterVdiskCreate(
   clusterId: string,
   payload: CreateVdiskPayload,
 ): Promise<ClusterFsExecutionResult> {
-  const nodes = resolveClusterNodes(clusterId)
+  assertClusterNodesWritable(clusterId)
+  const nodes = resolveClusterEnabledNodes(clusterId)
   const nodeResults: ClusterLvmNodeResult[] = []
   const errors: string[] = []
 
@@ -159,7 +146,8 @@ export async function executeClusterFileioBind(
   clusterId: string,
   payload: CreateFileioPayload,
 ): Promise<ClusterFsExecutionResult> {
-  const nodes = resolveClusterNodes(clusterId)
+  assertClusterNodesWritable(clusterId)
+  const nodes = resolveClusterEnabledNodes(clusterId)
   const nodeResults: ClusterLvmNodeResult[] = []
   const errors: string[] = []
 

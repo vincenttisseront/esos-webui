@@ -1,6 +1,9 @@
 import { createError, getQuery, type H3Event } from 'h3'
-import { getAllSans } from '../db/repositories/san.repository'
+import { getAllSans, getSanSummary } from '../db/repositories/san.repository'
 import { withSanContext } from './ssh-runtime'
+import { requireSanIdQuery } from './san-query'
+
+export const SAN_READONLY_CODE = 'san.read_only'
 
 const MULTI_SAN_READ_MESSAGE = 'sanId is required when multiple SANs are configured'
 
@@ -52,4 +55,23 @@ export function runReadWithSanScope<T>(event: H3Event, fn: () => Promise<T>): Pr
 /** Bucket key for in-memory stats when no resolved SAN (v1). */
 export function defaultStatsBucketSanId(): string {
   return process.env.DEFAULT_SAN_ID ?? '__default__'
+}
+
+/** Throws 403 when the SAN is marked read-only in the database. */
+export function assertSanWritable(sanId: string): void {
+  const san = getSanSummary(sanId)
+  if (san?.readOnly) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: 'SAN is read-only',
+      data: { code: SAN_READONLY_CODE },
+    })
+  }
+}
+
+/** Resolves `?sanId=` and enforces writable SAN for mutation handlers. */
+export function assertSanWritableFromEvent(event: H3Event): string {
+  const sanId = requireSanIdQuery(event)
+  assertSanWritable(sanId)
+  return sanId
 }
