@@ -86,6 +86,7 @@
       "sans": "SANs",
       "users": "Users",
       "esos_version": "ESOS Version",
+      "esos_version_hint": "Installed build vs GitHub (read-only)",
       "dependencies": "Dependencies",
       "webui_version": "WebUI Version"
     },
@@ -1851,9 +1852,22 @@
       "login_success": "Success",
       "login_failure": "Failed"
     },
+    "esos_version": {
+      "page": {
+        "subtitle": "Compare the installed ESOS build with GitHub releases. Upgrades are managed under System configuration.",
+        "refresh": "Refresh",
+        "upgrade_heading": "Planned upgrade",
+        "upgrade_hint": "Readiness checks, package staging, and step-by-step plans are in System configuration for the selected SAN or cluster.",
+        "prepare_upgrade": "Prepare an upgrade",
+        "no_san_title": "No SAN selected",
+        "no_san_desc": "Select a SAN or cluster in the header, or open System configuration from Administration → SANs.",
+        "time_ago_seconds": "{count}s ago",
+        "time_ago_minutes": "{count} min ago",
+        "time_ago_hours": "{count} h ago"
+      }
+    },
     "upgrade": {
       "tabs": {
-        "version": "Version",
         "readiness": "Readiness",
         "package": "Package",
         "plan": "Plan",
@@ -2086,6 +2100,8 @@
       },
       "page": {
         "title": "System config — {label}",
+        "upgrade_title": "System configuration — Upgrade ({label})",
+        "upgrade_description": "Maintenance workflow: readiness, package staging, and manual upgrade plan (cluster scope follows header selection).",
         "refresh": "Refresh",
         "san_not_found": "SAN not found",
         "readonly_title": "SAN is read-only",
@@ -2106,6 +2122,7 @@
           "smtp": "SMTP",
           "users": "Users",
           "terminal": "Terminal",
+          "upgrade": "Upgrade",
           "system": "System"
         },
         "relative_ago": "{seconds}s ago",

@@ -56,6 +56,14 @@
       </div>
 
       <div v-if="report.latestStable" class="flex flex-wrap gap-2">
+        <NuxtLink
+          v-if="prepareUpgradeTo"
+          :to="prepareUpgradeTo"
+          class="inline-flex items-center gap-1.5 text-xs bg-primary-50 dark:bg-primary-950/40 hover:bg-primary-100 text-primary-700 dark:text-primary-300 px-3 py-1.5 rounded-lg transition-colors"
+        >
+          <UIcon name="i-heroicons-arrow-up-circle" class="w-3.5 h-3.5" />
+          {{ prepareUpgradeLabel }}
+        </NuxtLink>
         <a
           :href="report.latestStable.downloadUrl"
           class="inline-flex items-center gap-1.5 text-xs bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-lg transition-colors"
@@ -84,8 +92,14 @@
 
 <script setup lang="ts">
 import type { ESOSVersionReport } from '~/server/utils/types'
+import { useUpgradeScope } from '~/composables/useUpgradeScope'
 
 const props = defineProps<{ report: ESOSVersionReport; diff: string }>()
+
+const { t } = useEsosI18n()
+const { upgradeUrl } = useUpgradeScope()
+const prepareUpgradeTo = computed(() => upgradeUrl('readiness'))
+const prepareUpgradeLabel = computed(() => t('admin.esos_version.page.prepare_upgrade'))
 
 const updateClass = computed(() => ({
   'bg-blue-50  border-blue-200':  props.diff === 'patch',

@@ -86,6 +86,7 @@
       "sans": "SANs",
       "users": "Utilisateurs",
       "esos_version": "Version ESOS",
+      "esos_version_hint": "Build installé vs GitHub (lecture seule)",
       "dependencies": "Dépendances",
       "webui_version": "Version WebUI"
     },
@@ -1851,9 +1852,22 @@
       "login_success": "Succès",
       "login_failure": "Échec"
     },
+    "esos_version": {
+      "page": {
+        "subtitle": "Comparer le build ESOS installé avec les releases GitHub. La mise à niveau se gère dans la configuration système.",
+        "refresh": "Actualiser",
+        "upgrade_heading": "Mise à niveau planifiée",
+        "upgrade_hint": "Préparation, transfert du paquet et plan pas à pas sont dans Configuration système pour le SAN ou le cluster sélectionné.",
+        "prepare_upgrade": "Préparer une mise à niveau",
+        "no_san_title": "Aucun SAN sélectionné",
+        "no_san_desc": "Sélectionnez un SAN ou un cluster dans l'en-tête, ou ouvrez Configuration système depuis Administration → SANs.",
+        "time_ago_seconds": "il y a {count}s",
+        "time_ago_minutes": "il y a {count} min",
+        "time_ago_hours": "il y a {count} h"
+      }
+    },
     "upgrade": {
       "tabs": {
-        "version": "Version",
         "readiness": "Préparation",
         "package": "Paquet",
         "plan": "Plan",
@@ -2086,6 +2100,8 @@
       },
       "page": {
         "title": "Config système — {label}",
+        "upgrade_title": "Configuration système — Mise à niveau ({label})",
+        "upgrade_description": "Maintenance : préparation, paquet et plan manuel (le périmètre cluster suit la sélection dans l'en-tête).",
         "refresh": "Actualiser",
         "san_not_found": "SAN introuvable",
         "readonly_title": "SAN en lecture seule",
@@ -2106,6 +2122,7 @@
           "smtp": "SMTP",
           "users": "Utilisateurs",
           "terminal": "Terminal",
+          "upgrade": "Mise à niveau",
           "system": "Système"
         },
         "relative_ago": "il y a {seconds}s",

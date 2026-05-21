@@ -9,23 +9,25 @@ See also [theming.md](./theming.md) for UI theme checks.
 
 ## Phase A — Readiness
 
-1. Open **Administration → Version ESOS** → tab **Préparation / Readiness**.
+1. Open **Administration → SANs → [SAN] → System configuration** → tab **Upgrade / Mise à niveau** → **Readiness / Préparation**.
 2. Standalone SAN with ≥ 5 GiB `/tmp` → overall **Prêt**.
 3. Enable SAN read-only → **Bloqué**, check `SAN modifiable`.
 4. Cluster: both nodes SSH up, Pacemaker healthy → **Prêt** or warnings if DRBD resync active.
 
 ## Phase B — Package (admin)
 
-1. Sign in as **operator** → Package tab hidden.
-2. Sign in as **admin** → upload small test zip (or real ESOS package).
-3. Verify progress, `install.sh` path shown, no `install.sh` execution in logs.
-4. DELETE staging → files removed on host.
+1. **Version ESOS** page: compare only; **Prepare upgrade** opens system config (`?tab=upgrade`).
+2. Sign in as **operator** → Package sub-tab hidden.
+3. Sign in as **admin** → upload small test zip (or real ESOS package).
+4. Verify progress, `install.sh` path shown, no `install.sh` execution in logs.
+5. DELETE staging → files removed on host.
 
 ## Phase C — Plan
 
-1. Generate plan after readiness (and optional package).
-2. Cluster: nodes ordered (secondary before primary when roles set).
+1. On system config **Upgrade** tab, generate plan after readiness (and optional package).
+2. Cluster (header scope): nodes ordered (secondary before primary when roles set).
 3. Steps include `conf_sync` before `install` and `reboot`; commands copyable.
+4. URL: `/admin/sans/:id/system-config?tab=upgrade&upgradeTab=plan`
 
 ## Phase D — Execute (future)
 

@@ -11,9 +11,9 @@
           color="gray"
         />
         <SectionTitle
-          :title="t('admin.sysconfig.page.title', { label: san?.label ?? sanId }) as string"
+          :title="pageTitle"
           icon="i-heroicons-wrench-screwdriver"
-          :description="san ? `${san.host}:${san.port} · ${san.username}` : ''"
+          :description="pageDescription"
         />
       </div>
 
@@ -148,7 +148,7 @@
             :class="activeTabKey === tab.key
               ? 'border-primary-500 text-primary-600 dark:text-primary-400'
               : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
-            @click="activeTabKey = tab.key"
+            @click="selectTab(tab.key)"
           >
             <UIcon :name="tab.icon" class="size-4 shrink-0" />
             {{ tab.label }}
@@ -232,6 +232,15 @@
             </ClientOnly>
           </div>
 
+          <!-- Mise à niveau ESOS -->
+          <div v-else-if="activeTabKey === 'upgrade'">
+            <UpgradeWorkspace
+              :san-id="sanId"
+              :initial-sub-tab="upgradeSubTab"
+              @sub-tab-change="onUpgradeSubTabChange"
+            />
+          </div>
+
           <!-- Système -->
           <div v-else-if="activeTabKey === 'system'" class="space-y-4">
             <SectionErrorState
@@ -277,12 +286,14 @@
 <script setup lang="ts">
 import type { SystemConfigResponse } from '~/server/utils/types'
 import type { SanSummary }           from '~/server/db/repositories/san.repository'
+import { isUpgradeSubTab, type UpgradeSubTab } from '~/composables/useUpgradeScope'
 
 definePageMeta({ layout: 'default' })
 
 const { t, tError } = useEsosI18n()
 
 const route = useRoute()
+const router = useRouter()
 const sanId = route.params.id as string
 
 const authStore = useAuthStore()
@@ -437,11 +448,26 @@ async function updateHost() {
 
 onMounted(reload)
 
+const pageTitle = computed(() => {
+  if (activeTabKey.value === 'upgrade') {
+    return t('admin.sysconfig.page.upgrade_title', { label: san.value?.label ?? sanId }) as string
+  }
+  return t('admin.sysconfig.page.title', { label: san.value?.label ?? sanId }) as string
+})
+
+const pageDescription = computed(() => {
+  if (activeTabKey.value === 'upgrade') {
+    return t('admin.sysconfig.page.upgrade_description') as string
+  }
+  return san.value ? `${san.value.host}:${san.value.port} · ${san.value.username}` : ''
+})
+
 const tabs = computed(() => [
   { key: 'network',  label: t('admin.sysconfig.page.tabs.network'),       icon: 'i-heroicons-globe-alt',       sectionStatus: config.value?.network.status },
   { key: 'datetime', label: t('admin.sysconfig.page.tabs.datetime'),      icon: 'i-heroicons-clock',            sectionStatus: config.value?.dateTime.status },
   { key: 'smtp',     label: t('admin.sysconfig.page.tabs.smtp'),          icon: 'i-heroicons-envelope',         sectionStatus: config.value?.smtp.status },
   { key: 'users',    label: t('admin.sysconfig.page.tabs.users'),         icon: 'i-heroicons-users',             sectionStatus: undefined },
+  { key: 'upgrade',  label: t('admin.sysconfig.page.tabs.upgrade'),       icon: 'i-heroicons-arrow-up-circle',  sectionStatus: undefined },
   { key: 'system',   label: t('admin.sysconfig.page.tabs.system'),        icon: 'i-heroicons-computer-desktop', sectionStatus: config.value?.hostname.status },
   { key: 'terminal', label: t('admin.sysconfig.page.tabs.terminal'),      icon: 'i-heroicons-command-line',     sectionStatus: undefined },
 ])
@@ -451,9 +477,41 @@ const visibleTabs = computed(() => {
   return tabs.value
 })
 
-const activeTabKey = ref<string>(
-  route.query.tab === 'terminal' && !isViewer.value ? 'terminal' : 'network',
-)
+function resolveTabFromQuery(tab: unknown): string {
+  if (tab === 'upgrade') return 'upgrade'
+  if (tab === 'terminal' && !isViewer.value) return 'terminal'
+  return 'network'
+}
+
+const activeTabKey = ref<string>(resolveTabFromQuery(route.query.tab))
+
+const upgradeSubTab = computed((): UpgradeSubTab | undefined => {
+  const q = route.query.upgradeTab
+  const raw = Array.isArray(q) ? q[0] : q
+  return isUpgradeSubTab(raw) ? raw : undefined
+})
+
+function syncRouteQuery() {
+  const query: Record<string, string> = {}
+  if (activeTabKey.value === 'upgrade') {
+    query.tab = 'upgrade'
+    query.upgradeTab = activeSubTabInUrl.value
+  } else if (activeTabKey.value === 'terminal') {
+    query.tab = 'terminal'
+  }
+  void router.replace({ query })
+}
+
+const activeSubTabInUrl = ref<UpgradeSubTab>(upgradeSubTab.value ?? 'readiness')
+
+watch(upgradeSubTab, (tab) => {
+  if (tab) activeSubTabInUrl.value = tab
+}, { immediate: true })
+
+function onUpgradeSubTabChange(tab: UpgradeSubTab) {
+  activeSubTabInUrl.value = tab
+  if (activeTabKey.value === 'upgrade') syncRouteQuery()
+}
 
 watch(visibleTabs, (list) => {
   if (!list.some(t => t.key === activeTabKey.value)) {
@@ -466,8 +524,7 @@ watch(isViewer, (v) => {
 }, { immediate: true })
 
 watch(() => route.query.tab, (tab) => {
-  if (tab === 'terminal' && !isViewer.value) activeTabKey.value = 'terminal'
-  if (tab === 'terminal' && isViewer.value) activeTabKey.value = 'network'
+  activeTabKey.value = resolveTabFromQuery(tab)
 })
 
 const lastReadLabel = computed(() => {
