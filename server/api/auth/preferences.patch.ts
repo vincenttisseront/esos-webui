@@ -4,15 +4,19 @@ import {
   mapSessionAuthFailureToHttp,
 } from '../../utils/session-auth'
 import { setPreferredLocale, setPreferredTheme } from '../../db/repositories/user.repository'
-import { isSupportedLocale, setLocaleCookie } from '../../utils/locale'
-import { isSupportedTheme, setThemeCookie } from '../../utils/theme'
+import { setLocaleCookie } from '../../utils/locale'
+import { setThemeCookie } from '../../utils/theme'
+import {
+  hasPreferencePatchFields,
+  validatePreferencesPatch,
+} from '../../utils/auth-preferences'
 
 /**
- * Met à jour les préférences de l'utilisateur connecté.
+ * Met à jour les préférences de l'utilisateur connecté (session courante uniquement).
  *
  * Body : { preferredLocale?: 'fr' | 'en' | null, preferredTheme?: 'light' | 'dark' | 'system' | null }
  *
- * - Met à jour `users.preferred_locale` / `users.preferred_theme`.
+ * - Met à jour `users.preferred_locale` / `users.preferred_theme` pour `auth.user.id`.
  * - Synchronise les cookies `esos_locale` / `esos_theme` pour SSR cohérent.
  */
 export default defineEventHandler(async (event) => {
@@ -23,39 +27,36 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode, message })
   }
 
-  const body = await readBody<{
-    preferredLocale?: string | null
-    preferredTheme?: string | null
-  }>(event)
+  const body = await readBody(event)
+  const validated = validatePreferencesPatch(body)
+  if (!validated.ok) {
+    const { error } = validated
+    throw createError({
+      statusCode: 400,
+      message: error.message,
+      data: { code: error.code },
+    })
+  }
 
+  const { patch } = validated
   const out: { preferredLocale?: string | null; preferredTheme?: string | null } = {}
 
-  if (body && 'preferredLocale' in body) {
-    const raw = body.preferredLocale ?? null
-    if (raw !== null && !isSupportedLocale(raw)) {
-      throw createError({
-        statusCode: 400,
-        message: 'Langue non supportée',
-        data: { code: 'auth.unsupported_locale' },
-      })
-    }
+  if ('preferredLocale' in patch) {
+    const raw = patch.preferredLocale ?? null
     await setPreferredLocale(auth.user.id, raw)
     if (raw) setLocaleCookie(event, raw)
     out.preferredLocale = raw
   }
 
-  if (body && 'preferredTheme' in body) {
-    const raw = body.preferredTheme ?? null
-    if (raw !== null && !isSupportedTheme(raw)) {
-      throw createError({
-        statusCode: 400,
-        message: 'Thème non supporté',
-        data: { code: 'auth.unsupported_theme' },
-      })
-    }
+  if ('preferredTheme' in patch) {
+    const raw = patch.preferredTheme ?? null
     await setPreferredTheme(auth.user.id, raw)
     if (raw) setThemeCookie(event, raw)
     out.preferredTheme = raw
+  }
+
+  if (!hasPreferencePatchFields(patch)) {
+    return out
   }
 
   return out

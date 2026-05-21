@@ -140,7 +140,7 @@
       "current_locale": "Langue active",
       "saved_locale": "Préférence enregistrée",
       "not_saved": "Non enregistrée",
-      "save_failed": "La langue a changé localement, mais la préférence n'a pas pu être enregistrée.",
+      "save_failed": "La langue a changé localement (cookie), mais l'enregistrement sur le compte a échoué.",
       "theme_title": "Thème",
       "theme_help": "Clair, sombre ou système. Enregistré sur votre compte et synchronisé dans le cookie esos_theme.",
       "current_theme": "Thème actif",
@@ -254,7 +254,8 @@
       "missing_credentials": "Identifiants manquants",
       "inactive": "Compte désactivé. Contactez un administrateur.",
       "generic": "Erreur de connexion",
-      "unsupported_locale": "Langue non prise en charge."
+      "unsupported_locale": "Langue non prise en charge.",
+      "unsupported_theme": "Thème non pris en charge."
     },
     "san": {
       "read_only": "Ce SAN est en lecture seule. Désactivez la protection dans Administration → SANs pour autoriser les modifications.",

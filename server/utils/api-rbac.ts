@@ -18,6 +18,8 @@ export const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 export const MUTATION_ROUTE_PERMISSIONS: RoutePermission[] = [
   [/^\/api\/auth\/logout$/, ['POST'], ['admin', 'operator', 'viewer']],
   [/^\/api\/auth\/change-password$/, ['POST'], ['admin', 'operator', 'viewer']],
+  /** Préférences du compte connecté (locale / thème) — tout utilisateur authentifié. */
+  [/^\/api\/auth\/preferences$/, ['PATCH'], ['admin', 'operator', 'viewer']],
 
   [/^\/api\/admin\/ssh\/test$/, ['POST'], ['admin']],
 

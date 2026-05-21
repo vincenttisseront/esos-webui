@@ -213,14 +213,21 @@ const savedLocaleLabel = computed(() => {
 })
 const localeError = ref<string | null>(null)
 
+function preferencePersistError(err: unknown, fallbackKey: string): string {
+  const e = err as { statusCode?: number; data?: { code?: string; message?: string }; message?: string }
+  if (e?.statusCode === 403) return t('errors.rbac.forbidden') as string
+  if (e?.statusCode === 401) return t('errors.auth.generic') as string
+  return tError(e, t(fallbackKey) as string)
+}
+
 function onLocalePersistError(err: unknown) {
-  localeError.value = tError(err as { data?: { code?: string; message?: string }; message?: string }, t('profile.preferences.save_failed'))
+  localeError.value = preferencePersistError(err, 'profile.preferences.save_failed')
 }
 
 const themeError = ref<string | null>(null)
 
 function onThemePersistError(err: unknown) {
-  themeError.value = tError(err as { data?: { code?: string; message?: string }; message?: string }, t('profile.preferences.theme_save_failed'))
+  themeError.value = preferencePersistError(err, 'profile.preferences.theme_save_failed')
 }
 
 const newPassword = ref('')
