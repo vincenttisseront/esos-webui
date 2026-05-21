@@ -35,6 +35,7 @@
       "reconnecting": "Reconnecting to the ESOS server…",
       "connection_lost": "SSH connection lost. Check that the ESOS server is reachable.",
       "connecting": "Connecting to the ESOS server…",
+      "reconnect": "Reconnect",
       "pending_review_one": "One issue needs your attention.",
       "pending_review_other": "{count} issues need your attention."
     },
@@ -2200,6 +2201,22 @@
         "role_fileio": "FILEIO data",
         "filter_vdisk_mount": "Vdisks on this mount",
         "detection_counts": "Detected: {filesystems} FILEIO mount(s), {vdiskFiles} vdisk file(s), {fileioDevices} FILEIO device(s), {lunMappings} LUN mapping(s)"
+      },
+      "summary": {
+        "counts_label": "Detected",
+        "count_filesystems": "{n} filesystem(s)",
+        "count_vdisks": "{n} vdisk(s)",
+        "count_fileio": "{n} FILEIO",
+        "count_luns": "{n} LUN(s)",
+        "status_ok": "OK",
+        "status_attention": "Attention",
+        "last_scan": "Last scan: {time}"
+      },
+      "refresh": {
+        "incomplete_title": "Refresh incomplete",
+        "technical_details": "Technical details",
+        "stale_title": "Stale data",
+        "stale_body": "Showing data from the last successful scan ({time})."
       },
       "next": {
         "title": "Recommended next step",

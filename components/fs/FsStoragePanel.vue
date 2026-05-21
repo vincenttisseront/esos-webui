@@ -1,77 +1,69 @@
 <template>
   <div class="space-y-4">
-    <StorageReadOnlyBanner :read-only="readOnly" />
+    <StorageReadOnlyBanner :read-only="readOnly" compact />
 
-    <UAlert color="blue" variant="soft" :title="t('storage.fs.help.title')" :description="t('storage.fs.help.body')" />
-
-    <UAlert
-      v-if="nextActionText"
-      color="primary"
-      variant="soft"
-      :title="t('storage.fs.next.title')"
-      :description="nextActionText"
+    <FsSummaryBar
+      :counts="summaryCounts"
+      :status="summaryStatus"
+      :scanned-at-label="scannedAtLabel"
+      :next-action-hint="nextActionText || undefined"
+      :refreshing="refreshing"
+      @refresh="refreshAll"
     />
 
     <UAlert
-      v-if="!eligibleCandidates.length && backends.length"
+      v-if="fs.error"
       color="amber"
       variant="soft"
-      :title="t('storage.fs.overview.candidates_title')"
-      :description="noEligibleSummary"
-    />
-
-    <UAlert
-      v-if="scanWarnings.length"
-      color="amber"
-      variant="soft"
-      :title="t('storage.fs.overview.scan_warnings')"
+      :title="t('storage.fs.refresh.incomplete_title')"
+      :description="fs.error"
     >
-      <ul class="text-xs list-disc pl-4">
-        <li v-for="(w, i) in scanWarnings" :key="i">{{ w }}</li>
-      </ul>
+      <details class="mt-1 text-xs opacity-80">
+        <summary class="cursor-pointer select-none">{{ t('storage.fs.refresh.technical_details') }}</summary>
+        <p class="mt-1 font-mono">{{ fs.lastEndpoint }}</p>
+      </details>
     </UAlert>
+
+    <UAlert
+      v-else-if="showStaleNotice"
+      color="blue"
+      variant="soft"
+      :title="t('storage.fs.refresh.stale_title')"
+      :description="t('storage.fs.refresh.stale_body', { time: scannedAtLabel })"
+    />
 
     <FsProvisioningChain :steps="chainSteps" />
 
-    <p v-if="detectionCounts" class="text-xs text-gray-500 font-mono">
-      {{ t('storage.fs.overview.detection_counts', detectionCounts) }}
-    </p>
-
-    <div class="flex flex-wrap gap-2 justify-between items-center">
-      <div v-if="!readOnly" class="flex flex-wrap gap-2">
-        <UButton
-          size="sm"
-          color="primary"
-          icon="i-heroicons-plus"
-          :disabled="!eligibleCandidates.length"
-          :title="!eligibleCandidates.length ? t('storage.fs.wizard.create_fs.no_backend') : undefined"
-          @click="openCreateFsWizard"
-        >
-          {{ t('storage.fs.actions.create_fs') }}
-        </UButton>
-        <UButton
-          size="sm"
-          color="primary"
-          variant="soft"
-          icon="i-heroicons-document-plus"
-          :disabled="!fileioDataMounts.length"
-          @click="openCreateVdiskWizard"
-        >
-          {{ t('storage.fs.actions.create_vdisk') }}
-        </UButton>
-        <UButton
-          size="sm"
-          color="primary"
-          variant="soft"
-          icon="i-heroicons-circle-stack"
-          :disabled="!unmappedVdisks.length"
-          @click="openFileioWizard"
-        >
-          {{ t('storage.fs.actions.bind_fileio') }}
-        </UButton>
-      </div>
-      <UButton size="sm" color="gray" variant="ghost" icon="i-heroicons-arrow-path" :loading="refreshing" @click="refreshAll">
-        {{ t('storage.fs.overview.refresh') }}
+    <div v-if="!readOnly" class="flex flex-wrap gap-2">
+      <UButton
+        size="sm"
+        color="primary"
+        icon="i-heroicons-plus"
+        :disabled="!eligibleCandidates.length"
+        :title="!eligibleCandidates.length ? t('storage.fs.wizard.create_fs.no_backend') : undefined"
+        @click="openCreateFsWizard"
+      >
+        {{ t('storage.fs.actions.create_fs') }}
+      </UButton>
+      <UButton
+        size="sm"
+        color="primary"
+        variant="soft"
+        icon="i-heroicons-document-plus"
+        :disabled="!fileioDataMounts.length"
+        @click="openCreateVdiskWizard"
+      >
+        {{ t('storage.fs.actions.create_vdisk') }}
+      </UButton>
+      <UButton
+        size="sm"
+        color="primary"
+        variant="soft"
+        icon="i-heroicons-circle-stack"
+        :disabled="!unmappedVdisks.length"
+        @click="openFileioWizard"
+      >
+        {{ t('storage.fs.actions.bind_fileio') }}
       </UButton>
     </div>
 
@@ -274,7 +266,33 @@
         </template>
       </UTable>
       <p v-else class="text-sm text-gray-500">{{ t('storage.fs.overview.empty_candidates') }}</p>
+
+      <details
+        v-if="!eligibleCandidates.length && backends.length"
+        class="mt-3 rounded border border-amber-200 dark:border-amber-800/50 px-3 py-2"
+      >
+        <summary class="text-xs font-medium text-amber-800 dark:text-amber-200 cursor-pointer select-none">
+          {{ t('storage.fs.overview.candidates_title') }}
+        </summary>
+        <p class="text-xs text-amber-700 dark:text-amber-300 mt-2">{{ noEligibleSummary }}</p>
+      </details>
     </UCard>
+
+    <details v-if="actionableScanWarnings.length" class="rounded-lg border border-amber-200 dark:border-amber-800/50 px-3 py-2">
+      <summary class="text-sm font-medium cursor-pointer select-none text-amber-800 dark:text-amber-200">
+        {{ t('storage.fs.overview.scan_warnings') }} ({{ actionableScanWarnings.length }})
+      </summary>
+      <ul class="text-xs list-disc pl-4 mt-2 text-amber-800 dark:text-amber-300">
+        <li v-for="(w, i) in actionableScanWarnings" :key="i">{{ w }}</li>
+      </ul>
+    </details>
+
+    <details class="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
+      <summary class="text-sm font-medium cursor-pointer select-none">
+        {{ t('storage.fs.help.title') }}
+      </summary>
+      <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">{{ t('storage.fs.help.body') }}</p>
+    </details>
 
     <details v-if="diagnostics" class="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
       <summary class="text-sm font-medium cursor-pointer select-none">
@@ -289,6 +307,8 @@
 import { formatBytes } from '~/utils/fs-provisioning-chain'
 import { buildFsFileioViewModel } from '~/utils/fs-fileio-view'
 import { fileioRelevantMounts } from '~/utils/fs-mount-classifier'
+import { filterActionableScanWarnings } from '~/utils/fs-scan-warnings'
+import { buildFsSummaryStatus, formatScannedAt } from '~/utils/fs-summary-status'
 import { fsTableColumn, fsTableColumnId } from '~/utils/fs-table-columns'
 import type { FileioDeviceRef, FileSystemMount, FsBackendRef, FsMountRole, MountHealth, ScstLunMappingRef, VDiskFile } from '~/types/filesystem'
 
@@ -325,9 +345,33 @@ const eligibleCandidates = computed(() => backends.value.filter(c => c.eligible)
 const unmappedVdisks = computed(() => fileioView.value?.vdiskFiles.filter(v => !v.mapped) ?? [])
 const fileioDevices = computed(() => fileioView.value?.fileioDevices ?? [])
 const lunMappings = computed(() => fileioView.value?.lunMappings ?? [])
-const detectionCounts = computed(() => fileioView.value?.counts)
-const scanWarnings = computed(() => fs.overview?.scanWarnings ?? [])
+const summaryCounts = computed(() =>
+  fileioView.value?.counts ?? {
+    filesystems: 0,
+    vdiskFiles: 0,
+    fileioDevices: 0,
+    lunMappings: 0,
+  },
+)
+const actionableScanWarnings = computed(() =>
+  filterActionableScanWarnings(fs.overview?.scanWarnings ?? []),
+)
 const diagnostics = computed(() => fs.diagnostics)
+
+const scannedAtLabel = computed(() =>
+  formatScannedAt(fs.overview?.scannedAt ?? fs.lastRefresh?.getTime()),
+)
+
+const summaryStatus = computed(() =>
+  buildFsSummaryStatus({
+    fileioView: fileioView.value,
+    fetchError: fs.error,
+    actionableWarnings: actionableScanWarnings.value,
+    hasStaleData: fs.hasStaleData,
+  }),
+)
+
+const showStaleNotice = computed(() => fs.hasStaleData && !fs.error && !!fs.overview)
 
 const fileioDataMounts = computed(() => fileioRelevantMounts(fs.mounts))
 

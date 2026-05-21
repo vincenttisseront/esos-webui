@@ -2,12 +2,15 @@ import { defineStore } from 'pinia'
 
 export type ErrorLevel = 'info' | 'warning' | 'error'
 export type ErrorSource = 'ssh' | 'overview' | 'target' | 'terminal' | 'parser'
+export type ErrorKind = 'ssh_disconnected' | 'refresh_failed' | 'stale_data'
 
 export interface AppError {
   id: string
   level: ErrorLevel
   message: string
   source: ErrorSource
+  kind?: ErrorKind
+  endpoint?: string
   code?: number
   timestamp: Date
   dismissed: boolean
@@ -41,6 +44,10 @@ export const useErrorStore = defineStore('error', {
 
     hasSSHError: (s): boolean =>
       s.errors.some((e) => !e.dismissed && e.source === 'ssh'),
+
+    /** Errors that must not open the global SSH banner (page-local only). */
+    nonGlobalActive: (s): AppError[] =>
+      s.errors.filter((e) => !e.dismissed && e.source !== 'ssh'),
 
     activeCount: (s): number => s.errors.filter((e) => !e.dismissed).length,
   },

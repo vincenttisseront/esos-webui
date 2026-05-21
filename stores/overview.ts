@@ -66,17 +66,11 @@ export const useOverviewStore = defineStore('overview', {
         this.data = data
         this.lastRefresh = new Date()
         this.error = null
+        useErrorStore().clearSource('overview')
       } catch (err: unknown) {
-        const fetchErr = err as { statusCode?: number; message?: string }
-        this.error = fetchErr.message ?? 'Erreur de chargement'
-
-        const errorStore = useErrorStore()
-        errorStore.push({
-          level: fetchErr.statusCode === 503 ? 'warning' : 'error',
-          message: this.error,
-          source: 'overview',
-          code: fetchErr.statusCode,
-        })
+        const fetchErr = err as { statusCode?: number; message?: string; data?: { message?: string } }
+        this.error = fetchErr.data?.message ?? fetchErr.message ?? 'Erreur de chargement'
+        // Page-local only — do not push to global error banner
       } finally {
         this.loading = false
       }

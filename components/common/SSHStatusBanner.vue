@@ -12,7 +12,7 @@
         </NuxtLink>
       </span>
 
-      <span v-if="sshStore.isReconnecting" class="flex items-center gap-1.5">
+      <span v-else-if="sshStore.isReconnecting" class="flex items-center gap-1.5">
         <span
           class="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"
         />
@@ -34,19 +34,27 @@
         {{ t('banner.ssh.connecting') }}
       </span>
 
-      <span v-else class="flex items-center gap-1.5">
+      <span v-else-if="errorStore.hasSSHError" class="flex items-center gap-1.5">
         <span aria-hidden="true">⚠️</span>
-        {{ pendingReviewLabel }}
+        {{ errorStore.latest?.message ?? t('banner.ssh.connection_lost') }}
       </span>
 
       <div class="ml-auto flex items-center gap-2">
-        <span v-if="errorStore.latest" class="text-xs opacity-75 truncate max-w-md">
-          {{ errorStore.latest.message }}
-        </span>
+        <UButton
+          v-if="sshStore.isError || sshStore.isReconnecting"
+          size="xs"
+          color="neutral"
+          variant="soft"
+          :loading="reconnecting"
+          class="!text-inherit"
+          @click="reconnect"
+        >
+          {{ t('banner.ssh.reconnect') }}
+        </UButton>
         <button
-          v-if="errorStore.activeCount > 0"
+          v-if="errorStore.hasSSHError"
           class="text-xs underline opacity-75 hover:opacity-100"
-          @click="errorStore.dismissAll()"
+          @click="errorStore.clearSource('ssh')"
         >
           {{ t('common.dismiss') }}
         </button>
@@ -56,30 +64,39 @@
 </template>
 
 <script setup lang="ts">
+import { globalSshBannerTone, shouldShowGlobalSshBanner } from '~/utils/error-banner'
+
 const sshStore = useSSHStore()
 const errorStore = useErrorStore()
+const overviewStore = useOverviewStore()
 const { t } = useEsosI18n()
+const reconnecting = ref(false)
 
-const pendingReviewLabel = computed(() => {
-  const n = errorStore.activeCount
-  return n === 1
-    ? t('banner.ssh.pending_review_one')
-    : t('banner.ssh.pending_review_other', { count: n })
-})
-
-const showBanner = computed(
-  () => !sshStore.isReady || errorStore.activeCount > 0,
+const showBanner = computed(() =>
+  shouldShowGlobalSshBanner(sshStore.status, errorStore.hasSSHError),
 )
 
 const bannerClass = computed(() => {
-  if (sshStore.isUnconfigured) return 'bg-blue-50 text-blue-800 border-b border-blue-200'
-  if (sshStore.isError) return 'bg-red-600 text-white'
-  if (sshStore.isReconnecting) return 'bg-orange-500 text-white'
-  if (sshStore.status === 'connecting') return 'bg-yellow-500 text-white'
-  if (errorStore.activeCount)
-    return 'bg-yellow-100 text-yellow-800 border-b border-yellow-200'
+  const tone = globalSshBannerTone(sshStore.status)
+  if (tone === 'unconfigured') return 'bg-blue-50 text-blue-800 border-b border-blue-200'
+  if (tone === 'error') return 'bg-red-600 text-white'
+  if (tone === 'reconnecting') return 'bg-orange-500 text-white'
+  if (tone === 'connecting') return 'bg-yellow-500 text-white'
+  if (errorStore.hasSSHError) return 'bg-red-600 text-white'
   return ''
 })
+
+async function reconnect() {
+  reconnecting.value = true
+  try {
+    await sshStore.fetchStatus()
+    if (sshStore.isReady) {
+      await overviewStore.fetch()
+    }
+  } finally {
+    reconnecting.value = false
+  }
+}
 </script>
 
 <style scoped>

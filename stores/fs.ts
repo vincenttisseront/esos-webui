@@ -16,6 +16,8 @@ export const useFsStore = defineStore('fs', {
     candidates: [] as FsBackendCandidate[],
     loading: false,
     error: null as string | null,
+    lastEndpoint: '/api/fs/overview' as string,
+    lastRefresh: null as Date | null,
     sanId: null as string | null,
     clusterId: null as string | null,
   }),
@@ -29,6 +31,13 @@ export const useFsStore = defineStore('fs', {
     diagnostics: s => s.overview?.diagnostics,
     tools: s => s.overview?.tools,
     fileioView: s => buildFsFileioViewModel(s.overview),
+
+    hasStaleData: (s): boolean => {
+      if (!s.overview) return false
+      if (s.error) return true
+      if (!s.lastRefresh) return true
+      return Date.now() - s.lastRefresh.getTime() > 120_000
+    },
   },
 
   actions: {
@@ -47,14 +56,18 @@ export const useFsStore = defineStore('fs', {
 
     async fetchOverview(refresh = false) {
       this.loading = true
-      this.error = null
+      this.lastEndpoint = '/api/fs/overview'
       try {
-        this.overview = await $fetch<FsOverview>('/api/fs/overview', {
+        const data = await $fetch<FsOverview>(this.lastEndpoint, {
           query: { ...this.query(), ...(refresh ? { refresh: '1' } : {}) },
         })
-        this.candidates = this.overview?.candidates ?? this.overview?.backends ?? []
+        this.overview = data
+        this.candidates = data.candidates ?? data.backends ?? []
+        this.lastRefresh = new Date()
+        this.error = null
       } catch (e: any) {
         this.error = e?.data?.message ?? e?.message ?? 'Erreur filesystem'
+        // Keep previous overview for stale display
       } finally {
         this.loading = false
       }
