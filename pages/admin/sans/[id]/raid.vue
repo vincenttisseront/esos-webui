@@ -316,6 +316,16 @@
       />
     </div>
 
+    <!-- Onglet File Systems -->
+    <div v-else-if="activeTab === 'fs'" class="space-y-3">
+      <FsStoragePanel
+        :san-id="sanId"
+        :cluster-id="san?.clusterId ?? undefined"
+        :is-clustered="isClusteredSan"
+        :read-only="isReadOnly"
+      />
+    </div>
+
     <!-- Onglet Block Devices -->
     <div v-else-if="activeTab === 'devices' && raid.overview" class="space-y-3">
       <div class="flex items-center gap-3">
@@ -536,6 +546,7 @@ const tabs = [
   { key: 'hardware', label: 'RAID Matériel',     icon: 'i-heroicons-cpu-chip' },
   { key: 'software', label: 'RAID Logiciel (MD)', icon: 'i-heroicons-server-stack' },
   { key: 'lvm',      label: t('lvm.tab.title'),  icon: 'i-heroicons-square-3-stack-3d' },
+  { key: 'fs',       label: t('storage.fs.tab.title'), icon: 'i-heroicons-folder' },
   { key: 'devices',  label: 'Block Devices',     icon: 'i-heroicons-circle-stack' },
   { key: 'ops',      label: 'Opérations',        icon: 'i-heroicons-queue-list' },
 ]

@@ -120,6 +120,26 @@
             @click="openAddGroup"
           />
         </div>
+        <div
+          v-if="exposeDevice && !isEffectiveReadOnly"
+          class="rounded-lg border border-green-200 dark:border-green-900 bg-green-50/60 dark:bg-green-950/30 px-4 py-3 text-sm"
+        >
+          <p class="font-semibold text-green-900 dark:text-green-100">
+            {{ t('storage.hosts.exposeCta.title') }}
+          </p>
+          <p class="text-green-800 dark:text-green-200 mt-1">
+            {{ t('storage.hosts.exposeCta.body') }}
+          </p>
+          <p class="font-mono text-xs mt-2">{{ exposeDevice }}</p>
+          <UButton
+            v-if="target.groups.length === 0"
+            class="mt-2"
+            size="sm"
+            :label="t('storage.hosts.actions.addGroup')"
+            @click="openAddGroup"
+          />
+        </div>
+
         <div v-if="target.groups.length > 0" class="space-y-3">
           <GroupPanel
             v-for="group in target.groups"
@@ -130,9 +150,40 @@
             @add-initiator="openAddInitiator"
             @remove-initiator="onRemoveInitiator"
             @remove-group="onRemoveGroup"
+            @map-lun="openMapLun"
+            @unmap-lun="onUnmapLun"
           />
         </div>
         <EmptyState v-else :message="t('storage.targets.detail.empty.noGroups')" icon="👥" />
+      </section>
+
+      <section v-if="unmappedDevices.length > 0">
+        <SectionTitle
+          :title="t('storage.hosts.unmapped.title')"
+          :count="unmappedDevices.length"
+        />
+        <p class="text-xs text-gray-500 mb-2">{{ t('storage.hosts.unmapped.hint') }}</p>
+        <ul class="space-y-2 text-sm">
+          <li
+            v-for="dev in unmappedDevices"
+            :key="dev.name"
+            class="flex items-center justify-between gap-2 flex-wrap"
+          >
+            <span class="font-mono font-semibold">{{ dev.name }}</span>
+            <span class="text-gray-500 text-xs">{{ dev.handler }} — {{ dev.filename }}</span>
+            <div v-if="!isEffectiveReadOnly && target.groups.length > 0" class="flex flex-wrap gap-1">
+              <UButton
+                v-for="g in target.groups"
+                :key="g.name"
+                size="xs"
+                variant="soft"
+                :label="`${t('storage.hosts.unmapped.mapToGroup')}: ${g.name}`"
+                :loading="hostsLoading"
+                @click="openMapLun(g.name, dev.name)"
+              />
+            </div>
+          </li>
+        </ul>
       </section>
 
       <section v-if="!isEffectiveReadOnly && discoveredInitiators.length > 0">
@@ -172,8 +223,11 @@
 import DestructiveModal from '~/components/modals/DestructiveModal.vue'
 import AddGroupModal from '~/components/targets/AddGroupModal.vue'
 import AddInitiatorModal from '~/components/targets/AddInitiatorModal.vue'
+import MapLunModal from '~/components/targets/MapLunModal.vue'
 import { discoveredInitiatorsForTarget } from '~/utils/scst-discovered-initiators'
+import { unmappedDevicesFromOverview } from '~/utils/scst-unmapped-devices'
 import { expectedDeleteGroupConfirmation } from '~/utils/scst-initiator-validation'
+import { expectedUnmapLunConfirmation } from '~/utils/scst-lun-validation'
 
 const { t } = useEsosI18n()
 const route = useRoute()
@@ -186,6 +240,11 @@ const { isEffectiveReadOnly } = useSelectedSan()
 const modal = useAppModal()
 const toast = useAppToast()
 
+const exposeDevice = computed(() => {
+  const q = route.query.exposeDevice
+  return typeof q === 'string' ? q : undefined
+})
+
 const {
   loading: hostsLoading,
   isClusterMode,
@@ -194,6 +253,8 @@ const {
   deleteGroup,
   addInitiator,
   removeInitiator,
+  mapLun,
+  unmapLun,
 } = useTargetHosts(name, { refresh, refreshOverview })
 
 const discoveredInitiators = computed(() =>
@@ -207,6 +268,10 @@ const devicesMap = computed(() => {
   }
   return map
 })
+
+const unmappedDevices = computed(() =>
+  overview.value ? unmappedDevicesFromOverview(overview.value) : [],
+)
 
 async function openAddGroup() {
   try {
@@ -263,6 +328,61 @@ async function onRemoveInitiator(payload: { groupName: string; initiator: string
   try {
     await removeInitiator(payload.groupName, payload.initiator)
     toast.success(t('storage.hosts.toasts.initiatorRemoved') as string, payload.initiator)
+  } catch (err: unknown) {
+    toastHostsError(err)
+  }
+}
+
+async function openMapLun(groupName: string, initialDeviceName?: string) {
+  if (!target.value || !overview.value) return
+  try {
+    const payload = await modal.open<{ lunId: number; deviceName: string; readOnly: boolean }>({
+      component: MapLunModal,
+      props: {
+        groupName,
+        target: target.value,
+        overview: overview.value,
+        unmappedDevices: unmappedDevices.value,
+        initialDeviceName: initialDeviceName ?? exposeDevice.value,
+        loading: hostsLoading.value,
+      },
+    })
+    await mapLun(groupName, payload.lunId, payload.deviceName, payload.readOnly)
+    toast.success(
+      t('storage.hosts.luns.toasts.mapped') as string,
+      `${payload.deviceName} → LUN ${payload.lunId}`,
+    )
+    if (exposeDevice.value) {
+      await router.replace({ query: { ...route.query, exposeDevice: undefined } })
+    }
+  } catch (err: unknown) {
+    if (isDismiss(err)) return
+    toastHostsError(err)
+  }
+}
+
+async function onUnmapLun(payload: { groupName: string; lunId: number; device: string }) {
+  const expected = expectedUnmapLunConfirmation(name.value, payload.groupName, payload.lunId)
+  try {
+    await modal.open({
+      component: DestructiveModal,
+      props: {
+        title: t('storage.hosts.luns.modals.unmap.title', { id: payload.lunId }) as string,
+        message: t('storage.hosts.luns.modals.unmap.message', {
+          id: payload.lunId,
+          device: payload.device,
+          group: payload.groupName,
+        }) as string,
+        confirmLabel: t('storage.hosts.luns.modals.unmap.confirmLabel') as string,
+        inputConfirm: expected,
+      },
+    })
+  } catch {
+    return
+  }
+  try {
+    await unmapLun(payload.groupName, payload.lunId)
+    toast.success(t('storage.hosts.luns.toasts.unmapped') as string, `LUN ${payload.lunId}`)
   } catch (err: unknown) {
     toastHostsError(err)
   }

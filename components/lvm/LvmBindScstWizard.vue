@@ -166,6 +166,7 @@ const emit = defineEmits<{ cancel: []; close: [] }>()
 const { t } = useEsosI18n()
 const lvm = useLvmStore()
 const toast = useAppToast()
+const { overview } = useOverview()
 
 const lv = computed(() => props.lv)
 const deviceName = ref('')
@@ -347,6 +348,13 @@ async function execute() {
       await lvm.bindScst(payload)
     }
     toast.success(t('lvm.wizard.scst_device.success'))
+    const firstTarget = overview.value?.targets[0]
+    if (firstTarget) {
+      await navigateTo({
+        path: `/targets/${encodeURIComponent(firstTarget.name)}`,
+        query: { exposeDevice: payload.deviceName },
+      })
+    }
     emit('close')
   } catch (e: unknown) {
     const message = resolveBindScstExecuteError(e as object, t)

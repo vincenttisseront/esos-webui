@@ -2049,7 +2049,52 @@
         "title": "Hôtes et initiateurs",
         "summary": "Les groupes d'accès définissent quels initiateurs peuvent accéder à quels LUNs sur cette target. Un initiateur est l'identité client : WWPN Fibre Channel, IQN iSCSI, GUID InfiniBand, ou un motif (* ? !).",
         "wikiLink": "Wiki ESOS — Hôtes et initiateurs",
-        "lunPhase2": "Le mappage LUN→groupe sera disponible dans une prochaine phase (Devices)."
+        "lunPhase2": "Associez un device SCST enregistré (ex. vdisk_blockio depuis LVM) à un numéro de LUN dans ce groupe."
+      },
+      "unmapped": {
+        "title": "Devices SCST non mappés",
+        "empty": "Tous les devices sont mappés à un LUN sur au moins une target.",
+        "hint": "Ces devices existent dans scst.conf mais ne sont pas encore assignés à un LUN.",
+        "mapToGroup": "Mapper au groupe"
+      },
+      "exposeCta": {
+        "title": "Exposer aux clients",
+        "body": "Device SCST créé. Créez un groupe d'accès, ajoutez des initiateurs et mappez ce device en LUN.",
+        "action": "Configurer sur la target"
+      },
+      "luns": {
+        "modals": {
+          "map": {
+            "title": "Mapper un device en LUN — {group}",
+            "deviceLabel": "Device SCST",
+            "devicePlaceholder": "Choisir un device",
+            "lunIdLabel": "Numéro de LUN",
+            "lunIdHint": "IDs utilisés dans ce groupe : {ids}",
+            "readOnlyLabel": "LUN en lecture seule",
+            "previewLabel": "Aperçu configuration",
+            "noDevices": "Aucun device non mappé — créez-en un via LVM ou Devices."
+          },
+          "unmap": {
+            "title": "Retirer le LUN {id} ?",
+            "message": "Retire le LUN {id} ({device}) du groupe « {group} ». Arrêtez les I/O clients d'abord.",
+            "confirmLabel": "Démapper le LUN"
+          }
+        },
+        "toasts": {
+          "mapped": "LUN mappé",
+          "unmapped": "LUN démappé"
+        },
+        "errors": {
+          "group_not_found": "Groupe introuvable.",
+          "lun_id_invalid": "Numéro de LUN invalide (0–65535).",
+          "device_name_invalid": "Nom de device invalide.",
+          "device_not_found": "Device SCST introuvable.",
+          "handler_not_allowed": "Ce handler ne peut pas être mappé dans cette phase.",
+          "lun_id_duplicate_group": "Numéro de LUN déjà utilisé dans ce groupe.",
+          "lun_id_duplicate_target": "Numéro de LUN déjà utilisé sur cette target.",
+          "device_already_mapped": "Device déjà mappé sur cette target.",
+          "lun_not_found": "LUN introuvable dans le groupe."
+        }
       },
       "clusterBanner": {
         "title": "Mode cluster",
@@ -2062,6 +2107,7 @@
         "addInitiator": "Ajouter un initiateur",
         "removeInitiator": "Retirer",
         "assignLun": "Assigner un device…",
+        "unmapLun": "Démapper",
         "addDiscovered": "Ajouter au groupe"
       },
       "discovered": {
@@ -2120,6 +2166,99 @@
         "initiator_type_unknown": "Type d'initiateur non détecté."
       }
     },
+    "fs": {
+      "tab": { "title": "Systèmes de fichiers" },
+      "help": {
+        "title": "FILEIO vs BLOCKIO",
+        "body": "Créez un système de fichiers sur un backend bloc (MD, LD RAID matériel ou LV LVM), placez des fichiers vdisk sur le montage, enregistrez-les en devices SCST vdisk_fileio, puis exposez aux clients via les groupes d'accès (phase B).",
+        "wikiLink": "Wiki ESOS — Systèmes de fichiers"
+      },
+      "overview": {
+        "refresh": "Actualiser",
+        "mounts_title": "Filesystems montés",
+        "candidates_title": "Backends éligibles",
+        "vdisks_title": "Fichiers vdisk",
+        "empty_mounts": "Aucun montage XFS/EXT4 détecté",
+        "empty_candidates": "Aucun backend éligible",
+        "empty_vdisks": "Aucun fichier vdisk"
+      },
+      "chain": {
+        "title": "Chaîne FILEIO",
+        "step": {
+          "filesystem": "Filesystem",
+          "vdisk": "Fichier vdisk",
+          "fileio": "SCST FILEIO",
+          "expose": "Exposer aux clients"
+        },
+        "status": {
+          "ready": "Prêt",
+          "created": "OK",
+          "missing": "Manquant",
+          "blocked": "Bloqué",
+          "next": "Suivant"
+        }
+      },
+      "actions": {
+        "create_fs": "Créer filesystem",
+        "create_vdisk": "Créer vdisk",
+        "bind_fileio": "Enregistrer FILEIO",
+        "delete_vdisk": "Supprimer vdisk",
+        "unmount": "Démonter"
+      },
+      "table": {
+        "mount_point": "Montage",
+        "backing": "Périphérique",
+        "type": "Type",
+        "size": "Taille",
+        "free": "Libre",
+        "fstab": "fstab",
+        "path": "Chemin",
+        "scst": "SCST",
+        "mapped": "Mappé",
+        "unmapped": "Non mappé"
+      },
+      "wizard": {
+        "create_fs": {
+          "title": "Créer un filesystem",
+          "backend": "Backend bloc",
+          "fs_type": "Type",
+          "label": "Label",
+          "mount_point": "Point de montage",
+          "partition": "Partition",
+          "partition_none": "Aucune (formater le device entier)",
+          "partition_gpt": "Partition GPT unique",
+          "confirm_phrase": "Saisir exactement pour confirmer :",
+          "execute": "Formater et monter"
+        },
+        "create_vdisk": {
+          "title": "Créer un fichier vdisk",
+          "mount": "Montage",
+          "file_name": "Nom du fichier",
+          "size": "Taille (octets)",
+          "alloc": "Allocation",
+          "execute": "Créer le fichier"
+        },
+        "fileio": {
+          "title": "Enregistrer SCST FILEIO",
+          "vdisk": "Chemin vdisk",
+          "device_name": "Nom device SCST",
+          "nv_cache": "Activer nv_cache",
+          "execute": "Créer le device",
+          "expose_cta": "Exposer aux clients"
+        }
+      },
+      "errors": {
+        "mount_point_invalid": "Point de montage invalide",
+        "mount_point_system": "Point de montage interdit sur chemins système",
+        "label_required": "Label requis",
+        "label_invalid": "Label invalide",
+        "backend_invalid": "Chemin backend invalide",
+        "fs_type_invalid": "Type de filesystem invalide",
+        "vdisk_name_invalid": "Nom de fichier vdisk invalide",
+        "vdisk_size_min": "Taille vdisk trop petite (min 1 Mio)",
+        "vdisk_size_free": "Taille supérieure à l'espace libre"
+      }
+    },
     "devices": {
       "list": {
         "countLine": "{count} device(s)",
@@ -2128,7 +2267,9 @@
       },
       "usage": {
         "count": "{count} LUN(s)",
-        "withRoSuffix": " dont {ro} R/O"
+        "withRoSuffix": " dont {ro} R/O",
+        "unmapped": "Non mappé",
+        "viewTargets": "Voir les targets"
       },
       "table": {
         "headers": {

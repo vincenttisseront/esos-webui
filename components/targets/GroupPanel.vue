@@ -92,7 +92,18 @@
           <tbody class="divide-y divide-gray-50 dark:divide-gray-800">
             <tr v-for="lun in group.luns" :key="lun.id">
               <td class="py-1.5 font-mono text-gray-500">{{ lun.id }}</td>
-              <td class="py-1.5 font-semibold">{{ lun.device }}</td>
+              <td class="py-1.5 font-semibold">
+                <span>{{ lun.device }}</span>
+                <UButton
+                  v-if="!readOnly"
+                  size="xs"
+                  color="neutral"
+                  variant="ghost"
+                  class="ml-1"
+                  :label="t('storage.hosts.actions.unmapLun')"
+                  @click="$emit('unmapLun', { groupName: group.name, lunId: lun.id, device: lun.device })"
+                />
+              </td>
               <td class="py-1.5 text-gray-500">
                 {{ devicesMap.get(lun.device)?.handler ?? '—' }}
               </td>
@@ -116,14 +127,13 @@
           {{ t('storage.targets.groupPanel.noLuns') }}
         </p>
         <div v-if="!readOnly" class="mt-2">
-          <UTooltip :text="t('storage.hosts.help.lunPhase2')">
-            <UButton
-              size="xs"
-              variant="outline"
-              disabled
-              :label="t('storage.hosts.actions.assignLun')"
-            />
-          </UTooltip>
+          <UButton
+            size="xs"
+            variant="outline"
+            icon="i-heroicons-link"
+            :label="t('storage.hosts.actions.assignLun')"
+            @click="$emit('mapLun', group.name)"
+          />
         </div>
       </div>
     </div>
@@ -145,6 +155,8 @@ defineEmits<{
   addInitiator: [groupName: string]
   removeInitiator: [payload: { groupName: string; initiator: string }]
   removeGroup: [groupName: string]
+  mapLun: [groupName: string]
+  unmapLun: [payload: { groupName: string; lunId: number; device: string }]
 }>()
 
 const open = ref(true)

@@ -15,6 +15,10 @@ export function mapHostsValidationError(errorKey?: string, t?: (key: string) => 
   return errorKey
 }
 
+export function mapLunValidationError(errorKey?: string, t?: (key: string) => string): string {
+  return mapHostsValidationError(errorKey, t)
+}
+
 export function previewGroupName(name: string, t?: (key: string) => string) {
   return validateGroupName(name)
     .ok

@@ -2,7 +2,8 @@ import { getActiveSSHManager } from './ssh-runtime'
 import { writeRemoteFileAtomicOrThrow } from './remote-file-writer'
 import { shellSingleQuoteForRemote } from './remote-config-paths'
 import { readScstConfig } from './scst-config-reader'
-import type { ScstConfig, Target, Group } from '~/types/esos'
+import type { ScstConfig, Target, Group, Lun } from '~/types/esos'
+import { validateMapLun, validateUnmapLun } from '~/utils/scst-lun-validation'
 import {
   validateGroupName,
   validateInitiatorValue,
@@ -86,15 +87,25 @@ export function serializeScstConfig(config: ScstConfig): string {
           lines.push(`\t\t\tINITIATOR ${initiator}`)
         }
         for (const lun of group.luns) {
-          const suffix = lun.readOnly ? ' readonly=1' : ''
-          lines.push(`\t\t\tLUN ${lun.id} ${lun.device}${suffix}`)
+          if (lun.readOnly) {
+            lines.push(`\t\t\tLUN ${lun.id} ${lun.device} {`)
+            lines.push(`\t\t\t\tread_only 1`)
+            lines.push(`\t\t\t}`)
+          } else {
+            lines.push(`\t\t\tLUN ${lun.id} ${lun.device}`)
+          }
         }
         lines.push(`\t\t}`)
       }
 
       for (const lun of target.luns) {
-        const suffix = lun.readOnly ? ' readonly=1' : ''
-        lines.push(`\t\tLUN ${lun.id} ${lun.device}${suffix}`)
+        if (lun.readOnly) {
+          lines.push(`\t\tLUN ${lun.id} ${lun.device} {`)
+          lines.push(`\t\t\tread_only 1`)
+          lines.push(`\t\t}`)
+        } else {
+          lines.push(`\t\tLUN ${lun.id} ${lun.device}`)
+        }
       }
 
       lines.push(`\t}`)
@@ -336,6 +347,54 @@ export async function removeInitiator(
   }
 
   group.initiators.splice(idx, 1)
+  await writeAndReloadScst(serializeScstConfig(config))
+}
+
+export async function addLunToGroup(
+  targetName: string,
+  groupName: string,
+  lunId: number,
+  deviceName: string,
+  options?: { readOnly?: boolean },
+): Promise<{ lunId: number; deviceName: string }> {
+  const config = await readScstConfig()
+  const target = findTargetInConfig(config, targetName)
+  if (!target) throw new Error(`Target "${targetName}" introuvable`)
+
+  const validated = validateMapLun(
+    { lunId, deviceName, readOnly: options?.readOnly },
+    { config, target, groupName },
+  )
+  if (!validated.ok) {
+    throw new Error(validated.message ?? 'Mappage LUN invalide')
+  }
+
+  const group = findGroup(target, groupName)!
+  const lun: Lun = {
+    id: lunId,
+    device: deviceName.trim(),
+    readOnly: !!options?.readOnly,
+    attrs: {},
+  }
+  group.luns.push(lun)
+  await writeAndReloadScst(serializeScstConfig(config))
+  return { lunId: lun.id, deviceName: lun.device }
+}
+
+export async function removeLunFromGroup(
+  targetName: string,
+  groupName: string,
+  lunId: number,
+): Promise<void> {
+  const config = await readScstConfig()
+  const target = findTargetInConfig(config, targetName)
+  if (!target) throw new Error(`Target "${targetName}" introuvable`)
+
+  const v = validateUnmapLun(lunId, target, groupName)
+  if (!v.ok) throw new Error(v.message ?? 'LUN introuvable')
+
+  const group = findGroup(target, groupName)!
+  group.luns = group.luns.filter(l => l.id !== lunId)
   await writeAndReloadScst(serializeScstConfig(config))
 }
 

@@ -10,6 +10,8 @@ import {
   deleteGroup,
   addInitiator,
   removeInitiator,
+  addLunToGroup,
+  removeLunFromGroup,
 } from './scst-config-writer'
 import type { InitiatorType } from '~/utils/scst-initiator-validation'
 import type { ClusterLvmNodeResult } from '~/types/lvm'
@@ -163,6 +165,40 @@ export async function clusterRemoveInitiator(
   return runOnClusterNodes(clusterId, `removeInitiator ${groupName}`, async (t) => {
     await removeInitiator(t, groupName, initiator)
   }, targetName)
+}
+
+export async function clusterAddLunToGroup(
+  clusterId: string,
+  targetName: string,
+  groupName: string,
+  lunId: number,
+  deviceName: string,
+  readOnly?: boolean,
+): Promise<ScstClusterMutationResult> {
+  return runOnClusterNodes(
+    clusterId,
+    `addLun ${groupName}/${lunId}`,
+    async (t) => {
+      await addLunToGroup(t, groupName, lunId, deviceName, { readOnly })
+    },
+    targetName,
+  )
+}
+
+export async function clusterRemoveLunFromGroup(
+  clusterId: string,
+  targetName: string,
+  groupName: string,
+  lunId: number,
+): Promise<ScstClusterMutationResult> {
+  return runOnClusterNodes(
+    clusterId,
+    `removeLun ${groupName}/${lunId}`,
+    async (t) => {
+      await removeLunFromGroup(t, groupName, lunId)
+    },
+    targetName,
+  )
 }
 
 export function assertScstClusterSuccess(result: ScstClusterMutationResult): void {

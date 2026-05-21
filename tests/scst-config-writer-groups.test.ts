@@ -34,4 +34,12 @@ describe('serializeScstConfig — groups and initiators', () => {
     expect(text).toContain('INITIATOR iqn.1994-05.com.redhat:*')
     expect(text).toContain('LUN 1 disk01')
   })
+
+  it('emits read_only block for read-only LUN', () => {
+    const cfg = structuredClone(base)
+    cfg.drivers[0].targets[0].groups[0].luns[0].readOnly = true
+    const text = serializeScstConfig(cfg)
+    expect(text).toContain('LUN 1 disk01 {')
+    expect(text).toContain('read_only 1')
+  })
 })

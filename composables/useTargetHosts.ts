@@ -159,6 +159,77 @@ export function useTargetHosts(
     }
   }
 
+  async function mapLun(
+    groupName: string,
+    lunId: number,
+    deviceName: string,
+    readOnly?: boolean,
+  ): Promise<HostsMutationResult> {
+    loading.value = true
+    try {
+      if (isClusterMode.value && clusterCtx.value) {
+        const res = await $fetch<HostsMutationResult>(
+          `/api/targets/${enc(targetName.value)}/groups/${enc(groupName)}/luns/cluster`,
+          {
+            method: 'POST',
+            body: { lunId, deviceName, readOnly, ...clusterCtx.value },
+          },
+        )
+        await afterMutation(res)
+        return res
+      }
+      await $fetch(
+        `/api/targets/${enc(targetName.value)}/groups/${enc(groupName)}/luns`,
+        {
+          method: 'POST',
+          body: { lunId, deviceName, readOnly },
+          ...sanQuery(),
+        },
+      )
+      await afterMutation()
+      return {}
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function unmapLun(groupName: string, lunId: number): Promise<HostsMutationResult> {
+    loading.value = true
+    try {
+      if (isClusterMode.value && clusterCtx.value) {
+        const res = await $fetch<HostsMutationResult>(
+          `/api/targets/${enc(targetName.value)}/groups/${enc(groupName)}/luns/cluster.remove`,
+          {
+            method: 'POST',
+            body: { lunId, ...clusterCtx.value },
+          },
+        )
+        await afterMutation(res)
+        return res
+      }
+      await $fetch(
+        `/api/targets/${enc(targetName.value)}/groups/${enc(groupName)}/luns/remove`,
+        {
+          method: 'POST',
+          body: { lunId },
+          ...sanQuery(),
+        },
+      )
+      await afterMutation()
+      return {}
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function fetchUnmappedDevices(): Promise<import('~/types/scst-hosts').UnmappedDeviceInfo[]> {
+    const res = await $fetch<{ devices: import('~/types/scst-hosts').UnmappedDeviceInfo[] }>(
+      `/api/targets/${enc(targetName.value)}/unmapped-devices`,
+      sanQuery(),
+    )
+    return res.devices
+  }
+
   async function fetchDiscovered(): Promise<string[]> {
     const res = await $fetch<{ initiators: string[] }>(
       `/api/targets/${enc(targetName.value)}/discovered-initiators`,
@@ -176,6 +247,9 @@ export function useTargetHosts(
     deleteGroup,
     addInitiator,
     removeInitiator,
+    mapLun,
+    unmapLun,
+    fetchUnmappedDevices,
     fetchDiscovered,
     extractNodeResults,
   }

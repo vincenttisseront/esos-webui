@@ -34,6 +34,8 @@ export const MUTATION_ROUTE_PERMISSIONS: RoutePermission[] = [
 
   [/^\/api\/lvm\//, ['POST', 'PATCH', 'PUT', 'DELETE'], ['admin', 'operator']],
 
+  [/^\/api\/fs\//, ['POST', 'PATCH', 'PUT', 'DELETE'], ['admin', 'operator']],
+
   [/^\/api\/cluster\//, ['POST', 'PUT', 'PATCH', 'DELETE'], ['admin', 'operator']],
 
   [/^\/api\/targets/, ['POST', 'PATCH', 'DELETE'], ['admin', 'operator']],
@@ -59,6 +61,8 @@ export const READ_ROUTE_PERMISSIONS: RoutePermission[] = [
   [/^\/api\/raid\//, ['GET'], ['admin', 'operator', 'viewer']],
   [/^\/api\/lvm\//, ['POST', 'PATCH', 'PUT', 'DELETE'], ['admin', 'operator']],
   [/^\/api\/lvm\//, ['GET'], ['admin', 'operator', 'viewer']],
+  [/^\/api\/fs\//, ['POST', 'PATCH', 'PUT', 'DELETE'], ['admin', 'operator']],
+  [/^\/api\/fs\//, ['GET'], ['admin', 'operator', 'viewer']],
   [/^\/api\/san\/[^/]+\/system-config/, ['GET'], ['admin', 'operator']],
   [/^\/api\/san\//, ['POST', 'PATCH', 'PUT', 'DELETE'], ['admin', 'operator']],
 

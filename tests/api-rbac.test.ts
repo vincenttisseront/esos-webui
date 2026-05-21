@@ -72,6 +72,22 @@ describe('api-rbac (mutations default deny)', () => {
     expectForbidden(() => enforceMutationAccess('/api/lvm/preflight', 'POST', 'viewer'))
   })
 
+  it('RB10 — viewer cannot POST /api/fs/create', () => {
+    expectForbidden(() => enforceMutationAccess('/api/fs/create', 'POST', 'viewer'))
+  })
+
+  it('RB10b — operator can POST /api/fs/create', () => {
+    expect(() => enforceMutationAccess('/api/fs/create', 'POST', 'operator')).not.toThrow()
+  })
+
+  it('RB10c — viewer can GET /api/fs/overview', () => {
+    expect(() => enforceReadAccess('/api/fs/overview', 'GET', 'viewer')).not.toThrow()
+  })
+
+  it('RB10d — viewer cannot DELETE /api/fs/vdisk', () => {
+    expectForbidden(() => enforceMutationAccess('/api/fs/vdisk', 'DELETE', 'viewer'))
+  })
+
   it('RB09g — operator can POST /api/lvm/pv/remove/cluster', () => {
     expect(() => enforceMutationAccess('/api/lvm/pv/remove/cluster', 'POST', 'operator')).not.toThrow()
   })
@@ -95,6 +111,18 @@ describe('api-rbac (mutations default deny)', () => {
   it('RB10c — viewer cannot POST initiators/remove', () => {
     expectForbidden(() =>
       enforceMutationAccess('/api/targets/t1/groups/g1/initiators/remove', 'POST', 'viewer'),
+    )
+  })
+
+  it('RB11 — operator can POST /api/targets/t1/groups/g1/luns', () => {
+    expect(() =>
+      enforceMutationAccess('/api/targets/t1/groups/g1/luns', 'POST', 'operator'),
+    ).not.toThrow()
+  })
+
+  it('RB11b — viewer cannot POST luns/remove', () => {
+    expectForbidden(() =>
+      enforceMutationAccess('/api/targets/t1/groups/g1/luns/remove', 'POST', 'viewer'),
     )
   })
 })
