@@ -1851,6 +1851,85 @@
       "login_success": "Success",
       "login_failure": "Failed"
     },
+    "upgrade": {
+      "tabs": {
+        "version": "Version",
+        "readiness": "Readiness",
+        "package": "Package",
+        "plan": "Plan",
+        "execute": "Execute"
+      },
+      "wiki_link": "ESOS documentation — Upgrading",
+      "scope_label": "Scope",
+      "refresh": "Analyze",
+      "levels": {
+        "ready": "Ready",
+        "warning": "Warnings",
+        "blocked": "Blocked"
+      },
+      "summary": {
+        "ready": "The system appears ready for a planned upgrade.",
+        "warning": "Warnings require attention before proceeding.",
+        "blocked": "Upgrade is blocked until critical criteria are resolved.",
+        "blocked_readonly": "SAN is read-only — disable protection under Administration → SANs.",
+        "blocked_ssh": "SSH connection required.",
+        "blocked_tmp": "Insufficient /tmp space (≥ 5 GiB required).",
+        "blocked_cluster": "Invalid cluster state or unreachable peer."
+      },
+      "checks": {
+        "ssh_connected": "SSH connection",
+        "san_writable": "SAN writable",
+        "esos_version": "ESOS version",
+        "tmp_mount": "/tmp mount",
+        "tmp_free_space": "/tmp free space",
+        "ram_available": "Available RAM",
+        "conf_sync_present": "conf_sync.sh",
+        "boot_slots": "Boot slots",
+        "cluster_membership": "Cluster membership",
+        "cluster_healthy": "Cluster health",
+        "peer_reachable": "Peer reachable",
+        "drbd_resync": "DRBD resync",
+        "raid_cli_present": "RAID CLI tools"
+      },
+      "package": {
+        "admin_only": "Administrators only.",
+        "blocked_hint": "Fix blockers on the Readiness tab or disable read-only mode.",
+        "choose_file": "ESOS package file (.zip, .tar.gz)",
+        "sha256": "SHA-256 (optional)",
+        "expected_version": "Target version (optional)",
+        "upload": "Upload and stage on host",
+        "uploading": "Transfer in progress…",
+        "ready": "Package ready — install.sh detected",
+        "error": "Staging failed",
+        "remove": "Remove staging",
+        "no_file": "No staged package"
+      },
+      "plan": {
+        "generate": "Generate plan",
+        "cluster_rolling": "Cluster upgrade — one node at a time",
+        "standalone": "Standalone upgrade",
+        "manual_step": "Manual step",
+        "copy_commands": "Copy",
+        "warning": {
+          "conf_sync": "Run conf_sync.sh before install/reboot.",
+          "keep_old_media": "Keep the previous boot media to roll back.",
+          "one_node_at_a_time": "Never upgrade all nodes at once."
+        },
+        "step_kind": {
+          "precheck": "Pre-checks",
+          "conf_sync": "Config sync",
+          "stage_package": "Stage package",
+          "install": "Install (install.sh)",
+          "verify_config": "Verify config",
+          "reboot": "Reboot",
+          "post_reboot": "Post-reboot validation"
+        }
+      },
+      "execute": {
+        "title": "Automated execution",
+        "coming_soon": "Guided execution (install.sh, reboot, operation log) will ship in a future release. Use the manual plan and wiki documentation for now."
+      }
+    },
     "sans": {
       "page": {
         "title": "SAN administration",

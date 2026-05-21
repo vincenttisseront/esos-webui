@@ -7,6 +7,7 @@ const MUTATION_PREFIXES = [
   '/api/targets/',
   '/api/devices/',
   '/api/cluster/',
+  '/api/admin/upgrade/',
 ]
 
 /**

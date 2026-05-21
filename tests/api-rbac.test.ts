@@ -262,3 +262,41 @@ describe('selection DTO allowlists (Batch 2A.1a)', () => {
     expect(allowed.has('username')).toBe(false)
   })
 })
+
+describe('api-rbac (upgrade assistant)', () => {
+  it('RBUP-01 — operator can GET upgrade readiness', () => {
+    expect(() =>
+      enforceReadAccess('/api/admin/upgrade/readiness', 'GET', 'operator'),
+    ).not.toThrow()
+  })
+
+  it('RBUP-02 — operator can GET upgrade plan by id', () => {
+    expect(() =>
+      enforceReadAccess('/api/admin/upgrade/plan/abc-123', 'GET', 'operator'),
+    ).not.toThrow()
+  })
+
+  it('RBUP-03 — operator cannot POST upgrade package upload', () => {
+    expectForbidden(() =>
+      enforceMutationAccess('/api/admin/upgrade/package/upload', 'POST', 'operator'),
+    )
+  })
+
+  it('RBUP-04 — operator cannot POST upgrade plan', () => {
+    expectForbidden(() =>
+      enforceMutationAccess('/api/admin/upgrade/plan', 'POST', 'operator'),
+    )
+  })
+
+  it('RBUP-05 — admin can POST upgrade plan', () => {
+    expect(() =>
+      enforceMutationAccess('/api/admin/upgrade/plan', 'POST', 'admin'),
+    ).not.toThrow()
+  })
+
+  it('RBUP-06 — admin can DELETE upgrade package', () => {
+    expect(() =>
+      enforceMutationAccess('/api/admin/upgrade/package', 'DELETE', 'admin'),
+    ).not.toThrow()
+  })
+})

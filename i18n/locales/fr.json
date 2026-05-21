@@ -1851,6 +1851,85 @@
       "login_success": "Succès",
       "login_failure": "Échec"
     },
+    "upgrade": {
+      "tabs": {
+        "version": "Version",
+        "readiness": "Préparation",
+        "package": "Paquet",
+        "plan": "Plan",
+        "execute": "Exécution"
+      },
+      "wiki_link": "Documentation ESOS — Mise à niveau",
+      "scope_label": "Périmètre",
+      "refresh": "Analyser",
+      "levels": {
+        "ready": "Prêt",
+        "warning": "Avertissements",
+        "blocked": "Bloqué"
+      },
+      "summary": {
+        "ready": "Le système semble prêt pour une mise à niveau planifiée.",
+        "warning": "Des avertissements nécessitent votre attention avant de continuer.",
+        "blocked": "La mise à niveau est bloquée tant que les critères critiques ne sont pas résolus.",
+        "blocked_readonly": "SAN en lecture seule — désactivez la protection dans Administration → SANs.",
+        "blocked_ssh": "Connexion SSH requise.",
+        "blocked_tmp": "Espace /tmp insuffisant (≥ 5 GiB requis).",
+        "blocked_cluster": "État cluster ou pair invalide."
+      },
+      "checks": {
+        "ssh_connected": "Connexion SSH",
+        "san_writable": "SAN modifiable",
+        "esos_version": "Version ESOS",
+        "tmp_mount": "Montage /tmp",
+        "tmp_free_space": "Espace libre /tmp",
+        "ram_available": "Mémoire disponible",
+        "conf_sync_present": "conf_sync.sh",
+        "boot_slots": "Slots de boot",
+        "cluster_membership": "Appartenance cluster",
+        "cluster_healthy": "Santé cluster",
+        "peer_reachable": "Pair joignable",
+        "drbd_resync": "Resynchronisation DRBD",
+        "raid_cli_present": "Outils RAID CLI"
+      },
+      "package": {
+        "admin_only": "Réservé aux administrateurs.",
+        "blocked_hint": "Corrigez les blocages dans l'onglet Préparation ou désactivez la lecture seule.",
+        "choose_file": "Fichier ESOS (.zip, .tar.gz)",
+        "sha256": "SHA-256 (optionnel)",
+        "expected_version": "Version cible (optionnel)",
+        "upload": "Envoyer et préparer sur l'hôte",
+        "uploading": "Transfert en cours…",
+        "ready": "Paquet prêt — install.sh détecté",
+        "error": "Échec du staging",
+        "remove": "Supprimer le staging",
+        "no_file": "Aucun paquet en staging"
+      },
+      "plan": {
+        "generate": "Générer le plan",
+        "cluster_rolling": "Mise à niveau cluster — un nœud à la fois",
+        "standalone": "Mise à niveau standalone",
+        "manual_step": "Étape manuelle",
+        "copy_commands": "Copier",
+        "warning": {
+          "conf_sync": "Exécuter conf_sync.sh avant install/reboot.",
+          "keep_old_media": "Conserver l'ancien média de boot pour revenir en arrière.",
+          "one_node_at_a_time": "Ne jamais mettre à niveau tous les nœuds simultanément."
+        },
+        "step_kind": {
+          "precheck": "Pré-vérifications",
+          "conf_sync": "Synchronisation config",
+          "stage_package": "Staging paquet",
+          "install": "Installation (install.sh)",
+          "verify_config": "Vérifier la config",
+          "reboot": "Redémarrage",
+          "post_reboot": "Validation post-reboot"
+        }
+      },
+      "execute": {
+        "title": "Exécution automatique",
+        "coming_soon": "L'exécution guidée (install.sh, reboot, journal) sera disponible dans une prochaine version. Utilisez le plan manuel et la documentation wiki pour l'instant."
+      }
+    },
     "sans": {
       "page": {
         "title": "Administration des SANs",

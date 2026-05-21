@@ -17,6 +17,7 @@ const MUTATION_PREFIXES = [
   '/api/targets/',
   '/api/devices/',
   '/api/cluster/',
+  '/api/admin/upgrade/',
 ]
 
 function pathnameFromEvent(event: ReturnType<typeof createEvent>): string {
@@ -70,5 +71,15 @@ describe('storage-readonly guard', () => {
     })
     runStorageReadonlyGuard(event)
     expect(assertSanWritable).not.toHaveBeenCalled()
+  })
+
+  it('calls assertSanWritable on upgrade package upload', () => {
+    const event = createEvent({
+      method: 'POST',
+      url: 'http://localhost/api/admin/upgrade/package/upload?sanId=san-ro',
+      path: '/api/admin/upgrade/package/upload',
+    })
+    runStorageReadonlyGuard(event)
+    expect(assertSanWritable).toHaveBeenCalledWith('san-ro')
   })
 })
