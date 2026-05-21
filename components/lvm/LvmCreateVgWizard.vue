@@ -9,7 +9,7 @@
       <UFormGroup :label="t('lvm.wizard.vg_create.name')">
         <UInput v-model="vgName" placeholder="vg_data" />
       </UFormGroup>
-      <p class="text-sm text-gray-500">{{ t('lvm.wizard.vg_create.pv_hint') }}</p>
+      <p class="text-sm text-gray-500 dark:text-gray-400">{{ t('lvm.wizard.vg_create.pv_hint') }}</p>
       <div class="space-y-1 max-h-40 overflow-y-auto">
         <label
           v-for="pv in lvm.orphanPvs"
@@ -18,7 +18,7 @@
         >
           <input v-model="selectedPvs" type="checkbox" :value="pv.path" class="accent-primary-500">
           <span class="font-mono">{{ pv.path }}</span>
-          <span class="text-gray-500">({{ formatBytes(pv.sizeBytes) }})</span>
+          <span class="text-gray-500 dark:text-gray-400">({{ formatBytes(pv.sizeBytes) }})</span>
         </label>
       </div>
       <UAlert v-if="preflight?.blockers.length" color="red" variant="soft" :title="preflight.blockers.join(' · ')" />

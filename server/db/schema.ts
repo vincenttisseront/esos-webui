@@ -108,6 +108,8 @@ export const users = sqliteTable('users', {
   lastExternalLoginAt: text('last_external_login_at'),
   /** Préférence i18n (`fr` | `en` | null). NULL = suit le cookie / navigateur. */
   preferredLocale: text('preferred_locale'),
+  /** Préférence thème (`light` | `dark` | `system` | null). NULL = suit le cookie. */
+  preferredTheme: text('preferred_theme'),
 })
 
 /**

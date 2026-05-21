@@ -1,8 +1,8 @@
 <template>
   <div class="space-y-4">
     <div>
-      <h3 class="font-semibold text-gray-800">Vérification du quorum Corosync</h3>
-      <p class="text-sm text-gray-500 mt-1">
+      <h3 class="font-semibold text-gray-800 dark:text-gray-200">Vérification du quorum Corosync</h3>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
         Le quorum doit être actif sur les deux nœuds pour que le cluster soit opérationnel.
         La vérification est automatique — attendez que les deux nœuds passent au vert.
       </p>
@@ -13,10 +13,10 @@
         v-for="node in props.nodes"
         :key="node.id"
         class="rounded-lg border p-4 transition-colors"
-        :class="quorumStatus[node.id] ? 'border-green-200 bg-green-50' : 'border-gray-200'"
+        :class="quorumStatus[node.id] ? 'border-green-200 bg-green-50 dark:bg-green-950/40' : 'border-gray-200 dark:border-gray-700'"
       >
         <div class="flex items-center justify-between">
-          <p class="text-sm font-medium text-gray-700">{{ node.label }}</p>
+          <p class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ node.label }}</p>
           <div class="flex items-center gap-1.5">
             <span
               class="w-2 h-2 rounded-full"

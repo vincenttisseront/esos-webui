@@ -2,7 +2,7 @@
   <div class="overflow-x-auto">
     <table class="w-full text-xs">
       <thead>
-        <tr class="text-left text-gray-500 border-b">
+        <tr class="text-left text-gray-500 dark:text-gray-400 border-b">
           <th v-for="col in columns" :key="col.key" class="py-1.5 pr-3">{{ col.label }}</th>
         </tr>
       </thead>
@@ -16,7 +16,7 @@
           <td v-for="col in columns" :key="col.key" class="py-1.5 pr-3" :class="col.mono ? 'font-mono' : ''">
             <template v-if="col.key === 'status'">
               <UBadge :color="statusColor(row.status)" variant="soft" size="xs" :label="statusLabel(row.status)" />
-              <span v-if="row.statusDetail" class="block text-[10px] text-gray-500 mt-0.5 max-w-[12rem] truncate" :title="row.statusDetail">
+              <span v-if="row.statusDetail" class="block text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 max-w-[12rem] truncate" :title="row.statusDetail">
                 {{ row.statusDetail }}
               </span>
             </template>
@@ -30,7 +30,7 @@
         </tr>
       </tbody>
     </table>
-    <p v-if="!rows.length" class="text-xs text-gray-500 py-2">{{ emptyText }}</p>
+    <p v-if="!rows.length" class="text-xs text-gray-500 dark:text-gray-400 py-2">{{ emptyText }}</p>
   </div>
 </template>
 

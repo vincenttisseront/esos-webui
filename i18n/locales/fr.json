@@ -105,7 +105,14 @@
     "open": "Ouvrir le menu utilisateur",
     "profile": "Mon profil",
     "logout": "Se déconnecter",
-    "language": "Langue"
+    "language": "Langue",
+    "theme": "Thème"
+  },
+  "theme": {
+    "light": "Clair",
+    "dark": "Sombre",
+    "system": "Système",
+    "persist_error": "Impossible d'enregistrer le thème sur le serveur."
   },
   "profile": {
     "title": "Mon profil",
@@ -133,7 +140,12 @@
       "current_locale": "Langue active",
       "saved_locale": "Préférence enregistrée",
       "not_saved": "Non enregistrée",
-      "save_failed": "La langue a changé localement, mais la préférence n'a pas pu être enregistrée."
+      "save_failed": "La langue a changé localement, mais la préférence n'a pas pu être enregistrée.",
+      "theme_title": "Thème",
+      "theme_help": "Clair, sombre ou système. Enregistré sur votre compte et synchronisé dans le cookie esos_theme.",
+      "current_theme": "Thème actif",
+      "saved_theme": "Préférence enregistrée",
+      "theme_save_failed": "Le thème a changé localement, mais la préférence n'a pas pu être enregistrée."
     },
     "security": {
       "title": "Sécurité",

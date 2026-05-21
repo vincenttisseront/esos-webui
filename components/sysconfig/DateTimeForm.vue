@@ -2,8 +2,8 @@
   <UCard>
     <template #header>
       <div class="flex items-center gap-2">
-        <UIcon name="i-heroicons-clock" class="text-gray-500 size-5" />
-        <span class="font-semibold text-gray-800">{{ t('admin.sysconfig.datetime.title') }}</span>
+        <UIcon name="i-heroicons-clock" class="text-gray-500 dark:text-gray-400 size-5" />
+        <span class="font-semibold text-gray-800 dark:text-gray-200">{{ t('admin.sysconfig.datetime.title') }}</span>
       </div>
     </template>
 
@@ -83,7 +83,7 @@
           class="size-2 rounded-full shrink-0"
           :class="config.ntpRunning ? 'bg-green-500' : 'bg-gray-400'"
         />
-        <span class="text-gray-500">
+        <span class="text-gray-500 dark:text-gray-400">
           {{ config.ntpRunning ? t('admin.sysconfig.datetime.ntp_running') : t('admin.sysconfig.datetime.ntp_stopped') }}
         </span>
       </div>

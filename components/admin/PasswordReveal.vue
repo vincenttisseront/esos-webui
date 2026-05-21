@@ -1,7 +1,7 @@
 <template>
   <div class="flex items-center gap-2">
     <code
-      class="flex-1 font-mono text-sm bg-gray-50 border border-gray-200 rounded px-3 py-1.5 text-gray-800 select-all"
+      class="flex-1 font-mono text-sm bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded px-3 py-1.5 text-gray-800 dark:text-gray-200 select-all"
     >
       {{ visible ? password : '•'.repeat(password.length) }}
     </code>

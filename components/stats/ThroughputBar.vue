@@ -99,7 +99,7 @@ function barColor(p: number, base: 'blue' | 'orange'): string {
   <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
     <!-- En-tête -->
     <div class="flex items-center justify-between mb-3">
-      <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">
+      <p class="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">
         {{ t('monitoring.throughput.title') }}
       </p>
       <span v-if="capacityLabel" class="text-[11px] text-gray-400 font-mono">

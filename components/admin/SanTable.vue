@@ -95,10 +95,10 @@ function liveStatusTextColor(s: SSHStatus | undefined): string {
       <tr
         v-for="san in rows"
         :key="san.id"
-        class="hover:bg-gray-50 transition-colors"
+        class="hover:bg-gray-50 dark:bg-gray-950 transition-colors"
       >
         <td class="py-3 pr-4">
-          <div class="font-medium text-gray-900 flex items-center gap-1.5">
+          <div class="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1.5">
             {{ san.label }}
             <UTooltip
               v-if="isPending(san.id).value"
@@ -109,8 +109,8 @@ function liveStatusTextColor(s: SSHStatus | undefined): string {
           </div>
           <div v-if="san.description" class="text-xs text-gray-400">{{ san.description }}</div>
         </td>
-        <td class="pr-4 font-mono text-xs text-gray-600">{{ san.host }}:{{ san.port }}</td>
-        <td class="pr-4 text-gray-600">{{ san.username }}</td>
+        <td class="pr-4 font-mono text-xs text-gray-600 dark:text-gray-400">{{ san.host }}:{{ san.port }}</td>
+        <td class="pr-4 text-gray-600 dark:text-gray-400">{{ san.username }}</td>
         <td class="pr-4">
           <UBadge
             :color="san.authType === 'key' ? 'blue' : 'orange'"
@@ -162,7 +162,7 @@ function liveStatusTextColor(s: SSHStatus | undefined): string {
               @click="emit('toggleReadOnly', san)"
             >
               <span
-                class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition-transform"
+                class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white dark:bg-gray-900 shadow ring-0 transition-transform"
                 :class="san.readOnly ? 'translate-x-0' : 'translate-x-4'"
               />
             </span>

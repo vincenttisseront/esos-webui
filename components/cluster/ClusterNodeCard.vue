@@ -1,20 +1,20 @@
 <template>
   <div class="esos-card">
     <!-- En-tête nœud -->
-    <div class="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
+    <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3">
       <span class="status-dot" :class="node.sshReady ? 'status-dot--online' : 'status-dot--offline'" />
       <div class="flex-1 min-w-0">
-        <p class="text-sm font-semibold text-gray-800">{{ node.hostname }}</p>
+        <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ node.hostname }}</p>
         <p class="text-xs text-gray-400 font-identifier">{{ node.host }}</p>
         <!-- Compteurs ressources / ALUA (compact) -->
         <div v-if="node.sshReady" class="flex items-center gap-2 mt-0.5 text-xs text-gray-400">
           <span>
-            <span class="font-semibold" :class="node.resources.length > 0 ? 'text-gray-600' : 'text-gray-300'">{{ node.resources.length }}</span>
+            <span class="font-semibold" :class="node.resources.length > 0 ? 'text-gray-600 dark:text-gray-400' : 'text-gray-300'">{{ node.resources.length }}</span>
             ressource{{ node.resources.length !== 1 ? 's' : '' }}
           </span>
           <span class="text-gray-200">·</span>
           <span>
-            <span class="font-semibold" :class="node.aluaGroups.length > 0 ? 'text-gray-600' : 'text-gray-300'">{{ node.aluaGroups.length }}</span>
+            <span class="font-semibold" :class="node.aluaGroups.length > 0 ? 'text-gray-600 dark:text-gray-400' : 'text-gray-300'">{{ node.aluaGroups.length }}</span>
             groupe{{ node.aluaGroups.length !== 1 ? 's' : '' }} ALUA
           </span>
         </div>
@@ -76,7 +76,7 @@
             class="flex items-center justify-between text-xs py-1 border-b border-gray-50 last:border-0"
           >
             <div>
-              <span class="font-identifier text-gray-700">{{ res.id }}</span>
+              <span class="font-identifier text-gray-700 dark:text-gray-300">{{ res.id }}</span>
               <span class="text-gray-400 ml-2">{{ res.type }}</span>
             </div>
             <ResourceRoleBadge :role="res.state" />
@@ -94,9 +94,9 @@
             class="flex items-center justify-between text-xs py-1 border-b border-gray-50 last:border-0"
           >
             <div>
-              <span class="font-identifier text-gray-700">{{ grp.deviceGroup }}</span>
+              <span class="font-identifier text-gray-700 dark:text-gray-300">{{ grp.deviceGroup }}</span>
               <span class="text-gray-400 mx-1">/</span>
-              <span class="font-identifier text-gray-600">{{ grp.targetGroup }}</span>
+              <span class="font-identifier text-gray-600 dark:text-gray-400">{{ grp.targetGroup }}</span>
               <span class="text-gray-300 ml-1">(ID {{ grp.groupId }})</span>
             </div>
             <ALUAStateBadge :state="grp.state" />
@@ -146,7 +146,7 @@
     </div>
 
     <!-- Pied de carte -->
-    <div class="px-4 py-2 border-t border-gray-100 bg-gray-50 text-xs text-gray-400">
+    <div class="px-4 py-2 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-xs text-gray-400">
       Vérifié {{ formatAgo(node.lastChecked) }}
     </div>
   </div>

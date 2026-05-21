@@ -13,7 +13,7 @@
         />
         <div>
           <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ t('admin.sans.performance.title') }}</h1>
-          <p class="text-sm text-gray-500 mt-1">
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
             {{ t('admin.sans.performance.subtitle', { label: san?.label ?? sanId }) }}
           </p>
         </div>
@@ -182,7 +182,7 @@
       <div v-else class="flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
         <UIcon name="i-heroicons-check-circle" class="w-4 h-4" />
         <span>{{ t('admin.sans.performance.compaction_active') }}</span>
-        <code v-if="compactionLine" class="text-xs font-mono text-gray-500 ml-2">{{ compactionLine }}</code>
+        <code v-if="compactionLine" class="text-xs font-mono text-gray-500 dark:text-gray-400 ml-2">{{ compactionLine }}</code>
       </div>
     </div>
 
@@ -192,7 +192,7 @@
         <template #header>
           <p class="font-semibold">{{ confirmModal.title }}</p>
         </template>
-        <p class="text-sm text-gray-600">{{ confirmModal.message }}</p>
+        <p class="text-sm text-gray-600 dark:text-gray-400">{{ confirmModal.message }}</p>
         <template #footer>
           <div class="flex justify-end gap-2">
             <UButton color="gray" variant="ghost" :label="t('admin.sans.performance.confirm_cancel')" @click="confirmModal.open = false" />

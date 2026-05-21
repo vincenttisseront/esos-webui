@@ -61,7 +61,7 @@
         <!-- Spinner SSH en cours de reconnexion -->
         <div
           v-if="isSshConnecting"
-          class="rounded-xl bg-blue-50 border border-blue-200 px-5 py-5 flex items-center gap-4"
+          class="rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 px-5 py-5 flex items-center gap-4"
         >
           <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-blue-500 shrink-0 animate-spin" />
           <div>
@@ -73,11 +73,11 @@
         <!-- Bannière SSH down globale -->
         <div
           v-if="isSshDown"
-          class="rounded-xl bg-red-50 border border-red-200 px-5 py-4 flex items-start gap-3"
+          class="rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 px-5 py-4 flex items-start gap-3"
         >
           <UIcon name="i-heroicons-server" class="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-semibold text-red-800">{{ t('admin.sysconfig.page.ssh_down_title') }}</p>
+            <p class="text-sm font-semibold text-red-800 dark:text-red-300">{{ t('admin.sysconfig.page.ssh_down_title') }}</p>
             <p class="text-xs text-red-600 mt-1">
               {{ t('admin.sysconfig.page.ssh_down_desc') }}
             </p>
@@ -104,8 +104,8 @@
             </div>
 
             <!-- Formulaire inline changement d'adresse -->
-            <div v-if="editingHost" class="mt-4 p-3 bg-white border border-red-200 rounded-lg">
-              <p class="text-xs font-semibold text-gray-600 mb-3">
+            <div v-if="editingHost" class="mt-4 p-3 bg-white dark:bg-gray-900 border border-red-200 dark:border-red-800 rounded-lg">
+              <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-3">
                 {{ t('admin.sysconfig.page.update_ip_hint') }}
               </p>
               <div class="flex items-center gap-2">
@@ -114,14 +114,14 @@
                     v-model="editHostForm.host"
                     type="text"
                     placeholder="192.168.1.10"
-                    class="flex-1 min-w-0 px-3 py-1.5 text-sm bg-white outline-none text-gray-900 placeholder-gray-400"
+                    class="flex-1 min-w-0 px-3 py-1.5 text-sm bg-white dark:bg-gray-900 outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400"
                   />
-                  <span class="flex items-center px-2 text-xs text-gray-400 bg-gray-50 border-l border-gray-200 font-mono select-none">:</span>
+                  <span class="flex items-center px-2 text-xs text-gray-400 bg-gray-50 dark:bg-gray-950 border-l border-gray-200 dark:border-gray-700 font-mono select-none">:</span>
                   <input
                     v-model.number="editHostForm.port"
                     type="number"
                     placeholder="22"
-                    class="w-16 px-2 py-1.5 text-sm bg-gray-50 outline-none text-gray-700 font-mono text-center"
+                    class="w-16 px-2 py-1.5 text-sm bg-gray-50 dark:bg-gray-950 outline-none text-gray-700 dark:text-gray-300 font-mono text-center"
                   />
                 </div>
                 <UButton
@@ -258,7 +258,7 @@
         </div>
 
         <!-- Bottom bar -->
-        <div class="flex items-center justify-end gap-3 text-sm text-gray-500 pt-2">
+        <div class="flex items-center justify-end gap-3 text-sm text-gray-500 dark:text-gray-400 pt-2">
           <span>{{ t('admin.sysconfig.page.last_read') }} {{ lastReadLabel }}</span>
           <UButton
             :label="t('admin.sysconfig.page.refresh') as string"

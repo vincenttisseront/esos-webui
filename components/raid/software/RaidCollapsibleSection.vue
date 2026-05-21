@@ -13,7 +13,7 @@
         <span class="truncate">{{ title }}</span>
         <UBadge v-if="badge" :color="badgeColor" :label="badge" size="xs" variant="soft" class="shrink-0" />
       </span>
-      <span class="text-xs font-normal text-gray-500 shrink-0">
+      <span class="text-xs font-normal text-gray-500 dark:text-gray-400 shrink-0">
         {{ open ? t('raid.software.cockpit.toggle_hide') : t('raid.software.cockpit.toggle_show') }}
       </span>
     </summary>

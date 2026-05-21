@@ -18,6 +18,7 @@
     "test:rbac": "vitest run tests/api-rbac.test.ts",
     "test:san-query": "vitest run tests/san-query.test.ts",
     "test:watch": "vitest",
+    "audit:theme": "node scripts/audit-theme.mjs",
     "smoke:output": "node scripts/batch3a-smoke.mjs",
     "postinstall": "nuxt prepare"
   },

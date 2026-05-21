@@ -6,6 +6,13 @@ export default defineNuxtConfig({
     enabled: process.env.NODE_ENV === 'development' || process.env.NUXT_DEVTOOLS === 'true',
   },
   modules: ['@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt', '@nuxtjs/i18n'],
+  colorMode: {
+    classSuffix: '',
+    preference: 'system',
+    fallback: 'light',
+    storage: 'cookie',
+    storageKey: 'esos_theme',
+  },
   i18n: {
     strategy: 'no_prefix',
     defaultLocale: 'fr',

@@ -27,7 +27,7 @@
           :mappings="diskMappings"
           @update:mappings="diskMappings = $event"
         />
-        <div v-if="preflightLoading" class="text-sm text-gray-500">{{ t('lvm.cluster.wizard.preflight_loading') }}</div>
+        <div v-if="preflightLoading" class="text-sm text-gray-500 dark:text-gray-400">{{ t('lvm.cluster.wizard.preflight_loading') }}</div>
         <UAlert
           v-else-if="clusterPreflightError"
           color="red"

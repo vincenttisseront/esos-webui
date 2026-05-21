@@ -62,7 +62,7 @@
                   size="xs"
                 />
               </td>
-              <td class="px-3 py-2 text-gray-500 font-mono truncate max-w-[12rem]" :title="result.diagnostics?.mdadmExamine.stdout">
+              <td class="px-3 py-2 text-gray-500 dark:text-gray-400 font-mono truncate max-w-[12rem]" :title="result.diagnostics?.mdadmExamine.stdout">
                 {{ examineSummary(result) }}
               </td>
             </tr>
@@ -76,7 +76,7 @@
                   size="xs"
                 />
               </td>
-              <td class="px-3 py-2 text-gray-500">
+              <td class="px-3 py-2 text-gray-500 dark:text-gray-400">
                 {{ wipefsDetail(result) }}
               </td>
             </tr>
@@ -90,7 +90,7 @@
                   size="xs"
                 />
               </td>
-              <td class="px-3 py-2 text-gray-500">
+              <td class="px-3 py-2 text-gray-500 dark:text-gray-400">
                 {{ blkidDetail(result) }}
               </td>
             </tr>
@@ -119,7 +119,7 @@
       </div>
 
       <details v-if="results[0]?.diagnostics?.zeroSuperblock" class="text-xs">
-        <summary class="cursor-pointer text-gray-600 select-none">mdadm --zero-superblock</summary>
+        <summary class="cursor-pointer text-gray-600 dark:text-gray-400 select-none">mdadm --zero-superblock</summary>
         <pre class="mt-2 p-2 bg-gray-50 dark:bg-gray-900 rounded overflow-x-auto whitespace-pre-wrap">{{ zeroStepPreview }}</pre>
       </details>
     </div>

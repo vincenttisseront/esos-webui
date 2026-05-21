@@ -1,5 +1,5 @@
 <template>
-  <div class="flex gap-1 bg-gray-100 rounded-lg p-1">
+  <div class="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
     <button
       v-for="w in windows"
       :key="w.value"

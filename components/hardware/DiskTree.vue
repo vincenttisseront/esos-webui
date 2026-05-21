@@ -8,7 +8,7 @@
       <!-- Disque racine -->
       <div class="flex items-center gap-2 py-1 font-medium">
         <span class="font-mono">{{ disk.name }}</span>
-        <span class="text-gray-500 text-xs">{{ disk.size }}</span>
+        <span class="text-gray-500 dark:text-gray-400 text-xs">{{ disk.size }}</span>
         <UBadge v-if="disk.readOnly" color="gray" variant="soft" size="xs">{{ t('hardware.diskTree.badgeRo') }}</UBadge>
         <span v-if="disk.mountpoint" class="text-xs text-gray-400 font-mono">{{ disk.mountpoint }}</span>
       </div>

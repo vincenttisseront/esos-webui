@@ -5,7 +5,7 @@
     :total-steps="2"
     icon="i-heroicons-trash"
   >
-    <div v-if="loading" class="text-sm text-gray-500 flex items-center gap-2 py-6">
+    <div v-if="loading" class="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2 py-6">
       <UIcon name="i-heroicons-arrow-path" class="animate-spin w-4 h-4" />
       {{ t('lvm.remove.preflight_loading') }}
     </div>
@@ -21,7 +21,7 @@
         </p>
         <div class="space-y-1 rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3 font-mono text-xs">
           <div v-for="row in commandRows" :key="row.label">
-            <span class="font-semibold text-gray-500">{{ row.label }}:</span> {{ row.command }}
+            <span class="font-semibold text-gray-500 dark:text-gray-400">{{ row.label }}:</span> {{ row.command }}
           </div>
           <p v-if="!commandRows.length && standalonePreview">{{ standalonePreview }}</p>
         </div>
@@ -42,7 +42,7 @@
       </ul>
 
       <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2">
-        <p class="text-xs text-gray-500">{{ t('lvm.remove.phrase_help') }}</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('lvm.remove.phrase_help') }}</p>
         <p class="font-mono text-sm font-semibold text-red-700 dark:text-red-300 select-all">{{ confirmationPhrase }}</p>
         <UFormGroup :label="t('lvm.confirm.label')">
           <UInput v-model="confirmation" class="font-mono" :placeholder="confirmationPhrase" />

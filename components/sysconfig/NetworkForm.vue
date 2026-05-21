@@ -2,8 +2,8 @@
   <UCard>
     <template #header>
       <div class="flex items-center gap-2">
-        <UIcon name="i-heroicons-globe-alt" class="text-gray-500 size-5" />
-        <span class="font-semibold text-gray-800">{{ t('admin.sysconfig.network.title') }}</span>
+        <UIcon name="i-heroicons-globe-alt" class="text-gray-500 dark:text-gray-400 size-5" />
+        <span class="font-semibold text-gray-800 dark:text-gray-200">{{ t('admin.sysconfig.network.title') }}</span>
       </div>
     </template>
 
@@ -42,7 +42,7 @@
       <div
         v-for="iface in form.interfaces"
         :key="iface.index"
-        class="border border-gray-200 rounded-lg p-4 space-y-3"
+        class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3"
       >
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
@@ -50,8 +50,8 @@
               class="size-2 rounded-full"
               :class="iface.state === 'up' ? 'bg-green-500' : 'bg-gray-300'"
             />
-            <span class="font-mono font-semibold text-gray-800">{{ iface.ifname }}</span>
-            <span v-if="iface.currentIp" class="text-xs text-gray-500 font-mono">({{ iface.currentIp }})</span>
+            <span class="font-mono font-semibold text-gray-800 dark:text-gray-200">{{ iface.ifname }}</span>
+            <span v-if="iface.currentIp" class="text-xs text-gray-500 dark:text-gray-400 font-mono">({{ iface.currentIp }})</span>
           </div>
         </div>
 

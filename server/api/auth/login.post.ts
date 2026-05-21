@@ -58,6 +58,7 @@ export default defineEventHandler(async (event) => {
       authSource:          user.authSource ?? 'local',
       forcePasswordChange: user.forcePasswordChange,
       preferredLocale:     user.preferredLocale ?? null,
+      preferredTheme:      user.preferredTheme ?? null,
     },
   }
 })

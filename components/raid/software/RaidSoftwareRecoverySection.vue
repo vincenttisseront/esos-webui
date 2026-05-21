@@ -17,7 +17,7 @@
             <h3 class="text-sm font-medium text-gray-800 dark:text-gray-200">
               {{ t('raid.stopped_md.section_assemblable_title') }}
             </h3>
-            <p class="text-xs text-gray-500 mt-1">{{ t('raid.stopped_md.section_assemblable_description') }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ t('raid.stopped_md.section_assemblable_description') }}</p>
           </div>
           <UCard v-for="arr in assemblable" :key="stoppedKey(arr)" class="overflow-hidden">
             <StoppedMdArrayCard
@@ -43,7 +43,7 @@
             <h3 class="text-sm font-medium text-gray-800 dark:text-gray-200">
               {{ t('raid.stopped_md.section_orphan_title') }}
             </h3>
-            <p class="text-xs text-gray-500 mt-1">{{ t('raid.stopped_md.section_orphan_description') }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ t('raid.stopped_md.section_orphan_description') }}</p>
           </div>
           <UCard v-for="arr in orphanOrIncomplete" :key="stoppedKey(arr)" class="overflow-hidden">
             <StoppedMdArrayCard

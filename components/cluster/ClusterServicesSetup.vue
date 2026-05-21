@@ -1,8 +1,8 @@
 <template>
   <div class="space-y-5">
     <div>
-      <h3 class="font-semibold text-gray-800">{{ t('cluster.services_setup.title') }}</h3>
-      <p class="text-sm text-gray-500 mt-1">{{ t('cluster.services_setup.intro') }}</p>
+      <h3 class="font-semibold text-gray-800 dark:text-gray-200">{{ t('cluster.services_setup.title') }}</h3>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ t('cluster.services_setup.intro') }}</p>
     </div>
 
     <UAlert
@@ -16,10 +16,10 @@
     <div
       v-for="node in props.nodes"
       :key="node.id"
-      class="rounded-lg border border-gray-200 overflow-hidden"
+      class="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
     >
-      <div class="px-4 py-2.5 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-        <p class="text-sm font-medium text-gray-700">
+      <div class="px-4 py-2.5 bg-gray-50 dark:bg-gray-950 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <p class="text-sm font-medium text-gray-700 dark:text-gray-300">
           {{ node.label }}
           <span class="font-mono text-gray-400 font-normal ml-1">{{ node.host }}</span>
         </p>
@@ -116,7 +116,7 @@
     </div>
 
     <UDivider class="my-1" />
-    <div class="rounded-lg bg-blue-50 border border-blue-200 px-4 py-3 space-y-3">
+    <div class="rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 px-4 py-3 space-y-3">
       <div class="flex items-start gap-2">
         <UIcon name="i-heroicons-information-circle" class="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
         <div>

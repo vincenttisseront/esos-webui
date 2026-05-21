@@ -91,7 +91,7 @@
     </div>
 
     <RaidArrayDetailsCollapse>
-      <div class="flex flex-wrap gap-x-4 text-xs text-gray-500">
+      <div class="flex flex-wrap gap-x-4 text-xs text-gray-500 dark:text-gray-400">
         <span v-if="array.uuid">UUID : {{ array.uuid }}</span>
         <span v-if="array.metadataVersion">metadata {{ array.metadataVersion }}</span>
         <span>{{ t('raid.stopped_md.members_count', { count: presentMemberCount, expected: array.raidDevices }) }}</span>
@@ -99,15 +99,15 @@
       <div class="overflow-x-auto mt-2">
         <table class="w-full text-xs">
           <thead>
-            <tr class="text-left text-gray-500 border-b border-gray-200">
+            <tr class="text-left text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
               <th class="py-1 pr-3">{{ t('raid.stopped_md.member_path') }}</th>
               <th class="py-1 pr-3">{{ t('raid.stopped_md.member_state') }}</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(member, idx) in array.members" :key="memberRowKey(member, idx)" class="border-b border-gray-100">
-              <td class="py-1.5 pr-3 font-mono text-gray-800">{{ member.path }}</td>
-              <td class="py-1.5 pr-3 text-gray-600" :title="memberStatusTitle(member)">
+            <tr v-for="(member, idx) in array.members" :key="memberRowKey(member, idx)" class="border-b border-gray-100 dark:border-gray-800">
+              <td class="py-1.5 pr-3 font-mono text-gray-800 dark:text-gray-200">{{ member.path }}</td>
+              <td class="py-1.5 pr-3 text-gray-600 dark:text-gray-400" :title="memberStatusTitle(member)">
                 <span class="inline-flex items-center gap-1.5 flex-wrap">
                   {{ memberStatusLabel(member) }}
                   <UBadge

@@ -20,7 +20,7 @@
       :label="status === 'ok' ? t('storage.fs.summary.status_ok') : t('storage.fs.summary.status_attention')"
     />
 
-    <span v-if="scannedAtLabel" class="text-xs text-gray-500 ml-auto">
+    <span v-if="scannedAtLabel" class="text-xs text-gray-500 dark:text-gray-400 ml-auto">
       {{ t('storage.fs.summary.last_scan', { time: scannedAtLabel }) }}
     </span>
 

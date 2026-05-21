@@ -1,18 +1,18 @@
 <template>
-  <aside class="w-56 bg-gray-900 text-white flex flex-col shrink-0 hidden md:flex">
+  <aside class="w-56 flex flex-col shrink-0 hidden md:flex border-r border-gray-200 bg-gray-100 text-gray-900 dark:border-gray-800 dark:bg-gray-900 dark:text-white">
     <!-- Logo -->
-    <div class="px-4 py-5 border-b border-gray-700 flex items-center gap-3">
+    <div class="px-4 py-5 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
       <img src="/logo/logo-esos-icon.svg" alt="ESOS" class="w-8 h-8 shrink-0" />
       <div>
         <span class="text-lg font-bold tracking-wide leading-none">ESOS</span>
-        <span class="text-xs text-gray-400 block leading-tight">{{ t('app.tagline') }}</span>
+        <span class="text-xs text-gray-500 dark:text-gray-400 block leading-tight">{{ t('app.tagline') }}</span>
       </div>
     </div>
 
     <nav class="flex-1 px-3 py-4 space-y-5 overflow-y-auto">
       <!-- Sections classiques -->
       <div v-for="section in navSections" :key="section.label">
-        <p class="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-500 select-none">
+        <p class="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-500 select-none">
           {{ section.label }}
         </p>
 
@@ -21,9 +21,9 @@
             v-for="item in section.items"
             :key="item.to"
             :to="item.to"
-            class="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-gray-300 hover:bg-gray-800 hover:text-white"
-            active-class="bg-gray-800 text-white"
-            exact-active-class="bg-gray-800 text-white"
+            class="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
+            active-class="bg-white text-gray-900 shadow-sm dark:bg-gray-800 dark:text-white dark:shadow-none"
+            exact-active-class="bg-white text-gray-900 shadow-sm dark:bg-gray-800 dark:text-white dark:shadow-none"
           >
             <UIcon :name="item.icon" class="w-4 h-4 shrink-0" />
             <span class="flex-1">{{ item.label }}</span>
@@ -40,7 +40,7 @@
 
       <!-- Section Système : Administration + sous-menu -->
       <div>
-        <p class="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-500 select-none">
+        <p class="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-500 select-none">
           {{ t('nav.sections.system') }}
         </p>
 
@@ -48,8 +48,8 @@
           <!-- Item Administration (parent) -->
           <NuxtLink
             to="/admin"
-            class="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-gray-300 hover:bg-gray-800 hover:text-white"
-            active-class="bg-gray-800 text-white"
+            class="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
+            active-class="bg-white text-gray-900 shadow-sm dark:bg-gray-800 dark:text-white dark:shadow-none"
           >
             <UIcon name="i-heroicons-cog-6-tooth" class="w-4 h-4 shrink-0" />
             <span class="flex-1">{{ t('nav.items.administration') }}</span>
@@ -58,9 +58,9 @@
           <!-- Sous-items (toujours visibles, indentés) -->
           <NuxtLink
             to="/admin/sans"
-            class="flex items-center gap-3 pl-8 pr-3 py-1.5 rounded-md text-xs transition-colors text-gray-400 hover:bg-gray-800 hover:text-gray-200"
-            active-class="bg-gray-800 text-gray-100"
-            exact-active-class="bg-gray-800 text-gray-100"
+            class="flex items-center gap-3 pl-8 pr-3 py-1.5 rounded-md text-xs transition-colors text-gray-500 hover:bg-gray-200 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+            active-class="bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
+            exact-active-class="bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
           >
             <UIcon name="i-heroicons-server-stack" class="w-3.5 h-3.5 shrink-0" />
             <span class="flex-1">{{ t('nav.items.sans') }}</span>
@@ -68,9 +68,9 @@
 
           <NuxtLink
             to="/admin/cluster"
-            class="flex items-center gap-3 pl-12 pr-3 py-1.5 rounded-md text-xs transition-colors text-gray-400 hover:bg-gray-800 hover:text-gray-200"
-            active-class="bg-gray-800 text-gray-100"
-            exact-active-class="bg-gray-800 text-gray-100"
+            class="flex items-center gap-3 pl-12 pr-3 py-1.5 rounded-md text-xs transition-colors text-gray-500 hover:bg-gray-200 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+            active-class="bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
+            exact-active-class="bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
           >
             <UIcon name="i-heroicons-rectangle-group" class="w-3.5 h-3.5 shrink-0" />
             <span class="flex-1">{{ t('nav.items.cluster_ha') }}</span>
@@ -85,9 +85,9 @@
           <NuxtLink
             v-if="authStore.user?.role === 'admin'"
             to="/admin/users"
-            class="flex items-center gap-3 pl-8 pr-3 py-1.5 rounded-md text-xs transition-colors text-gray-400 hover:bg-gray-800 hover:text-gray-200"
-            active-class="bg-gray-800 text-gray-100"
-            exact-active-class="bg-gray-800 text-gray-100"
+            class="flex items-center gap-3 pl-8 pr-3 py-1.5 rounded-md text-xs transition-colors text-gray-500 hover:bg-gray-200 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+            active-class="bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
+            exact-active-class="bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
           >
             <UIcon name="i-heroicons-users" class="w-3.5 h-3.5 shrink-0" />
             <span class="flex-1">{{ t('nav.items.users') }}</span>
@@ -95,9 +95,9 @@
 
           <NuxtLink
             to="/admin/esos-version"
-            class="flex items-center gap-3 pl-8 pr-3 py-1.5 rounded-md text-xs transition-colors text-gray-400 hover:bg-gray-800 hover:text-gray-200"
-            active-class="bg-gray-800 text-gray-100"
-            exact-active-class="bg-gray-800 text-gray-100"
+            class="flex items-center gap-3 pl-8 pr-3 py-1.5 rounded-md text-xs transition-colors text-gray-500 hover:bg-gray-200 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+            active-class="bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
+            exact-active-class="bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
           >
             <UIcon name="i-heroicons-tag" class="w-3.5 h-3.5 shrink-0" />
             <span class="flex-1">{{ t('nav.items.esos_version') }}</span>
@@ -118,9 +118,9 @@
           <NuxtLink
             v-if="authStore.user?.role !== 'viewer'"
             to="/admin/dependencies"
-            class="flex items-center gap-3 pl-8 pr-3 py-1.5 rounded-md text-xs transition-colors text-gray-400 hover:bg-gray-800 hover:text-gray-200"
-            active-class="bg-gray-800 text-gray-100"
-            exact-active-class="bg-gray-800 text-gray-100"
+            class="flex items-center gap-3 pl-8 pr-3 py-1.5 rounded-md text-xs transition-colors text-gray-500 hover:bg-gray-200 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+            active-class="bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
+            exact-active-class="bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
           >
             <UIcon name="i-heroicons-cube" class="w-3.5 h-3.5 shrink-0" />
             <span class="flex-1">{{ t('nav.items.dependencies') }}</span>
@@ -135,9 +135,9 @@
           <NuxtLink
             v-if="authStore.user?.role === 'admin'"
             to="/admin/app-version"
-            class="flex items-center gap-3 pl-8 pr-3 py-1.5 rounded-md text-xs transition-colors text-gray-400 hover:bg-gray-800 hover:text-gray-200"
-            active-class="bg-gray-800 text-gray-100"
-            exact-active-class="bg-gray-800 text-gray-100"
+            class="flex items-center gap-3 pl-8 pr-3 py-1.5 rounded-md text-xs transition-colors text-gray-500 hover:bg-gray-200 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+            active-class="bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
+            exact-active-class="bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
           >
             <UIcon name="i-heroicons-cube-transparent" class="w-3.5 h-3.5 shrink-0" />
             <span class="flex-1">{{ t('nav.items.webui_version') }}</span>
@@ -149,27 +149,27 @@
 
     <ClientOnly>
       <div v-if="appVersionStore.version" class="px-4 pb-1 pt-0">
-        <span class="text-[9px] text-gray-600 font-mono select-none">
+        <span class="text-[9px] text-gray-500 dark:text-gray-600 font-mono select-none">
           {{ appVersionStore.label }}<template v-if="appVersionStore.shortCommit"> · {{ appVersionStore.shortCommit }}</template>
         </span>
       </div>
     </ClientOnly>
 
-    <div class="px-4 py-3 border-t border-gray-700">
+    <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
       <NuxtLink
         to="/profile"
         class="flex items-center gap-2.5 group"
       >
-        <div class="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center shrink-0 group-hover:bg-gray-600 transition-colors">
-          <span class="text-xs font-bold text-gray-300 uppercase leading-none select-none">
+        <div class="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center shrink-0 group-hover:bg-gray-300 dark:group-hover:bg-gray-600 transition-colors">
+          <span class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase leading-none select-none">
             {{ authStore.user?.username?.charAt(0) ?? '?' }}
           </span>
         </div>
         <div class="flex-1 min-w-0">
-          <p class="text-xs font-medium text-gray-300 truncate group-hover:text-white transition-colors">{{ authStore.user?.username ?? '—' }}</p>
-          <p class="text-[10px] text-gray-500 truncate">{{ authStore.user?.role }}</p>
+          <p class="text-xs font-medium text-gray-700 dark:text-gray-300 truncate group-hover:text-gray-900 dark:group-hover:text-white transition-colors">{{ authStore.user?.username ?? '—' }}</p>
+          <p class="text-[10px] text-gray-500 dark:text-gray-400 truncate">{{ authStore.user?.role }}</p>
         </div>
-        <UIcon name="i-heroicons-cog-6-tooth" class="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400 transition-colors shrink-0" />
+        <UIcon name="i-heroicons-cog-6-tooth" class="w-3.5 h-3.5 text-gray-400 group-hover:text-gray-600 dark:text-gray-600 dark:group-hover:text-gray-400 transition-colors shrink-0" />
       </NuxtLink>
     </div>
   </aside>

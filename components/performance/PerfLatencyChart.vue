@@ -1,7 +1,7 @@
 <template>
   <div class="relative">
     <Line v-if="chartData" :data="chartData" :options="chartOptions" class="max-h-48" />
-    <div v-else class="h-32 flex items-center justify-center text-sm text-gray-400">
+    <div v-else class="h-32 flex items-center justify-center text-sm text-gray-400 dark:text-gray-500">
       Aucune donnée à afficher
     </div>
   </div>
@@ -19,13 +19,16 @@ import {
   Legend,
 } from 'chart.js'
 import type { PerfDeviceSeries } from '~/server/utils/perf-agent-types'
+import { buildChartJsOptions, useChartTheme } from '~/utils/chart-theme'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ChartTooltip, Legend)
 
 const props = defineProps<{ series: PerfDeviceSeries | null }>()
+const chartTheme = useChartTheme()
 
 const chartData = computed(() => {
   const pts = props.series?.points
+  const t = chartTheme.value
   if (!pts?.length) return null
   const labels = pts.map(p => new Date(p.t).toLocaleTimeString())
   return {
@@ -41,7 +44,7 @@ const chartData = computed(() => {
       {
         label: 'Latence écriture',
         data: pts.map(p => p.averageWriteTimeMs),
-        borderColor: '#ef4444',
+        borderColor: t.writeBorder,
         tension: 0.3,
         pointRadius: pts.length > 100 ? 0 : 2,
       },
@@ -49,30 +52,28 @@ const chartData = computed(() => {
   }
 })
 
-const chartOptions = {
-  responsive: true,
-  maintainAspectRatio: true,
-  interaction: { mode: 'index' as const, intersect: false },
-  plugins: {
-    legend: { position: 'top' as const, labels: { boxWidth: 12, font: { size: 11 } } },
-    tooltip: {
-      callbacks: {
-        label: (ctx: any) => ` ${ctx.dataset.label}: ${ctx.raw.toFixed(2)} ms`,
+const chartOptions = computed(() =>
+  buildChartJsOptions(chartTheme.value, {
+    interaction: { mode: 'index' as const, intersect: false },
+    plugins: {
+      tooltip: {
+        callbacks: {
+          label: (ctx: { dataset: { label?: string }; raw: unknown }) =>
+            ` ${ctx.dataset.label}: ${Number(ctx.raw).toFixed(2)} ms`,
+        },
       },
     },
-    // Seuils visuels via annotation plugin (optionnel, non requis)
-  },
-  scales: {
-    y: {
-      beginAtZero: true,
-      ticks: {
-        font: { size: 10 },
-        callback: (v: any) => `${v} ms`,
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          font: { size: 10 },
+          color: chartTheme.value.tick,
+          callback: (v: string | number) => `${v} ms`,
+        },
+        grid: { color: chartTheme.value.grid },
       },
     },
-    x: {
-      ticks: { font: { size: 10 }, maxTicksLimit: 8 },
-    },
-  },
-}
+  }),
+)
 </script>

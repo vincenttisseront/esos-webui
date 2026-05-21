@@ -34,10 +34,10 @@ const devices = computed(() =>
           class="bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700"
         >
           <tr>
-            <th class="text-left px-4 py-2 text-gray-500 font-medium">
+            <th class="text-left px-4 py-2 text-gray-500 dark:text-gray-400 font-medium">
               Device
             </th>
-            <th class="text-left px-3 py-2 text-gray-500 font-medium">
+            <th class="text-left px-3 py-2 text-gray-500 dark:text-gray-400 font-medium">
               Handler
             </th>
             <th class="text-right px-3 py-2 text-blue-600 font-medium">
@@ -52,13 +52,13 @@ const devices = computed(() =>
             <th class="text-right px-3 py-2 text-orange-500 font-medium">
               Write /s
             </th>
-            <th class="text-right px-3 py-2 text-gray-500 font-medium">
+            <th class="text-right px-3 py-2 text-gray-500 dark:text-gray-400 font-medium">
               IOPS R
             </th>
-            <th class="text-right px-3 py-2 text-gray-500 font-medium">
+            <th class="text-right px-3 py-2 text-gray-500 dark:text-gray-400 font-medium">
               IOPS W
             </th>
-            <th class="px-4 py-2 text-gray-500 font-medium">
+            <th class="px-4 py-2 text-gray-500 dark:text-gray-400 font-medium">
               Activité (2min)
             </th>
           </tr>
@@ -74,7 +74,7 @@ const devices = computed(() =>
             >
               {{ device.device }}
             </td>
-            <td class="px-3 py-2.5 text-gray-500">{{ device.handler }}</td>
+            <td class="px-3 py-2.5 text-gray-500 dark:text-gray-400">{{ device.handler }}</td>
             <td
               class="px-3 py-2.5 text-right font-mono text-gray-700 dark:text-gray-200"
             >
@@ -115,12 +115,12 @@ const devices = computed(() =>
                 }}
               </span>
             </td>
-            <td class="px-3 py-2.5 text-right font-mono text-gray-500">
+            <td class="px-3 py-2.5 text-right font-mono text-gray-500 dark:text-gray-400">
               {{
                 device.readOpsPerSec > 0 ? device.readOpsPerSec + '/s' : '—'
               }}
             </td>
-            <td class="px-3 py-2.5 text-right font-mono text-gray-500">
+            <td class="px-3 py-2.5 text-right font-mono text-gray-500 dark:text-gray-400">
               {{
                 device.writeOpsPerSec > 0
                   ? device.writeOpsPerSec + '/s'

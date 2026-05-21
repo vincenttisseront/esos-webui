@@ -13,7 +13,7 @@
         <UIcon name="i-heroicons-circle-stack" class="w-6 h-6 text-purple-500" />
         <div>
           <h1 class="text-xl font-semibold text-gray-900 dark:text-gray-100">{{ t('raid.page.title') }}</h1>
-          <p class="text-sm text-gray-500">{{ san?.label ?? sanId }}</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400">{{ san?.label ?? sanId }}</p>
         </div>
         <RaidPerSanHealthBadges
           :page-health="pageRaidHealth"
@@ -61,7 +61,7 @@
     </div>
 
     <!-- Chargement initial -->
-    <div v-if="raid.loading && !raid.overview" class="text-center py-16 text-gray-500">
+    <div v-if="raid.loading && !raid.overview" class="text-center py-16 text-gray-500 dark:text-gray-400">
       <UIcon name="i-heroicons-arrow-path" class="animate-spin w-8 h-8 mb-2 mx-auto" />
       <p>{{ t('raid.page.scan_in_progress') }}</p>
     </div>
@@ -119,19 +119,19 @@
         <UCard>
           <div class="text-center py-2">
             <div class="text-3xl font-bold text-gray-900 dark:text-gray-100">{{ raid.controllers.length }}</div>
-            <div class="text-sm text-gray-500 mt-1">{{ t('raid.page.hw_controllers') }}</div>
+            <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ t('raid.page.hw_controllers') }}</div>
           </div>
         </UCard>
         <UCard>
           <div class="text-center py-2">
             <div class="text-3xl font-bold text-gray-900 dark:text-gray-100">{{ raid.mdSoftwareCount }}</div>
-            <div class="text-sm text-gray-500 mt-1">{{ t('raid.md_detection.overview_count_label') }}</div>
+            <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ t('raid.md_detection.overview_count_label') }}</div>
           </div>
         </UCard>
         <UCard>
           <div class="text-center py-2">
             <div class="text-3xl font-bold text-gray-900 dark:text-gray-100">{{ raid.blockDevices.length }}</div>
-            <div class="text-sm text-gray-500 mt-1">{{ t('raid.page.block_devices') }}</div>
+            <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ t('raid.page.block_devices') }}</div>
           </div>
         </UCard>
         <UCard>
@@ -157,7 +157,7 @@
             >
               {{ lvmClusterStorageHint }}
             </p>
-            <p class="text-[11px] text-gray-500">
+            <p class="text-[11px] text-gray-500 dark:text-gray-400">
               {{ t(lvmRaidSummary.countsLabelKey, lvmRaidSummary.countsParams) }}
             </p>
             <UAlert
@@ -246,7 +246,7 @@
           {{ t('raid.page.create_hw_volume') }}
         </UButton>
       </div>
-      <div v-if="!raid.controllers.length" class="text-center py-8 text-gray-500">
+      <div v-if="!raid.controllers.length" class="text-center py-8 text-gray-500 dark:text-gray-400">
         <UIcon name="i-heroicons-cpu-chip" class="w-10 h-10 mx-auto mb-2 opacity-30" />
         <p>{{ t('raid.page.hw_empty') }}</p>
         <p class="text-xs mt-1">{{ t('raid.page.hw_empty_hint') }}</p>
@@ -304,7 +304,7 @@
         color="red"
         variant="soft"
       />
-      <div v-if="lvm.loading && !lvm.overview" class="text-center py-12 text-gray-500">
+      <div v-if="lvm.loading && !lvm.overview" class="text-center py-12 text-gray-500 dark:text-gray-400">
         <UIcon name="i-heroicons-arrow-path" class="animate-spin w-8 h-8 mx-auto mb-2" />
         <p>{{ t('lvm.overview.refresh') }}…</p>
       </div>
@@ -349,7 +349,7 @@
 
     <!-- Onglet Opérations -->
     <div v-else-if="activeTab === 'ops'" class="space-y-3">
-      <div v-if="!raid.operations.length" class="text-center py-8 text-gray-500">
+      <div v-if="!raid.operations.length" class="text-center py-8 text-gray-500 dark:text-gray-400">
         <UIcon name="i-heroicons-queue-list" class="w-10 h-10 mx-auto mb-2 opacity-30" />
         <p>{{ t('raid.page.ops_empty') }}</p>
       </div>
@@ -463,7 +463,7 @@
 
             <!-- Sections brutes -->
             <div v-for="(value, key) in diagnosticSections" :key="key" class="space-y-1">
-              <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ key }}</p>
+              <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ key }}</p>
               <pre class="text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-3 overflow-x-auto whitespace-pre-wrap text-gray-700 dark:text-gray-300">{{ value || t('raid.page.diagnostic_empty') }}</pre>
             </div>
           </template>

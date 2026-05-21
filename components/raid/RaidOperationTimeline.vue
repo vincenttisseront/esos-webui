@@ -26,7 +26,7 @@
           <span class="text-sm text-gray-700 dark:text-gray-200">{{ step.label }}</span>
           <UBadge :color="statusColor(step.status)" :label="step.status" size="xs" variant="soft" />
         </div>
-        <code v-if="step.command" class="block text-[10px] text-gray-500 font-mono bg-gray-900 rounded px-2 py-0.5 truncate mb-1">
+        <code v-if="step.command" class="block text-[10px] text-gray-500 dark:text-gray-400 font-mono bg-gray-900 rounded px-2 py-0.5 truncate mb-1">
           {{ step.command }}
         </code>
         <pre v-if="step.stdoutPreview" class="text-[10px] text-gray-400 whitespace-pre-wrap max-h-20 overflow-y-auto bg-gray-900 rounded px-2 py-1">{{ step.stdoutPreview }}</pre>

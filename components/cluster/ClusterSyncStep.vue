@@ -1,26 +1,26 @@
 <template>
   <div class="space-y-5">
     <div>
-      <h3 class="font-semibold text-gray-800">Synchronisation de la configuration</h3>
-      <p class="text-sm text-gray-500 mt-1">
-        Lance <code class="bg-gray-100 px-1 rounded font-mono">conf_sync.sh</code> sur le nœud primaire
+      <h3 class="font-semibold text-gray-800 dark:text-gray-200">Synchronisation de la configuration</h3>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        Lance <code class="bg-gray-100 dark:bg-gray-800 px-1 rounded font-mono">conf_sync.sh</code> sur le nœud primaire
         pour propager la configuration vers les autres nœuds.
       </p>
     </div>
 
     <!-- Résultat précédent -->
-    <div v-if="output" class="rounded-lg border p-3" :class="success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'">
+    <div v-if="output" class="rounded-lg border p-3" :class="success ? 'border-green-200 bg-green-50 dark:bg-green-950/40' : 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40'">
       <div class="flex items-center gap-2 mb-2">
         <UIcon
           :name="success ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'"
           class="w-4 h-4"
           :class="success ? 'text-green-500' : 'text-red-500'"
         />
-        <span class="text-sm font-medium" :class="success ? 'text-green-700' : 'text-red-700'">
+        <span class="text-sm font-medium" :class="success ? 'text-green-700' : 'text-red-700 dark:text-red-300'">
           {{ success ? 'Synchronisation réussie' : 'Synchronisation échouée' }}
         </span>
       </div>
-      <pre v-if="output" class="text-xs font-mono text-gray-700 whitespace-pre-wrap max-h-32 overflow-y-auto">{{ output }}</pre>
+      <pre v-if="output" class="text-xs font-mono text-gray-700 dark:text-gray-300 whitespace-pre-wrap max-h-32 overflow-y-auto">{{ output }}</pre>
     </div>
 
     <div class="flex gap-2">

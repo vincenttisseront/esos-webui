@@ -23,7 +23,7 @@
         </UBadge>
         <div class="min-w-0">
           <p class="text-sm font-medium">{{ alert.title }}</p>
-          <p class="text-xs text-gray-500 mt-0.5">{{ alert.message }}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ alert.message }}</p>
         </div>
       </div>
     </div>

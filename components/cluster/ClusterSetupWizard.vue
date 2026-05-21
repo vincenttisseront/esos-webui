@@ -20,7 +20,7 @@
       </template>
     </div>
 
-    <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+    <div class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5 shadow-sm">
       <ClusterNodeSelector
         v-if="current === 0"
         @nodes-selected="onNodesSelected"

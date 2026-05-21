@@ -1,12 +1,12 @@
 <template>
-  <div class="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
-    <span class="text-xs font-medium text-gray-700">{{ label }}</span>
+  <div class="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-950 px-3 py-2">
+    <span class="text-xs font-medium text-gray-700 dark:text-gray-300">{{ label }}</span>
 
     <div class="flex items-center gap-2">
       <!-- Badge statut avec dot pulsant -->
       <span
         class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
-        :class="running ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'"
+        :class="running ? 'bg-green-100 text-green-700' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'"
       >
         <span
           class="h-1.5 w-1.5 rounded-full"

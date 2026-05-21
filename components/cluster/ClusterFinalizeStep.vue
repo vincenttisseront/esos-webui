@@ -1,8 +1,8 @@
 <template>
   <div class="space-y-5">
     <div>
-      <h3 class="font-semibold text-gray-800">{{ t('cluster.finalize.title') }}</h3>
-      <p class="text-sm text-gray-500 mt-1">{{ t('cluster.finalize.intro') }}</p>
+      <h3 class="font-semibold text-gray-800 dark:text-gray-200">{{ t('cluster.finalize.title') }}</h3>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ t('cluster.finalize.intro') }}</p>
     </div>
 
     <div class="space-y-1.5">
@@ -17,9 +17,9 @@
       <p v-if="!clusterName.trim()" class="text-xs text-amber-500">{{ t('cluster.finalize.name_required') }}</p>
     </div>
 
-    <div v-if="props.removedNodes?.length" class="rounded-lg border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
+    <div v-if="props.removedNodes?.length" class="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 p-4 flex items-start gap-3">
       <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-      <div class="text-sm text-amber-800 space-y-1">
+      <div class="text-sm text-amber-800 dark:text-amber-300 space-y-1">
         <p class="font-semibold">{{ t('cluster.finalize.removed_title', { count: props.removedNodes.length }) }}</p>
         <ul class="list-disc list-inside text-xs space-y-0.5">
           <li v-for="n in props.removedNodes" :key="n.id" class="font-medium">{{ n.label }} <span class="font-mono font-normal">({{ n.host }})</span></li>
@@ -33,17 +33,17 @@
       <div
         v-for="node in props.nodes"
         :key="node.id"
-        class="flex items-center gap-4 rounded-lg border border-gray-200 px-4 py-3"
+        class="flex items-center gap-4 rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-3"
       >
         <div class="flex-1 min-w-0">
-          <p class="text-sm font-medium text-gray-800">{{ node.label }}</p>
+          <p class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ node.label }}</p>
           <p class="text-xs text-gray-400 font-mono">{{ node.host }}</p>
         </div>
-        <div class="flex rounded-lg overflow-hidden border border-gray-200 shrink-0">
+        <div class="flex rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shrink-0">
           <button
             type="button"
             class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors"
-            :class="roles[node.id] === 'primary' ? 'bg-blue-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
+            :class="roles[node.id] === 'primary' ? 'bg-blue-500 text-white' : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:bg-gray-950'"
             :disabled="saving"
             @click="setRole(node.id, 'primary')"
           >
@@ -52,8 +52,8 @@
           </button>
           <button
             type="button"
-            class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border-l border-gray-200 transition-colors"
-            :class="roles[node.id] === 'secondary' ? 'bg-gray-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
+            class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border-l border-gray-200 dark:border-gray-700 transition-colors"
+            :class="roles[node.id] === 'secondary' ? 'bg-gray-600 text-white' : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:bg-gray-950'"
             :disabled="saving"
             @click="setRole(node.id, 'secondary')"
           >
@@ -69,14 +69,14 @@
       </p>
     </div>
 
-    <div v-if="clusterState" class="rounded-lg border p-4 space-y-3" :class="clusterState.healthy ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50'">
+    <div v-if="clusterState" class="rounded-lg border p-4 space-y-3" :class="clusterState.healthy ? 'border-green-200 bg-green-50 dark:bg-green-950/40' : 'border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40'">
       <div class="flex items-center gap-2">
         <UIcon
           :name="clusterState.healthy ? 'i-heroicons-check-circle' : 'i-heroicons-exclamation-triangle'"
           class="w-5 h-5 shrink-0"
           :class="clusterState.healthy ? 'text-green-500' : 'text-amber-500'"
         />
-        <p class="text-sm font-medium" :class="clusterState.healthy ? 'text-green-800' : 'text-amber-800'">
+        <p class="text-sm font-medium" :class="clusterState.healthy ? 'text-green-800' : 'text-amber-800 dark:text-amber-300'">
           {{ clusterState.healthy ? t('cluster.finalize.operational') : t('cluster.finalize.partial') }}
         </p>
         <span class="ml-auto text-xs px-2 py-0.5 rounded-full" :class="clusterState.healthy ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'">
@@ -87,11 +87,11 @@
         <div
           v-for="node in clusterState.nodes"
           :key="node.nodeId"
-          class="flex items-center gap-2 text-xs rounded px-2 py-1.5 bg-white border"
-          :class="node.corosyncRunning && node.pacemakerRunning ? 'border-green-200' : 'border-red-200'"
+          class="flex items-center gap-2 text-xs rounded px-2 py-1.5 bg-white dark:bg-gray-900 border"
+          :class="node.corosyncRunning && node.pacemakerRunning ? 'border-green-200' : 'border-red-200 dark:border-red-800'"
         >
           <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="node.corosyncRunning && node.pacemakerRunning ? 'bg-green-500' : 'bg-red-400'" />
-          <span class="font-medium text-gray-700 truncate">{{ nodeLabel(node.nodeId, node.hostname) }}</span>
+          <span class="font-medium text-gray-700 dark:text-gray-300 truncate">{{ nodeLabel(node.nodeId, node.hostname) }}</span>
           <span class="ml-auto text-gray-400">{{ node.pacemakerNodeState }}</span>
         </div>
       </div>

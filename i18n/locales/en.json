@@ -105,7 +105,14 @@
     "open": "Open user menu",
     "profile": "My profile",
     "logout": "Sign out",
-    "language": "Language"
+    "language": "Language",
+    "theme": "Theme"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "persist_error": "Could not save theme preference on the server."
   },
   "profile": {
     "title": "My profile",
@@ -133,7 +140,12 @@
       "current_locale": "Active language",
       "saved_locale": "Saved preference",
       "not_saved": "Not saved",
-      "save_failed": "The language changed locally, but the preference could not be saved."
+      "save_failed": "The language changed locally, but the preference could not be saved.",
+      "theme_title": "Theme",
+      "theme_help": "Light, dark, or system. Saved on your account and synced to the esos_theme cookie.",
+      "current_theme": "Active theme",
+      "saved_theme": "Saved preference",
+      "theme_save_failed": "The theme changed locally, but the preference could not be saved."
     },
     "security": {
       "title": "Security",

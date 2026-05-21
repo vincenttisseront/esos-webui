@@ -1,11 +1,11 @@
 <template>
   <div class="space-y-4">
     <div>
-      <h3 class="font-semibold text-gray-800">{{ t('cluster.prereq.title') }}</h3>
-      <p class="text-sm text-gray-500 mt-1">{{ t('cluster.prereq.intro') }}</p>
+      <h3 class="font-semibold text-gray-800 dark:text-gray-200">{{ t('cluster.prereq.title') }}</h3>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ t('cluster.prereq.intro') }}</p>
     </div>
 
-    <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 flex items-start gap-2">
+    <div class="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 p-3 flex items-start gap-2">
       <UIcon name="i-heroicons-exclamation-triangle" class="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
       <div class="text-xs text-amber-700 space-y-1">
         <p class="font-semibold">{{ t('cluster.prereq.iscsi_impact_title') }}</p>
@@ -17,9 +17,9 @@
       <div
         v-for="node in props.nodes"
         :key="node.id"
-        class="rounded-lg border border-gray-200 p-4"
+        class="rounded-lg border border-gray-200 dark:border-gray-700 p-4"
       >
-        <p class="text-sm font-medium text-gray-700 mb-3">
+        <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
           {{ node.label }} — <span class="font-mono text-gray-400">{{ node.host }}</span>
         </p>
         <div class="space-y-1.5">
@@ -38,7 +38,7 @@
               class="w-4 h-4 shrink-0"
               :class="check.ok ? 'text-green-500' : 'text-red-400'"
             />
-            <span :class="check.ok ? 'text-gray-700' : 'text-red-600 font-medium'">{{ check.label }}</span>
+            <span :class="check.ok ? 'text-gray-700 dark:text-gray-300' : 'text-red-600 font-medium'">{{ check.label }}</span>
 
             <template v-if="!check.ok && check.label.includes('SCST')">
               <UButton
@@ -64,7 +64,7 @@
     <div
       v-if="fixMessage"
       class="rounded-lg border p-2.5 text-xs flex items-center gap-2"
-      :class="fixMessage.ok ? 'border-green-200 bg-green-50 text-green-700' : 'border-red-200 bg-red-50 text-red-600'"
+      :class="fixMessage.ok ? 'border-green-200 bg-green-50 dark:bg-green-950/40 text-green-700' : 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 text-red-600'"
     >
       <UIcon
         :name="fixMessage.ok ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'"

@@ -80,7 +80,7 @@ async function onSystemChange() {
     <header class="flex items-center justify-between">
       <div>
         <h1 class="text-2xl font-bold">{{ t('monitoring.stats.title') }}</h1>
-        <p class="text-sm text-gray-500">{{ t('monitoring.stats.subtitle') }}</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400">{{ t('monitoring.stats.subtitle') }}</p>
       </div>
     </header>
 
@@ -276,7 +276,7 @@ async function onSystemChange() {
       <!-- Empty state -->
       <div v-else-if="!perf.loading" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-10 text-center space-y-3">
         <UIcon name="i-heroicons-chart-bar" class="w-12 h-12 text-gray-300 mx-auto" />
-        <p class="text-gray-500 font-medium">{{ t('monitoring.stats.empty_title') }}</p>
+        <p class="text-gray-500 dark:text-gray-400 font-medium">{{ t('monitoring.stats.empty_title') }}</p>
         <ul class="text-sm text-gray-400 space-y-1 text-left max-w-sm mx-auto list-disc pl-5">
           <li>{{ t('monitoring.stats.empty_check_agent') }}</li>
           <li>{{ t('monitoring.stats.empty_check_dburi') }}</li>

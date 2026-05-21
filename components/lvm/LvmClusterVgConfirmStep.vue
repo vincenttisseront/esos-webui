@@ -38,7 +38,7 @@
           <span class="font-semibold text-gray-600 dark:text-gray-400">{{ row.label }}:</span>
           {{ row.command }}
         </div>
-        <p v-if="!commandRows.length" class="text-xs text-gray-500">—</p>
+        <p v-if="!commandRows.length" class="text-xs text-gray-500 dark:text-gray-400">—</p>
       </div>
     </div>
 

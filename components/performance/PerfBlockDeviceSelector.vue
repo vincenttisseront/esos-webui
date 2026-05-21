@@ -46,7 +46,7 @@
             <td class="px-3 py-2 text-right text-gray-600 dark:text-gray-400 text-xs font-mono">
               {{ fmtSize(d.size) }}
             </td>
-            <td class="px-3 py-2 text-xs text-gray-500 hidden sm:table-cell">
+            <td class="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 hidden sm:table-cell">
               {{ d.model || d.vendor || '—' }}
             </td>
             <td class="px-3 py-2 hidden md:table-cell">

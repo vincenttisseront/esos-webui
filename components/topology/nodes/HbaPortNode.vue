@@ -3,7 +3,7 @@
     <Handle type="source" :position="Position.Right" />
     <div class="node-icon">⬡</div>
     <div class="node-content">
-      <p class="text-[10px] uppercase tracking-wide text-gray-500">{{ t('topology.nodes.hbaPort.label') }}</p>
+      <p class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ t('topology.nodes.hbaPort.label') }}</p>
       <p class="node-label">{{ port.host.toUpperCase() }}</p>
       <p class="node-wwn">{{ shortWwn(port.portName) }}</p>
       <div class="node-badge" :class="port.portState === 'Online' ? 'badge-green' : 'badge-red'">

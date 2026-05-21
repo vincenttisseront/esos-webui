@@ -1,13 +1,13 @@
 <template>
   <div class="space-y-3">
-    <p class="text-sm text-gray-500">{{ t('lvm.cluster.wizard.mapping_hint') }}</p>
+    <p class="text-sm text-gray-500 dark:text-gray-400">{{ t('lvm.cluster.wizard.mapping_hint') }}</p>
     <div
       v-for="peer in peerNodes"
       :key="peer.sanId"
       class="rounded border border-gray-200 dark:border-gray-700 p-3 space-y-2"
     >
       <div class="text-sm font-medium">{{ peer.label }}</div>
-      <div class="text-xs text-gray-500 font-mono">{{ sourcePath }} →</div>
+      <div class="text-xs text-gray-500 dark:text-gray-400 font-mono">{{ sourcePath }} →</div>
       <LvmNativeSelect
         :model-value="mappingForPeer(peer.sanId)"
         :options="peerCandidateOptions(peer)"

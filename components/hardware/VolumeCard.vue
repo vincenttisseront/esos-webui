@@ -4,7 +4,7 @@
       <span class="text-lg font-semibold">{{ t('volumes.card.title') }}</span>
     </template>
 
-    <div v-if="volumes.length === 0" class="text-sm text-gray-500 py-4 text-center">
+    <div v-if="volumes.length === 0" class="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
       {{ t('volumes.card.empty') }}
     </div>
 
@@ -22,7 +22,7 @@
             :style="{ width: `${vol.usedPct}%` }"
           />
         </div>
-        <p class="text-xs text-gray-500 mt-1">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
           {{ formatKb(vol.usedKb) }} / {{ formatKb(vol.totalKb) }}
           — {{ formatKb(vol.availableKb) }} {{ t('volumes.card.free') }}
         </p>

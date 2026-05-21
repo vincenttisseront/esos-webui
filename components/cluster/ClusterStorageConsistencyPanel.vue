@@ -25,7 +25,7 @@
         </UBadge>
       </li>
     </ul>
-    <p class="mt-3 text-xs text-gray-500">{{ data.scst.summary }}</p>
+    <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">{{ data.scst.summary }}</p>
   </UCard>
 </template>
 

@@ -4,7 +4,7 @@
     <p class="text-sm text-gray-600 dark:text-gray-400">
       {{ nodeLabel }} — {{ clusterName }}
     </p>
-    <div v-if="preflightLoading" class="text-sm text-gray-500 flex items-center gap-2">
+    <div v-if="preflightLoading" class="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
       <UIcon name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
       {{ t('cluster.remove_node.preflight') }}
     </div>
@@ -23,7 +23,7 @@
       :title="t('cluster.remove_node.primary_title')"
       :description="t('cluster.remove_node.primary_hint')"
     />
-    <p v-if="loading" class="text-sm text-gray-500 flex items-center gap-2">
+    <p v-if="loading" class="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
       <UIcon name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
       {{ t('cluster.remove_node.in_progress') }}
     </p>

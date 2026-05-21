@@ -23,7 +23,7 @@
     <UFormField :label="t('storage.hosts.luns.modals.map.lunIdLabel')" class="mt-3">
       <UInput v-model.number="lunId" type="number" min="0" max="65535" />
     </UFormField>
-    <p class="text-xs text-gray-500 mt-1">
+    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
       {{ t('storage.hosts.luns.modals.map.lunIdHint', { ids: usedIdsLabel }) }}
     </p>
 
@@ -34,7 +34,7 @@
     />
 
     <div v-if="previewLine" class="mt-3">
-      <p class="text-xs font-semibold text-gray-500">{{ t('storage.hosts.luns.modals.map.previewLabel') }}</p>
+      <p class="text-xs font-semibold text-gray-500 dark:text-gray-400">{{ t('storage.hosts.luns.modals.map.previewLabel') }}</p>
       <pre class="text-xs font-mono bg-gray-50 dark:bg-gray-800 p-2 rounded mt-1 whitespace-pre-wrap">{{ previewLine }}</pre>
     </div>
     <p v-if="previewError" class="text-sm text-red-500 mt-2">{{ previewError }}</p>

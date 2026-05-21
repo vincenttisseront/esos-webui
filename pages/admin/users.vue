@@ -135,15 +135,15 @@ function fmtDate(iso: string | null | undefined) {
     </div>
 
     <!-- Rôles & Permissions -->
-    <div class="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
+    <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white dark:bg-gray-900 shadow-sm">
       <button
         type="button"
-        class="w-full px-5 py-3 bg-gray-50 flex items-center gap-2 hover:bg-gray-100 transition-colors text-left"
-        :class="showPermissions ? 'border-b border-gray-200' : ''"
+        class="w-full px-5 py-3 bg-gray-50 dark:bg-gray-950 flex items-center gap-2 hover:bg-gray-100 dark:bg-gray-800 transition-colors text-left"
+        :class="showPermissions ? 'border-b border-gray-200 dark:border-gray-700' : ''"
         @click="showPermissions = !showPermissions"
       >
-        <UIcon name="i-heroicons-shield-check" class="w-4 h-4 text-gray-500" />
-        <h2 class="text-sm font-semibold text-gray-700 flex-1">{{ t('admin.users.matrix.toggle') }}</h2>
+        <UIcon name="i-heroicons-shield-check" class="w-4 h-4 text-gray-500 dark:text-gray-400" />
+        <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300 flex-1">{{ t('admin.users.matrix.toggle') }}</h2>
         <UIcon
           name="i-heroicons-chevron-down"
           class="w-4 h-4 text-gray-400 transition-transform"
@@ -153,8 +153,8 @@ function fmtDate(iso: string | null | undefined) {
       <div v-if="showPermissions" class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
-            <tr class="border-b border-gray-100">
-              <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider w-56">
+            <tr class="border-b border-gray-100 dark:border-gray-800">
+              <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-56">
                 {{ t('admin.users.matrix.permission') }}
               </th>
               <th class="px-4 py-3 text-center">
@@ -168,15 +168,15 @@ function fmtDate(iso: string | null | undefined) {
                 </span>
               </th>
               <th class="px-4 py-3 text-center">
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-semibold">
                   <UIcon name="i-heroicons-eye" class="w-3.5 h-3.5" /> {{ t('admin.users.matrix.roles.viewer') }}
                 </span>
               </th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-50">
-            <tr v-for="perm in permissionMatrix" :key="perm.id" class="hover:bg-gray-50/50">
-              <td class="px-5 py-2.5 text-gray-700">
+            <tr v-for="perm in permissionMatrix" :key="perm.id" class="hover:bg-gray-50 dark:bg-gray-950/50">
+              <td class="px-5 py-2.5 text-gray-700 dark:text-gray-300">
                 <div class="flex items-center gap-2">
                   <UIcon :name="perm.icon" class="w-4 h-4 text-gray-400 shrink-0" />
                   {{ t(`admin.users.permissions.${perm.id}`) }}
@@ -210,19 +210,19 @@ function fmtDate(iso: string | null | undefined) {
     </div>
 
     <!-- Tableau utilisateurs -->
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
       <div v-if="pending" class="flex items-center justify-center py-12 text-gray-400">
         <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin mr-2" />
         {{ t('admin.users.table.loading') }}
       </div>
       <table v-else class="w-full text-sm">
-        <thead class="bg-gray-50 border-b border-gray-200">
+        <thead class="bg-gray-50 dark:bg-gray-950 border-b border-gray-200 dark:border-gray-700">
           <tr>
-            <th class="text-left px-4 py-3 font-medium text-gray-600">{{ t('admin.users.table.headers.user') }}</th>
-            <th class="text-left px-4 py-3 font-medium text-gray-600">{{ t('admin.users.table.headers.role') }}</th>
-            <th class="text-left px-4 py-3 font-medium text-gray-600">{{ t('admin.users.table.headers.status') }}</th>
-            <th class="text-left px-4 py-3 font-medium text-gray-600">{{ t('admin.users.table.headers.lastLogin') }}</th>
-            <th class="text-left px-4 py-3 font-medium text-gray-600">{{ t('admin.users.table.headers.created') }}</th>
+            <th class="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">{{ t('admin.users.table.headers.user') }}</th>
+            <th class="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">{{ t('admin.users.table.headers.role') }}</th>
+            <th class="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">{{ t('admin.users.table.headers.status') }}</th>
+            <th class="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">{{ t('admin.users.table.headers.lastLogin') }}</th>
+            <th class="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">{{ t('admin.users.table.headers.created') }}</th>
             <th class="px-4 py-3 w-10" />
           </tr>
         </thead>
@@ -233,7 +233,7 @@ function fmtDate(iso: string | null | undefined) {
           <tr
             v-for="u in users"
             :key="u.id"
-            class="hover:bg-gray-50 transition-colors"
+            class="hover:bg-gray-50 dark:bg-gray-950 transition-colors"
           >
             <!-- Nom -->
             <td class="px-4 py-3">
@@ -242,7 +242,7 @@ function fmtDate(iso: string | null | undefined) {
                   {{ u.username.charAt(0).toUpperCase() }}
                 </div>
                 <div>
-                  <div class="font-medium text-gray-900">
+                  <div class="font-medium text-gray-900 dark:text-gray-100">
                     {{ u.displayName || u.username }}
                     <span v-if="u.isCurrentUser" class="ml-1 text-xs text-gray-400">{{ t('admin.users.table.you') }}</span>
                   </div>
@@ -273,10 +273,10 @@ function fmtDate(iso: string | null | undefined) {
             </td>
 
             <!-- Dernière connexion -->
-            <td class="px-4 py-3 text-sm text-gray-500">{{ fmtDate(u.lastLoginAt) }}</td>
+            <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{{ fmtDate(u.lastLoginAt) }}</td>
 
             <!-- Créé le -->
-            <td class="px-4 py-3 text-sm text-gray-500">{{ fmtDate(u.createdAt) }}</td>
+            <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{{ fmtDate(u.createdAt) }}</td>
 
             <!-- Actions -->
             <td class="px-4 py-3">
@@ -382,7 +382,7 @@ function fmtDate(iso: string | null | undefined) {
             :closable="false"
           >
             <div class="space-y-3">
-              <p class="text-sm text-gray-600">
+              <p class="text-sm text-gray-600 dark:text-gray-400">
                 {{ t('admin.users.modals.revealHint') }}
               </p>
               <PasswordReveal :password="revealPassword" />

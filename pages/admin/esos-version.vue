@@ -3,8 +3,8 @@
     <!-- En-tête -->
     <header class="flex items-start justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Version ESOS</h1>
-        <p class="text-sm text-gray-500 mt-1">Suivi de version du système ESOS installé</p>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Version ESOS</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Suivi de version du système ESOS installé</p>
       </div>
       <div class="flex items-center gap-3">
         <span v-if="store.report" class="text-xs text-gray-400">

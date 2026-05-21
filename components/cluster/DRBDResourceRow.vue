@@ -3,7 +3,7 @@
 
     <!-- Ligne 1 : nom + rôle + taille -->
     <div class="flex items-center justify-between gap-2">
-      <span class="font-identifier text-sm text-gray-800">{{ res.name }}</span>
+      <span class="font-identifier text-sm text-gray-800 dark:text-gray-200">{{ res.name }}</span>
       <div class="flex items-center gap-1.5">
         <DRBDRoleBadge :role="res.role" />
         <span v-if="res.sizeBytes > 0" class="text-xs text-gray-400">{{ formatSize(res.sizeBytes) }}</span>
@@ -11,7 +11,7 @@
     </div>
 
     <!-- Ligne 2 : disques local / peer -->
-    <div class="grid grid-cols-2 gap-2 text-xs text-gray-500">
+    <div class="grid grid-cols-2 gap-2 text-xs text-gray-500 dark:text-gray-400">
       <div class="flex items-center gap-1">
         <span class="text-gray-400">Local :</span>
         <DRBDDiskStateBadge :state="res.diskState" />
@@ -38,7 +38,7 @@
         <span v-if="res.outOfSyncKB > 0">{{ formatKB(res.outOfSyncKB) }} restant</span>
         <span v-if="res.etaSeconds !== null && res.etaSeconds > 0">ETA {{ formatEta(res.etaSeconds) }}</span>
       </div>
-      <div class="w-full bg-gray-100 rounded-full h-1.5">
+      <div class="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5">
         <div
           class="bg-blue-500 h-1.5 rounded-full transition-all duration-500"
           :style="{ width: `${res.syncPercent}%` }"
@@ -47,7 +47,7 @@
     </div>
 
     <!-- Alerte Split-Brain (StandAlone) -->
-    <div v-if="res.connState === 'StandAlone'" class="rounded bg-red-50 border border-red-200 px-2 py-1.5 text-xs text-red-700 space-y-1">
+    <div v-if="res.connState === 'StandAlone'" class="rounded bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 px-2 py-1.5 text-xs text-red-700 dark:text-red-300 space-y-1">
       <div class="font-semibold flex items-center gap-1">
         <UIcon name="i-heroicons-exclamation-triangle" class="w-3.5 h-3.5" />
         Split-brain détecté — intervention requise
@@ -58,7 +58,7 @@
     </div>
 
     <!-- Alerte Disconnected / Unconnected -->
-    <div v-else-if="res.connState === 'Disconnected' || res.connState === 'Unconnected'" class="rounded bg-amber-50 border border-amber-200 px-2 py-1.5 text-xs text-amber-700 flex items-center gap-1">
+    <div v-else-if="res.connState === 'Disconnected' || res.connState === 'Unconnected'" class="rounded bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 px-2 py-1.5 text-xs text-amber-700 flex items-center gap-1">
       <UIcon name="i-heroicons-signal-slash" class="w-3.5 h-3.5" />
       Pair hors ligne — réplication inactive
     </div>

@@ -1,14 +1,14 @@
 <template>
   <div>
-    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Mémoire</h3>
+    <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Mémoire</h3>
 
     <!-- Overview bar -->
     <div class="mb-4">
-      <div class="flex justify-between text-xs text-gray-500 mb-1">
+      <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
         <span>Utilisée : {{ formatBytes(mem.usedKb * 1024) }}</span>
         <span>Total : {{ formatBytes(mem.totalKb * 1024) }}</span>
       </div>
-      <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+      <div class="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
         <div
           class="h-full rounded-full transition-all"
           :class="mem.usedPct >= 90 ? 'bg-red-400' : mem.usedPct >= 75 ? 'bg-amber-400' : 'bg-blue-400'"
@@ -19,7 +19,7 @@
     </div>
 
     <!-- Swap -->
-    <div v-if="mem.swapTotalKb > 0" class="text-xs text-gray-500 mb-4">
+    <div v-if="mem.swapTotalKb > 0" class="text-xs text-gray-500 dark:text-gray-400 mb-4">
       Swap : {{ formatBytes(mem.swapUsedKb * 1024) }} / {{ formatBytes(mem.swapTotalKb * 1024) }}
     </div>
   </div>

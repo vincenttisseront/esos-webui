@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-4">
     <div class="flex items-center justify-between gap-2 flex-wrap">
-      <p class="text-sm text-gray-500">{{ t('storage.devices.list.countLine', { count: filtered.length }) }}</p>
+      <p class="text-sm text-gray-500 dark:text-gray-400">{{ t('storage.devices.list.countLine', { count: filtered.length }) }}</p>
       <div class="flex gap-2">
         <USelect
           v-model="handlerFilter"

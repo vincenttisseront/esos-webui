@@ -2,7 +2,7 @@
   <div>
     <div class="flex items-center justify-between mb-4">
       <div>
-        <p class="font-semibold text-gray-800">/dev/{{ disk.name }}</p>
+        <p class="font-semibold text-gray-800 dark:text-gray-200">/dev/{{ disk.name }}</p>
         <p class="text-xs text-gray-400 mt-0.5">{{ disk.model }}{{ disk.serial ? ` · ${disk.serial}` : '' }}</p>
       </div>
       <UButton size="xs" variant="ghost" icon="i-heroicons-x-mark" @click="$emit('close')" />
@@ -10,7 +10,7 @@
 
     <div class="flex items-center gap-3 mb-4">
       <SmartHealthBadge :smart="disk.smart!" />
-      <span class="text-sm text-gray-500">
+      <span class="text-sm text-gray-500 dark:text-gray-400">
         <template v-if="disk.smart!.temperature != null">{{ disk.smart!.temperature }}°C · </template>
         {{ disk.smart!.powerOnHours != null ? `${disk.smart!.powerOnHours} h de fonctionnement` : '' }}
       </span>
@@ -22,7 +22,7 @@
       <div class="overflow-x-auto">
         <table class="w-full text-xs font-mono">
           <thead>
-            <tr class="text-gray-400 border-b border-gray-100">
+            <tr class="text-gray-400 border-b border-gray-100 dark:border-gray-800">
               <th class="text-left py-1 pr-3">#</th>
               <th class="text-left py-1 pr-3">Attribut</th>
               <th class="text-right py-1 pr-3">Valeur</th>

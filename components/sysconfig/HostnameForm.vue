@@ -2,8 +2,8 @@
   <UCard>
     <template #header>
       <div class="flex items-center gap-2">
-        <UIcon name="i-heroicons-server" class="text-gray-500 size-5" />
-        <span class="font-semibold text-gray-800">{{ t('admin.sysconfig.hostname.title') }}</span>
+        <UIcon name="i-heroicons-server" class="text-gray-500 dark:text-gray-400 size-5" />
+        <span class="font-semibold text-gray-800 dark:text-gray-200">{{ t('admin.sysconfig.hostname.title') }}</span>
       </div>
     </template>
 
@@ -16,9 +16,9 @@
         <UInput v-model="form.domain" placeholder="example.com" :disabled="isDisabled" />
       </UFormField>
 
-      <div class="bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-600">
+      <div class="bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2.5 text-sm text-gray-600 dark:text-gray-400">
         {{ t('admin.sysconfig.hostname.fqdn') }} :
-        <span class="font-mono font-semibold text-gray-800">{{ fqdn || '—' }}</span>
+        <span class="font-mono font-semibold text-gray-800 dark:text-gray-200">{{ fqdn || '—' }}</span>
       </div>
     </div>
 

@@ -1,8 +1,8 @@
 <template>
   <div class="max-w-3xl mx-auto space-y-6 p-6">
     <header>
-      <h1 class="text-2xl font-bold text-gray-900">{{ t('profile.title') }}</h1>
-      <p class="text-sm text-gray-500 mt-1">{{ t('profile.subtitle') }}</p>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ t('profile.title') }}</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ t('profile.subtitle') }}</p>
     </header>
 
     <UCard>
@@ -14,7 +14,7 @@
             </span>
           </div>
           <div class="min-w-0">
-            <p class="text-lg font-semibold text-gray-900 truncate">{{ auth.user?.username }}</p>
+            <p class="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">{{ auth.user?.username }}</p>
             <div class="flex flex-wrap items-center gap-2 mt-1">
               <UBadge :color="auth.user?.role === 'admin' ? 'blue' : 'gray'" size="xs" variant="subtle">
                 {{ auth.user?.role ?? '—' }}
@@ -30,16 +30,16 @@
 
       <div class="divide-y divide-gray-100">
         <div class="py-3 flex items-center justify-between gap-4 text-sm">
-          <span class="text-gray-500">{{ t('profile.account.user_id') }}</span>
-          <span class="font-mono text-gray-700 text-xs text-right">{{ auth.user?.id ?? '—' }}</span>
+          <span class="text-gray-500 dark:text-gray-400">{{ t('profile.account.user_id') }}</span>
+          <span class="font-mono text-gray-700 dark:text-gray-300 text-xs text-right">{{ auth.user?.id ?? '—' }}</span>
         </div>
         <div class="py-3 flex items-center justify-between gap-4 text-sm">
-          <span class="text-gray-500">{{ t('profile.account.auth_source') }}</span>
-          <span class="text-gray-700 text-right">{{ authSourceLabel }}</span>
+          <span class="text-gray-500 dark:text-gray-400">{{ t('profile.account.auth_source') }}</span>
+          <span class="text-gray-700 dark:text-gray-300 text-right">{{ authSourceLabel }}</span>
         </div>
         <div class="py-3 flex items-center justify-between gap-4 text-sm">
-          <span class="text-gray-500">{{ t('profile.account.last_login') }}</span>
-          <span class="text-gray-700 text-right">{{ lastLoginFormatted }}</span>
+          <span class="text-gray-500 dark:text-gray-400">{{ t('profile.account.last_login') }}</span>
+          <span class="text-gray-700 dark:text-gray-300 text-right">{{ lastLoginFormatted }}</span>
         </div>
       </div>
     </UCard>
@@ -47,24 +47,24 @@
     <UCard>
       <template #header>
         <div>
-          <p class="text-sm font-semibold text-gray-800 flex items-center gap-2">
+          <p class="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
             <UIcon name="i-heroicons-language" class="w-4 h-4 text-gray-400" />
             {{ t('profile.preferences.title') }}
           </p>
-          <p class="text-xs text-gray-500 mt-1">{{ t('profile.preferences.language_help') }}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ t('profile.preferences.language_help') }}</p>
         </div>
       </template>
 
       <div class="space-y-4">
         <LanguageSwitcher mode="profile" @persist-error="onLocalePersistError" />
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-          <div class="rounded-lg bg-gray-50 border border-gray-100 px-3 py-2">
+          <div class="rounded-lg bg-gray-50 dark:bg-gray-950 border border-gray-100 dark:border-gray-800 px-3 py-2">
             <p class="text-xs text-gray-400">{{ t('profile.preferences.current_locale') }}</p>
-            <p class="font-medium text-gray-800">{{ currentLocaleLabel }}</p>
+            <p class="font-medium text-gray-800 dark:text-gray-200">{{ currentLocaleLabel }}</p>
           </div>
-          <div class="rounded-lg bg-gray-50 border border-gray-100 px-3 py-2">
+          <div class="rounded-lg bg-gray-50 dark:bg-gray-950 border border-gray-100 dark:border-gray-800 px-3 py-2">
             <p class="text-xs text-gray-400">{{ t('profile.preferences.saved_locale') }}</p>
-            <p class="font-medium text-gray-800">{{ savedLocaleLabel }}</p>
+            <p class="font-medium text-gray-800 dark:text-gray-200">{{ savedLocaleLabel }}</p>
           </div>
         </div>
         <UAlert
@@ -74,17 +74,34 @@
           icon="i-heroicons-exclamation-triangle"
           :title="localeError"
         />
+
+        <div class="border-t border-gray-100 dark:border-gray-800 pt-4">
+          <p class="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2 mb-1">
+            <UIcon name="i-heroicons-sun" class="w-4 h-4 text-gray-400" />
+            {{ t('profile.preferences.theme_title') }}
+          </p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">{{ t('profile.preferences.theme_help') }}</p>
+          <ThemeSwitcher mode="profile" @persist-error="onThemePersistError" />
+          <UAlert
+            v-if="themeError"
+            class="mt-3"
+            color="red"
+            variant="soft"
+            icon="i-heroicons-exclamation-triangle"
+            :title="themeError"
+          />
+        </div>
       </div>
     </UCard>
 
     <UCard>
       <template #header>
         <div>
-          <p class="text-sm font-semibold text-gray-800 flex items-center gap-2">
+          <p class="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
             <UIcon name="i-heroicons-lock-closed" class="w-4 h-4 text-gray-400" />
             {{ t('profile.security.title') }}
           </p>
-          <p class="text-xs text-gray-500 mt-1">
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
             {{ isLocalAccount ? t('profile.security.local_help') : t('profile.security.external_title') }}
           </p>
         </div>
@@ -100,7 +117,7 @@
           <UInput v-model="newPassword" type="password" autocomplete="new-password" />
         </UFormGroup>
 
-        <div v-if="newPassword.length > 0" class="grid gap-1.5 text-xs rounded-lg bg-gray-50 border border-gray-100 p-3">
+        <div v-if="newPassword.length > 0" class="grid gap-1.5 text-xs rounded-lg bg-gray-50 dark:bg-gray-950 border border-gray-100 dark:border-gray-800 p-3">
           <div
             v-for="check in localizedChecks"
             :key="check.id"
@@ -152,7 +169,7 @@
     <UCard>
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <p class="text-sm font-semibold text-gray-800">{{ t('profile.session.title') }}</p>
+          <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ t('profile.session.title') }}</p>
           <p class="text-xs text-gray-400 mt-0.5">{{ t('profile.session.subtitle') }}</p>
         </div>
         <UButton
@@ -198,6 +215,12 @@ const localeError = ref<string | null>(null)
 
 function onLocalePersistError(err: unknown) {
   localeError.value = tError(err as { data?: { code?: string; message?: string }; message?: string }, t('profile.preferences.save_failed'))
+}
+
+const themeError = ref<string | null>(null)
+
+function onThemePersistError(err: unknown) {
+  themeError.value = tError(err as { data?: { code?: string; message?: string }; message?: string }, t('profile.preferences.theme_save_failed'))
 }
 
 const newPassword = ref('')

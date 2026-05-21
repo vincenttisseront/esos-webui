@@ -134,9 +134,9 @@ function onForgotPasswordToast() {
 </script>
 
 <template>
-  <div class="min-h-screen flex bg-[#F5F8FC]">
+  <div class="min-h-screen flex bg-[var(--color-surface-alt)]">
     <!-- Panneau gauche — branding -->
-    <div class="hidden lg:flex lg:w-[46%] bg-[#08111F] flex-col items-center justify-center p-12 relative overflow-hidden">
+    <div class="hidden lg:flex lg:w-[46%] bg-[#08111F] dark:bg-gray-950 flex-col items-center justify-center p-12 relative overflow-hidden">
       <!-- Grille décorative -->
       <div
         class="absolute inset-0 opacity-[0.07]"
@@ -167,7 +167,7 @@ function onForgotPasswordToast() {
           <div
             v-for="item in features"
             :key="item.label"
-            class="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-3"
+            class="flex items-center gap-3 rounded-2xl border border-white/10 bg-white dark:bg-gray-900/[0.035] px-4 py-3"
           >
             <div class="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-300/15 flex items-center justify-center shrink-0">
               <UIcon :name="item.icon" class="w-4 h-4 text-blue-300" />
@@ -180,27 +180,27 @@ function onForgotPasswordToast() {
 
     <!-- Panneau droit — formulaire premium -->
     <div
-      class="flex-1 flex flex-col items-center justify-center bg-[#F5F8FC] p-6 lg:p-16"
+      class="flex-1 flex flex-col items-center justify-center bg-[var(--color-surface-alt)] p-6 lg:p-16"
     >
       <!-- Logo mobile -->
       <div class="lg:hidden mb-6 text-center">
         <img src="/logo/logo-esos-icon.svg" alt="ESOS" class="w-12 h-12 mx-auto mb-3" />
-        <h1 class="text-xl font-bold text-gray-900">{{ t('app.name') }}</h1>
+        <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">{{ t('app.name') }}</h1>
       </div>
 
       <div class="w-full max-w-md space-y-5">
         <div class="px-1 text-center lg:text-left">
-          <h2 class="text-2xl font-bold tracking-tight text-gray-900">
+          <h2 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
             {{ t('auth.login.title') }}
           </h2>
-          <p class="mt-1 text-sm text-gray-600">
+          <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
             {{ t('auth.login.subtitle') }}
           </p>
         </div>
 
         <div
           v-if="providersError"
-          class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          class="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 px-4 py-3 text-sm text-red-700 dark:text-red-300"
           role="alert"
         >
           {{ t('auth.login.providers_load_error') }}
@@ -224,10 +224,13 @@ function onForgotPasswordToast() {
         />
 
         <div class="flex items-center justify-between gap-3 px-1 pt-1">
-          <p class="text-xs text-gray-500">
+          <p class="text-xs text-gray-500 dark:text-gray-400">
             {{ t('auth.login.footer_tagline') }}
           </p>
-          <LanguageSwitcher mode="compact" />
+          <div class="flex items-center gap-2">
+            <ThemeSwitcher mode="compact" />
+            <LanguageSwitcher mode="compact" />
+          </div>
         </div>
       </div>
     </div>

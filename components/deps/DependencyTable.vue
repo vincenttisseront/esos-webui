@@ -1,6 +1,6 @@
 <template>
   <div class="esos-card">
-    <div class="px-4 py-3 border-b border-gray-100 flex flex-wrap items-center gap-3">
+    <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex flex-wrap items-center gap-3">
       <UInput
         v-model="deps.filterQuery"
         icon="i-heroicons-magnifying-glass"
@@ -14,7 +14,7 @@
           v-for="opt in diffFilters"
           :key="opt.value"
           class="px-2.5 py-1 text-xs rounded-lg transition-colors"
-          :class="deps.filterDiff === opt.value ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+          :class="deps.filterDiff === opt.value ? 'bg-gray-800 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200'"
           @click="deps.filterDiff = opt.value"
         >
           {{ opt.label }}
@@ -26,7 +26,7 @@
           v-for="opt in typeFilters"
           :key="opt.value"
           class="px-2.5 py-1 text-xs rounded-lg transition-colors"
-          :class="deps.filterType === opt.value ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+          :class="deps.filterType === opt.value ? 'bg-gray-800 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200'"
           @click="deps.filterType = opt.value"
         >
           {{ opt.label }}
@@ -55,7 +55,7 @@
           <tr v-for="pkg in deps.filtered" :key="pkg.name">
             <td>
               <div>
-                <span class="font-identifier font-medium text-gray-800">{{ pkg.name }}</span>
+                <span class="font-identifier font-medium text-gray-800 dark:text-gray-200">{{ pkg.name }}</span>
                 <p v-if="pkg.description" class="text-xs text-gray-400 truncate max-w-xs mt-0.5">
                   {{ pkg.description }}
                 </p>
@@ -63,7 +63,7 @@
             </td>
 
             <td>
-              <span class="font-identifier text-gray-600">{{ pkg.installedClean }}</span>
+              <span class="font-identifier text-gray-600 dark:text-gray-400">{{ pkg.installedClean }}</span>
             </td>
 
             <td>
@@ -90,7 +90,7 @@
             <td>
               <span
                 class="text-xs px-1.5 py-0.5 rounded font-medium"
-                :class="pkg.type === 'dependencies' ? 'bg-violet-50 text-violet-600' : 'bg-gray-100 text-gray-500'"
+                :class="pkg.type === 'dependencies' ? 'bg-violet-50 text-violet-600' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'"
               >
                 {{ pkg.type === 'dependencies' ? t('admin.dependencies.table.typeDep') : t('admin.dependencies.table.typeDev') }}
               </span>
@@ -102,7 +102,7 @@
                   :href="pkg.npmUrl"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-gray-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-gray-100"
+                  class="text-gray-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-gray-100 dark:bg-gray-800"
                   :title="t('admin.dependencies.table.linkNpm')"
                 >
                   <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor">
@@ -115,7 +115,7 @@
                   :href="pkg.repoUrl"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-gray-400 hover:text-gray-700 transition-colors p-1 rounded hover:bg-gray-100"
+                  class="text-gray-400 hover:text-gray-700 dark:text-gray-300 transition-colors p-1 rounded hover:bg-gray-100 dark:bg-gray-800"
                   :title="t('admin.dependencies.table.linkGithub')"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -128,7 +128,7 @@
                   :href="`${pkg.repoUrl}/releases`"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-gray-400 hover:text-blue-500 transition-colors p-1 rounded hover:bg-gray-100"
+                  class="text-gray-400 hover:text-blue-500 transition-colors p-1 rounded hover:bg-gray-100 dark:bg-gray-800"
                   :title="t('admin.dependencies.table.linkChangelog')"
                 >
                   <UIcon name="i-heroicons-document-text" class="w-4 h-4" />

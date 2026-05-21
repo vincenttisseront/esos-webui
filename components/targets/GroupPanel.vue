@@ -91,7 +91,7 @@
           </thead>
           <tbody class="divide-y divide-gray-50 dark:divide-gray-800">
             <tr v-for="lun in group.luns" :key="lun.id">
-              <td class="py-1.5 font-mono text-gray-500">{{ lun.id }}</td>
+              <td class="py-1.5 font-mono text-gray-500 dark:text-gray-400">{{ lun.id }}</td>
               <td class="py-1.5 font-semibold">
                 <span>{{ lun.device }}</span>
                 <UButton
@@ -104,10 +104,10 @@
                   @click="$emit('unmapLun', { groupName: group.name, lunId: lun.id, device: lun.device })"
                 />
               </td>
-              <td class="py-1.5 text-gray-500">
+              <td class="py-1.5 text-gray-500 dark:text-gray-400">
                 {{ devicesMap.get(lun.device)?.handler ?? '—' }}
               </td>
-              <td class="py-1.5 font-mono text-gray-500 text-xs">
+              <td class="py-1.5 font-mono text-gray-500 dark:text-gray-400 text-xs">
                 {{ devicesMap.get(lun.device)?.filename ?? '—' }}
               </td>
               <td class="py-1.5">

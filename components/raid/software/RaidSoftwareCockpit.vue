@@ -57,7 +57,7 @@
     <section id="raid-software-active" class="space-y-4" aria-labelledby="raid-software-active-heading">
       <h2 id="raid-software-active-heading" class="text-lg font-semibold text-gray-900 dark:text-gray-100">
         {{ t('raid.software.cockpit.section.active_title') }}
-        <span class="text-sm font-normal text-gray-500">({{ cockpit.activeArrays.length }})</span>
+        <span class="text-sm font-normal text-gray-500 dark:text-gray-400">({{ cockpit.activeArrays.length }})</span>
       </h2>
       <div class="space-y-4">
         <RaidActiveArrayCard

@@ -2,8 +2,8 @@
   <UCard>
     <template #header>
       <div class="flex items-center gap-2">
-        <UIcon name="i-heroicons-envelope" class="text-gray-500 size-5" />
-        <span class="font-semibold text-gray-800">{{ t('admin.sysconfig.smtp.title') }}</span>
+        <UIcon name="i-heroicons-envelope" class="text-gray-500 dark:text-gray-400 size-5" />
+        <span class="font-semibold text-gray-800 dark:text-gray-200">{{ t('admin.sysconfig.smtp.title') }}</span>
       </div>
     </template>
 

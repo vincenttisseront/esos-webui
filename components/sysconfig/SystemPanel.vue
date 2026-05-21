@@ -2,19 +2,19 @@
   <UCard>
     <template #header>
       <div class="flex items-center gap-2">
-        <UIcon name="i-heroicons-computer-desktop" class="text-gray-500 size-5" />
-        <span class="font-semibold text-gray-800">{{ t('admin.sysconfig.system.title') }}</span>
+        <UIcon name="i-heroicons-computer-desktop" class="text-gray-500 dark:text-gray-400 size-5" />
+        <span class="font-semibold text-gray-800 dark:text-gray-200">{{ t('admin.sysconfig.system.title') }}</span>
       </div>
     </template>
 
     <div class="space-y-6">
-      <div v-if="fqdn" class="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-600">
+      <div v-if="fqdn" class="bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
         {{ t('admin.sysconfig.system.fqdn_current') }} :
-        <span class="font-mono font-semibold text-gray-800">{{ fqdn }}</span>
+        <span class="font-mono font-semibold text-gray-800 dark:text-gray-200">{{ fqdn }}</span>
       </div>
 
-      <div class="border border-gray-200 rounded-lg p-4 space-y-4">
-        <p class="text-sm font-semibold text-gray-700">{{ t('admin.sysconfig.system.actions_title') }}</p>
+      <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-4">
+        <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ t('admin.sysconfig.system.actions_title') }}</p>
 
         <div class="flex flex-col sm:flex-row gap-3">
           <UButton

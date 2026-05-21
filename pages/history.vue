@@ -4,10 +4,10 @@
     <div class="flex items-center justify-between">
       <div>
         <h1 class="text-xl font-bold">Historique des métriques</h1>
-        <p v-if="oldestDate" class="text-xs text-gray-500 mt-0.5">
+        <p v-if="oldestDate" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
           Données disponibles depuis {{ oldestDate }}
         </p>
-        <p v-else class="text-xs text-gray-500 mt-0.5 italic">
+        <p v-else class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 italic">
           Collecte démarrée — premier point dans moins de 30s
         </p>
       </div>

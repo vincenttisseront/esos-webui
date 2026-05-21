@@ -19,8 +19,8 @@
       </p>
       <div class="rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm">
         <span class="font-semibold">{{ offered.primaryLabel }}</span>
-        <span class="font-mono text-xs text-gray-500 ml-2">({{ offered.primarySanId }})</span>
-        <p v-if="members.length" class="text-xs text-gray-500 mt-1 font-mono">
+        <span class="font-mono text-xs text-gray-500 dark:text-gray-400 ml-2">({{ offered.primarySanId }})</span>
+        <p v-if="members.length" class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono">
           {{ members.join(', ') }}
         </p>
       </div>
@@ -36,7 +36,7 @@
         class="text-xs rounded border border-gray-200 dark:border-gray-700 px-3 py-2 bg-gray-50 dark:bg-gray-800/50"
       >
         <span class="font-medium">{{ peer.label }}</span>
-        <ul class="list-disc pl-4 mt-1 text-gray-500">
+        <ul class="list-disc pl-4 mt-1 text-gray-500 dark:text-gray-400">
           <li v-for="(reason, idx) in peer.reasons" :key="idx">{{ reason }}</li>
         </ul>
       </div>
@@ -45,7 +45,7 @@
     <div v-if="confirmationPhrase" class="space-y-2">
       <p class="text-sm text-gray-700 dark:text-gray-300">
         {{ t('raid.cluster_md.confirm_phrase_hint') }}
-        <code class="text-red-800 bg-red-100 border border-red-200 px-1.5 py-0.5 rounded font-mono text-xs">{{ confirmationPhrase }}</code>
+        <code class="text-red-800 dark:text-red-300 bg-red-100 border border-red-200 dark:border-red-800 px-1.5 py-0.5 rounded font-mono text-xs">{{ confirmationPhrase }}</code>
       </p>
       <UInput
         v-model="inputPhrase"

@@ -71,7 +71,7 @@
       </UButton>
     </div>
 
-    <div v-if="isClustered && lvm.clusterInventoryLoading && !clusterView" class="text-sm text-gray-500">
+    <div v-if="isClustered && lvm.clusterInventoryLoading && !clusterView" class="text-sm text-gray-500 dark:text-gray-400">
       {{ t('lvm.cluster.view.inventory_loading') }}
     </div>
 
@@ -226,7 +226,7 @@
       <div v-if="lvm.pvs.length" class="overflow-x-auto">
         <table class="w-full text-xs">
           <thead>
-            <tr class="text-left text-gray-500 border-b">
+            <tr class="text-left text-gray-500 dark:text-gray-400 border-b">
               <th class="py-1.5 pr-3">PV</th>
               <th class="py-1.5 pr-3">VG</th>
               <th class="py-1.5 pr-3">{{ t('lvm.col.size') }}</th>
@@ -247,7 +247,7 @@
           </tbody>
         </table>
       </div>
-      <p v-else class="text-xs text-gray-500 px-1 py-2">{{ t('lvm.provisioning.empty.pv') }}</p>
+      <p v-else class="text-xs text-gray-500 dark:text-gray-400 px-1 py-2">{{ t('lvm.provisioning.empty.pv') }}</p>
     </UCard>
 
     <UCard>
@@ -260,7 +260,7 @@
       <div v-if="lvm.vgs.length" class="overflow-x-auto">
         <table class="w-full text-xs">
           <thead>
-            <tr class="text-left text-gray-500 border-b">
+            <tr class="text-left text-gray-500 dark:text-gray-400 border-b">
               <th class="py-1.5 pr-3">VG</th>
               <th class="py-1.5 pr-3">{{ t('lvm.col.size_free') }}</th>
               <th class="py-1.5 pr-3">PVs</th>
@@ -284,7 +284,7 @@
           </tbody>
         </table>
       </div>
-      <p v-else class="text-xs text-gray-500 px-1 py-2">{{ t('lvm.provisioning.empty.vg') }}</p>
+      <p v-else class="text-xs text-gray-500 dark:text-gray-400 px-1 py-2">{{ t('lvm.provisioning.empty.vg') }}</p>
     </UCard>
 
     <UCard>
@@ -297,7 +297,7 @@
       <div v-if="displayLvs.length" class="overflow-x-auto">
         <table class="w-full text-xs">
           <thead>
-            <tr class="text-left text-gray-500 border-b">
+            <tr class="text-left text-gray-500 dark:text-gray-400 border-b">
               <th class="py-1.5 pr-3">LV</th>
               <th class="py-1.5 pr-3">{{ t('lvm.lv.col_backing_path') }}</th>
               <th class="py-1.5 pr-3">VG</th>
@@ -318,7 +318,7 @@
                 </template>
                 <template v-else-if="lvScstUiState(row) === 'partial'">
                   <UBadge color="amber" variant="soft" size="xs" :label="t('lvm.lv.scst_partial')" class="mr-1" />
-                  <span class="font-mono text-gray-600">{{ lvScstLabel(row) || '—' }}</span>
+                  <span class="font-mono text-gray-600 dark:text-gray-400">{{ lvScstLabel(row) || '—' }}</span>
                   <UButton
                     v-if="canMutate"
                     size="xs"
@@ -348,7 +348,7 @@
           </tbody>
         </table>
       </div>
-      <p v-else class="text-xs text-gray-500 px-1 py-2">{{ t('lvm.provisioning.empty.lv') }}</p>
+      <p v-else class="text-xs text-gray-500 dark:text-gray-400 px-1 py-2">{{ t('lvm.provisioning.empty.lv') }}</p>
     </UCard>
     </template>
 
@@ -365,7 +365,7 @@
           <div class="overflow-x-auto">
             <table class="w-full text-xs">
               <thead>
-                <tr class="text-left text-gray-500 border-b">
+                <tr class="text-left text-gray-500 dark:text-gray-400 border-b">
                   <th class="py-1 pr-3">{{ t('lvm.col.device') }}</th>
                   <th class="py-1 pr-3">{{ t('lvm.col.kind') }}</th>
                   <th class="py-1">{{ t('lvm.col.size') }}</th>
@@ -388,14 +388,14 @@
               {{ t('lvm.provisioning.technical.peers') }} — {{ t('lvm.cluster.peer_node', { label: peer.nodeLabel }) }}
             </h4>
             <div class="grid grid-cols-3 gap-2 text-xs mb-2">
-              <div><span class="text-gray-500">PV</span> {{ peer.pvs.length }}</div>
-              <div><span class="text-gray-500">VG</span> {{ peer.vgs.length }}</div>
-              <div><span class="text-gray-500">LV</span> {{ peer.lvs.length }}</div>
+              <div><span class="text-gray-500 dark:text-gray-400">PV</span> {{ peer.pvs.length }}</div>
+              <div><span class="text-gray-500 dark:text-gray-400">VG</span> {{ peer.vgs.length }}</div>
+              <div><span class="text-gray-500 dark:text-gray-400">LV</span> {{ peer.lvs.length }}</div>
             </div>
             <div v-if="peer.vgs.length" class="overflow-x-auto">
               <table class="w-full text-xs">
                 <thead>
-                  <tr class="text-left text-gray-500 border-b">
+                  <tr class="text-left text-gray-500 dark:text-gray-400 border-b">
                     <th class="py-1 pr-2">VG</th>
                     <th class="py-1">{{ t('lvm.col.size_free') }}</th>
                   </tr>
@@ -408,7 +408,7 @@
                 </tbody>
               </table>
             </div>
-            <p v-else class="text-xs text-gray-500">{{ t('lvm.cluster.peer_empty') }}</p>
+            <p v-else class="text-xs text-gray-500 dark:text-gray-400">{{ t('lvm.cluster.peer_empty') }}</p>
           </div>
         </template>
       </div>

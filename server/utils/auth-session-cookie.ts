@@ -5,6 +5,7 @@ import type { UserRow } from '../db/repositories/user.repository'
 import { updateLastLogin, recordLoginEvent } from '../db/repositories/user.repository'
 import type { UserRole } from './types'
 import { isSupportedLocale, setLocaleCookie } from './locale'
+import { isSupportedTheme, setThemeCookie } from './theme'
 
 export async function setSessionCookieForUser(event: H3Event, user: UserRow): Promise<void> {
   const token = await signSession({
@@ -19,6 +20,10 @@ export async function setSessionCookieForUser(event: H3Event, user: UserRow): Pr
   // pour que le SSR du prochain rendu corresponde aux préférences utilisateur.
   if (isSupportedLocale(user.preferredLocale)) {
     setLocaleCookie(event, user.preferredLocale)
+  }
+
+  if (isSupportedTheme(user.preferredTheme)) {
+    setThemeCookie(event, user.preferredTheme)
   }
 
   await updateLastLogin(user.id)

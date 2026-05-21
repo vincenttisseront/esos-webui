@@ -48,7 +48,7 @@ const fpShort = computed(() => {
     <div class="flex items-start justify-between">
       <div class="min-w-0">
         <div class="font-semibold truncate">{{ san.label }}</div>
-        <div v-if="san.description" class="text-xs text-gray-500 truncate">
+        <div v-if="san.description" class="text-xs text-gray-500 dark:text-gray-400 truncate">
           {{ san.description }}
         </div>
       </div>
@@ -72,7 +72,7 @@ const fpShort = computed(() => {
         </span>
         <span
           v-if="fpShort"
-          class="font-mono text-[11px] text-gray-500 truncate"
+          class="font-mono text-[11px] text-gray-500 dark:text-gray-400 truncate"
           :title="san.keyFingerprint ?? ''"
         >
           {{ fpShort }}

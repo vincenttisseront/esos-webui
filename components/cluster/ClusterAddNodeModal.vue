@@ -11,7 +11,7 @@
         @update:model-value="runPreflight"
       />
     </UFormGroup>
-    <div v-if="preflightLoading" class="text-sm text-gray-500 flex items-center gap-2">
+    <div v-if="preflightLoading" class="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
       <UIcon name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
       {{ t('cluster.add_node.preflight') }}
     </div>
@@ -19,16 +19,16 @@
       <li
         v-for="c in preflightChecks"
         :key="c.label"
-        :class="c.ok ? 'text-green-700' : 'text-red-700'"
+        :class="c.ok ? 'text-green-700' : 'text-red-700 dark:text-red-300'"
       >
         {{ c.label }} — {{ c.detail }}
       </li>
     </ul>
-    <details class="rounded border border-gray-200 px-3 py-2">
-      <summary class="cursor-pointer text-sm font-medium text-gray-700 select-none list-none">
+    <details class="rounded border border-gray-200 dark:border-gray-700 px-3 py-2">
+      <summary class="cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-300 select-none list-none">
         {{ t('cluster.sync.help_title') }}
       </summary>
-      <ul class="mt-2 text-xs text-gray-600 list-disc pl-4 space-y-0.5">
+      <ul class="mt-2 text-xs text-gray-600 dark:text-gray-400 list-disc pl-4 space-y-0.5">
         <li v-for="line in syncLines" :key="line">{{ line }}</li>
       </ul>
     </details>

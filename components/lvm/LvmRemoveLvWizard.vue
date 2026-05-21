@@ -1,6 +1,6 @@
 <template>
   <LvmWizardModalShell :title="t('lvm.remove.lv.title')" :step="step" :total-steps="2" icon="i-heroicons-trash">
-    <div v-if="loading" class="text-sm text-gray-500 py-6">{{ t('lvm.remove.preflight_loading') }}</div>
+    <div v-if="loading" class="text-sm text-gray-500 dark:text-gray-400 py-6">{{ t('lvm.remove.preflight_loading') }}</div>
     <div v-else-if="step === 1" class="space-y-4">
       <UAlert color="red" variant="soft" :title="t('lvm.remove.destructive_warning')" />
       <p class="text-sm">{{ t('lvm.remove.lv.intro', { vg: vgName, name: lvName }) }}</p>
@@ -9,7 +9,7 @@
         <div v-if="standalonePreview">{{ standalonePreview }}</div>
       </div>
       <UAlert v-if="blockers.length" color="red" variant="soft" :title="blockers.join(' · ')" />
-      <p class="font-mono text-sm font-semibold text-red-700">{{ confirmationPhrase }}</p>
+      <p class="font-mono text-sm font-semibold text-red-700 dark:text-red-300">{{ confirmationPhrase }}</p>
       <UFormGroup :label="t('lvm.confirm.label')">
         <UInput v-model="confirmation" class="font-mono" />
       </UFormGroup>

@@ -1,6 +1,6 @@
 <template>
   <div v-if="action" class="flex flex-wrap items-center gap-2 text-xs">
-    <span class="text-gray-500">{{ t('raid.stopped_md.recommended_label') }}:</span>
+    <span class="text-gray-500 dark:text-gray-400">{{ t('raid.stopped_md.recommended_label') }}:</span>
     <UBadge color="amber" variant="soft" size="xs" :label="actionLabel" />
   </div>
 </template>

@@ -16,7 +16,7 @@
         <p class="text-sm text-gray-700 dark:text-gray-300">
           {{ model.reason }}
         </p>
-        <p v-if="model.affectedNodeLabels.length" class="text-xs text-gray-500">
+        <p v-if="model.affectedNodeLabels.length" class="text-xs text-gray-500 dark:text-gray-400">
           {{ t('raid.overview.cluster_alert.nodes', { nodes: model.affectedNodeLabels.join(', ') }) }}
         </p>
       </div>

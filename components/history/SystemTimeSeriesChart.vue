@@ -1,7 +1,7 @@
 <template>
-  <div class="bg-white rounded-lg border border-gray-200 p-4">
+  <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
     <div class="flex items-center justify-between mb-4">
-      <h3 class="text-sm font-semibold text-gray-700">CPU &amp; Mémoire</h3>
+      <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">CPU &amp; Mémoire</h3>
       <TimeWindowSelector v-model="window" />
     </div>
 
@@ -29,6 +29,7 @@ import {
   Legend,
   Filler,
 } from 'chart.js'
+import { useChartTheme } from '~/utils/chart-theme'
 
 ChartJS.register(
   CategoryScale,
@@ -97,21 +98,29 @@ const chartData = computed(() => {
   }
 })
 
-const chartOptions = {
+const chartTheme = useChartTheme()
+
+const chartOptions = computed(() => ({
   responsive:          true,
   maintainAspectRatio: false,
   animation:           false,
-  plugins: { legend: { position: 'bottom' as const } },
+  plugins: {
+    legend: {
+      position: 'bottom' as const,
+      labels: { color: chartTheme.value.legend },
+    },
+  },
   scales: {
     y: {
       min: 0,
       max: 100,
-      ticks: { callback: (v: number) => `${v}%` },
+      ticks: { callback: (v: number) => `${v}%`, color: chartTheme.value.tick },
+      grid: { color: chartTheme.value.grid },
     },
     x: {
-      ticks: { maxTicksLimit: 8, font: { size: 10 } },
+      ticks: { maxTicksLimit: 8, font: { size: 10 }, color: chartTheme.value.tick },
       grid: { display: false },
     },
   },
-}
+}))
 </script>

@@ -63,8 +63,8 @@ async function save() {
   <div class="p-6 space-y-6 max-w-2xl mx-auto">
     <header class="flex items-start justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Seuils d’alerte</h1>
-        <p class="text-sm text-gray-500 mt-1">
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Seuils d’alerte</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
           Volumes, sessions SCST (strict / multipathing) et ports FC — paramètres globaux WebUI.
         </p>
       </div>
@@ -77,8 +77,8 @@ async function save() {
       Chargement…
     </div>
 
-    <div v-else class="space-y-6 bg-white rounded-xl border border-gray-200 p-6">
-      <h2 class="text-sm font-semibold text-gray-700">Volumes</h2>
+    <div v-else class="space-y-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+      <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Volumes</h2>
       <UFormGroup label="Seuil avertissement (%)" description="Entre 1 et 99, strictement inférieur au critique.">
         <UInput v-model.number="form.volumeWarnPct" type="number" min="1" max="99" />
       </UFormGroup>
@@ -86,12 +86,12 @@ async function save() {
         <UInput v-model.number="form.volumeCriticalPct" type="number" min="1" max="100" />
       </UFormGroup>
 
-      <hr class="border-gray-100">
+      <hr class="border-gray-100 dark:border-gray-800">
 
-      <h2 class="text-sm font-semibold text-gray-700">Sessions SCST</h2>
+      <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Sessions SCST</h2>
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-sm font-medium text-gray-700">Alertes session</p>
+          <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Alertes session</p>
           <p class="text-xs text-gray-400">Désactive la détection « session perdue / insuffisante » (les targets désactivées restent signalées).</p>
         </div>
         <UToggle v-model="form.sessionEnabled" />
@@ -121,12 +121,12 @@ async function save() {
         <UInput v-model.number="form.sessionMinActive" type="number" min="1" max="4096" />
       </UFormGroup>
 
-      <hr class="border-gray-100">
+      <hr class="border-gray-100 dark:border-gray-800">
 
-      <h2 class="text-sm font-semibold text-gray-700">Ports FC</h2>
+      <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Ports FC</h2>
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-sm font-medium text-gray-700">Alertes port FC hors ligne</p>
+          <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Alertes port FC hors ligne</p>
           <p class="text-xs text-gray-400">Désactiver limite les faux positifs si l’état FC n’est pas pertinent.</p>
         </div>
         <UToggle v-model="form.fcPortEnabled" />

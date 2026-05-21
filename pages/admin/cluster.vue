@@ -12,8 +12,8 @@
           color="gray"
         />
         <div>
-          <h1 class="text-2xl font-bold text-gray-900">{{ t('cluster.admin_page.title') }}</h1>
-          <p class="text-sm text-gray-500 mt-1">
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ t('cluster.admin_page.title') }}</h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
             {{ t('cluster.admin_page.subtitle') }}
           </p>
         </div>
@@ -97,7 +97,7 @@
                   <span
                     v-for="n in group.nodes"
                     :key="n.id"
-                    class="font-mono text-xs text-gray-500"
+                    class="font-mono text-xs text-gray-500 dark:text-gray-400"
                   >{{ n.host }}</span>
                 </div>
               </td>
@@ -227,7 +227,7 @@
 
               <!-- Action reconfigure -->
               <div class="pt-2 border-t border-gray-100 dark:border-gray-700">
-                <p class="text-xs text-gray-500 mb-3">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
                   {{ t('cluster.admin_page.running_warning') }}
                 </p>
                 <UButton
@@ -263,7 +263,7 @@
         </template>
 
         <!-- Erreur -->
-        <div v-else-if="cluster.error" class="rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+        <div v-else-if="cluster.error" class="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 px-5 py-4 text-sm text-red-700 dark:text-red-300">
           <p class="font-semibold">{{ t('cluster.admin_page.load_error_title') }}</p>
           <p class="mt-1">{{ cluster.error }}</p>
           <UButton

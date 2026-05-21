@@ -48,10 +48,10 @@ function shortWwn(wwn: string): string {
           class="bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700"
         >
           <tr>
-            <th class="text-left px-4 py-2 text-gray-500 font-medium">
+            <th class="text-left px-4 py-2 text-gray-500 dark:text-gray-400 font-medium">
               Initiateur (WWN)
             </th>
-            <th class="text-center px-3 py-2 text-gray-500 font-medium">
+            <th class="text-center px-3 py-2 text-gray-500 dark:text-gray-400 font-medium">
               LUNs
             </th>
             <th class="text-right px-3 py-2 text-blue-600 font-medium">
@@ -66,7 +66,7 @@ function shortWwn(wwn: string): string {
             <th class="text-right px-3 py-2 text-orange-500 font-medium">
               Write /s
             </th>
-            <th class="px-4 py-2 text-gray-500 font-medium">
+            <th class="px-4 py-2 text-gray-500 dark:text-gray-400 font-medium">
               Activité (2min)
             </th>
           </tr>

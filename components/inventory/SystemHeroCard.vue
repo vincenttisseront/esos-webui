@@ -1,22 +1,22 @@
 <template>
-  <div class="bg-white rounded-xl border border-gray-200 px-6 py-5">
+  <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 px-6 py-5">
     <div class="flex items-start justify-between gap-4">
       <div class="flex items-start gap-5">
         <!-- Server icon -->
-        <div class="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center shrink-0">
-          <UIcon name="i-heroicons-server" class="w-8 h-8 text-gray-500" />
+        <div class="w-14 h-14 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center shrink-0">
+          <UIcon name="i-heroicons-server" class="w-8 h-8 text-gray-500 dark:text-gray-400" />
         </div>
 
         <div>
-          <h1 class="text-xl font-bold text-gray-900 leading-tight">
+          <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100 leading-tight">
             {{ inv.system.manufacturer }} {{ inv.system.productName }}
           </h1>
           <p class="text-sm text-blue-600 font-mono mt-0.5">{{ inv.hostname }}</p>
 
-          <div class="flex flex-wrap gap-x-5 gap-y-1.5 mt-3 text-xs text-gray-500">
+          <div class="flex flex-wrap gap-x-5 gap-y-1.5 mt-3 text-xs text-gray-500 dark:text-gray-400">
             <span class="flex items-center gap-1">
               <UIcon name="i-heroicons-tag" class="w-3.5 h-3.5 shrink-0" />
-              S/N&nbsp;:&nbsp;<span class="font-mono text-gray-700">{{ inv.system.serialNumber }}</span>
+              S/N&nbsp;:&nbsp;<span class="font-mono text-gray-700 dark:text-gray-300">{{ inv.system.serialNumber }}</span>
             </span>
             <span class="flex items-center gap-1">
               <UIcon name="i-heroicons-cpu-chip" class="w-3.5 h-3.5 shrink-0" />
@@ -41,7 +41,7 @@
       <!-- Load avg + refresh -->
       <div class="text-right shrink-0">
         <div class="text-[10px] uppercase tracking-wide text-gray-400 mb-0.5">Load avg</div>
-        <div class="font-mono text-sm font-semibold text-gray-700">
+        <div class="font-mono text-sm font-semibold text-gray-700 dark:text-gray-300">
           {{ inv.loadAvg[0].toFixed(2) }} / {{ inv.loadAvg[1].toFixed(2) }} / {{ inv.loadAvg[2].toFixed(2) }}
         </div>
         <UButton

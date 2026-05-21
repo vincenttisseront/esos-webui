@@ -55,3 +55,34 @@
   --modal-max-lg:   720px;
   --modal-max-xl:   900px;
 }
+
+/* ── Mode sombre (classe .dark sur <html> via @nuxtjs/color-mode) ── */
+.dark {
+  --color-brand-50:   #1e3a5f;
+  --color-brand-100:  #1e40af;
+  --color-brand-500:  #60a5fa;
+  --color-brand-600:  #3b82f6;
+  --color-brand-700:  #2563eb;
+
+  --color-success:    #34d399;
+  --color-warning:    #fbbf24;
+  --color-danger:     #f87171;
+  --color-info:       #60a5fa;
+  --color-io-read:    #60a5fa;
+  --color-io-write:   #fb923c;
+
+  --color-surface:     #111827;
+  --color-surface-alt: #030712;
+  --color-border:      #374151;
+  --color-border-strong: #4b5563;
+  --color-text:        #f3f4f6;
+  --color-text-muted:  #9ca3af;
+  --color-text-faint:  #6b7280;
+
+  --shadow-sm:  0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow-md:  0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+  --shadow-lg:  0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+  --shadow-xl:  0 20px 25px -5px rgb(0 0 0 / 0.45), 0 8px 10px -6px rgb(0 0 0 / 0.35);
+
+  --modal-backdrop: rgb(0 0 0 / 0.65);
+}

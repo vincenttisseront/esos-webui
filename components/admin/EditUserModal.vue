@@ -20,7 +20,7 @@
 
       <!-- Rôle -->
       <div class="space-y-1.5">
-        <p class="text-sm font-medium text-gray-700">
+        <p class="text-sm font-medium text-gray-700 dark:text-gray-300">
           {{ t('admin.users.edit.roleLabel') }} <span class="text-red-500">*</span>
         </p>
         <div class="flex flex-wrap gap-2">

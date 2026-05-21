@@ -30,7 +30,7 @@
 
       <!-- Rôle -->
       <div>
-        <p class="text-sm font-medium text-gray-700 mb-2">{{ t('admin.users.create.roleLabel') }}</p>
+        <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ t('admin.users.create.roleLabel') }}</p>
         <div class="grid grid-cols-3 gap-2">
           <button
             v-for="opt in roleOptions"
@@ -63,9 +63,9 @@
       </UFormGroup>
 
       <!-- Forcer changement -->
-      <div class="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+      <div class="flex items-center justify-between rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-950 px-4 py-3">
         <div>
-          <p class="text-sm font-medium text-gray-700">{{ t('admin.users.create.forcePwTitle') }}</p>
+          <p class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('admin.users.create.forcePwTitle') }}</p>
           <p class="text-xs text-gray-400 mt-0.5">{{ t('admin.users.create.forcePwDesc') }}</p>
         </div>
         <UToggle v-model="form.forcePasswordChange" :disabled="saving" />

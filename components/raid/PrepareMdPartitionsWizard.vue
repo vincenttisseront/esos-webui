@@ -1,9 +1,9 @@
 <template>
-  <div class="bg-white rounded-xl shadow-modal w-full relative max-w-3xl max-h-[calc(100vh-2rem)] flex flex-col overflow-hidden outline-none" role="dialog" :aria-modal="true">
+  <div class="bg-white dark:bg-gray-900 rounded-xl shadow-modal w-full relative max-w-3xl max-h-[calc(100vh-2rem)] flex flex-col overflow-hidden outline-none" role="dialog" :aria-modal="true">
     <div class="px-5 pt-5 pb-0 shrink-0">
       <div class="flex items-center gap-2">
         <UIcon name="i-heroicons-circle-stack" class="w-5 h-5 text-amber-500" />
-        <h3 class="font-semibold text-gray-900">{{ t('raid.wizard.step_header', { current: step + 1, total: steps.length, title: t('raid.prepare_partitions.title') }) }}</h3>
+        <h3 class="font-semibold text-gray-900 dark:text-gray-100">{{ t('raid.wizard.step_header', { current: step + 1, total: steps.length, title: t('raid.prepare_partitions.title') }) }}</h3>
       </div>
       <div class="flex gap-1 mt-3">
         <div
@@ -17,7 +17,7 @@
 
     <div class="px-5 py-4 min-h-0 flex-1 overflow-y-auto overscroll-contain">
       <div v-if="step === 0" class="space-y-4">
-        <div class="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-800 space-y-1">
+        <div class="rounded-lg border border-blue-100 bg-blue-50 dark:bg-blue-950/40 px-3 py-2 text-xs text-blue-800 space-y-1">
           <p class="font-semibold">{{ t('raid.workflow.title') }}</p>
           <ol class="list-decimal pl-4 space-y-0.5">
             <li>{{ t('raid.workflow.step_prepare') }}</li>
@@ -31,14 +31,14 @@
           color="amber"
           icon="i-heroicons-exclamation-triangle"
         />
-        <p class="text-sm text-gray-600">
+        <p class="text-sm text-gray-600 dark:text-gray-400">
           {{ t('raid.prepare_partitions.physical_disk_selection_help') }}
         </p>
         <div class="space-y-1 max-h-72 overflow-y-auto">
           <label
             v-for="disk in eligibleDisks"
             :key="disk.path"
-            class="flex items-start gap-3 px-3 py-2 rounded hover:bg-gray-50 cursor-pointer"
+            class="flex items-start gap-3 px-3 py-2 rounded hover:bg-gray-50 dark:bg-gray-950 cursor-pointer"
           >
             <input
               v-model="form.disks"
@@ -48,11 +48,11 @@
             />
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
-                <span class="font-mono text-sm text-gray-800">{{ disk.path }}</span>
-                <span class="text-xs text-gray-500">{{ formatSize(disk.sizeBytes) }}</span>
-                <span v-if="disk.model" class="text-xs text-gray-500 truncate">{{ disk.model }}</span>
+                <span class="font-mono text-sm text-gray-800 dark:text-gray-200">{{ disk.path }}</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400">{{ formatSize(disk.sizeBytes) }}</span>
+                <span v-if="disk.model" class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ disk.model }}</span>
               </div>
-              <div class="text-xs text-gray-500 mt-0.5">
+              <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                 <span v-if="disk.diskSignatures?.length">{{ t('raid.wizard.signatures_label', { types: disk.diskSignatures.join(', ') }) }}</span>
                 <span v-if="disk.childrenPaths?.length"> {{ t('raid.wizard.partitions_label', { paths: disk.childrenPaths.join(', ') }) }}</span>
                 <span v-if="!disk.diskSignatures?.length && !disk.childrenPaths?.length">{{ t('raid.wizard.no_signatures') }}</span>
@@ -69,14 +69,14 @@
         <UFormGroup :label="t('raid.prepare_partitions.partition_table.label')">
           <select
             v-model="form.partitionTable"
-            class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
+            class="w-full rounded-md border border-gray-300 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
           >
             <option v-for="option in partitionTableOptions" :key="option.value" :value="option.value">
               {{ option.label }}
             </option>
           </select>
         </UFormGroup>
-        <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 space-y-1">
+        <div class="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-3 py-2 text-xs text-amber-800 dark:text-amber-300 space-y-1">
           <div class="flex items-center gap-2 font-semibold">
             <UIcon name="i-heroicons-information-circle" class="w-4 h-4 shrink-0" />
             <span>{{ t('raid.prepare_partitions.partition_table.selected') }} : {{ selectedPartitionTableOption?.label }}</span>
@@ -85,11 +85,11 @@
         </div>
         <label class="flex items-start gap-3 cursor-pointer select-none">
           <input v-model="form.allowOverwriteSignatures" type="checkbox" class="mt-0.5 accent-red-500" />
-          <span class="text-sm text-gray-600">
+          <span class="text-sm text-gray-600 dark:text-gray-400">
             {{ t('raid.prepare_partitions.allow_overwrite_label') }}
           </span>
         </label>
-        <div class="rounded border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600 space-y-1">
+        <div class="rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-950 p-3 text-xs text-gray-600 dark:text-gray-400 space-y-1">
           <p v-for="disk in selectedDisks" :key="disk.path">
             <span class="font-mono">{{ disk.path }}</span> — {{ formatSize(disk.sizeBytes) }}
             <span v-if="disk.diskSignatures?.length"> — signatures : {{ disk.diskSignatures.join(', ') }}</span>
@@ -99,12 +99,12 @@
       </div>
 
       <div v-else-if="step === 2" class="space-y-3">
-        <div v-if="preflightLoading" class="text-sm text-gray-500 flex items-center gap-2 py-4">
+        <div v-if="preflightLoading" class="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2 py-4">
           <UIcon name="i-heroicons-arrow-path" class="animate-spin w-4 h-4" />
           {{ t('raid.wizard.preflight_analyzing') }}
         </div>
         <RaidPreflightPanel v-else-if="preflightResult" :preflight="preflightResult" :on-navigate-detection="props.onNavigateDetection" />
-        <div v-if="preflightResult" class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700 space-y-1">
+        <div v-if="preflightResult" class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-950 px-3 py-2 text-xs text-gray-700 dark:text-gray-300 space-y-1">
           <p>
             <span class="font-semibold">{{ t('raid.prepare_partitions.partition_table.selected') }} :</span>
             {{ partitionTableLabel(preflightResult.partitionTableRequested ?? form.partitionTable) }}
@@ -114,32 +114,32 @@
             {{ partitionTableLabel(preflightResult.partitionTableResolved) }}
           </p>
         </div>
-        <div v-if="clusterPreflightLoading" class="text-sm text-gray-500 flex items-center gap-2 py-2">
+        <div v-if="clusterPreflightLoading" class="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2 py-2">
           <UIcon name="i-heroicons-arrow-path" class="animate-spin w-4 h-4" />
           {{ t('raid.wizard.cluster_preflight_loading') }}
         </div>
         <ClusterStoragePreflightPanel v-else-if="clusterPreflightResult" :preflight="clusterPreflightResult" :on-navigate-detection="props.onNavigateDetection" />
-        <div v-if="ambiguousMappings.length" class="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-3">
+        <div v-if="ambiguousMappings.length" class="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 p-3 space-y-3">
           <div class="space-y-1">
             <p class="text-sm font-semibold text-amber-900">{{ t('raid.prepare_partitions.mapping.title') }}</p>
-            <p class="text-xs text-amber-800">{{ t('raid.prepare_partitions.mapping.description') }}</p>
+            <p class="text-xs text-amber-800 dark:text-amber-300">{{ t('raid.prepare_partitions.mapping.description') }}</p>
           </div>
           <div
             v-for="mapping in ambiguousMappings"
             :key="mappingKey(mapping)"
-            class="rounded border border-amber-200 bg-white p-3 space-y-2"
+            class="rounded border border-amber-200 dark:border-amber-800 bg-white dark:bg-gray-900 p-3 space-y-2"
           >
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
               <div>
-                <p class="font-semibold text-gray-700">{{ t('raid.prepare_partitions.mapping.source_disk') }}</p>
-                <p class="font-mono text-gray-900">{{ mapping.sourcePath }}</p>
-                <p class="text-gray-500">{{ deviceSummary(sourceDevice(mapping.sourcePath)) }}</p>
+                <p class="font-semibold text-gray-700 dark:text-gray-300">{{ t('raid.prepare_partitions.mapping.source_disk') }}</p>
+                <p class="font-mono text-gray-900 dark:text-gray-100">{{ mapping.sourcePath }}</p>
+                <p class="text-gray-500 dark:text-gray-400">{{ deviceSummary(sourceDevice(mapping.sourcePath)) }}</p>
               </div>
               <div>
-                <p class="font-semibold text-gray-700">{{ t('raid.prepare_partitions.mapping.peer_disk') }} — {{ nodeLabel(mapping.targetSanId) }}</p>
+                <p class="font-semibold text-gray-700 dark:text-gray-300">{{ t('raid.prepare_partitions.mapping.peer_disk') }} — {{ nodeLabel(mapping.targetSanId) }}</p>
                 <select
                   v-model="manualDiskMappingSelection[mappingKey(mapping)]"
-                  class="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  class="mt-1 w-full rounded-md border border-gray-300 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
                 >
                   <option value="">{{ t('raid.prepare_partitions.mapping.select_placeholder') }}</option>
                   <option
@@ -157,7 +157,7 @@
             </div>
           </div>
           <div class="flex items-center justify-between gap-3">
-            <p v-if="!manualMappingComplete" class="text-xs text-amber-800">
+            <p v-if="!manualMappingComplete" class="text-xs text-amber-800 dark:text-amber-300">
               {{ t('raid.prepare_partitions.mapping.incomplete') }}
             </p>
             <p v-else-if="duplicateMappingKeys.size" class="text-xs text-red-600">
@@ -193,21 +193,21 @@
           icon="i-heroicons-exclamation-triangle"
         />
         <div v-if="!isClustered && preflightResult?.commandPreview" class="space-y-1">
-          <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">{{ t('raid.wizard.commands_preview') }}</p>
-          <pre class="text-xs bg-gray-50 border border-gray-200 rounded p-3 max-h-64 overflow-auto font-mono text-gray-700">{{ preflightResult.commandPreview }}</pre>
+          <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">{{ t('raid.wizard.commands_preview') }}</p>
+          <pre class="text-xs bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded p-3 max-h-64 overflow-auto font-mono text-gray-700 dark:text-gray-300">{{ preflightResult.commandPreview }}</pre>
         </div>
         <div v-if="isClustered && perNodeCommandPreviews.length" class="space-y-2">
-          <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">{{ t('raid.prepare_partitions.cluster_execution.per_node_commands') }}</p>
+          <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">{{ t('raid.prepare_partitions.cluster_execution.per_node_commands') }}</p>
           <div
             v-for="node in perNodeCommandPreviews"
             :key="node.sanId"
-            class="rounded border border-gray-200 bg-gray-50 p-3 space-y-2"
+            class="rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-950 p-3 space-y-2"
           >
             <div class="flex items-center justify-between gap-2">
-              <p class="text-sm font-semibold text-gray-800">{{ node.label }}</p>
+              <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ node.label }}</p>
               <UBadge :label="node.role ?? node.source" color="gray" variant="soft" size="xs" />
             </div>
-            <pre class="text-xs bg-white border border-gray-200 rounded p-3 max-h-48 overflow-auto font-mono text-gray-700">{{ node.commandPreview }}</pre>
+            <pre class="text-xs bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded p-3 max-h-48 overflow-auto font-mono text-gray-700 dark:text-gray-300">{{ node.commandPreview }}</pre>
           </div>
         </div>
         <UAlert
@@ -221,7 +221,7 @@
 
       <div v-else-if="step === 3" class="space-y-4">
         <RaidPreflightPanel v-if="preflightResult" :preflight="preflightResult" :on-navigate-detection="props.onNavigateDetection" />
-        <div v-if="preflightResult" class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700 space-y-1">
+        <div v-if="preflightResult" class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-950 px-3 py-2 text-xs text-gray-700 dark:text-gray-300 space-y-1">
           <p>
             <span class="font-semibold">{{ t('raid.prepare_partitions.partition_table.selected') }} :</span>
             {{ partitionTableLabel(preflightResult.partitionTableRequested ?? form.partitionTable) }}
@@ -240,42 +240,42 @@
           icon="i-heroicons-bolt"
         />
         <div v-if="!isClustered && preflightResult?.commandPreview" class="space-y-1">
-          <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">{{ t('raid.wizard.commands_preview') }}</p>
-          <pre class="text-xs bg-gray-50 border border-gray-200 rounded p-3 max-h-64 overflow-auto font-mono text-gray-700">{{ preflightResult.commandPreview }}</pre>
+          <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">{{ t('raid.wizard.commands_preview') }}</p>
+          <pre class="text-xs bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded p-3 max-h-64 overflow-auto font-mono text-gray-700 dark:text-gray-300">{{ preflightResult.commandPreview }}</pre>
         </div>
         <div v-if="isClustered && perNodeCommandPreviews.length" class="space-y-2">
-          <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">{{ t('raid.prepare_partitions.cluster_execution.per_node_commands') }}</p>
+          <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">{{ t('raid.prepare_partitions.cluster_execution.per_node_commands') }}</p>
           <div
             v-for="node in perNodeCommandPreviews"
             :key="node.sanId"
-            class="rounded border border-gray-200 bg-gray-50 p-3 space-y-2"
+            class="rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-950 p-3 space-y-2"
           >
             <div class="flex items-center justify-between gap-2">
-              <p class="text-sm font-semibold text-gray-800">{{ node.label }}</p>
+              <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ node.label }}</p>
               <UBadge :label="node.role ?? node.source" color="gray" variant="soft" size="xs" />
             </div>
-            <pre class="text-xs bg-white border border-gray-200 rounded p-3 max-h-48 overflow-auto font-mono text-gray-700">{{ node.commandPreview }}</pre>
+            <pre class="text-xs bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded p-3 max-h-48 overflow-auto font-mono text-gray-700 dark:text-gray-300">{{ node.commandPreview }}</pre>
           </div>
         </div>
         <div v-if="executionNodePlans.length" class="space-y-2">
-          <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">{{ t('raid.prepare_partitions.cluster_execution.status_title') }}</p>
+          <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">{{ t('raid.prepare_partitions.cluster_execution.status_title') }}</p>
           <div
             v-for="node in executionNodePlans"
             :key="node.sanId"
-            class="flex items-center justify-between gap-3 rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm"
+            class="flex items-center justify-between gap-3 rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-950 px-3 py-2 text-sm"
           >
             <div>
-              <p class="font-semibold text-gray-800">{{ node.label }}</p>
+              <p class="font-semibold text-gray-800 dark:text-gray-200">{{ node.label }}</p>
               <p v-if="node.error" class="text-xs text-red-600">{{ node.error }}</p>
-              <p v-else class="text-xs text-gray-500">{{ node.disks.join(', ') }}</p>
+              <p v-else class="text-xs text-gray-500 dark:text-gray-400">{{ node.disks.join(', ') }}</p>
             </div>
             <UBadge :color="nodeStatusColor(node.status)" :label="nodeStatusLabel(node.status)" variant="soft" size="xs" />
           </div>
         </div>
         <div class="space-y-2">
-          <p class="text-sm text-gray-600">
+          <p class="text-sm text-gray-600 dark:text-gray-400">
             {{ t('raid.wizard.confirm_phrase_intro') }}
-            <code class="text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded font-mono text-xs">
+            <code class="text-amber-700 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 px-1.5 py-0.5 rounded font-mono text-xs">
               {{ confirmationPhrase }}
             </code>
             pour confirmer :
@@ -284,7 +284,7 @@
         </div>
         <label class="flex items-start gap-3 cursor-pointer">
           <input v-model="understood" type="checkbox" class="mt-0.5 accent-red-500" />
-          <span class="text-sm text-gray-600">
+          <span class="text-sm text-gray-600 dark:text-gray-400">
             {{ t('raid.wizard.understood_partition_loss') }}
           </span>
         </label>
@@ -299,7 +299,7 @@
           icon="i-heroicons-check-circle"
         />
         <div v-if="result?.preparedPartitions?.length" class="space-y-1">
-          <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">{{ t('raid.prepare_partitions.expected_member_partitions') }}</p>
+          <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">{{ t('raid.prepare_partitions.expected_member_partitions') }}</p>
           <div class="flex flex-wrap gap-1">
             <UBadge
               v-for="part in result.preparedPartitions"
@@ -313,16 +313,16 @@
           </div>
         </div>
         <div v-if="result?.clusterExecution?.nodePlans?.length" class="space-y-2">
-          <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">{{ t('raid.prepare_partitions.cluster_execution.result_title') }}</p>
+          <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">{{ t('raid.prepare_partitions.cluster_execution.result_title') }}</p>
           <div
             v-for="node in result.clusterExecution.nodePlans"
             :key="node.sanId"
-            class="rounded border border-gray-200 bg-gray-50 p-3 space-y-2"
+            class="rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-950 p-3 space-y-2"
           >
             <div class="flex items-center justify-between gap-3">
               <div>
-                <p class="text-sm font-semibold text-gray-800">{{ node.label }}</p>
-                <p class="text-xs text-gray-500">{{ node.preparedPartitions.join(', ') }}</p>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ node.label }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">{{ node.preparedPartitions.join(', ') }}</p>
               </div>
               <UBadge :color="nodeStatusColor(node.status)" :label="nodeStatusLabel(node.status)" variant="soft" size="xs" />
             </div>
@@ -333,7 +333,7 @@
       </div>
     </div>
 
-    <div class="px-5 py-4 border-t border-gray-100 bg-white shrink-0 flex justify-between">
+    <div class="px-5 py-4 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shrink-0 flex justify-between">
       <UButton
         color="gray"
         variant="ghost"

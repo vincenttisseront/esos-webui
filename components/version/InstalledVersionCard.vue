@@ -1,11 +1,11 @@
 <template>
-  <div class="rounded-lg border border-gray-200 bg-white p-4 space-y-4">
+  <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 space-y-4">
     <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Version installée</p>
 
     <div class="flex items-center gap-3">
       <span
         class="font-mono text-lg font-bold"
-        :class="installed.buildType === 'master' ? 'text-purple-700' : 'text-gray-900'"
+        :class="installed.buildType === 'master' ? 'text-purple-700' : 'text-gray-900 dark:text-gray-100'"
       >
         {{ installed.raw || '—' }}
       </span>
@@ -13,7 +13,7 @@
     </div>
 
     <!-- Détail build master -->
-    <div v-if="installed.buildType === 'master'" class="space-y-1.5 text-xs text-gray-500">
+    <div v-if="installed.buildType === 'master'" class="space-y-1.5 text-xs text-gray-500 dark:text-gray-400">
       <div class="flex gap-2">
         <span class="text-gray-400 w-20">Branche</span>
         <span class="font-mono text-purple-600">{{ installed.branch }}</span>
@@ -30,7 +30,7 @@
     </div>
 
     <!-- Détail version stable -->
-    <div v-else-if="installed.buildType === 'stable'" class="text-xs text-gray-500">
+    <div v-else-if="installed.buildType === 'stable'" class="text-xs text-gray-500 dark:text-gray-400">
       <div class="flex gap-2">
         <span class="text-gray-400 w-20">Branche</span>
         <span class="font-mono">{{ installed.version?.split('.')[0] }}.x.x</span>
@@ -46,7 +46,7 @@
           :key="opt.flag"
           :text="opt.description"
         >
-          <span class="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-mono cursor-default">
+          <span class="inline-flex items-center gap-1 text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded font-mono cursor-default">
             <span class="font-bold">{{ opt.flag }}</span>
           </span>
         </UTooltip>

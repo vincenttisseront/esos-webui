@@ -6,10 +6,10 @@
     <table class="w-full text-sm">
       <thead class="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
         <tr>
-          <th class="px-4 py-3 text-left font-medium text-gray-500">{{ t('storage.sessions.table.headers.initiator') }}</th>
-          <th class="px-4 py-3 text-left font-medium text-gray-500">{{ t('storage.sessions.table.headers.ip') }}</th>
-          <th v-if="!hideTarget" class="px-4 py-3 text-left font-medium text-gray-500">{{ t('storage.sessions.table.headers.target') }}</th>
-          <th class="px-4 py-3 text-left font-medium text-gray-500">{{ t('storage.sessions.table.headers.sid') }}</th>
+          <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">{{ t('storage.sessions.table.headers.initiator') }}</th>
+          <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">{{ t('storage.sessions.table.headers.ip') }}</th>
+          <th v-if="!hideTarget" class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">{{ t('storage.sessions.table.headers.target') }}</th>
+          <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">{{ t('storage.sessions.table.headers.sid') }}</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-100 dark:divide-gray-800">

@@ -61,6 +61,23 @@
   margin-bottom:  12px;
 }
 
+/* ── Blocs commande / pre (RAID, LVM, SCST) ─────────────────── */
+.esos-command-pre {
+  font-family:    var(--font-mono);
+  font-size:      var(--text-xs);
+  border-radius:  var(--radius-md);
+  padding:        0.75rem 1rem;
+  overflow-x:     auto;
+  background-color: #f3f4f6;
+  color:          #111827;
+  border:         1px solid var(--color-border);
+}
+.dark .esos-command-pre {
+  background-color: #030712;
+  color:          #e5e7eb;
+  border-color:   var(--color-border);
+}
+
 /* ── Card de base ───────────────────────────────────────────── */
 .esos-card {
   background-color: var(--color-surface);

@@ -1,12 +1,12 @@
 <template>
-  <div class="rounded-lg border border-gray-200 bg-white overflow-hidden">
-    <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-      <h3 class="text-sm font-semibold text-gray-700">Historique des versions ESOS</h3>
+  <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
+    <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+      <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Historique des versions ESOS</h3>
       <span class="text-xs text-gray-400">{{ tags.length }} versions disponibles</span>
     </div>
 
     <table class="w-full text-sm">
-      <thead class="bg-gray-50 text-left text-xs text-gray-400 uppercase tracking-wider border-b border-gray-100">
+      <thead class="bg-gray-50 dark:bg-gray-950 text-left text-xs text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-800">
         <tr>
           <th class="px-4 py-2">Version</th>
           <th class="px-4 py-2">SHA</th>
@@ -16,10 +16,10 @@
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-100">
-        <tr v-for="(tag, i) in tags" :key="tag.name" class="hover:bg-gray-50 transition-colors">
+        <tr v-for="(tag, i) in tags" :key="tag.name" class="hover:bg-gray-50 dark:bg-gray-950 transition-colors">
           <td class="px-4 py-2.5">
             <div class="flex items-center gap-2">
-              <span class="font-mono font-semibold text-gray-800">{{ tag.name }}</span>
+              <span class="font-mono font-semibold text-gray-800 dark:text-gray-200">{{ tag.name }}</span>
               <UBadge v-if="i === 0" color="green" size="xs" variant="subtle">latest</UBadge>
               <UBadge
                 v-if="installedVersion && tag.name === installedVersion"
@@ -43,7 +43,7 @@
             {{ tag.publishedAt ? formatDate(tag.publishedAt) : '—' }}
           </td>
           <td class="px-4 py-2.5">
-            <span class="font-mono text-xs text-gray-500">{{ tag.name.split('.')[0] }}.x.x</span>
+            <span class="font-mono text-xs text-gray-500 dark:text-gray-400">{{ tag.name.split('.')[0] }}.x.x</span>
           </td>
           <td class="px-4 py-2.5 text-right">
             <div class="flex items-center justify-end gap-1">
@@ -52,7 +52,7 @@
                   :href="tag.zipUrl"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="p-1 text-gray-400 hover:text-blue-500 rounded hover:bg-gray-100 transition-colors"
+                  class="p-1 text-gray-400 hover:text-blue-500 rounded hover:bg-gray-100 dark:bg-gray-800 transition-colors"
                 >
                   <UIcon name="i-heroicons-arrow-down-tray" class="w-4 h-4" />
                 </a>
@@ -62,7 +62,7 @@
                   :href="`https://github.com/quantum/esos/releases/tag/${tag.name}`"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="p-1 text-gray-400 hover:text-gray-700 rounded hover:bg-gray-100 transition-colors"
+                  class="p-1 text-gray-400 hover:text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:bg-gray-800 transition-colors"
                 >
                   <UIcon name="i-heroicons-code-bracket-square" class="w-4 h-4" />
                 </a>

@@ -5,7 +5,7 @@
       <!-- Vider le cache -->
       <div class="flex items-center justify-between py-2">
         <div>
-          <p class="text-sm font-medium text-gray-700">Vider le cache applicatif</p>
+          <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Vider le cache applicatif</p>
           <p class="text-xs text-gray-400">
             Force le rechargement de scst.conf et du sysfs au prochain appel API
           </p>
@@ -26,7 +26,7 @@
       <!-- Purger les métriques -->
       <div class="flex items-center justify-between py-2">
         <div>
-          <p class="text-sm font-medium text-gray-700">Purger toutes les métriques</p>
+          <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Purger toutes les métriques</p>
           <p class="text-xs text-gray-400">
             Supprime l'intégralité de l'historique I/O et système.
             <strong class="text-red-600">Action irréversible.</strong>

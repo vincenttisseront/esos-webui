@@ -27,7 +27,7 @@
             <USelect v-model="sizeUnit" :options="sizeUnitOptions" />
           </UFormGroup>
         </div>
-        <p v-if="selectedMount" class="text-xs text-gray-500">
+        <p v-if="selectedMount" class="text-xs text-gray-500 dark:text-gray-400">
           {{ t('storage.fs.wizard.create_vdisk.free_hint', { free: formatFsBytes(selectedMount.freeBytes) }) }}
         </p>
         <UFormGroup :label="t('storage.fs.wizard.create_vdisk.alloc')">

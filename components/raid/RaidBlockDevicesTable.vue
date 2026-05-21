@@ -21,8 +21,8 @@
           :class="{ 'opacity-50': !dev.eligibleForMd && !dev.eligibleForHardwareRaid }"
         >
           <td class="py-1.5 pr-3 font-mono">{{ dev.path }}</td>
-          <td class="py-1.5 pr-3 uppercase text-[10px] text-gray-500">{{ dev.type }}</td>
-          <td class="py-1.5 pr-3 text-[10px] text-gray-500">
+          <td class="py-1.5 pr-3 uppercase text-[10px] text-gray-500 dark:text-gray-400">{{ dev.type }}</td>
+          <td class="py-1.5 pr-3 text-[10px] text-gray-500 dark:text-gray-400">
             {{ dev.partitionTypeName ?? dev.partitionTypeCode ?? '—' }}
           </td>
           <td class="py-1.5 pr-3 tabular-nums">{{ formatSize(dev.sizeBytes) }}</td>
@@ -39,7 +39,7 @@
               <span v-if="!dev.usedBy.length" class="text-gray-400">—</span>
             </div>
           </td>
-          <td class="py-1.5 pr-3 font-mono text-gray-500 text-[10px]">{{ dev.mountpoint ?? '—' }}</td>
+          <td class="py-1.5 pr-3 font-mono text-gray-500 dark:text-gray-400 text-[10px]">{{ dev.mountpoint ?? '—' }}</td>
           <td class="py-1.5 pr-3">
             <div class="flex items-center gap-2">
               <UIcon
@@ -47,7 +47,7 @@
                 :class="dev.eligibleForMd ? 'text-green-500' : 'text-gray-400 dark:text-gray-600'"
                 class="w-4 h-4 shrink-0"
               />
-              <span v-if="!dev.eligibleForMd && dev.mdEligibilityReasons?.length" class="text-[10px] text-gray-500">
+              <span v-if="!dev.eligibleForMd && dev.mdEligibilityReasons?.length" class="text-[10px] text-gray-500 dark:text-gray-400">
                 {{ dev.mdEligibilityReasons.join(', ') }}
               </span>
             </div>
@@ -59,7 +59,7 @@
                 :class="dev.eligibleForMdPartitionPrep ? 'text-green-500' : 'text-gray-400 dark:text-gray-600'"
                 class="w-4 h-4 shrink-0"
               />
-              <span v-if="!dev.eligibleForMdPartitionPrep && dev.mdPartitionPrepReasons?.length" class="text-[10px] text-gray-500">
+              <span v-if="!dev.eligibleForMdPartitionPrep && dev.mdPartitionPrepReasons?.length" class="text-[10px] text-gray-500 dark:text-gray-400">
                 {{ dev.mdPartitionPrepReasons.join(', ') }}
               </span>
             </div>

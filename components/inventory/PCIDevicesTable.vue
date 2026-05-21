@@ -1,6 +1,6 @@
 <template>
   <div v-if="devices.length">
-    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Périphériques PCI notables</h3>
+    <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Périphériques PCI notables</h3>
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead class="border-b border-gray-100 dark:border-gray-800">
@@ -17,7 +17,7 @@
             :key="d.slot"
             class="hover:bg-gray-50 dark:hover:bg-gray-800/30"
           >
-            <td class="py-2 pr-4 font-mono text-xs text-gray-500">{{ d.slot }}</td>
+            <td class="py-2 pr-4 font-mono text-xs text-gray-500 dark:text-gray-400">{{ d.slot }}</td>
             <td class="py-2 pr-4 text-xs">{{ d.vendor }}</td>
             <td class="py-2 pr-4 text-xs">{{ d.device }}</td>
             <td class="py-2 text-xs text-gray-400">{{ d.class }}</td>

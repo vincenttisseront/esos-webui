@@ -5,7 +5,7 @@
       <!-- Retour -->
       <NuxtLink
         to="/"
-        class="flex items-center gap-1 text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 border border-gray-300 transition shrink-0"
+        class="flex items-center gap-1 text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 text-gray-600 dark:text-gray-400 border border-gray-300 transition shrink-0"
       >
         {{ t('topology.toolbar.back') }}
       </NuxtLink>
@@ -46,7 +46,7 @@
       </div>
 
       <button
-        class="ml-auto text-xs px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition shrink-0"
+        class="ml-auto text-xs px-2 py-1 rounded bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 text-blue-700 border border-blue-200 transition shrink-0"
         :disabled="loading"
         @click="refresh"
       >

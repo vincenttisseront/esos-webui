@@ -15,7 +15,7 @@
             label="Lecture seule limitée"
           />
         </div>
-        <div class="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-gray-500">
+        <div class="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-gray-500 dark:text-gray-400">
           <span v-if="controller.pciAddress">PCI : {{ controller.pciAddress }}</span>
           <span v-if="controller.driver">Driver : {{ controller.driver }}</span>
           <span v-if="controller.serial">S/N : {{ controller.serial }}</span>
@@ -49,7 +49,7 @@
 
     <!-- Mode contrôleur -->
     <div class="flex items-center gap-2 flex-wrap text-sm">
-      <span class="text-gray-500 text-xs">Mode contrôleur :</span>
+      <span class="text-gray-500 dark:text-gray-400 text-xs">Mode contrôleur :</span>
       <UBadge
         :color="modeColor"
         variant="soft"
@@ -112,7 +112,7 @@
       />
     </div>
 
-    <div v-if="!controller.physicalDrives.length && !controller.logicalDrives.length" class="text-sm text-gray-500 italic">
+    <div v-if="!controller.physicalDrives.length && !controller.logicalDrives.length" class="text-sm text-gray-500 dark:text-gray-400 italic">
       {{ controller.managementMode === 'read_only_limited'
         ? 'Aucun volume exposé par le kernel (lsscsi). Vérifiez que les volumes RAID sont configurés via le BIOS du contrôleur, puis redémarrez ESOS.'
         : 'Aucun disque ou volume détecté' }}

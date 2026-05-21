@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">IPMI / Capteurs</h3>
+    <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">IPMI / Capteurs</h3>
 
     <div v-if="!ipmi.available" class="text-sm text-gray-400 italic">
       IPMI non disponible sur ce système

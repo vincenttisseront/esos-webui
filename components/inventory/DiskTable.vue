@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Block Devices</h3>
+    <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Block Devices</h3>
 
     <p v-if="!disks.length" class="text-sm text-gray-400 italic">Aucun block device détecté</p>
 

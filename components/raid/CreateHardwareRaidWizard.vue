@@ -1,11 +1,11 @@
 <template>
-  <div class="bg-white rounded-xl shadow-modal w-full relative max-w-2xl max-h-[calc(100vh-2rem)] flex flex-col overflow-hidden outline-none" role="dialog" :aria-modal="true">
+  <div class="bg-white dark:bg-gray-900 rounded-xl shadow-modal w-full relative max-w-2xl max-h-[calc(100vh-2rem)] flex flex-col overflow-hidden outline-none" role="dialog" :aria-modal="true">
     <!-- Header -->
     <div class="px-5 pt-5 pb-0 shrink-0">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
           <UIcon name="i-heroicons-cpu-chip" class="w-5 h-5 text-purple-500" />
-          <h3 class="font-semibold text-gray-900">Étape {{ step + 1 }}/{{ steps.length }} — Créer un volume RAID matériel</h3>
+          <h3 class="font-semibold text-gray-900 dark:text-gray-100">Étape {{ step + 1 }}/{{ steps.length }} — Créer un volume RAID matériel</h3>
         </div>
       </div>
       <div class="flex gap-1 mt-3">
@@ -30,7 +30,7 @@
             placeholder="Sélectionnez un contrôleur"
           />
         </UFormGroup>
-        <div v-if="selectedController" class="text-xs text-gray-500 bg-gray-50 rounded px-3 py-2 space-y-1">
+        <div v-if="selectedController" class="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-950 rounded px-3 py-2 space-y-1">
           <p>Vendeur : {{ selectedController.vendor }}</p>
           <p>CLI : {{ selectedController.cliTool }}</p>
           <p>Disques physiques disponibles : {{ availableDrives.length }}</p>
@@ -42,19 +42,19 @@
         <UFormGroup label="Niveau RAID" required>
           <USelect v-model="form.raidLevel" :options="hwLevelOptions" />
         </UFormGroup>
-        <p class="text-xs text-gray-500">
+        <p class="text-xs text-gray-500 dark:text-gray-400">
           Minimum {{ minDrives }} disques requis pour RAID{{ form.raidLevel }}.
         </p>
       </div>
 
       <!-- Étape 2 : Sélection disques -->
       <div v-else-if="step === 2" class="space-y-3">
-        <p class="text-sm text-gray-600">Sélectionnez les disques physiques ({{ minDrives }} min) :</p>
+        <p class="text-sm text-gray-600 dark:text-gray-400">Sélectionnez les disques physiques ({{ minDrives }} min) :</p>
         <div class="max-h-72 overflow-y-auto space-y-1">
           <label
             v-for="drive in availableDrives"
             :key="`${drive.enclosure}-${drive.slot}`"
-            class="flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-50 cursor-pointer"
+            class="flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-50 dark:bg-gray-950 cursor-pointer"
           >
             <input
               type="checkbox"
@@ -64,11 +64,11 @@
             />
             <div class="flex-1">
               <div class="flex items-center gap-2 text-sm">
-                <span class="font-mono text-gray-700">Slot {{ drive.enclosure ? `${drive.enclosure}:` : '' }}{{ drive.slot }}</span>
-                <span class="text-gray-500">{{ formatSize(drive.sizeBytes) }}</span>
-                <span class="text-gray-500 text-xs">{{ drive.mediaType }}</span>
+                <span class="font-mono text-gray-700 dark:text-gray-300">Slot {{ drive.enclosure ? `${drive.enclosure}:` : '' }}{{ drive.slot }}</span>
+                <span class="text-gray-500 dark:text-gray-400">{{ formatSize(drive.sizeBytes) }}</span>
+                <span class="text-gray-500 dark:text-gray-400 text-xs">{{ drive.mediaType }}</span>
               </div>
-              <div class="text-xs text-gray-500">{{ drive.model }}</div>
+              <div class="text-xs text-gray-500 dark:text-gray-400">{{ drive.model }}</div>
             </div>
           </label>
         </div>
@@ -95,7 +95,7 @@
 
       <!-- Étape 4 : Pré-vérification -->
       <div v-else-if="step === 4" class="space-y-3">
-        <div v-if="preflightLoading" class="py-4 flex items-center gap-2 text-sm text-gray-500">
+        <div v-if="preflightLoading" class="py-4 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
           <UIcon name="i-heroicons-arrow-path" class="animate-spin w-4 h-4" />
           Analyse en cours…
         </div>
@@ -112,23 +112,23 @@
       <div v-else-if="step === 5" class="space-y-4">
         <RaidPreflightPanel v-if="preflightResult" :preflight="preflightResult" />
         <div v-if="preflightResult?.requiredConfirmation" class="space-y-2">
-          <p class="text-sm text-gray-600">
+          <p class="text-sm text-gray-600 dark:text-gray-400">
             Saisissez exactement
-            <code class="text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded font-mono text-xs">{{ preflightResult.requiredConfirmation }}</code>
+            <code class="text-amber-700 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 px-1.5 py-0.5 rounded font-mono text-xs">{{ preflightResult.requiredConfirmation }}</code>
             :
           </p>
           <UInput v-model="form.confirmation" class="font-mono" @paste.prevent />
         </div>
         <label class="flex items-start gap-3 cursor-pointer">
           <input type="checkbox" v-model="understood" class="mt-0.5 accent-red-500" />
-          <span class="text-sm text-gray-600">Je comprends que la création d'un volume matériel efface les disques sélectionnés.</span>
+          <span class="text-sm text-gray-600 dark:text-gray-400">Je comprends que la création d'un volume matériel efface les disques sélectionnés.</span>
         </label>
         <p v-if="submitError" class="text-sm text-red-600">{{ submitError }}</p>
       </div>
     </div>
 
     <!-- Footer -->
-    <div class="px-5 py-4 border-t border-gray-100 bg-white shrink-0 flex justify-between">
+    <div class="px-5 py-4 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shrink-0 flex justify-between">
       <UButton
         color="gray"
         variant="ghost"

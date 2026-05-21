@@ -8,10 +8,10 @@
     @cancel="$emit('cancel')"
   >
     <div class="space-y-4">
-      <p class="text-ui-base text-gray-700 leading-relaxed">{{ message }}</p>
+      <p class="text-ui-base text-gray-700 dark:text-gray-300 leading-relaxed">{{ message }}</p>
 
       <div class="space-y-1.5">
-        <label class="text-ui-sm font-medium text-gray-600">
+        <label class="text-ui-sm font-medium text-gray-600 dark:text-gray-400">
           Confirmez votre mot de passe pour continuer
         </label>
         <UInput

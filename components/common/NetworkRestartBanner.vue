@@ -11,7 +11,7 @@
     <button
       v-for="entry in pendingEntries"
       :key="entry.id"
-      class="shrink-0 flex items-center gap-1 bg-white/20 hover:bg-white/30 rounded px-2 py-1 text-xs font-semibold transition"
+      class="shrink-0 flex items-center gap-1 bg-white dark:bg-gray-900/20 hover:bg-white dark:bg-gray-900/30 rounded px-2 py-1 text-xs font-semibold transition"
       :disabled="verifying[entry.id]"
       @click="verify(entry.id)"
     >
@@ -24,7 +24,7 @@
     </button>
 
     <button
-      class="shrink-0 flex items-center gap-1 bg-white/10 hover:bg-white/20 rounded px-2 py-1 text-xs transition"
+      class="shrink-0 flex items-center gap-1 bg-white dark:bg-gray-900/10 hover:bg-white dark:bg-gray-900/20 rounded px-2 py-1 text-xs transition"
       @click="dismissAll"
     >
       <UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5" />

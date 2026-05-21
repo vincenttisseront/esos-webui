@@ -12,16 +12,16 @@
         <RaidRiskBadge :risk="riskLevel" />
       </div>
 
-      <p class="text-sm text-gray-700">{{ description }}</p>
+      <p class="text-sm text-gray-700 dark:text-gray-300">{{ description }}</p>
 
-      <div v-if="preflight" class="border border-gray-200 rounded p-3 bg-gray-50">
+      <div v-if="preflight" class="border border-gray-200 dark:border-gray-700 rounded p-3 bg-gray-50 dark:bg-gray-950">
         <RaidPreflightPanel :preflight="preflight" />
       </div>
 
       <div v-if="confirmationPhrase" class="space-y-2">
-        <p class="text-sm text-gray-600">
+        <p class="text-sm text-gray-600 dark:text-gray-400">
           Saisissez exactement
-          <code class="text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded font-mono text-xs">{{ confirmationPhrase }}</code>
+          <code class="text-amber-700 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 px-1.5 py-0.5 rounded font-mono text-xs">{{ confirmationPhrase }}</code>
           pour confirmer :
         </p>
         <UInput
@@ -41,7 +41,7 @@
           :disabled="loading"
           class="mt-0.5 accent-red-500"
         />
-        <span class="text-sm text-gray-600">
+        <span class="text-sm text-gray-600 dark:text-gray-400">
           Je comprends que cette opération est irréversible et que les données peuvent être perdues.
         </span>
       </label>

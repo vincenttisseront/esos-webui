@@ -1,11 +1,11 @@
 <template>
   <section
-    class="w-full max-w-lg rounded-[24px] border border-[#D8E2EE] bg-white px-6 py-7 shadow-[0_24px_80px_rgba(15,23,42,0.12)] sm:px-8 sm:py-8"
+    class="w-full max-w-lg rounded-[24px] border border-[#D8E2EE] dark:border-gray-700 bg-white dark:bg-gray-900 px-6 py-7 shadow-[0_24px_80px_rgba(15,23,42,0.12)] dark:shadow-[0_24px_80px_rgba(0,0,0,0.35)] sm:px-8 sm:py-8"
     :aria-label="t('auth.login.card_label')"
   >
     <div
       v-if="availableModes.length > 1"
-      class="relative mb-7 rounded-full border border-slate-200 bg-slate-100 p-1"
+      class="relative mb-7 rounded-full border border-slate-200 dark:border-gray-600 bg-slate-100 dark:bg-gray-800 p-1"
       role="tablist"
       :aria-label="t('auth.login.mode_selector_label')"
       @keydown="onTablistKeydown"
@@ -55,7 +55,7 @@
     >
       <div
         v-if="error"
-        class="mb-5 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-700"
+        class="mb-5 flex items-start gap-2.5 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 px-3.5 py-3 text-sm text-red-700 dark:text-red-300"
         role="alert"
       >
         <UIcon name="i-heroicons-exclamation-circle" class="mt-0.5 h-4 w-4 shrink-0 text-red-500" />

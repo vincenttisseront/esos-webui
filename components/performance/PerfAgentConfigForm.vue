@@ -16,7 +16,7 @@
         />
         <button
           type="button"
-          class="absolute inset-y-0 right-0 px-3 text-gray-400 hover:text-gray-600"
+          class="absolute inset-y-0 right-0 px-3 text-gray-400 hover:text-gray-600 dark:text-gray-400"
           @click="showDbUri = !showDbUri"
         >
           <UIcon :name="showDbUri ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'" class="w-4 h-4" />

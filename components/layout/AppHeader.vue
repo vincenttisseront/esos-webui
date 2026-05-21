@@ -15,13 +15,13 @@
           class="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium border transition-colors shrink-0"
           :class="sanSelector.isAll.value
             ? 'bg-primary-600 text-white border-primary-600'
-            : 'bg-white text-gray-600 border-gray-300 hover:border-primary-400 hover:text-primary-600'"
+            : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-primary-400 hover:text-primary-600 dark:hover:text-primary-400'"
           @click="switchSan(ALL_SANS_ID)"
         >
           <UIcon name="i-heroicons-server-stack" class="w-3 h-3" />
           {{ t('common.all') }}
         </button>
-        <span class="h-4 w-px bg-gray-200 shrink-0" />
+        <span class="h-4 w-px bg-gray-200 dark:bg-gray-700 shrink-0" />
       </template>
 
       <!-- SANs standalone -->
@@ -31,7 +31,7 @@
         class="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition-colors shrink-0"
         :class="!sanSelector.isAll.value && sanSelector.selected.value?.id === san.id
           ? 'bg-primary-600 text-white border-primary-600'
-          : 'bg-white text-gray-600 border-gray-300 hover:border-primary-400 hover:text-primary-600'"
+          : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-primary-400 hover:text-primary-600 dark:hover:text-primary-400'"
         @click="switchSan(san.id)"
       >
         <span
@@ -48,7 +48,7 @@
 
       <!-- Séparateur si les deux groupes sont présents -->
       <template v-if="sanSelector.standaloneSans.value.length > 0 && sanSelector.clusters.value.length > 0">
-        <span class="h-4 w-px bg-gray-200 shrink-0" />
+        <span class="h-4 w-px bg-gray-200 dark:bg-gray-700 shrink-0" />
       </template>
 
       <!-- Clusters -->
@@ -58,7 +58,7 @@
         class="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition-colors shrink-0"
         :class="sanSelector.selectedCluster.value?.id === cluster.id
           ? 'bg-indigo-600 text-white border-indigo-600'
-          : 'bg-white text-gray-600 border-gray-300 hover:border-indigo-400 hover:text-indigo-600'"
+          : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400'"
         @click="switchSan(cluster.id)"
       >
         <UIcon name="i-heroicons-server-stack" class="w-3 h-3 shrink-0" />
@@ -68,7 +68,7 @@
           class="ml-0.5 text-[9px] px-1 py-0.5 rounded font-semibold uppercase tracking-wide"
           :class="sanSelector.selectedCluster.value?.id === cluster.id
             ? 'bg-indigo-500 text-indigo-100'
-            : 'bg-gray-100 text-gray-500'"
+            : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'"
         >HA</span>
       </button>
     </div>
@@ -80,7 +80,7 @@
         <NuxtLink
           v-if="sshStore.isUnconfigured"
           to="/admin"
-          class="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 underline underline-offset-2"
+          class="flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline underline-offset-2"
         >
           <span class="w-2 h-2 rounded-full bg-gray-400" />
           {{ t(sshStore.statusKey) }}
@@ -115,17 +115,17 @@
       <!-- Menu utilisateur -->
       <UDropdownMenu :items="userMenuItems" :content="{ side: 'bottom', align: 'end' }">
         <button
-          class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-gray-100 transition-colors"
+          class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           type="button"
           :aria-label="t('user_menu.open')"
         >
-          <div class="w-7 h-7 rounded-full bg-primary-100 border border-primary-200 flex items-center justify-center shrink-0">
-            <span class="text-xs font-bold text-primary-600 uppercase select-none leading-none">
+          <div class="w-7 h-7 rounded-full bg-primary-100 dark:bg-primary-950 border border-primary-200 dark:border-primary-800 flex items-center justify-center shrink-0">
+            <span class="text-xs font-bold text-primary-600 dark:text-primary-400 uppercase select-none leading-none">
               {{ authStore.user?.username?.charAt(0) ?? '?' }}
             </span>
           </div>
-          <span class="text-sm text-gray-700 font-medium hidden sm:block">{{ authStore.user?.username }}</span>
-          <UIcon name="i-heroicons-chevron-down" class="w-3.5 h-3.5 text-gray-400" />
+          <span class="text-sm text-gray-700 dark:text-gray-200 font-medium hidden sm:block">{{ authStore.user?.username }}</span>
+          <UIcon name="i-heroicons-chevron-down" class="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
         </button>
 
         <template #content-top>
@@ -146,6 +146,7 @@
 
         <template #content-bottom>
           <div class="border-t border-gray-100 dark:border-gray-800">
+            <ThemeSwitcher mode="menu" />
             <LanguageSwitcher mode="menu" />
           </div>
         </template>

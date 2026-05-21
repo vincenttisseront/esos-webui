@@ -3,19 +3,19 @@
     <p class="text-xs font-semibold text-amber-700 uppercase tracking-wide">
       {{ t('raid.create_md.peer_cleanup.section_title') }}
     </p>
-    <p class="text-xs text-amber-800">
+    <p class="text-xs text-amber-800 dark:text-amber-300">
       {{ t('raid.create_md.peer_cleanup.section_description') }}
     </p>
 
     <div
       v-for="group in groups"
       :key="group.sanId"
-      class="rounded-lg border border-amber-300 bg-amber-50/80 p-4 space-y-3"
+      class="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/40/80 p-4 space-y-3"
     >
       <div class="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p class="text-sm font-semibold text-gray-900">{{ group.label }}</p>
-          <p class="text-xs font-mono text-gray-500">{{ group.sanId }}</p>
+          <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ group.label }}</p>
+          <p class="text-xs font-mono text-gray-500 dark:text-gray-400">{{ group.sanId }}</p>
         </div>
         <UBadge
           :label="group.sshReady ? t('raid.create_md.peer_cleanup.ssh_ready') : t('raid.create_md.peer_cleanup.ssh_unavailable')"
@@ -26,10 +26,10 @@
       </div>
 
       <div>
-        <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
+        <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1">
           {{ t('raid.create_md.peer_cleanup.affected_partitions') }}
         </p>
-        <ul class="list-disc pl-5 text-sm font-mono text-gray-800 space-y-0.5">
+        <ul class="list-disc pl-5 text-sm font-mono text-gray-800 dark:text-gray-200 space-y-0.5">
           <li v-for="member in group.members" :key="member">{{ member }}</li>
         </ul>
       </div>
@@ -47,12 +47,12 @@
 
       <div
         v-else
-        class="space-y-3 rounded border border-amber-200 bg-white p-3"
+        class="space-y-3 rounded border border-amber-200 dark:border-amber-800 bg-white dark:bg-gray-900 p-3"
       >
         <p class="text-xs text-amber-900">
           {{ t('raid.create_md.peer_cleanup.risk_single_node', { label: group.label }) }}
         </p>
-        <p class="text-xs text-gray-600">
+        <p class="text-xs text-gray-600 dark:text-gray-400">
           {{ t('raid.create_md.peer_cleanup.no_sync') }}
         </p>
 
@@ -76,9 +76,9 @@
         </div>
 
         <div class="space-y-2">
-          <p class="text-sm text-gray-700">
+          <p class="text-sm text-gray-700 dark:text-gray-300">
             {{ t('raid.cluster_md.confirm_phrase_hint') }}
-            <code class="text-amber-800 bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded font-mono text-xs">{{ confirmationPhrase(group.label) }}</code>
+            <code class="text-amber-800 dark:text-amber-300 bg-amber-100 border border-amber-200 dark:border-amber-800 px-1.5 py-0.5 rounded font-mono text-xs">{{ confirmationPhrase(group.label) }}</code>
           </p>
           <UInput
             v-model="inputPhrase[group.sanId]"

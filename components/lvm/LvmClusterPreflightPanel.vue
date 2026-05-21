@@ -8,7 +8,7 @@
     <ul v-if="preflight.warnings.length" class="text-amber-600 dark:text-amber-400 space-y-0.5 list-disc pl-4">
       <li v-for="(w, i) in preflight.warnings" :key="i">{{ w }}</li>
     </ul>
-    <div v-if="preflight.mappings.length" class="text-xs text-gray-500">
+    <div v-if="preflight.mappings.length" class="text-xs text-gray-500 dark:text-gray-400">
       <p class="font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t('lvm.cluster.wizard.mappings_title') }}</p>
       <div v-for="m in preflight.mappings" :key="`${m.peerSanId}-${m.sourcePath}`" class="font-mono">
         {{ nodeLabel(m.peerSanId) }} : {{ m.sourcePath }} → {{ m.peerPath }}

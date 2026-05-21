@@ -1,5 +1,5 @@
 <template>
-  <div class="rounded-lg border border-gray-200 bg-white p-4 space-y-3">
+  <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 space-y-3">
     <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Comparaison GitHub</p>
 
     <!-- Build master -->
@@ -24,7 +24,7 @@
     <!-- À jour -->
     <div
       v-else-if="diff === 'up-to-date'"
-      class="rounded-lg bg-green-50 border border-green-200 p-3 text-sm flex items-center gap-3"
+      class="rounded-lg bg-green-50 dark:bg-green-950/40 border border-green-200 p-3 text-sm flex items-center gap-3"
     >
       <UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-green-500 shrink-0" />
       <div>
@@ -45,11 +45,11 @@
             Mise à jour <span class="uppercase">{{ diff }}</span> disponible
           </p>
           <div class="flex items-center gap-2 font-mono text-xs">
-            <span class="text-gray-500">{{ report.installed.version }}</span>
+            <span class="text-gray-500 dark:text-gray-400">{{ report.installed.version }}</span>
             <UIcon name="i-heroicons-arrow-right" class="w-3 h-3 text-gray-400" />
             <span class="font-bold" :class="versionClass">{{ report.latestStable?.name }}</span>
           </div>
-          <p v-if="report.behindCount > 1" class="text-xs text-gray-500">
+          <p v-if="report.behindCount > 1" class="text-xs text-gray-500 dark:text-gray-400">
             {{ report.behindCount }} versions en retard
           </p>
         </div>
@@ -58,7 +58,7 @@
       <div v-if="report.latestStable" class="flex flex-wrap gap-2">
         <a
           :href="report.latestStable.downloadUrl"
-          class="inline-flex items-center gap-1.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg transition-colors"
+          class="inline-flex items-center gap-1.5 text-xs bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-lg transition-colors"
         >
           <UIcon name="i-heroicons-arrow-down-tray" class="w-3.5 h-3.5" />
           Télécharger {{ report.latestStable.name }} (.zip)
@@ -67,7 +67,7 @@
           :href="`https://github.com/quantum/esos/compare/${report.installed.version}...${report.latestStable.name}`"
           target="_blank"
           rel="noopener noreferrer"
-          class="inline-flex items-center gap-1.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg transition-colors"
+          class="inline-flex items-center gap-1.5 text-xs bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-lg transition-colors"
         >
           <UIcon name="i-heroicons-code-bracket" class="w-3.5 h-3.5" />
           Voir les changements
@@ -76,7 +76,7 @@
     </div>
 
     <!-- Inconnu -->
-    <div v-else class="rounded-lg bg-gray-50 border border-gray-200 p-3 text-sm text-gray-500">
+    <div v-else class="rounded-lg bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-700 p-3 text-sm text-gray-500 dark:text-gray-400">
       Impossible de comparer la version installée avec GitHub.
     </div>
   </div>

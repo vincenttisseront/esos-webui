@@ -10,7 +10,7 @@
           <UIcon v-if="icon" :name="icon" class="w-5 h-5 text-primary-500 shrink-0" />
           <h3 class="font-semibold text-gray-900 dark:text-gray-100 truncate">{{ title }}</h3>
         </div>
-        <span v-if="totalSteps > 1" class="text-xs text-gray-500 shrink-0">
+        <span v-if="totalSteps > 1" class="text-xs text-gray-500 dark:text-gray-400 shrink-0">
           {{ t('lvm.cluster.wizard.step', { current: step, total: totalSteps }) }}
         </span>
       </div>

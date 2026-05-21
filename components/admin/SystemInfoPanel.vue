@@ -4,12 +4,12 @@
 
       <div>
         <dt class="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Version</dt>
-        <dd class="font-mono text-gray-800">{{ info.app.version }}</dd>
+        <dd class="font-mono text-gray-800 dark:text-gray-200">{{ info.app.version }}</dd>
       </div>
 
       <div>
         <dt class="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Uptime serveur</dt>
-        <dd class="text-gray-800">{{ formatUptime(info.app.nodeUptime) }}</dd>
+        <dd class="text-gray-800 dark:text-gray-200">{{ formatUptime(info.app.nodeUptime) }}</dd>
       </div>
 
       <div>
@@ -19,7 +19,7 @@
             :color="info.ssh.status === 'connected' ? 'green' : 'red'"
             size="xs"
           >{{ info.ssh.status }}</UBadge>
-          <span class="ml-2 font-mono text-xs text-gray-600">
+          <span class="ml-2 font-mono text-xs text-gray-600 dark:text-gray-400">
             {{ info.ssh.user }}@{{ info.ssh.host }}:{{ info.ssh.port }}
           </span>
         </dd>
@@ -27,7 +27,7 @@
 
       <div>
         <dt class="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Métriques</dt>
-        <dd class="text-gray-800">
+        <dd class="text-gray-800 dark:text-gray-200">
           {{ info.metrics.totalSamples.toLocaleString('fr-FR') }} samples
           <span v-if="info.metrics.oldestSampleAt" class="text-gray-400 text-xs">
             depuis {{ formatDate(info.metrics.oldestSampleAt) }}

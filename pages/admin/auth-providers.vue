@@ -331,8 +331,8 @@ async function testOidc() {
   <div v-if="authStore.user?.role === 'admin'" class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
     <header class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div class="space-y-3 min-w-0">
-        <h1 class="text-2xl font-bold text-gray-900">{{ t('admin.authProviders.page.title') }}</h1>
-        <p class="text-base text-gray-600 max-w-3xl">
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ t('admin.authProviders.page.title') }}</h1>
+        <p class="text-base text-gray-600 dark:text-gray-400 max-w-3xl">
           {{ t('admin.authProviders.page.subtitle') }}
         </p>
         <div v-if="data && summaryBadges.length" class="flex flex-wrap gap-2">
@@ -352,7 +352,7 @@ async function testOidc() {
 
     <template v-else-if="data">
       <section v-if="securityAlerts.length" class="space-y-3" aria-labelledby="auth-security-heading">
-        <h2 id="auth-security-heading" class="text-sm font-semibold text-gray-900">
+        <h2 id="auth-security-heading" class="text-sm font-semibold text-gray-900 dark:text-gray-100">
           {{ t('admin.authProviders.page.securityHeading') }}
         </h2>
         <div class="space-y-2">
@@ -371,8 +371,8 @@ async function testOidc() {
       <UCard>
         <template #header>
           <div class="space-y-1">
-            <span class="text-lg font-semibold text-gray-900">{{ t('admin.authProviders.oidc.cardTitle') }}</span>
-            <p class="text-sm text-gray-500">
+            <span class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ t('admin.authProviders.oidc.cardTitle') }}</span>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
               {{ t('admin.authProviders.oidc.cardSubtitle') }}
             </p>
           </div>
@@ -385,7 +385,7 @@ async function testOidc() {
           />
 
           <div class="space-y-6">
-            <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
               {{ t('admin.authProviders.oidc.sectionConnection') }}
             </h3>
             <UFormGroup
@@ -420,11 +420,11 @@ async function testOidc() {
                   class="w-full font-mono text-base"
                   :placeholder="t('admin.authProviders.oidc.clientSecretPlaceholder')"
                 />
-                <div class="rounded-lg border border-gray-200 bg-gray-50/80 p-4 space-y-2">
-                  <p class="text-sm font-medium text-gray-800">
+                <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-950/80 p-4 space-y-2">
+                  <p class="text-sm font-medium text-gray-800 dark:text-gray-200">
                     {{ t('admin.authProviders.oidc.secretStateTitle') }}
                   </p>
-                  <p class="text-sm text-gray-600">
+                  <p class="text-sm text-gray-600 dark:text-gray-400">
                     {{ t('admin.authProviders.oidc.secretStateDesc') }}
                   </p>
                   <div class="flex flex-wrap gap-2">
@@ -463,7 +463,7 @@ async function testOidc() {
               :label="t('admin.authProviders.oidc.callbackPreviewLabel')"
               :description="t('admin.authProviders.oidc.callbackPreviewDesc')"
             >
-              <UInput :model-value="oidcCallbackFullUrl" readonly class="w-full font-mono text-base bg-gray-50" />
+              <UInput :model-value="oidcCallbackFullUrl" readonly class="w-full font-mono text-base bg-gray-50 dark:bg-gray-950" />
             </UFormGroup>
             <UFormGroup
               :label="t('admin.authProviders.oidc.clockSkewLabel')"
@@ -480,8 +480,8 @@ async function testOidc() {
             </UFormGroup>
           </div>
 
-          <div class="space-y-6 pt-2 border-t border-gray-100">
-            <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <div class="space-y-6 pt-2 border-t border-gray-100 dark:border-gray-800">
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
               {{ t('admin.authProviders.oidc.sectionSecurity') }}
             </h3>
           <UFormGroup
@@ -505,32 +505,32 @@ async function testOidc() {
           />
           </div>
 
-          <div class="space-y-4 pt-2 border-t border-gray-100">
-            <p class="text-sm font-medium text-gray-900">{{ t('admin.authProviders.oidc.protectionsTitle') }}</p>
-            <ul class="divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white">
+          <div class="space-y-4 pt-2 border-t border-gray-100 dark:border-gray-800">
+            <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ t('admin.authProviders.oidc.protectionsTitle') }}</p>
+            <ul class="divide-y divide-gray-200 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
               <li class="flex gap-3 py-3 px-4">
                 <UIcon name="i-heroicons-shield-check" class="size-5 text-green-600 shrink-0 mt-0.5" />
                 <div>
-                  <p class="font-medium text-gray-900">{{ t('admin.authProviders.oidc.pkceTitle') }}</p>
-                  <p class="text-sm text-gray-600 mt-0.5">
+                  <p class="font-medium text-gray-900 dark:text-gray-100">{{ t('admin.authProviders.oidc.pkceTitle') }}</p>
+                  <p class="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
                     {{ t('admin.authProviders.oidc.pkceBody') }}
                   </p>
                 </div>
               </li>
               <li class="flex gap-3 py-3 px-4">
-                <UIcon name="i-heroicons-user" class="size-5 text-gray-500 shrink-0 mt-0.5" />
+                <UIcon name="i-heroicons-user" class="size-5 text-gray-500 dark:text-gray-400 shrink-0 mt-0.5" />
                 <div>
-                  <p class="font-medium text-gray-900">{{ t('admin.authProviders.oidc.correlationTitle') }}</p>
-                  <p class="text-sm text-gray-600 mt-0.5">
+                  <p class="font-medium text-gray-900 dark:text-gray-100">{{ t('admin.authProviders.oidc.correlationTitle') }}</p>
+                  <p class="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
                     {{ t('admin.authProviders.oidc.correlationBody') }}
                   </p>
                 </div>
               </li>
               <li class="flex gap-3 py-3 px-4">
-                <UIcon name="i-heroicons-map" class="size-5 text-gray-500 shrink-0 mt-0.5" />
+                <UIcon name="i-heroicons-map" class="size-5 text-gray-500 dark:text-gray-400 shrink-0 mt-0.5" />
                 <div>
-                  <p class="font-medium text-gray-900">{{ t('admin.authProviders.oidc.mappingRolesTitle') }}</p>
-                  <p class="text-sm text-gray-600 mt-0.5">
+                  <p class="font-medium text-gray-900 dark:text-gray-100">{{ t('admin.authProviders.oidc.mappingRolesTitle') }}</p>
+                  <p class="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
                     {{ t('admin.authProviders.oidc.mappingRolesBody') }}
                   </p>
                 </div>
@@ -538,11 +538,11 @@ async function testOidc() {
             </ul>
           </div>
 
-          <div class="space-y-3 pt-2 border-t border-gray-100">
-            <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <div class="space-y-3 pt-2 border-t border-gray-100 dark:border-gray-800">
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
               {{ t('admin.authProviders.oidc.testSection') }}
             </h3>
-            <p class="text-sm text-gray-600">
+            <p class="text-sm text-gray-600 dark:text-gray-400">
               {{ t('admin.authProviders.oidc.testDesc') }}
             </p>
             <UButton
@@ -563,8 +563,8 @@ async function testOidc() {
       <UCard>
         <template #header>
           <div class="space-y-1">
-            <span class="text-lg font-semibold text-gray-900">{{ t('admin.authProviders.ldap.cardTitle') }}</span>
-            <p class="text-sm text-gray-500">
+            <span class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ t('admin.authProviders.ldap.cardTitle') }}</span>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
               {{ t('admin.authProviders.ldap.cardSubtitle') }}
             </p>
           </div>
@@ -584,14 +584,14 @@ async function testOidc() {
           />
 
           <div class="space-y-6">
-            <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
               {{ t('admin.authProviders.ldap.sectionTransport') }}
             </h3>
           <UFormGroup
             :label="t('admin.authProviders.ldap.modeSummaryLabel')"
             :description="t('admin.authProviders.ldap.modeSummaryDesc')"
           >
-            <UInput :model-value="ldapModeSummary" readonly class="w-full text-base bg-gray-50" />
+            <UInput :model-value="ldapModeSummary" readonly class="w-full text-base bg-gray-50 dark:bg-gray-950" />
           </UFormGroup>
           <UFormGroup
             :label="t('admin.authProviders.ldap.urlLabel')"
@@ -617,8 +617,8 @@ async function testOidc() {
           </UFormGroup>
           </div>
 
-          <div class="space-y-6 pt-2 border-t border-gray-100">
-            <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <div class="space-y-6 pt-2 border-t border-gray-100 dark:border-gray-800">
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
               {{ t('admin.authProviders.ldap.sectionBind') }}
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
@@ -644,11 +644,11 @@ async function testOidc() {
                     class="w-full font-mono text-base"
                     :placeholder="t('admin.authProviders.ldap.bindPasswordPlaceholder')"
                   />
-                  <div class="rounded-lg border border-gray-200 bg-gray-50/80 p-4 space-y-2">
-                    <p class="text-sm font-medium text-gray-800">
+                  <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-950/80 p-4 space-y-2">
+                    <p class="text-sm font-medium text-gray-800 dark:text-gray-200">
                       {{ t('admin.authProviders.ldap.bindPwStateTitle') }}
                     </p>
-                    <p class="text-sm text-gray-600">
+                    <p class="text-sm text-gray-600 dark:text-gray-400">
                       {{ t('admin.authProviders.ldap.bindPwStateDesc') }}
                     </p>
                     <div class="flex flex-wrap gap-2">
@@ -665,8 +665,8 @@ async function testOidc() {
             </div>
           </div>
 
-          <div class="space-y-6 pt-2 border-t border-gray-100">
-            <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <div class="space-y-6 pt-2 border-t border-gray-100 dark:border-gray-800">
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
               {{ t('admin.authProviders.ldap.sectionSearch') }}
             </h3>
           <UFormGroup
@@ -739,11 +739,11 @@ async function testOidc() {
           />
           </div>
 
-          <div class="space-y-3 pt-2 border-t border-gray-100">
-            <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <div class="space-y-3 pt-2 border-t border-gray-100 dark:border-gray-800">
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
               {{ t('admin.authProviders.ldap.testSection') }}
             </h3>
-            <p class="text-sm text-gray-600">
+            <p class="text-sm text-gray-600 dark:text-gray-400">
               {{ t('admin.authProviders.ldap.testDesc') }}
             </p>
             <UButton
@@ -764,8 +764,8 @@ async function testOidc() {
       <UCard>
         <template #header>
           <div class="space-y-1">
-            <span class="text-lg font-semibold text-gray-900">{{ t('admin.authProviders.mapping.cardTitle') }}</span>
-            <p class="text-sm text-gray-500">
+            <span class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ t('admin.authProviders.mapping.cardTitle') }}</span>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
               {{ t('admin.authProviders.mapping.cardSubtitle') }}
             </p>
           </div>
@@ -814,7 +814,7 @@ async function testOidc() {
               :model-value="MAPPING_RULES_JSON_EXAMPLE"
               readonly
               :rows="6"
-              class="w-full font-mono text-xs bg-gray-50"
+              class="w-full font-mono text-xs bg-gray-50 dark:bg-gray-950"
             />
           </UFormGroup>
         </div>
@@ -824,18 +824,18 @@ async function testOidc() {
       <UCard class="lg:sticky lg:top-4 lg:z-10">
         <template #header>
           <div class="space-y-1">
-            <span class="text-lg font-semibold text-gray-900">{{ t('admin.authProviders.save.cardTitle') }}</span>
-            <p class="text-sm text-gray-500">
+            <span class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ t('admin.authProviders.save.cardTitle') }}</span>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
               {{ t('admin.authProviders.save.cardSubtitle') }}
             </p>
           </div>
         </template>
         <div class="p-6 lg:p-8 space-y-8">
           <div class="space-y-4">
-            <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
               {{ t('admin.authProviders.save.actionsSection') }}
             </h3>
-            <p class="text-sm text-gray-600">
+            <p class="text-sm text-gray-600 dark:text-gray-400">
               {{ t('admin.authProviders.save.actionsIntro') }}
             </p>
             <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-stretch">
@@ -859,11 +859,11 @@ async function testOidc() {
             </div>
           </div>
 
-          <div class="space-y-3 pt-2 border-t border-gray-100">
-            <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <div class="space-y-3 pt-2 border-t border-gray-100 dark:border-gray-800">
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
               {{ t('admin.authProviders.save.quickTestsSection') }}
             </h3>
-            <p class="text-sm text-gray-600">
+            <p class="text-sm text-gray-600 dark:text-gray-400">
               {{ t('admin.authProviders.save.quickTestsIntro') }}
             </p>
             <div class="flex flex-col sm:flex-row flex-wrap gap-3">
@@ -890,16 +890,16 @@ async function testOidc() {
             </div>
           </div>
 
-          <div class="space-y-4 pt-2 border-t border-gray-100">
-            <p class="text-sm font-medium text-gray-900">{{ t('admin.authProviders.save.resultsTitle') }}</p>
-            <div class="rounded-lg border border-gray-200 p-4 space-y-3 bg-gray-50/50">
-              <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">
+          <div class="space-y-4 pt-2 border-t border-gray-100 dark:border-gray-800">
+            <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ t('admin.authProviders.save.resultsTitle') }}</p>
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3 bg-gray-50 dark:bg-gray-950/50">
+              <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                 {{ t('admin.authProviders.save.oidcResultHeading') }}
               </p>
               <div v-if="lastOidcTest" class="space-y-2">
                 <template v-if="lastOidcTest.ok">
                   <p class="text-sm text-green-700 font-medium">{{ t('admin.authProviders.save.success') }}</p>
-                  <ul class="text-sm text-gray-700 space-y-1 font-mono">
+                  <ul class="text-sm text-gray-700 dark:text-gray-300 space-y-1 font-mono">
                     <li>
                       authorization_endpoint :
                       {{ lastOidcTest.authorizationEndpoint ? t('admin.authProviders.save.present') : t('admin.authProviders.save.absent') }}
@@ -922,10 +922,10 @@ async function testOidc() {
                   :description="lastOidcTest.error"
                 />
               </div>
-              <p v-else class="text-sm text-gray-500">{{ t('admin.authProviders.save.noOidcTest') }}</p>
+              <p v-else class="text-sm text-gray-500 dark:text-gray-400">{{ t('admin.authProviders.save.noOidcTest') }}</p>
             </div>
-            <div class="rounded-lg border border-gray-200 p-4 space-y-3 bg-gray-50/50">
-              <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3 bg-gray-50 dark:bg-gray-950/50">
+              <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                 {{ t('admin.authProviders.save.ldapResultHeading') }}
               </p>
               <div v-if="lastLdapTest">
@@ -940,7 +940,7 @@ async function testOidc() {
                   :description="lastLdapTest.error"
                 />
               </div>
-              <p v-else class="text-sm text-gray-500">{{ t('admin.authProviders.save.noLdapTest') }}</p>
+              <p v-else class="text-sm text-gray-500 dark:text-gray-400">{{ t('admin.authProviders.save.noLdapTest') }}</p>
             </div>
           </div>
         </div>

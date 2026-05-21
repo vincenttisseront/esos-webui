@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Processeur</h3>
+    <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Processeur</h3>
     <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
       <StatItem label="Modèle"         :value="cpu.modelName"                         wide />
       <StatItem label="Architecture"   :value="cpu.architecture" />

@@ -33,13 +33,13 @@ const disks = computed(() =>
       <table class="w-full text-xs">
         <thead class="bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700">
           <tr>
-            <th class="text-left px-4 py-2 text-gray-500 font-medium">Disque</th>
+            <th class="text-left px-4 py-2 text-gray-500 dark:text-gray-400 font-medium">Disque</th>
             <th class="text-right px-3 py-2 text-blue-600 font-medium">Read /s</th>
             <th class="text-right px-3 py-2 text-orange-500 font-medium">Write /s</th>
-            <th class="text-right px-3 py-2 text-gray-500 font-medium">IOPS R</th>
-            <th class="text-right px-3 py-2 text-gray-500 font-medium">IOPS W</th>
-            <th class="text-right px-3 py-2 text-gray-500 font-medium">I/Os en cours</th>
-            <th class="px-4 py-2 text-gray-500 font-medium">Activité (2min)</th>
+            <th class="text-right px-3 py-2 text-gray-500 dark:text-gray-400 font-medium">IOPS R</th>
+            <th class="text-right px-3 py-2 text-gray-500 dark:text-gray-400 font-medium">IOPS W</th>
+            <th class="text-right px-3 py-2 text-gray-500 dark:text-gray-400 font-medium">I/Os en cours</th>
+            <th class="px-4 py-2 text-gray-500 dark:text-gray-400 font-medium">Activité (2min)</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
@@ -67,10 +67,10 @@ const disks = computed(() =>
                 {{ disk.writeKbPerSec > 0 ? formatKbps(disk.writeKbPerSec) : '—' }}
               </span>
             </td>
-            <td class="px-3 py-2.5 text-right font-mono text-gray-500">
+            <td class="px-3 py-2.5 text-right font-mono text-gray-500 dark:text-gray-400">
               {{ disk.readOpsPerSec > 0 ? disk.readOpsPerSec + '/s' : '—' }}
             </td>
-            <td class="px-3 py-2.5 text-right font-mono text-gray-500">
+            <td class="px-3 py-2.5 text-right font-mono text-gray-500 dark:text-gray-400">
               {{ disk.writeOpsPerSec > 0 ? disk.writeOpsPerSec + '/s' : '—' }}
             </td>
             <td class="px-3 py-2.5 text-right">

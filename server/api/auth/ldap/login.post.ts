@@ -61,6 +61,7 @@ export default defineEventHandler(async (event) => {
         authSource:          user.authSource ?? 'ldap',
         forcePasswordChange: user.forcePasswordChange,
         preferredLocale:     user.preferredLocale ?? null,
+        preferredTheme:      user.preferredTheme ?? null,
       },
     }
   } catch (e) {

@@ -57,7 +57,7 @@
 
       <motion.div
         v-if="clusterLoading"
-        class="text-sm text-gray-500 flex items-center gap-2"
+        class="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2"
         :initial="{ opacity: 0 }"
         :animate="{ opacity: 1 }"
       >
@@ -91,9 +91,9 @@
             size="xs"
             variant="soft"
           />
-          <span v-if="report.uuid" class="text-xs font-mono text-gray-500">{{ t('raid.cluster_md.recovery.col_uuid') }}: {{ report.uuid }}</span>
-          <span v-if="report.arrayPath" class="text-xs font-mono text-gray-500">{{ report.arrayPath }}</span>
-          <span v-if="report.reasons[0]" class="text-xs text-gray-500">{{ report.reasons[0] }}</span>
+          <span v-if="report.uuid" class="text-xs font-mono text-gray-500 dark:text-gray-400">{{ t('raid.cluster_md.recovery.col_uuid') }}: {{ report.uuid }}</span>
+          <span v-if="report.arrayPath" class="text-xs font-mono text-gray-500 dark:text-gray-400">{{ report.arrayPath }}</span>
+          <span v-if="report.reasons[0]" class="text-xs text-gray-500 dark:text-gray-400">{{ report.reasons[0] }}</span>
         </motion.div>
       </motion.div>
 
@@ -212,9 +212,9 @@
       />
 
       <div v-if="effectiveConfirmationPhrase && !showLocalRecoveryMode" class="space-y-2">
-        <p class="text-sm text-gray-600">
+        <p class="text-sm text-gray-600 dark:text-gray-400">
           {{ t('raid.cluster_md.confirm_phrase_hint') }}
-          <code class="text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded font-mono text-xs">{{ effectiveConfirmationPhrase }}</code>
+          <code class="text-amber-700 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 px-1.5 py-0.5 rounded font-mono text-xs">{{ effectiveConfirmationPhrase }}</code>
         </p>
         <UInput
           v-model="inputPhrase"

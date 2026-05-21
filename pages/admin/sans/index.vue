@@ -3,7 +3,7 @@
     <header class="flex items-center justify-between">
       <div>
         <h1 class="text-2xl font-bold">{{ t('admin.sans.page.title') }}</h1>
-        <p class="text-sm text-gray-500">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
           {{ isViewer ? t('admin.sans.page.subtitle_viewer') : t('admin.sans.page.subtitle_admin') }}
         </p>
       </div>
@@ -48,25 +48,25 @@
           <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">{{ t('admin.sans.page.section_ssh') }}</p>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="space-y-1.5">
-              <label class="block text-sm font-medium text-gray-700">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 {{ t('admin.sans.page.host') }} <span class="text-red-500">*</span>
               </label>
-              <div class="flex rounded-md shadow-sm ring-1 ring-inset ring-gray-300 focus-within:ring-2 focus-within:ring-primary-500 bg-white overflow-hidden h-9">
-                <span class="flex items-center pl-3 pr-2 text-gray-400 border-r border-gray-200 shrink-0">
+              <div class="flex rounded-md shadow-sm ring-1 ring-inset ring-gray-300 focus-within:ring-2 focus-within:ring-primary-500 bg-white dark:bg-gray-900 overflow-hidden h-9">
+                <span class="flex items-center pl-3 pr-2 text-gray-400 border-r border-gray-200 dark:border-gray-700 shrink-0">
                   <UIcon name="i-heroicons-server" class="w-4 h-4" />
                 </span>
                 <input
                   v-model="form.host"
                   type="text"
                   placeholder="192.168.1.10"
-                  class="flex-1 min-w-0 px-3 text-sm bg-white outline-none text-gray-900 placeholder-gray-400"
+                  class="flex-1 min-w-0 px-3 text-sm bg-white dark:bg-gray-900 outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400"
                 />
-                <span class="flex items-center px-2 text-xs text-gray-400 bg-gray-50 border-l border-gray-200 font-mono select-none shrink-0">:</span>
+                <span class="flex items-center px-2 text-xs text-gray-400 bg-gray-50 dark:bg-gray-950 border-l border-gray-200 dark:border-gray-700 font-mono select-none shrink-0">:</span>
                 <input
                   v-model.number="form.port"
                   type="number"
                   placeholder="22"
-                  class="w-16 px-2 text-sm bg-gray-50 outline-none text-gray-700 font-mono text-center border-l border-gray-100"
+                  class="w-16 px-2 text-sm bg-gray-50 dark:bg-gray-950 outline-none text-gray-700 dark:text-gray-300 font-mono text-center border-l border-gray-100 dark:border-gray-800"
                 />
               </div>
             </div>
@@ -82,11 +82,11 @@
         <div>
           <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">{{ t('admin.sans.page.section_auth') }}</p>
 
-          <div class="flex rounded-lg overflow-hidden border border-gray-200 w-fit mb-4">
+          <div class="flex rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 w-fit mb-4">
             <button
               type="button"
               class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors"
-              :class="form.authType === 'key' ? 'bg-primary-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
+              :class="form.authType === 'key' ? 'bg-primary-500 text-white' : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:bg-gray-950'"
               @click="form.authType = 'key'"
             >
               <UIcon name="i-heroicons-key" class="w-4 h-4" />
@@ -94,8 +94,8 @@
             </button>
             <button
               type="button"
-              class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-l border-gray-200 transition-colors"
-              :class="form.authType === 'password' ? 'bg-primary-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
+              class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-l border-gray-200 dark:border-gray-700 transition-colors"
+              :class="form.authType === 'password' ? 'bg-primary-500 text-white' : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:bg-gray-950'"
               @click="form.authType = 'password'"
             >
               <UIcon name="i-heroicons-lock-closed" class="w-4 h-4" />
@@ -141,7 +141,7 @@
               :false-value="true"
               class="w-4 h-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500 cursor-pointer"
             />
-            <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">
+            <span class="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:text-gray-100 transition-colors">
               {{ t('admin.sans.page.allow_web_edit') }}
             </span>
           </label>
@@ -149,7 +149,7 @@
 
         <UAlert v-if="formError" color="red" variant="soft" :title="formError" />
 
-        <div class="flex justify-end gap-2 pt-1 border-t border-gray-100">
+        <div class="flex justify-end gap-2 pt-1 border-t border-gray-100 dark:border-gray-800">
           <UButton variant="ghost" color="gray" type="button" @click="resetForm">{{ t('admin.sans.page.reset') }}</UButton>
           <UButton type="submit" :loading="creating" color="primary" icon="i-heroicons-plus">{{ t('admin.sans.page.create') }}</UButton>
         </div>
@@ -177,7 +177,7 @@
       <!-- ── Clusters ── -->
       <template v-if="clusterGroups.length">
         <div class="flex items-center justify-between">
-          <h2 class="text-base font-semibold text-gray-700 flex items-center gap-2">
+          <h2 class="text-base font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
             <UIcon name="i-heroicons-server-stack" class="w-4 h-4 text-indigo-500" />
             {{ t('admin.sans.page.ha_clusters') }}
           </h2>
@@ -223,7 +223,7 @@
       <!-- ── SANs seuls ── -->
       <template v-if="standaloneSans.length || !clusterGroups.length">
         <div class="flex items-center justify-between" :class="clusterGroups.length ? 'mt-2' : ''">
-          <h2 class="text-base font-semibold text-gray-700 flex items-center gap-2">
+          <h2 class="text-base font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
             <UIcon name="i-heroicons-server" class="w-4 h-4 text-gray-400" />
             {{ t('admin.sans.page.standalone_sans') }}
           </h2>
@@ -248,7 +248,7 @@
           <div class="flex items-center gap-2 ml-2">
             <UIcon name="i-heroicons-bolt" class="w-3.5 h-3.5 text-gray-400" />
             <span class="text-xs font-mono text-gray-300 font-semibold">{{ testResult.sanLabel }}</span>
-            <span class="text-xs font-mono text-gray-500">— {{ testResult.sanHost }}</span>
+            <span class="text-xs font-mono text-gray-500 dark:text-gray-400">— {{ testResult.sanHost }}</span>
           </div>
           <UBadge
             :color="testResult.success ? 'green' : 'red'"
@@ -276,7 +276,7 @@
           :key="i"
           class="flex gap-3"
         >
-          <span class="text-gray-600 shrink-0 select-none">{{ line.ts }}</span>
+          <span class="text-gray-600 dark:text-gray-400 shrink-0 select-none">{{ line.ts }}</span>
           <span
             :class="{
               'text-gray-300': line.level === 'info',

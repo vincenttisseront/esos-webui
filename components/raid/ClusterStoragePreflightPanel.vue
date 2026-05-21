@@ -13,7 +13,7 @@
       icon="i-heroicons-exclamation-triangle"
     />
 
-    <div v-if="preflight.syncLimitations.length" class="rounded border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+    <div v-if="preflight.syncLimitations.length" class="rounded border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 p-3 text-xs text-amber-800 dark:text-amber-300">
       <p class="font-semibold mb-1">{{ t('raid.cluster_preflight.sync_limits_title') }}</p>
       <ul class="list-disc pl-4 space-y-0.5">
         <li v-for="item in preflight.syncLimitations" :key="item">{{ item }}</li>
@@ -25,7 +25,7 @@
       <div
         v-for="blocker in preflight.blockers"
         :key="blocker"
-        class="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+        class="rounded border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 px-3 py-2 text-sm text-red-700 dark:text-red-300"
       >
         {{ blocker }}
       </div>
@@ -35,7 +35,7 @@
       <div
         v-for="ref in preflight.blockerRefs"
         :key="`${ref.code}-${ref.path ?? ''}-${ref.sanId ?? ''}-${ref.message}`"
-        class="flex flex-wrap items-center justify-between gap-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+        class="flex flex-wrap items-center justify-between gap-2 rounded border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 px-3 py-2 text-sm text-red-700 dark:text-red-300"
       >
         <span class="flex-1 min-w-0">{{ ref.message }}</span>
         <UButton
@@ -55,15 +55,15 @@
       <div
         v-for="warning in preflight.warnings"
         :key="warning"
-        class="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700"
+        class="rounded border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-3 py-2 text-sm text-amber-700"
       >
         {{ warning }}
       </div>
     </div>
 
-    <div class="overflow-x-auto rounded border border-gray-200">
+    <div class="overflow-x-auto rounded border border-gray-200 dark:border-gray-700">
       <table class="w-full text-xs">
-        <thead class="bg-gray-50 text-left text-gray-500 uppercase tracking-wide">
+        <thead class="bg-gray-50 dark:bg-gray-950 text-left text-gray-500 dark:text-gray-400 uppercase tracking-wide">
           <tr>
             <th class="px-3 py-2">{{ t('raid.cluster_preflight.table_node') }}</th>
             <th class="px-3 py-2">{{ t('raid.cluster_preflight.table_role') }}</th>
@@ -73,25 +73,25 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="node in preflight.nodes" :key="node.sanId" class="border-t border-gray-100">
-            <td class="px-3 py-2 font-medium text-gray-800">{{ node.label }}</td>
-            <td class="px-3 py-2 text-gray-600">{{ node.role ?? '—' }}</td>
+          <tr v-for="node in preflight.nodes" :key="node.sanId" class="border-t border-gray-100 dark:border-gray-800">
+            <td class="px-3 py-2 font-medium text-gray-800 dark:text-gray-200">{{ node.label }}</td>
+            <td class="px-3 py-2 text-gray-600 dark:text-gray-400">{{ node.role ?? '—' }}</td>
             <td class="px-3 py-2" :class="node.sshReady ? 'text-green-600' : 'text-red-600'">
               {{ node.sshReady ? t('raid.cluster_preflight.ssh_connected') : t('raid.cluster_preflight.ssh_unavailable') }}
             </td>
-            <td class="px-3 py-2 text-gray-600">
+            <td class="px-3 py-2 text-gray-600 dark:text-gray-400">
               <span v-if="node.tools">{{ t('raid.cluster_preflight.tools_line', { mdadm: node.tools.mdadm ? 'OK' : 'KO', parted: node.tools.parted ? 'OK' : 'KO', sfdisk: node.tools.sfdisk ? 'OK' : 'KO' }) }}</span>
               <span v-else>—</span>
             </td>
-            <td class="px-3 py-2 text-gray-600">{{ node.blockDevices.length }}</td>
+            <td class="px-3 py-2 text-gray-600 dark:text-gray-400">{{ node.blockDevices.length }}</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <div v-if="preflight.mappings.length" class="overflow-x-auto rounded border border-gray-200">
+    <div v-if="preflight.mappings.length" class="overflow-x-auto rounded border border-gray-200 dark:border-gray-700">
       <table class="w-full text-xs">
-        <thead class="bg-gray-50 text-left text-gray-500 uppercase tracking-wide">
+        <thead class="bg-gray-50 dark:bg-gray-950 text-left text-gray-500 dark:text-gray-400 uppercase tracking-wide">
           <tr>
             <th class="px-3 py-2">{{ t('raid.cluster_preflight.mapping_source') }}</th>
             <th class="px-3 py-2">{{ t('raid.cluster_preflight.mapping_target_node') }}</th>
@@ -101,14 +101,14 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="mapping in preflight.mappings" :key="`${mapping.targetSanId}-${mapping.sourcePath}`" class="border-t border-gray-100">
+          <tr v-for="mapping in preflight.mappings" :key="`${mapping.targetSanId}-${mapping.sourcePath}`" class="border-t border-gray-100 dark:border-gray-800">
             <td class="px-3 py-2 font-mono">{{ mapping.sourcePath }}</td>
             <td class="px-3 py-2">{{ nodeLabel(mapping.targetSanId) }}</td>
             <td class="px-3 py-2 font-mono">{{ mapping.targetPath ?? '—' }}</td>
             <td class="px-3 py-2">
               <UBadge :color="confidenceColor(mapping.confidence)" :label="mapping.confidence" size="xs" variant="soft" />
             </td>
-            <td class="px-3 py-2 text-gray-600">
+            <td class="px-3 py-2 text-gray-600 dark:text-gray-400">
               {{ mapping.evidence.join(', ') || mapping.blockers.join(', ') || mapping.warnings.join(', ') || '—' }}
               <span v-if="mapping.candidates?.length" class="block text-amber-600">
                 {{ t('raid.cluster_preflight.mapping_manual_required', { count: mapping.candidates.length }) }}

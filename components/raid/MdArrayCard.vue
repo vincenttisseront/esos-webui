@@ -34,7 +34,7 @@
           :style="{ width: `${array.progress.percent}%` }"
         />
       </div>
-      <div class="flex justify-between text-[10px] text-gray-600 mt-1">
+      <div class="flex justify-between text-[10px] text-gray-600 dark:text-gray-400 mt-1">
         <span v-if="array.progress.speedKbps">{{ (array.progress.speedKbps / 1024).toFixed(0) }} MB/s</span>
         <span v-if="array.progress.finishEta">ETA : {{ array.progress.finishEta }}</span>
       </div>
@@ -49,7 +49,7 @@
         {{ t('raid.cockpit.array.technical_toggle') }}
       </summary>
       <div class="px-3 pb-3 pt-1 border-t border-gray-200 dark:border-gray-700 space-y-2">
-        <div class="flex flex-wrap gap-x-4 text-xs text-gray-500">
+        <div class="flex flex-wrap gap-x-4 text-xs text-gray-500 dark:text-gray-400">
           <span v-if="array.uuid">UUID : {{ array.uuid }}</span>
           <span v-if="array.metadataVersion">metadata {{ array.metadataVersion }}</span>
           <span v-if="array.detailState">état mdadm : {{ array.detailState }}</span>
@@ -74,7 +74,7 @@
           <span class="font-mono font-semibold text-gray-900 dark:text-gray-100">{{ array.path }}</span>
           <UBadge :color="stateColor" :label="array.state" size="xs" variant="soft" />
           <UBadge color="gray" :label="`RAID${array.raidLevel}`" size="xs" variant="outline" />
-          <span class="text-xs text-gray-500">{{ array.activeDevices }}/{{ array.raidDevices }} actif(s)</span>
+          <span class="text-xs text-gray-500 dark:text-gray-400">{{ array.activeDevices }}/{{ array.raidDevices }} actif(s)</span>
           <span v-if="array.failedDevices > 0" class="text-xs text-red-600 dark:text-red-400">{{ array.failedDevices }} en échec</span>
         </div>
       </div>
@@ -121,7 +121,7 @@
           :style="{ width: `${array.progress.percent}%` }"
         />
       </div>
-      <div class="flex justify-between text-[10px] text-gray-600 mt-1">
+      <div class="flex justify-between text-[10px] text-gray-600 dark:text-gray-400 mt-1">
         <span v-if="array.progress.speedKbps">{{ (array.progress.speedKbps / 1024).toFixed(0) }} MB/s</span>
         <span v-if="array.progress.finishEta">ETA : {{ array.progress.finishEta }}</span>
       </div>
@@ -132,7 +132,7 @@
     </div>
 
     <RaidArrayDetailsCollapse>
-      <div class="flex flex-wrap gap-x-4 text-xs text-gray-500">
+      <div class="flex flex-wrap gap-x-4 text-xs text-gray-500 dark:text-gray-400">
         <span v-if="array.uuid">UUID : {{ array.uuid }}</span>
         <span v-if="array.metadataVersion">metadata {{ array.metadataVersion }}</span>
         <span v-if="array.detailState">état mdadm : {{ array.detailState }}</span>

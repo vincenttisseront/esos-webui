@@ -59,7 +59,7 @@
     <p v-if="resyncLine" class="text-xs text-amber-700 dark:text-amber-300 font-mono">
       {{ resyncLine }}
     </p>
-    <p v-else-if="counts.active > 0 && counts.rebuilding === 0" class="text-xs text-gray-500">
+    <p v-else-if="counts.active > 0 && counts.rebuilding === 0" class="text-xs text-gray-500 dark:text-gray-400">
       {{ t('raid.software.summary.no_resync') }}
     </p>
   </div>

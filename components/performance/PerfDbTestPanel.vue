@@ -18,13 +18,13 @@
         <UIcon name="i-heroicons-check-circle" class="w-5 h-5 shrink-0 mt-0.5" />
         <div class="space-y-1">
           <p class="font-medium">Connexion {{ result.dbType === 'postgres' ? 'PostgreSQL' : 'MySQL' }} réussie</p>
-          <p v-if="result.latencyMs !== undefined" class="text-xs text-gray-500">
+          <p v-if="result.latencyMs !== undefined" class="text-xs text-gray-500 dark:text-gray-400">
             Latence : {{ result.latencyMs }} ms
           </p>
-          <p v-if="result.tables?.length" class="text-xs text-gray-500">
+          <p v-if="result.tables?.length" class="text-xs text-gray-500 dark:text-gray-400">
             Tables : {{ result.tables.join(', ') }}
           </p>
-          <p v-if="result.sampleCount !== undefined" class="text-xs text-gray-500">
+          <p v-if="result.sampleCount !== undefined" class="text-xs text-gray-500 dark:text-gray-400">
             {{ result.sampleCount.toLocaleString() }} samples
             <template v-if="result.oldestSampleAt && result.newestSampleAt">
               · du {{ new Date(result.oldestSampleAt).toLocaleDateString() }}

@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Interfaces réseau</h3>
+    <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Interfaces réseau</h3>
 
     <p v-if="!network.length" class="text-sm text-gray-400 italic">Aucune interface réseau détectée</p>
 

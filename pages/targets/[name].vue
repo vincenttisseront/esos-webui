@@ -49,7 +49,7 @@
       </div>
     </div>
 
-    <div v-if="pending && !target" class="text-gray-500 text-sm">
+    <div v-if="pending && !target" class="text-gray-500 dark:text-gray-400 text-sm">
       {{ t('storage.targets.detail.loading') }}
     </div>
 
@@ -164,7 +164,7 @@
           :title="t('storage.hosts.unmapped.title')"
           :count="unmappedDevices.length"
         />
-        <p class="text-xs text-gray-500 mb-2">{{ t('storage.hosts.unmapped.hint') }}</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">{{ t('storage.hosts.unmapped.hint') }}</p>
         <ul class="space-y-2 text-sm">
           <li
             v-for="dev in unmappedDevices"
@@ -172,7 +172,7 @@
             class="flex items-center justify-between gap-2 flex-wrap"
           >
             <span class="font-mono font-semibold">{{ dev.name }}</span>
-            <span class="text-gray-500 text-xs">{{ dev.handler }} — {{ dev.filename }}</span>
+            <span class="text-gray-500 dark:text-gray-400 text-xs">{{ dev.handler }} — {{ dev.filename }}</span>
             <div v-if="!isEffectiveReadOnly && target.groups.length > 0" class="flex flex-wrap gap-1">
               <UButton
                 v-for="g in target.groups"
@@ -193,7 +193,7 @@
           :title="t('storage.hosts.discovered.title')"
           :count="discoveredInitiators.length"
         />
-        <p class="text-xs text-gray-500 mb-2">{{ t('storage.hosts.discovered.hint') }}</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">{{ t('storage.hosts.discovered.hint') }}</p>
         <ul class="space-y-2">
           <li
             v-for="init in discoveredInitiators"

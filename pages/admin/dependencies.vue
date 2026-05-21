@@ -2,7 +2,7 @@
   <div class="space-y-5 max-w-6xl mx-auto p-6">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-lg font-semibold text-gray-800">{{ t('admin.dependencies.page.title') }}</h1>
+        <h1 class="text-lg font-semibold text-gray-800 dark:text-gray-200">{{ t('admin.dependencies.page.title') }}</h1>
         <p class="text-xs text-gray-400 mt-0.5">
           {{ t('admin.dependencies.page.subtitle') }}
           <span v-if="deps.report">{{ t('admin.dependencies.page.subtitleScan', { ago: deps.scannedAgo }) }}</span>
@@ -53,7 +53,7 @@
     <template v-if="deps.loading && !deps.report">
       <div class="esos-card p-8 text-center">
         <UIcon name="i-heroicons-arrow-path" class="animate-spin w-6 h-6 text-gray-400 mx-auto mb-3" />
-        <p class="text-sm text-gray-500">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
           {{ t('admin.dependencies.loading.title') }}
         </p>
         <p class="text-xs text-gray-400 mt-1">{{ t('admin.dependencies.loading.hint') }}</p>
@@ -61,7 +61,7 @@
     </template>
 
     <template v-else-if="deps.error">
-      <div class="esos-card p-6 border-red-200">
+      <div class="esos-card p-6 border-red-200 dark:border-red-800">
         <p class="text-sm text-red-600">{{ deps.error }}</p>
       </div>
     </template>
@@ -71,7 +71,7 @@
 
       <div
         v-if="deps.report.outdated === 0"
-        class="esos-card px-5 py-3 bg-green-50 border-green-200 flex items-center gap-3"
+        class="esos-card px-5 py-3 bg-green-50 dark:bg-green-950/40 border-green-200 flex items-center gap-3"
       >
         <UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-green-500 shrink-0" />
         <p class="text-sm text-green-700 font-medium">

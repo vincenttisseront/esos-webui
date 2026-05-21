@@ -8,14 +8,14 @@
     @cancel="$emit('cancel')"
   >
     <div class="space-y-4">
-      <p class="text-ui-base text-gray-700 font-medium">{{ title }}</p>
-      <p class="text-ui-sm text-gray-500 leading-relaxed">{{ message }}</p>
+      <p class="text-ui-base text-gray-700 dark:text-gray-300 font-medium">{{ title }}</p>
+      <p class="text-ui-sm text-gray-500 dark:text-gray-400 leading-relaxed">{{ message }}</p>
 
       <!-- Saisie de confirmation si inputConfirm défini -->
       <div v-if="inputConfirm" class="mt-3 space-y-2">
-        <p class="text-ui-sm text-gray-600">
+        <p class="text-ui-sm text-gray-600 dark:text-gray-400">
           {{ t('storage.common.destructiveModal.typeToConfirmBefore') }}
-          <span class="font-identifier font-semibold text-red-600 bg-red-50 px-1.5 py-0.5 rounded">{{ inputConfirm }}</span>
+          <span class="font-identifier font-semibold text-red-600 bg-red-50 dark:bg-red-950/40 px-1.5 py-0.5 rounded">{{ inputConfirm }}</span>
           {{ t('storage.common.destructiveModal.typeToConfirmAfter') }}
         </p>
         <UInput

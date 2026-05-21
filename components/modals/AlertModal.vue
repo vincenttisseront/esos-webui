@@ -7,7 +7,7 @@
     :closable="false"
     @cancel="$emit('close')"
   >
-    <p class="text-ui-base text-gray-600 leading-relaxed">{{ message }}</p>
+    <p class="text-ui-base text-gray-600 dark:text-gray-400 leading-relaxed">{{ message }}</p>
 
     <template #actions>
       <UButton

@@ -1,7 +1,7 @@
 <template>
   <div
     class="rounded-xl border px-5 py-4 flex items-center gap-4"
-    :class="clusterStatus?.healthy ? 'bg-green-50 border-green-200' : clusterStatus ? 'bg-amber-50 border-amber-200' : 'bg-indigo-50 border-indigo-200'"
+    :class="clusterStatus?.healthy ? 'bg-green-50 dark:bg-green-950/40 border-green-200' : clusterStatus ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800' : 'bg-indigo-50 border-indigo-200'"
   >
     <!-- Icône -->
     <div
@@ -18,7 +18,7 @@
     <!-- Infos cluster -->
     <div class="flex-1 min-w-0">
       <div class="flex items-center gap-2">
-        <p class="text-sm font-semibold" :class="clusterStatus?.healthy ? 'text-green-800' : 'text-gray-800'">
+        <p class="text-sm font-semibold" :class="clusterStatus?.healthy ? 'text-green-800' : 'text-gray-800 dark:text-gray-200'">
           {{ cluster.name }}
         </p>
         <span
@@ -26,7 +26,7 @@
           :class="modeClasses"
         >{{ modeLabel }}</span>
       </div>
-      <p class="text-xs mt-0.5 text-gray-500">
+      <p class="text-xs mt-0.5 text-gray-500 dark:text-gray-400">
         {{ t('dashboard.clusterBanner.nodesLine', { count: cluster.nodes.length }) }} ·
         {{ t('dashboard.clusterBanner.primaryStats') }}
         <template v-if="primaryNode"> · <span class="font-medium font-mono">{{ primaryNode.label }}</span></template>

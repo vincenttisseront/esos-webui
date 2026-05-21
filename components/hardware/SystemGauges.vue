@@ -17,7 +17,7 @@
             :style="{ width: `${props.info.cpuUsagePct}%` }"
           />
         </div>
-        <p class="text-xs text-gray-500 mt-1">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
           {{ props.info.cpuModel }} — {{ t('hardware.systemGauges.cores', { n: props.info.cpuCores }) }}
           — {{ t('hardware.systemGauges.loadPrefix') }}: {{ props.info.loadAvg.map((v) => v.toFixed(2)).join(' / ') }}
         </p>
@@ -35,7 +35,7 @@
             :style="{ width: `${props.memory.usedPct}%` }"
           />
         </div>
-        <p class="text-xs text-gray-500 mt-1">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
           {{
             t('hardware.systemGauges.ramLine', {
               used: formatKb(props.memory.usedKb),
@@ -49,11 +49,11 @@
       <!-- Uptime + Hostname -->
       <div class="flex gap-6">
         <div>
-          <p class="text-xs text-gray-500">{{ t('hardware.systemGauges.host') }}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('hardware.systemGauges.host') }}</p>
           <p class="text-sm font-mono">{{ props.info.hostname }}</p>
         </div>
         <div>
-          <p class="text-xs text-gray-500">{{ t('hardware.systemGauges.uptimeLabel') }}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('hardware.systemGauges.uptimeLabel') }}</p>
           <p class="text-sm">{{ formatUptime(props.info.uptime) }}</p>
         </div>
       </div>

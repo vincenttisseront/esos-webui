@@ -5,7 +5,7 @@
       :key="s.name"
       class="flex items-center justify-between text-xs"
     >
-      <span class="text-gray-600 truncate">{{ s.name }}</span>
+      <span class="text-gray-600 dark:text-gray-400 truncate">{{ s.name }}</span>
       <span :class="stateClass(s.state)" class="font-mono ml-2 shrink-0">
         {{ s.value }} {{ s.unit }}
       </span>

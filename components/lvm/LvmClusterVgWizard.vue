@@ -10,7 +10,7 @@
         <UFormGroup :label="t('lvm.wizard.vg_create.name')">
           <UInput v-model="vgName" placeholder="data" />
         </UFormGroup>
-        <p class="text-sm text-gray-500">{{ t('lvm.wizard.vg_create.pv_hint') }}</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400">{{ t('lvm.wizard.vg_create.pv_hint') }}</p>
         <div class="space-y-1 max-h-40 overflow-y-auto">
           <label v-for="pv in lvm.orphanPvs" :key="pv.path" class="flex items-center gap-2 text-sm cursor-pointer">
             <input v-model="selectedPvs" type="checkbox" :value="pv.path" class="accent-primary-500">
@@ -19,7 +19,7 @@
         </div>
       </template>
       <template v-else-if="step === 2">
-        <div v-if="preflightLoading" class="text-sm text-gray-500">{{ t('lvm.cluster.wizard.preflight_loading') }}</div>
+        <div v-if="preflightLoading" class="text-sm text-gray-500 dark:text-gray-400">{{ t('lvm.cluster.wizard.preflight_loading') }}</div>
         <UAlert
           v-else-if="clusterPreflightError"
           color="red"

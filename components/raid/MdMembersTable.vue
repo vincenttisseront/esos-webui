@@ -16,7 +16,7 @@
           class="border-b border-gray-100 dark:border-gray-800"
         >
           <td class="py-1.5 pr-3 font-mono">{{ member.path ?? 'removed' }}</td>
-          <td class="py-1.5 pr-3 text-gray-500">{{ member.raidDevice ?? member.role ?? '—' }}</td>
+          <td class="py-1.5 pr-3 text-gray-500 dark:text-gray-400">{{ member.raidDevice ?? member.role ?? '—' }}</td>
           <td class="py-1.5 pr-3">
             <div class="flex flex-wrap gap-1">
               <UBadge

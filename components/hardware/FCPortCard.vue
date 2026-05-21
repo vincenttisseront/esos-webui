@@ -9,7 +9,7 @@
       </div>
     </template>
 
-    <div v-if="ports.length === 0" class="text-sm text-gray-500 py-4 text-center">
+    <div v-if="ports.length === 0" class="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
       {{ t('hardware.fcPortCard.empty') }}
     </div>
 
@@ -31,7 +31,7 @@
           />
           <div>
             <p class="text-sm font-medium font-mono">{{ port.portName || port.host }}</p>
-            <p class="text-xs text-gray-500">{{ port.symbolicName || port.host }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">{{ port.symbolicName || port.host }}</p>
           </div>
         </div>
 
@@ -45,7 +45,7 @@
           >
             {{ port.portState }}
           </UBadge>
-          <p class="text-xs text-gray-500">{{ port.speed }}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">{{ port.speed }}</p>
         </div>
       </div>
     </div>

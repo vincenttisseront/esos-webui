@@ -12,6 +12,7 @@ interface AuthUser {
   forcePasswordChange: boolean
   lastLoginAt: string | null
   preferredLocale: string | null
+  preferredTheme: string | null
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -91,10 +92,21 @@ export const useAuthStore = defineStore('auth', () => {
       method: 'PATCH',
       body: { preferredLocale: locale },
     })
-    if (user.value) {
-      user.value = { ...user.value, preferredLocale: result.preferredLocale }
+    if (user.value && 'preferredLocale' in result) {
+      user.value = { ...user.value, preferredLocale: result.preferredLocale ?? null }
     }
     return result.preferredLocale
+  }
+
+  async function setPreferredTheme(theme: string | null) {
+    const result = await $fetch<{ preferredTheme: string | null }>('/api/auth/preferences', {
+      method: 'PATCH',
+      body: { preferredTheme: theme },
+    })
+    if (user.value && 'preferredTheme' in result) {
+      user.value = { ...user.value, preferredTheme: result.preferredTheme ?? null }
+    }
+    return result.preferredTheme
   }
 
   async function logout() {
@@ -130,5 +142,6 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     changePassword,
     setPreferredLocale,
+    setPreferredTheme,
   }
 })

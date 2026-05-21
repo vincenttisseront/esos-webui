@@ -1,6 +1,6 @@
 <template>
   <div
-    class="bg-white rounded-xl shadow-modal w-full relative outline-none"
+    class="bg-white dark:bg-gray-900 rounded-xl shadow-modal w-full relative outline-none"
     :class="sizeClass"
     role="dialog"
     :aria-modal="true"
@@ -22,16 +22,16 @@
           </div>
         </div>
         <div>
-          <h2 :id="labelId" class="text-base font-semibold text-gray-900 leading-tight">
+          <h2 :id="labelId" class="text-base font-semibold text-gray-900 dark:text-gray-100 leading-tight">
             {{ title }}
           </h2>
-          <p v-if="subtitle" class="text-ui-sm text-gray-500 mt-0.5">{{ subtitle }}</p>
+          <p v-if="subtitle" class="text-ui-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ subtitle }}</p>
         </div>
       </div>
       <!-- Bouton fermeture (optionnel) -->
       <button
         v-if="closable"
-        class="text-gray-400 hover:text-gray-600 transition-colors ml-4 shrink-0 -mt-1 -mr-1 p-1 rounded-lg hover:bg-gray-100"
+        class="text-gray-400 hover:text-gray-600 dark:text-gray-400 transition-colors ml-4 shrink-0 -mt-1 -mr-1 p-1 rounded-lg hover:bg-gray-100 dark:bg-gray-800"
         @click="$emit('cancel')"
         :aria-label="t('common.actions.close') as string"
       >

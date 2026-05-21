@@ -50,7 +50,7 @@
             <span class="text-gray-600 dark:text-gray-400">
               — {{ t('raid.attention.peer_items', { count: group.items.length }) }}
             </span>
-            <span v-if="group.topSummary" class="text-gray-500"> · {{ truncate(group.topSummary) }}</span>
+            <span v-if="group.topSummary" class="text-gray-500 dark:text-gray-400"> · {{ truncate(group.topSummary) }}</span>
           </div>
           <UButton
             size="xs"

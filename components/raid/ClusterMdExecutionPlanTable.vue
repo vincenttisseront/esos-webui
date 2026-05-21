@@ -27,8 +27,8 @@
           >
             <td class="px-2 py-2 align-top">
               <p class="font-semibold text-gray-800 dark:text-gray-200">{{ node.label }}</p>
-              <p v-if="node.arrayPath" class="font-mono text-gray-500">{{ node.arrayPath }}</p>
-              <p v-if="node.members.length" class="text-gray-500">
+              <p v-if="node.arrayPath" class="font-mono text-gray-500 dark:text-gray-400">{{ node.arrayPath }}</p>
+              <p v-if="node.members.length" class="text-gray-500 dark:text-gray-400">
                 {{ t('raid.cluster_md.members_label') }}: {{ node.members.join(', ') }}
               </p>
             </td>
@@ -43,7 +43,7 @@
             </td>
             <td v-if="showRecoveryColumns" class="px-2 py-2 align-top text-gray-600 dark:text-gray-400">
               <span v-if="node.participation">{{ t(`raid.cluster_md.recovery.participation.${node.participation}`) }}</span>
-              <p v-if="node.skipReason" class="text-gray-500 mt-0.5">{{ node.skipReason }}</p>
+              <p v-if="node.skipReason" class="text-gray-500 dark:text-gray-400 mt-0.5">{{ node.skipReason }}</p>
             </td>
             <td class="px-2 py-2 align-top">
               <UBadge

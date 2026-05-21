@@ -117,13 +117,13 @@
           />
         </template>
       </UTable>
-      <p v-else class="text-sm text-gray-500">{{ t('storage.fs.overview.empty_fileio') }}</p>
+      <p v-else class="text-sm text-gray-500 dark:text-gray-400">{{ t('storage.fs.overview.empty_fileio') }}</p>
     </UCard>
 
     <UCard>
       <template #header>
         <span>{{ t('storage.fs.overview.luns_title') }}</span>
-        <span v-if="lunFilterDevice" class="text-xs text-gray-500 ml-2">({{ lunFilterDevice }})</span>
+        <span v-if="lunFilterDevice" class="text-xs text-gray-500 dark:text-gray-400 ml-2">({{ lunFilterDevice }})</span>
       </template>
       <UTable v-if="displayedLuns.length" :data="displayedLuns" :columns="lunCols">
         <template #targetName-cell="{ row }">
@@ -147,7 +147,7 @@
           <UBadge v-if="row.original.readOnly" color="amber" size="xs" :label="t('storage.targets.detail.readOnlyBadge')" />
         </template>
       </UTable>
-      <p v-else class="text-sm text-gray-500">{{ t('storage.fs.overview.empty_luns') }}</p>
+      <p v-else class="text-sm text-gray-500 dark:text-gray-400">{{ t('storage.fs.overview.empty_luns') }}</p>
       <UButton v-if="lunFilterDevice" size="xs" variant="ghost" class="mt-2" @click="lunFilterDevice = null">
         {{ t('storage.fs.wizard.cancel') }}
       </UButton>
@@ -156,7 +156,7 @@
     <UCard>
       <template #header>
         <span>{{ t('storage.fs.overview.vdisks_title') }}</span>
-        <span v-if="vdiskFilterMount" class="text-xs text-gray-500 ml-2">{{ vdiskFilterMount }}</span>
+        <span v-if="vdiskFilterMount" class="text-xs text-gray-500 dark:text-gray-400 ml-2">{{ vdiskFilterMount }}</span>
       </template>
       <UTable v-if="displayedVdisks.length" :data="displayedVdisks" :columns="vdiskCols">
         <template #path-cell="{ row }">
@@ -193,7 +193,7 @@
           </div>
         </template>
       </UTable>
-      <p v-else class="text-sm text-gray-500">{{ t('storage.fs.overview.empty_vdisks') }}</p>
+      <p v-else class="text-sm text-gray-500 dark:text-gray-400">{{ t('storage.fs.overview.empty_vdisks') }}</p>
       <UButton v-if="vdiskFilterMount" size="xs" variant="ghost" class="mt-2" @click="vdiskFilterMount = null">
         {{ t('storage.fs.wizard.cancel') }}
       </UButton>
@@ -203,7 +203,7 @@
       <template #header>
         <div class="flex items-center justify-between gap-2 flex-wrap">
           <span>{{ t('storage.fs.overview.mounts_title') }}</span>
-          <label class="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+          <label class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 cursor-pointer">
             <input v-model="showSystemMounts" type="checkbox" class="accent-primary-500" />
             {{ t('storage.fs.overview.show_system_mounts') }}
           </label>
@@ -247,7 +247,7 @@
           </UButton>
         </template>
       </UTable>
-      <p v-else class="text-sm text-gray-500">{{ t('storage.fs.overview.empty_mounts') }}</p>
+      <p v-else class="text-sm text-gray-500 dark:text-gray-400">{{ t('storage.fs.overview.empty_mounts') }}</p>
     </UCard>
 
     <UCard>
@@ -281,7 +281,7 @@
           <span v-else class="text-gray-400">—</span>
         </template>
       </UTable>
-      <p v-else class="text-sm text-gray-500">{{ t('storage.fs.overview.empty_candidates') }}</p>
+      <p v-else class="text-sm text-gray-500 dark:text-gray-400">{{ t('storage.fs.overview.empty_candidates') }}</p>
 
       <details
         v-if="!eligibleCandidates.length && backends.length"

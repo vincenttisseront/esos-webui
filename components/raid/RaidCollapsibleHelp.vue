@@ -6,7 +6,7 @@
   >
     <summary class="cursor-pointer px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 select-none flex items-center justify-between gap-2 [&::-webkit-details-marker]:hidden list-none">
       <span>{{ title }}</span>
-      <span class="text-xs font-normal text-gray-500">
+      <span class="text-xs font-normal text-gray-500 dark:text-gray-400">
         {{ open ? t('raid.software.help.toggle_hide') : t('raid.software.help.toggle_show') }}
       </span>
     </summary>

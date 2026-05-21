@@ -5,7 +5,7 @@
       {{ t('cluster.node_selector.loading') }}
     </div>
 
-    <div v-else-if="error" class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+    <div v-else-if="error" class="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-600">
       {{ error }}
     </div>
 
@@ -24,7 +24,7 @@
           <div class="flex items-center justify-between gap-2">
             <div class="flex items-center gap-2">
               <UIcon name="i-heroicons-server-stack" class="w-4 h-4 text-blue-500 shrink-0" />
-              <span class="text-sm font-semibold text-gray-800">{{ cluster.name }}</span>
+              <span class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ cluster.name }}</span>
               <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-600 font-medium">
                 {{ t('cluster.node_selector.nodes_count', { count: cluster.nodes.length }) }}
               </span>
@@ -71,11 +71,11 @@
                 />
               </template>
               <UIcon v-else name="i-heroicons-lock-closed" class="w-3 h-3 text-gray-300 shrink-0" />
-              <span class="font-medium truncate flex-1" :class="removedExisting.has(node.id) ? 'text-red-400 line-through' : 'text-gray-700'">{{ node.label }}</span>
+              <span class="font-medium truncate flex-1" :class="removedExisting.has(node.id) ? 'text-red-400 line-through' : 'text-gray-700 dark:text-gray-300'">{{ node.label }}</span>
               <span class="font-mono truncate" :class="removedExisting.has(node.id) ? 'text-red-300' : 'text-gray-400'">{{ node.host }}</span>
               <span v-if="removedExisting.has(node.id)" class="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-medium shrink-0">{{ t('cluster.node_selector.removed') }}</span>
               <span v-else class="px-1.5 py-0.5 rounded font-medium shrink-0"
-                :class="node.clusterRole === 'primary' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'"
+                :class="node.clusterRole === 'primary' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'"
               >{{ node.clusterRole === 'primary' ? t('cluster.roles.primary') : t('cluster.roles.secondary') }}</span>
             </label>
           </div>
@@ -111,7 +111,7 @@
                   :checked="selected.has(san.id)"
                   @change="toggle(san.id)"
                 />
-                <span class="font-medium text-gray-700 flex-1">{{ san.label }}</span>
+                <span class="font-medium text-gray-700 dark:text-gray-300 flex-1">{{ san.label }}</span>
                 <span class="font-mono text-gray-400">{{ san.host }}</span>
               </label>
               <p v-if="freeNodes.length === 0" class="text-xs text-gray-400 italic">
@@ -127,12 +127,12 @@
           {{ existingClusters.length > 0 ? t('cluster.node_selector.create_new_cluster') : t('cluster.node_selector.available_nodes') }}
         </p>
 
-        <div v-if="targetClusterId !== null" class="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-500">
+        <div v-if="targetClusterId !== null" class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-950 p-3 text-xs text-gray-500 dark:text-gray-400">
           {{ t('cluster.node_selector.cluster_selected_hint') }}
         </div>
 
         <template v-else>
-          <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 flex items-start gap-2">
+          <div class="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 p-3 flex items-start gap-2">
             <UIcon name="i-heroicons-exclamation-triangle" class="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
             <div class="text-xs text-amber-700 space-y-0.5">
               <p class="font-semibold">{{ t('cluster.node_selector.impact_title') }}</p>
@@ -162,11 +162,11 @@
               @change="toggle(san.id)"
             />
             <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium text-gray-800">{{ san.label }}</p>
+              <p class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ san.label }}</p>
               <p class="text-xs text-gray-400 font-mono truncate">{{ san.host }}</p>
               <span
                 class="text-[10px] px-1.5 py-0.5 rounded mt-1 inline-block"
-                :class="san.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'"
+                :class="san.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'"
               >{{ san.status }}</span>
             </div>
           </label>
@@ -174,7 +174,7 @@
       </div>
     </template>
 
-    <div v-if="!loading && !error" class="flex items-center justify-between pt-1 border-t border-gray-100">
+    <div v-if="!loading && !error" class="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-gray-800">
       <p class="text-xs" :class="canConfirm ? 'text-green-600' : 'text-amber-500'">
         <template v-if="targetClusterId">
           <template v-if="removedExisting.size === 0 && selected.size === 0">{{ t('cluster.node_selector.confirm_reconfigure_only') }}</template>

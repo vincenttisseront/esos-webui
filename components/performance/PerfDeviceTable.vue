@@ -40,7 +40,7 @@
           <td class="px-4 py-3 text-right font-mono" :class="latencyClass(d.averageWriteTimeMs)">
             {{ d.averageWriteTimeMs.toFixed(1) }} ms
           </td>
-          <td class="px-4 py-3 text-xs text-gray-500">
+          <td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
             {{ d.lastSampleAt ? new Date(d.lastSampleAt).toLocaleTimeString() : '—' }}
           </td>
         </tr>

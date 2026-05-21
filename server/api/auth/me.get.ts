@@ -27,5 +27,6 @@ export default defineEventHandler(async (event) => {
     forcePasswordChange: row.forcePasswordChange,
     lastLoginAt:         row.lastLoginAt,
     preferredLocale:     row.preferredLocale ?? null,
+    preferredTheme:      row.preferredTheme ?? null,
   }
 })

@@ -30,8 +30,8 @@
             <UBadge :color="ldStateColor(drive.state)" :label="drive.state" size="xs" variant="soft" />
           </td>
           <td class="py-1.5 pr-3 tabular-nums">{{ drive.sizeBytes ? formatSize(drive.sizeBytes) : '—' }}</td>
-          <td class="py-1.5 pr-3 text-gray-500">{{ drive.cachePolicy ?? '—' }}</td>
-          <td class="py-1.5 pr-3 font-mono text-gray-500 text-[10px]">{{ drive.devicePath ?? '—' }}</td>
+          <td class="py-1.5 pr-3 text-gray-500 dark:text-gray-400">{{ drive.cachePolicy ?? '—' }}</td>
+          <td class="py-1.5 pr-3 font-mono text-gray-500 dark:text-gray-400 text-[10px]">{{ drive.devicePath ?? '—' }}</td>
           <td v-if="supportsDelete && !readOnly" class="py-1.5 text-right">
             <UButton
               size="xs"

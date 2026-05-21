@@ -1,7 +1,7 @@
 <template>
   <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
     <div class="esos-card p-4 text-center">
-      <p class="text-2xl font-bold text-gray-800">{{ report.totalCount }}</p>
+      <p class="text-2xl font-bold text-gray-800 dark:text-gray-200">{{ report.totalCount }}</p>
       <p class="text-xs text-gray-400 mt-0.5">{{ t('admin.dependencies.stats.packages') }}</p>
     </div>
 

@@ -5,7 +5,7 @@
       <!-- Activer/Désactiver -->
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-sm font-medium text-gray-700">Collecte automatique</p>
+          <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Collecte automatique</p>
           <p class="text-xs text-gray-400">Active la remontée périodique des métriques I/O et système</p>
         </div>
         <UToggle v-model="form.enabled" @change="autoSave" />

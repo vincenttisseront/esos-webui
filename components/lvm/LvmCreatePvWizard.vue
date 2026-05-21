@@ -17,7 +17,7 @@
         :label="t('lvm.wizard.pv_create.force')"
       />
       <UAlert v-if="preflight?.blockers.length" color="red" variant="soft" :title="preflight.blockers.join(' · ')" />
-      <p v-if="preflight?.commandPreview" class="text-xs font-mono text-gray-500">{{ preflight.commandPreview }}</p>
+      <p v-if="preflight?.commandPreview" class="text-xs font-mono text-gray-500 dark:text-gray-400">{{ preflight.commandPreview }}</p>
       <UFormGroup v-if="preflight?.ok" :label="t('lvm.confirm.label')">
         <UInput v-model="confirmation" :placeholder="preflight.requiredConfirmation" />
       </UFormGroup>

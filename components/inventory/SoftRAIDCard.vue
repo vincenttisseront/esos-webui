@@ -1,14 +1,14 @@
 <template>
   <div v-if="raids.length">
-    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">RAID logiciel (md)</h3>
+    <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">RAID logiciel (md)</h3>
     <div class="space-y-3">
       <div
         v-for="r in raids"
         :key="r.device"
-        class="rounded-lg border border-gray-100 bg-gray-50 p-4 text-sm"
+        class="rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 p-4 text-sm"
       >
         <div class="flex items-center justify-between mb-2">
-          <span class="font-semibold font-mono text-gray-800">{{ r.device }}</span>
+          <span class="font-semibold font-mono text-gray-800 dark:text-gray-200">{{ r.device }}</span>
           <div class="flex items-center gap-2">
             <UBadge :color="r.state === 'active' ? 'green' : 'red'" size="xs" variant="subtle">{{ r.state }}</UBadge>
             <span class="text-xs text-gray-400">{{ r.level }}</span>
@@ -34,7 +34,7 @@
 
         <!-- Resync progress -->
         <div v-if="r.resync" class="mt-2">
-          <div class="flex justify-between text-xs text-gray-500 mb-0.5">
+          <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-0.5">
             <span>{{ r.resync.action }} en cours</span>
             <span>{{ r.resync.speed }}</span>
           </div>

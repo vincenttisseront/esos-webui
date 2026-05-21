@@ -5,11 +5,11 @@
     <table class="w-full text-sm">
       <thead class="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
         <tr>
-          <th class="px-4 py-3 text-left font-medium text-gray-500">{{ t('storage.targets.table.headers.iqn') }}</th>
-          <th class="px-4 py-3 text-left font-medium text-gray-500">{{ t('storage.targets.table.headers.driver') }}</th>
-          <th class="px-4 py-3 text-left font-medium text-gray-500">{{ t('storage.targets.table.headers.state') }}</th>
-          <th class="px-4 py-3 text-center font-medium text-gray-500">{{ t('storage.targets.table.headers.groups') }}</th>
-          <th class="px-4 py-3 text-center font-medium text-gray-500">{{ t('storage.targets.table.headers.sessions') }}</th>
+          <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">{{ t('storage.targets.table.headers.iqn') }}</th>
+          <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">{{ t('storage.targets.table.headers.driver') }}</th>
+          <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">{{ t('storage.targets.table.headers.state') }}</th>
+          <th class="px-4 py-3 text-center font-medium text-gray-500 dark:text-gray-400">{{ t('storage.targets.table.headers.groups') }}</th>
+          <th class="px-4 py-3 text-center font-medium text-gray-500 dark:text-gray-400">{{ t('storage.targets.table.headers.sessions') }}</th>
           <th class="px-4 py-3"></th>
         </tr>
       </thead>

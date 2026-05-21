@@ -5,10 +5,10 @@
     <table class="w-full text-sm">
       <thead class="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
         <tr>
-          <th class="px-4 py-3 text-left font-medium text-gray-500">{{ t('storage.devices.table.headers.name') }}</th>
-          <th class="px-4 py-3 text-left font-medium text-gray-500">{{ t('storage.devices.table.headers.handler') }}</th>
-          <th class="px-4 py-3 text-left font-medium text-gray-500">{{ t('storage.devices.table.headers.path') }}</th>
-          <th class="px-4 py-3 text-left font-medium text-gray-500">{{ t('storage.devices.table.headers.usedBy') }}</th>
+          <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">{{ t('storage.devices.table.headers.name') }}</th>
+          <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">{{ t('storage.devices.table.headers.handler') }}</th>
+          <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">{{ t('storage.devices.table.headers.path') }}</th>
+          <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">{{ t('storage.devices.table.headers.usedBy') }}</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -23,7 +23,7 @@
           <td class="px-4 py-3">
             <UBadge :color="handlerColor(d.handler)" variant="soft" :label="d.handler" />
           </td>
-          <td class="px-4 py-3 font-mono text-xs text-gray-500">
+          <td class="px-4 py-3 font-mono text-xs text-gray-500 dark:text-gray-400">
             {{ d.filename }}
           </td>
           <td class="px-4 py-3 text-gray-600 dark:text-gray-300 text-xs">

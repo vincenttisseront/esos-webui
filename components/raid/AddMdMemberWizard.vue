@@ -55,8 +55,8 @@
             <input v-model="selectedDevice" type="radio" :value="dev.path" class="mt-1 accent-primary-500" />
             <div class="min-w-0 flex-1">
               <span class="font-mono text-sm">{{ dev.path }}</span>
-              <span class="text-xs text-gray-500 ml-2">{{ formatSize(dev.sizeBytes) }}</span>
-              <p v-if="dev.partitionTypeName" class="text-xs text-gray-500">{{ dev.partitionTypeName }}</p>
+              <span class="text-xs text-gray-500 dark:text-gray-400 ml-2">{{ formatSize(dev.sizeBytes) }}</span>
+              <p v-if="dev.partitionTypeName" class="text-xs text-gray-500 dark:text-gray-400">{{ dev.partitionTypeName }}</p>
             </div>
           </label>
         </div>
@@ -77,11 +77,11 @@
         />
         <p v-if="clusterPreflightError" class="text-sm text-red-600">{{ clusterPreflightError }}</p>
         <div v-if="ambiguousMappings.length" class="space-y-2">
-          <p class="text-xs font-semibold text-gray-600 uppercase">{{ t('raid.add_member.wizard.mapping_manual') }}</p>
+          <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">{{ t('raid.add_member.wizard.mapping_manual') }}</p>
           <div
             v-for="mapping in ambiguousMappings"
             :key="mappingKey(mapping)"
-            class="rounded border border-gray-200 p-3 space-y-2"
+            class="rounded border border-gray-200 dark:border-gray-700 p-3 space-y-2"
           >
             <p class="text-sm font-mono">{{ mapping.sourcePath }} → {{ peerLabel(mapping.targetSanId) }}</p>
             <USelect
@@ -104,7 +104,7 @@
           :on-navigate-detection="onNavigateDetection"
         />
         <div v-if="executionPlan?.nodeResults?.length" class="space-y-2">
-          <p class="text-xs font-semibold text-gray-600 uppercase">{{ t('raid.add_member.wizard.per_node_commands') }}</p>
+          <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">{{ t('raid.add_member.wizard.per_node_commands') }}</p>
           <div
             v-for="node in executionPlan.nodeResults"
             :key="node.sanId"
@@ -115,18 +115,18 @@
           </div>
         </div>
         <div v-else-if="preflightResult?.commandPreview" class="space-y-1">
-          <pre class="text-xs font-mono bg-gray-50 border rounded p-3">{{ preflightResult.commandPreview }}</pre>
+          <pre class="text-xs font-mono bg-gray-50 dark:bg-gray-950 border rounded p-3">{{ preflightResult.commandPreview }}</pre>
         </div>
         <div class="space-y-2">
-          <p class="text-sm text-gray-600">
+          <p class="text-sm text-gray-600 dark:text-gray-400">
             {{ t('raid.add_member.wizard.confirm_hint') }}
-            <code class="font-mono text-xs bg-amber-50 border px-1 rounded">{{ confirmationPhrase }}</code>
+            <code class="font-mono text-xs bg-amber-50 dark:bg-amber-950/40 border px-1 rounded">{{ confirmationPhrase }}</code>
           </p>
           <UInput v-model="confirmation" class="font-mono" @paste.prevent />
         </div>
         <label class="flex items-start gap-2 cursor-pointer">
           <input v-model="understood" type="checkbox" class="mt-0.5 accent-primary-500" />
-          <span class="text-sm text-gray-600">{{ t('raid.add_member.wizard.understood') }}</span>
+          <span class="text-sm text-gray-600 dark:text-gray-400">{{ t('raid.add_member.wizard.understood') }}</span>
         </label>
         <p v-if="submitError" class="text-sm text-red-600">{{ submitError }}</p>
       </div>

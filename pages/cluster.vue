@@ -13,10 +13,10 @@
           @click="back"
         />
         <div>
-          <h1 class="text-2xl font-bold text-gray-900">
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
             {{ selected ? selected.name : t('cluster.page.title_ha') }}
           </h1>
-          <p class="text-sm text-gray-500 mt-1">
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
             {{ selected ? t('cluster.page.subtitle_detail') : t('cluster.page.subtitle_list') }}
           </p>
         </div>
@@ -60,7 +60,7 @@
         {{ t('cluster.page.loading_clusters') }}
       </div>
 
-      <div v-else-if="clusters.length === 0" class="rounded-xl border border-blue-200 bg-blue-50 px-6 py-8 flex flex-col items-center gap-4 text-center">
+      <div v-else-if="clusters.length === 0" class="rounded-xl border border-blue-200 bg-blue-50 dark:bg-blue-950/40 px-6 py-8 flex flex-col items-center gap-4 text-center">
         <UIcon name="i-heroicons-server-stack" class="w-12 h-12 text-blue-300" />
         <div>
           <p class="text-base font-semibold text-blue-900">{{ t('cluster.page.empty_title') }}</p>
@@ -73,17 +73,17 @@
         <div
           v-for="c in clusters"
           :key="c.id"
-          class="rounded-xl border border-gray-200 bg-white p-5 space-y-4 hover:border-blue-300 hover:shadow-sm transition cursor-pointer"
+          class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5 space-y-4 hover:border-blue-300 hover:shadow-sm transition cursor-pointer"
           @click="select(c)"
         >
           <!-- Nom + nœud count -->
           <div class="flex items-start justify-between gap-2">
             <div class="flex items-center gap-2">
               <UIcon name="i-heroicons-server-stack" class="w-5 h-5 text-blue-500 shrink-0" />
-              <span class="text-base font-semibold text-gray-800">{{ c.name }}</span>
+              <span class="text-base font-semibold text-gray-800 dark:text-gray-200">{{ c.name }}</span>
               <ClusterHealthBadge :health="listAttentionMap[c.id]?.health" />
             </div>
-            <span class="text-[11px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium border border-blue-100 shrink-0">
+            <span class="text-[11px] px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 font-medium border border-blue-100 shrink-0">
               {{ t('cluster.page.nodes_count', { count: c.nodes.length }) }}
             </span>
           </div>
@@ -93,7 +93,7 @@
             <div
               v-for="n in c.nodes"
               :key="n.id"
-              class="flex items-center gap-2 text-xs text-gray-600"
+              class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400"
             >
               <span class="w-1.5 h-1.5 rounded-full shrink-0"
                 :class="n.status === 'active' ? 'bg-green-400' : 'bg-gray-300'" />
@@ -103,7 +103,7 @@
                 class="font-mono text-gray-400 truncate"
               >{{ n.host }}</span>
               <span class="ml-auto px-1.5 py-0.5 rounded font-medium"
-                :class="n.clusterRole === 'primary' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'">
+                :class="n.clusterRole === 'primary' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'">
                 {{ n.clusterRole === 'primary' ? t('cluster.roles.primary') : t('cluster.roles.secondary') }}
               </span>
             </div>
@@ -144,11 +144,11 @@
 
         <ClusterStorageConsistencyPanel :data="storageConsistency" />
 
-        <details class="rounded-lg border border-gray-200 bg-white px-3 py-2">
-          <summary class="cursor-pointer text-sm font-medium text-gray-700 select-none list-none">
+        <details class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2">
+          <summary class="cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-300 select-none list-none">
             {{ t('cluster.sync.help_title') }}
           </summary>
-          <ul class="mt-2 text-xs text-gray-600 list-disc pl-4 space-y-0.5">
+          <ul class="mt-2 text-xs text-gray-600 dark:text-gray-400 list-disc pl-4 space-y-0.5">
             <li v-for="line in syncLimitationLines" :key="line">{{ line }}</li>
           </ul>
         </details>
@@ -169,7 +169,7 @@
         </p>
       </template>
 
-      <div v-else-if="detailError" class="rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+      <div v-else-if="detailError" class="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 px-5 py-4 text-sm text-red-700 dark:text-red-300">
         <p class="font-semibold">{{ t('cluster.page.load_error_title') }}</p>
         <p class="mt-1">{{ detailError }}</p>
       </div>

@@ -191,7 +191,7 @@ function liveStatusTextColor(s: SSHStatus | undefined): string {
         <div class="space-y-1 min-w-0 flex-1">
           <div class="flex items-center gap-2 flex-wrap">
             <UIcon name="i-heroicons-server-stack" class="w-5 h-5 text-indigo-500 shrink-0" />
-            <h3 class="font-semibold text-gray-900 truncate">{{ clusterName }}</h3>
+            <h3 class="font-semibold text-gray-900 dark:text-gray-100 truncate">{{ clusterName }}</h3>
             <UBadge color="indigo" variant="subtle" size="xs">HA</UBadge>
             <ClusterHealthBadge :health="clusterHealth" />
             <UBadge v-if="overview" :color="modeColor(mode)" variant="soft" size="xs">{{ mode }}</UBadge>
@@ -245,21 +245,21 @@ function liveStatusTextColor(s: SSHStatus | undefined): string {
 
     <div class="space-y-3">
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-        <div class="rounded-lg bg-gray-50 border border-gray-100 px-2.5 py-2">
+        <div class="rounded-lg bg-gray-50 dark:bg-gray-950 border border-gray-100 dark:border-gray-800 px-2.5 py-2">
           <p class="text-[10px] uppercase text-gray-400 font-semibold">{{ t('admin.sans.cluster_card.primary') }}</p>
-          <p class="font-medium text-gray-800 truncate">{{ primaryNode?.label ?? '—' }}</p>
+          <p class="font-medium text-gray-800 dark:text-gray-200 truncate">{{ primaryNode?.label ?? '—' }}</p>
         </div>
-        <div class="rounded-lg bg-gray-50 border border-gray-100 px-2.5 py-2">
+        <div class="rounded-lg bg-gray-50 dark:bg-gray-950 border border-gray-100 dark:border-gray-800 px-2.5 py-2">
           <p class="text-[10px] uppercase text-gray-400 font-semibold">{{ t('admin.sans.cluster_card.connections') }}</p>
           <p class="font-medium" :class="nodesUp === nodes.length ? 'text-green-600' : 'text-amber-600'">
             {{ nodesUp }}/{{ nodes.length }}
           </p>
         </div>
-        <div class="rounded-lg bg-gray-50 border border-gray-100 px-2.5 py-2">
+        <div class="rounded-lg bg-gray-50 dark:bg-gray-950 border border-gray-100 dark:border-gray-800 px-2.5 py-2">
           <p class="text-[10px] uppercase text-gray-400 font-semibold">{{ t('cluster.storage.title') }}</p>
           <p class="font-medium truncate" :class="storageKpi.class">{{ storageKpi.label }}</p>
         </div>
-        <div class="rounded-lg bg-gray-50 border border-gray-100 px-2.5 py-2">
+        <div class="rounded-lg bg-gray-50 dark:bg-gray-950 border border-gray-100 dark:border-gray-800 px-2.5 py-2">
           <p class="text-[10px] uppercase text-gray-400 font-semibold">{{ t('cluster.services.title') }}</p>
           <p class="font-medium" :class="servicesKpi.class">{{ servicesKpi.label }}</p>
         </div>
@@ -272,12 +272,12 @@ function liveStatusTextColor(s: SSHStatus | undefined): string {
         @action="handleAttentionAction"
       />
 
-      <details class="rounded-lg border border-gray-200">
-        <summary class="cursor-pointer px-3 py-2 text-sm font-medium text-gray-700 select-none list-none">
+      <details class="rounded-lg border border-gray-200 dark:border-gray-700">
+        <summary class="cursor-pointer px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 select-none list-none">
           {{ t('cluster.nodes_section', { count: nodes.length }) }}
         </summary>
-        <div class="px-3 pb-3 border-t border-gray-100">
-          <div class="flex flex-wrap gap-2 py-2 border-b border-gray-100 mb-2" v-if="!isViewer">
+        <div class="px-3 pb-3 border-t border-gray-100 dark:border-gray-800">
+          <div class="flex flex-wrap gap-2 py-2 border-b border-gray-100 dark:border-gray-800 mb-2" v-if="!isViewer">
             <UButton size="xs" color="gray" variant="outline" icon="i-heroicons-bolt" @click="emit('testAll', clusterId)">
               {{ t('admin.sans.cluster_card.test_all') }}
             </UButton>
@@ -303,8 +303,8 @@ function liveStatusTextColor(s: SSHStatus | undefined): string {
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100">
-                <tr v-for="node in nodes" :key="node.id" class="hover:bg-gray-50">
-                  <td class="py-2 pr-4 font-medium text-gray-900">
+                <tr v-for="node in nodes" :key="node.id" class="hover:bg-gray-50 dark:bg-gray-950">
+                  <td class="py-2 pr-4 font-medium text-gray-900 dark:text-gray-100">
                     {{ node.label }}
                     <UTooltip v-if="isPending(node.id).value" text="Redémarrage réseau requis">
                       <UIcon name="i-heroicons-exclamation-triangle" class="w-4 h-4 text-orange-500 inline" />

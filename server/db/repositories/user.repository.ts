@@ -214,6 +214,18 @@ export async function setPreferredLocale(userId: string, locale: string | null):
     .run()
 }
 
+/**
+ * Met à jour le thème préféré d'un utilisateur (clair / sombre / système).
+ */
+export async function setPreferredTheme(userId: string, theme: string | null): Promise<void> {
+  const db  = getDB()
+  const now = new Date().toISOString()
+  db.update(users)
+    .set({ preferredTheme: theme, updatedAt: now })
+    .where(eq(users.id, userId))
+    .run()
+}
+
 export async function touchExternalLogin(userId: string): Promise<void> {
   const db  = getDB()
   const now = new Date().toISOString()

@@ -5,7 +5,7 @@
       :key="kpi.label"
       class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-3"
     >
-      <p class="text-xs text-gray-500 font-medium">{{ kpi.label }}</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">{{ kpi.label }}</p>
       <p class="text-lg font-semibold mt-0.5" :class="kpi.color">{{ kpi.value }}</p>
     </div>
   </div>

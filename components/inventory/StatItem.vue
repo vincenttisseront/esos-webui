@@ -1,7 +1,7 @@
 <template>
   <div>
     <dt class="text-[10px] uppercase tracking-wide text-gray-400 truncate">{{ label }}</dt>
-    <dd class="text-sm font-medium text-gray-800 truncate">{{ value || '—' }}</dd>
+    <dd class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{{ value || '—' }}</dd>
   </div>
 </template>
 
