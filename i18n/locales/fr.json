@@ -208,7 +208,7 @@
       "ldap_title": "Annuaire LDAP / Active Directory",
       "ldap_help": "Utilisez vos identifiants d'annuaire d'entreprise.",
       "ldap_username_label": "Identifiant AD",
-      "ldap_username_placeholder": "DOMAINE\\utilisateur ou utilisateur@entreprise.fr",
+      "ldap_username_placeholder": "{'DOMAINE\\\\utilisateur ou utilisateur@entreprise.fr'}",
       "ldap_password_placeholder": "Mot de passe annuaire",
       "ldap_unavailable": "L'authentification annuaire n'est pas activée pour cette instance ESOS.",
       "sso_title": "Single Sign-On",

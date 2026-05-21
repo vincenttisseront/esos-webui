@@ -208,7 +208,7 @@
       "ldap_title": "LDAP / Active Directory",
       "ldap_help": "Use your enterprise directory credentials.",
       "ldap_username_label": "AD username",
-      "ldap_username_placeholder": "DOMAIN\\user or user@company.com",
+      "ldap_username_placeholder": "{'DOMAIN\\\\user or user@company.com'}",
       "ldap_password_placeholder": "Directory password",
       "ldap_unavailable": "Directory authentication is not enabled for this ESOS instance.",
       "sso_title": "Single Sign-On",
