@@ -2198,7 +2198,8 @@
         "diagnostics_title": "Detection diagnostics",
         "role_system": "system",
         "role_fileio": "FILEIO data",
-        "filter_vdisk_mount": "Vdisks on this mount"
+        "filter_vdisk_mount": "Vdisks on this mount",
+        "detection_counts": "Detected: {filesystems} FILEIO mount(s), {vdiskFiles} vdisk file(s), {fileioDevices} FILEIO device(s), {lunMappings} LUN mapping(s)"
       },
       "next": {
         "title": "Recommended next step",

@@ -8,6 +8,7 @@ import type {
   FsPreflightResult,
 } from '~/types/filesystem'
 import type { ClusterFsExecutionRequest } from '~/server/utils/fs-cluster-execution'
+import { buildFsFileioViewModel } from '~/utils/fs-fileio-view'
 
 export const useFsStore = defineStore('fs', {
   state: () => ({
@@ -27,6 +28,7 @@ export const useFsStore = defineStore('fs', {
     backends: s => s.overview?.backends ?? [],
     diagnostics: s => s.overview?.diagnostics,
     tools: s => s.overview?.tools,
+    fileioView: s => buildFsFileioViewModel(s.overview),
   },
 
   actions: {

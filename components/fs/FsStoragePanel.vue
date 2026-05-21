@@ -33,6 +33,10 @@
 
     <FsProvisioningChain :steps="chainSteps" />
 
+    <p v-if="detectionCounts" class="text-xs text-gray-500 font-mono">
+      {{ t('storage.fs.overview.detection_counts', detectionCounts) }}
+    </p>
+
     <div class="flex flex-wrap gap-2 justify-between items-center">
       <div v-if="!readOnly" class="flex flex-wrap gap-2">
         <UButton
@@ -73,35 +77,35 @@
 
     <UCard>
       <template #header>{{ t('storage.fs.overview.fileio_title') }}</template>
-      <UTable v-if="fileioDevices.length" :rows="fileioDevices" :columns="fileioCols">
-        <template #name-data="{ row }">
+      <UTable v-if="fileioDevices.length" :data="fileioDevices" :columns="fileioCols">
+        <template #name-cell="{ row }">
           <button
             type="button"
             class="font-mono text-xs text-primary-600 hover:underline"
-            @click="highlightLunsForDevice(row.name)"
+            @click="highlightLunsForDevice(row.original.name)"
           >
-            {{ row.name }}
+            {{ row.original.name }}
           </button>
         </template>
-        <template #filename-data="{ row }">
+        <template #filename-cell="{ row }">
           <button
-            v-if="row.filename"
+            v-if="row.original.filename"
             type="button"
             class="font-mono text-xs break-all text-primary-600 hover:underline text-left"
-            @click="highlightVdiskPath(row.filename)"
+            @click="highlightVdiskPath(row.original.filename)"
           >
-            {{ row.filename }}
+            {{ row.original.filename }}
           </button>
           <span v-else class="text-gray-400">—</span>
         </template>
-        <template #nv_cache-data="{ row }">
-          {{ row.attrs.nv_cache ?? '—' }}
+        <template #nv_cache-cell="{ row }">
+          {{ row.original.attrs.nv_cache ?? '—' }}
         </template>
-        <template #mapped-data="{ row }">
+        <template #mapped-cell="{ row }">
           <UBadge
-            :color="row.mapped ? 'green' : 'gray'"
+            :color="row.original.mapped ? 'green' : 'gray'"
             size="xs"
-            :label="row.mapped ? t('storage.fs.table.mapped') : t('storage.fs.table.unmapped')"
+            :label="row.original.mapped ? t('storage.fs.table.mapped') : t('storage.fs.table.unmapped')"
           />
         </template>
       </UTable>
@@ -113,26 +117,26 @@
         <span>{{ t('storage.fs.overview.luns_title') }}</span>
         <span v-if="lunFilterDevice" class="text-xs text-gray-500 ml-2">({{ lunFilterDevice }})</span>
       </template>
-      <UTable v-if="displayedLuns.length" :rows="displayedLuns" :columns="lunCols">
-        <template #targetName-data="{ row }">
-          <span class="font-mono text-xs">{{ row.targetName }}</span>
+      <UTable v-if="displayedLuns.length" :data="displayedLuns" :columns="lunCols">
+        <template #targetName-cell="{ row }">
+          <span class="font-mono text-xs">{{ row.original.targetName }}</span>
         </template>
-        <template #groupName-data="{ row }">
-          <span class="text-xs">{{ row.groupName || '—' }}</span>
+        <template #groupName-cell="{ row }">
+          <span class="text-xs">{{ row.original.groupName || '—' }}</span>
         </template>
-        <template #filename-data="{ row }">
+        <template #filename-cell="{ row }">
           <button
-            v-if="row.filename"
+            v-if="row.original.filename"
             type="button"
             class="font-mono text-xs break-all text-primary-600 hover:underline"
-            @click="highlightVdiskPath(row.filename)"
+            @click="highlightVdiskPath(row.original.filename)"
           >
-            {{ row.filename }}
+            {{ row.original.filename }}
           </button>
           <span v-else>—</span>
         </template>
-        <template #readOnly-data="{ row }">
-          <UBadge v-if="row.readOnly" color="amber" size="xs" :label="t('storage.targets.detail.readOnlyBadge')" />
+        <template #readOnly-cell="{ row }">
+          <UBadge v-if="row.original.readOnly" color="amber" size="xs" :label="t('storage.targets.detail.readOnlyBadge')" />
         </template>
       </UTable>
       <p v-else class="text-sm text-gray-500">{{ t('storage.fs.overview.empty_luns') }}</p>
@@ -146,35 +150,35 @@
         <span>{{ t('storage.fs.overview.vdisks_title') }}</span>
         <span v-if="vdiskFilterMount" class="text-xs text-gray-500 ml-2">{{ vdiskFilterMount }}</span>
       </template>
-      <UTable v-if="displayedVdisks.length" :rows="displayedVdisks" :columns="vdiskCols">
-        <template #path-data="{ row }">
-          <span class="font-mono text-xs break-all">{{ row.path }}</span>
+      <UTable v-if="displayedVdisks.length" :data="displayedVdisks" :columns="vdiskCols">
+        <template #path-cell="{ row }">
+          <span class="font-mono text-xs break-all">{{ row.original.path }}</span>
         </template>
-        <template #size-data="{ row }">{{ formatBytes(row.sizeBytes) }}</template>
-        <template #mapped-data="{ row }">
+        <template #size-cell="{ row }">{{ formatBytes(row.original.sizeBytes) }}</template>
+        <template #mapped-cell="{ row }">
           <UBadge
-            :color="row.mapped ? 'green' : 'gray'"
+            :color="row.original.mapped ? 'green' : 'gray'"
             size="xs"
-            :label="row.mapped ? t('storage.fs.table.mapped') : t('storage.fs.table.unmapped')"
+            :label="row.original.mapped ? t('storage.fs.table.mapped') : t('storage.fs.table.unmapped')"
           />
         </template>
-        <template #actions-data="{ row }">
+        <template #actions-cell="{ row }">
           <div v-if="!readOnly" class="flex gap-1">
             <UButton
-              v-if="!row.mapped"
+              v-if="!row.original.mapped"
               size="xs"
               color="primary"
               variant="ghost"
-              @click="openFileioWizardFor(row)"
+              @click="openFileioWizardFor(row.original)"
             >
               {{ t('storage.fs.actions.bind_fileio') }}
             </UButton>
             <UButton
-              v-if="!row.mapped"
+              v-if="!row.original.mapped"
               size="xs"
               color="red"
               variant="ghost"
-              @click="confirmDeleteVdisk(row.path)"
+              @click="confirmDeleteVdisk(row.original.path)"
             >
               {{ t('storage.fs.actions.delete_vdisk') }}
             </UButton>
@@ -197,39 +201,39 @@
           </label>
         </div>
       </template>
-      <UTable v-if="displayedMounts.length" :rows="displayedMounts" :columns="mountCols">
-        <template #mountPoint-data="{ row }">
+      <UTable v-if="displayedMounts.length" :data="displayedMounts" :columns="mountCols">
+        <template #mountPoint-cell="{ row }">
           <button
             type="button"
             class="font-mono text-xs text-primary-600 hover:underline"
-            @click="vdiskFilterMount = row.mountPoint"
+            @click="vdiskFilterMount = row.original.mountPoint"
           >
-            {{ row.mountPoint }}
+            {{ row.original.mountPoint }}
           </button>
-          <UBadge v-if="row.role" size="xs" variant="soft" class="ml-1" :label="roleLabel(row.role)" />
+          <UBadge v-if="row.original.role" size="xs" variant="soft" class="ml-1" :label="roleLabel(row.original.role)" />
         </template>
-        <template #backingDevice-data="{ row }">
+        <template #backingDevice-cell="{ row }">
           <button
             type="button"
             class="font-mono text-xs text-primary-600 hover:underline"
-            @click="emit('navigate-block-devices', row.linkedBackendPath ?? row.backingDevice)"
+            @click="emit('navigate-block-devices', row.original.linkedBackendPath ?? row.original.backingDevice)"
           >
-            {{ row.backingDevice }}
+            {{ row.original.backingDevice }}
           </button>
         </template>
-        <template #health-data="{ row }">
-          <UBadge v-if="row.health" :color="healthColor(row.health)" size="xs" :label="row.health" />
+        <template #health-cell="{ row }">
+          <UBadge v-if="row.original.health" :color="healthColor(row.original.health)" size="xs" :label="row.original.health" />
         </template>
-        <template #size-data="{ row }">
-          {{ formatBytes(row.totalBytes) }} / {{ formatBytes(row.freeBytes) }} free
+        <template #size-cell="{ row }">
+          {{ formatBytes(row.original.totalBytes) }} / {{ formatBytes(row.original.freeBytes) }} free
         </template>
-        <template #actions-data="{ row }">
+        <template #actions-cell="{ row }">
           <UButton
-            v-if="!readOnly && row.role === 'fileio_data'"
+            v-if="!readOnly && row.original.role === 'fileio_data'"
             size="xs"
             color="red"
             variant="ghost"
-            @click="confirmUnmount(row.mountPoint)"
+            @click="confirmUnmount(row.original.mountPoint)"
           >
             {{ t('storage.fs.actions.unmount') }}
           </UButton>
@@ -247,25 +251,25 @@
           </UButton>
         </div>
       </template>
-      <UTable v-if="backends.length" :rows="backends" :columns="backendCols">
-        <template #path-data="{ row }">
+      <UTable v-if="backends.length" :data="backends" :columns="backendCols">
+        <template #path-cell="{ row }">
           <button
             type="button"
             class="font-mono text-xs text-primary-600 hover:underline"
-            @click="emit('navigate-block-devices', row.path)"
+            @click="emit('navigate-block-devices', row.original.path)"
           >
-            {{ row.path }}
+            {{ row.original.path }}
           </button>
         </template>
-        <template #eligible-data="{ row }">
-          <UBadge :color="row.eligible ? 'green' : 'gray'" size="xs" :label="row.eligible ? 'OK' : '—'" />
+        <template #eligible-cell="{ row }">
+          <UBadge :color="row.original.eligible ? 'green' : 'gray'" size="xs" :label="row.original.eligible ? 'OK' : '—'" />
         </template>
-        <template #reasons-data="{ row }">
-          <span v-if="row.eligible" class="text-green-600 text-xs">OK</span>
-          <span v-else class="text-red-600 text-xs">{{ row.reasons.join(' · ') || '—' }}</span>
+        <template #reasons-cell="{ row }">
+          <span v-if="row.original.eligible" class="text-green-600 text-xs">OK</span>
+          <span v-else class="text-red-600 text-xs">{{ row.original.reasons.join(' · ') || '—' }}</span>
         </template>
-        <template #hw-data="{ row }">
-          <span v-if="row.controllerLabel" class="text-xs">{{ row.controllerLabel }} / {{ row.hwLdId ?? '—' }}</span>
+        <template #hw-cell="{ row }">
+          <span v-if="row.original.controllerLabel" class="text-xs">{{ row.original.controllerLabel }} / {{ row.original.hwLdId ?? '—' }}</span>
           <span v-else class="text-gray-400">—</span>
         </template>
       </UTable>
@@ -282,9 +286,11 @@
 </template>
 
 <script setup lang="ts">
-import { buildFsProvisioningSteps, formatBytes } from '~/utils/fs-provisioning-chain'
+import { formatBytes } from '~/utils/fs-provisioning-chain'
+import { buildFsFileioViewModel } from '~/utils/fs-fileio-view'
 import { fileioRelevantMounts } from '~/utils/fs-mount-classifier'
-import type { FsMountRole, MountHealth, VDiskFile } from '~/types/filesystem'
+import { fsTableColumn, fsTableColumnId } from '~/utils/fs-table-columns'
+import type { FileioDeviceRef, FileSystemMount, FsBackendRef, FsMountRole, MountHealth, ScstLunMappingRef, VDiskFile } from '~/types/filesystem'
 
 const props = defineProps<{
   sanId: string
@@ -312,12 +318,14 @@ onMounted(async () => {
   await refreshAll()
 })
 
-const chainSteps = computed(() => buildFsProvisioningSteps(fs.overview))
+const fileioView = computed(() => buildFsFileioViewModel(fs.overview))
+const chainSteps = computed(() => fileioView.value?.chain ?? [])
 const backends = computed(() => fs.backends)
 const eligibleCandidates = computed(() => backends.value.filter(c => c.eligible))
-const unmappedVdisks = computed(() => fs.vdiskFiles.filter(v => !v.mapped))
-const fileioDevices = computed(() => fs.fileioDevices)
-const lunMappings = computed(() => fs.lunMappings)
+const unmappedVdisks = computed(() => fileioView.value?.vdiskFiles.filter(v => !v.mapped) ?? [])
+const fileioDevices = computed(() => fileioView.value?.fileioDevices ?? [])
+const lunMappings = computed(() => fileioView.value?.lunMappings ?? [])
+const detectionCounts = computed(() => fileioView.value?.counts)
 const scanWarnings = computed(() => fs.overview?.scanWarnings ?? [])
 const diagnostics = computed(() => fs.diagnostics)
 
@@ -335,8 +343,9 @@ const displayedLuns = computed(() => {
 })
 
 const displayedVdisks = computed(() => {
-  if (!vdiskFilterMount.value) return fs.vdiskFiles
-  return fs.vdiskFiles.filter(v => v.mountPoint === vdiskFilterMount.value)
+  const list = fileioView.value?.vdiskFiles ?? []
+  if (!vdiskFilterMount.value) return list
+  return list.filter(v => v.mountPoint === vdiskFilterMount.value)
 })
 
 const noEligibleSummary = computed(() => {
@@ -359,40 +368,40 @@ const nextActionText = computed(() => {
 })
 
 const mountCols = [
-  { key: 'mountPoint', label: t('storage.fs.table.mount_point') },
-  { key: 'backingDevice', label: t('storage.fs.table.backing') },
-  { key: 'fsType', label: t('storage.fs.table.type') },
-  { key: 'health', label: '' },
-  { key: 'size', label: t('storage.fs.table.size') },
-  { key: 'actions', label: '' },
+  fsTableColumn<FileSystemMount>('mountPoint', t('storage.fs.table.mount_point')),
+  fsTableColumn<FileSystemMount>('backingDevice', t('storage.fs.table.backing')),
+  fsTableColumn<FileSystemMount>('fsType', t('storage.fs.table.type')),
+  fsTableColumnId<FileSystemMount>('health', ''),
+  fsTableColumnId<FileSystemMount>('size', t('storage.fs.table.size')),
+  fsTableColumnId<FileSystemMount>('actions', ''),
 ]
 const backendCols = [
-  { key: 'path', label: t('storage.fs.table.path') },
-  { key: 'kind', label: t('storage.fs.table.type') },
-  { key: 'eligible', label: '' },
-  { key: 'reasons', label: '' },
-  { key: 'hw', label: 'HW RAID' },
+  fsTableColumn<FsBackendRef>('path', t('storage.fs.table.path')),
+  fsTableColumn<FsBackendRef>('kind', t('storage.fs.table.type')),
+  fsTableColumnId<FsBackendRef>('eligible', ''),
+  fsTableColumnId<FsBackendRef>('reasons', ''),
+  fsTableColumnId<FsBackendRef>('hw', 'HW RAID'),
 ]
 const vdiskCols = [
-  { key: 'path', label: t('storage.fs.table.path') },
-  { key: 'size', label: t('storage.fs.table.size') },
-  { key: 'mapped', label: t('storage.fs.table.scst') },
-  { key: 'actions', label: '' },
+  fsTableColumn<VDiskFile>('path', t('storage.fs.table.path')),
+  fsTableColumnId<VDiskFile>('size', t('storage.fs.table.size')),
+  fsTableColumn<VDiskFile>('mapped', t('storage.fs.table.scst')),
+  fsTableColumnId<VDiskFile>('actions', ''),
 ]
 const fileioCols = [
-  { key: 'name', label: t('storage.fs.table.device') },
-  { key: 'filename', label: t('storage.fs.table.filename') },
-  { key: 'nv_cache', label: t('storage.fs.table.nv_cache') },
-  { key: 'mapped', label: t('storage.fs.table.scst') },
+  fsTableColumn<FileioDeviceRef>('name', t('storage.fs.table.device')),
+  fsTableColumn<FileioDeviceRef>('filename', t('storage.fs.table.filename')),
+  fsTableColumnId<FileioDeviceRef>('nv_cache', t('storage.fs.table.nv_cache')),
+  fsTableColumn<FileioDeviceRef>('mapped', t('storage.fs.table.scst')),
 ]
 const lunCols = [
-  { key: 'targetName', label: t('storage.fs.table.target') },
-  { key: 'groupName', label: t('storage.fs.table.group') },
-  { key: 'lunId', label: t('storage.fs.table.lun') },
-  { key: 'deviceName', label: t('storage.fs.table.device') },
-  { key: 'handler', label: t('storage.fs.table.handler') },
-  { key: 'filename', label: t('storage.fs.table.filename') },
-  { key: 'readOnly', label: '' },
+  fsTableColumn<ScstLunMappingRef>('targetName', t('storage.fs.table.target')),
+  fsTableColumn<ScstLunMappingRef>('groupName', t('storage.fs.table.group')),
+  fsTableColumn<ScstLunMappingRef>('lunId', t('storage.fs.table.lun')),
+  fsTableColumn<ScstLunMappingRef>('deviceName', t('storage.fs.table.device')),
+  fsTableColumn<ScstLunMappingRef>('handler', t('storage.fs.table.handler')),
+  fsTableColumn<ScstLunMappingRef>('filename', t('storage.fs.table.filename')),
+  fsTableColumnId<ScstLunMappingRef>('readOnly', ''),
 ]
 
 function roleLabel(role: FsMountRole | undefined) {
