@@ -68,17 +68,99 @@
         </p>
       </section>
 
+      <div
+        v-if="isClusterMode"
+        class="rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50/60 dark:bg-blue-950/30 px-4 py-3 text-sm"
+      >
+        <p class="font-semibold text-blue-900 dark:text-blue-100">
+          {{ t('storage.hosts.clusterBanner.title') }}
+        </p>
+        <p class="text-blue-800 dark:text-blue-200 mt-1">
+          {{ t('storage.hosts.clusterBanner.body') }}
+        </p>
+        <NuxtLink
+          to="/cluster"
+          class="text-primary-600 hover:underline text-xs mt-2 inline-block"
+        >
+          {{ t('storage.hosts.clusterBanner.adminLink') }} →
+        </NuxtLink>
+      </div>
+
+      <ScstClusterNodeResults
+        v-if="lastNodeResults?.length"
+        :node-results="lastNodeResults"
+      />
+
+      <details class="rounded-lg border border-gray-200 dark:border-gray-800 px-4 py-3">
+        <summary class="cursor-pointer text-sm font-semibold text-gray-700 dark:text-gray-200">
+          {{ t('storage.hosts.help.title') }}
+        </summary>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+          {{ t('storage.hosts.help.summary') }}
+        </p>
+        <a
+          href="https://github.com/quantum/esos/wiki/35_Hosts_and_Initiators"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-primary-500 hover:underline text-xs mt-2 inline-block"
+        >
+          {{ t('storage.hosts.help.wikiLink') }} ↗
+        </a>
+      </details>
+
       <section>
-        <SectionTitle :title="t('storage.targets.detail.sections.accessGroups')" :count="target.groups.length" />
+        <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
+          <SectionTitle :title="t('storage.targets.detail.sections.accessGroups')" :count="target.groups.length" />
+          <UButton
+            v-if="!isEffectiveReadOnly"
+            icon="i-heroicons-plus"
+            size="sm"
+            :label="t('storage.hosts.actions.addGroup')"
+            :loading="hostsLoading"
+            @click="openAddGroup"
+          />
+        </div>
         <div v-if="target.groups.length > 0" class="space-y-3">
           <GroupPanel
             v-for="group in target.groups"
             :key="group.name"
             :group="group"
             :devices-map="devicesMap"
+            :read-only="isEffectiveReadOnly"
+            @add-initiator="openAddInitiator"
+            @remove-initiator="onRemoveInitiator"
+            @remove-group="onRemoveGroup"
           />
         </div>
         <EmptyState v-else :message="t('storage.targets.detail.empty.noGroups')" icon="👥" />
+      </section>
+
+      <section v-if="!isEffectiveReadOnly && discoveredInitiators.length > 0">
+        <SectionTitle
+          :title="t('storage.hosts.discovered.title')"
+          :count="discoveredInitiators.length"
+        />
+        <p class="text-xs text-gray-500 mb-2">{{ t('storage.hosts.discovered.hint') }}</p>
+        <ul class="space-y-2">
+          <li
+            v-for="init in discoveredInitiators"
+            :key="init"
+            class="flex items-center justify-between gap-2 text-sm"
+          >
+            <IqnDisplay :iqn="init" />
+            <div v-if="target.groups.length > 0" class="flex flex-wrap gap-1">
+              <UButton
+                v-for="g in target.groups"
+                :key="g.name"
+                size="xs"
+                variant="soft"
+                :label="`${t('storage.hosts.actions.addDiscovered')}: ${g.name}`"
+                :loading="hostsLoading"
+                @click="addDiscoveredToGroup(g.name, init)"
+              />
+            </div>
+          </li>
+        </ul>
       </section>
     </template>
 
@@ -88,17 +170,35 @@
 
 <script setup lang="ts">
 import DestructiveModal from '~/components/modals/DestructiveModal.vue'
+import AddGroupModal from '~/components/targets/AddGroupModal.vue'
+import AddInitiatorModal from '~/components/targets/AddInitiatorModal.vue'
+import { discoveredInitiatorsForTarget } from '~/utils/scst-discovered-initiators'
+import { expectedDeleteGroupConfirmation } from '~/utils/scst-initiator-validation'
 
 const { t } = useEsosI18n()
 const route = useRoute()
 const router = useRouter()
 const name = computed(() => decodeURIComponent(route.params.name as string))
 
-const { target, pending, refresh } = useTargetDetail(name)
+const { target, loading: pending, refresh } = useTargetDetail(name)
 const { overview, refresh: refreshOverview } = useOverview()
 const { isEffectiveReadOnly } = useSelectedSan()
 const modal = useAppModal()
 const toast = useAppToast()
+
+const {
+  loading: hostsLoading,
+  isClusterMode,
+  lastNodeResults,
+  createGroup,
+  deleteGroup,
+  addInitiator,
+  removeInitiator,
+} = useTargetHosts(name, { refresh, refreshOverview })
+
+const discoveredInitiators = computed(() =>
+  target.value ? discoveredInitiatorsForTarget(target.value) : [],
+)
 
 const devicesMap = computed(() => {
   const map = new Map<string, { handler: string; filename: string }>()
@@ -107,6 +207,109 @@ const devicesMap = computed(() => {
   }
   return map
 })
+
+async function openAddGroup() {
+  try {
+    const groupName = await modal.open<string>({
+      component: AddGroupModal,
+      props: { loading: hostsLoading.value },
+    })
+    await createGroup(groupName)
+    toast.success(t('storage.hosts.toasts.groupCreated') as string, groupName)
+  } catch (err: unknown) {
+    if (isDismiss(err)) return
+    toastHostsError(err)
+  }
+}
+
+async function openAddInitiator(groupName: string, initialValue?: string) {
+  try {
+    const payload = await modal.open<{ initiator: string; type: import('~/utils/scst-initiator-validation').InitiatorType }>({
+      component: AddInitiatorModal,
+      props: { groupName, initialValue, loading: hostsLoading.value },
+    })
+    await addInitiator(groupName, payload.initiator, payload.type)
+    toast.success(t('storage.hosts.toasts.initiatorAdded') as string, payload.initiator)
+  } catch (err: unknown) {
+    if (isDismiss(err)) return
+    toastHostsError(err)
+  }
+}
+
+async function addDiscoveredToGroup(groupName: string, initiator: string) {
+  if (!groupName) return
+  try {
+    await addInitiator(groupName, initiator, 'auto')
+    toast.success(t('storage.hosts.toasts.initiatorAdded') as string, initiator)
+  } catch (err: unknown) {
+    toastHostsError(err)
+  }
+}
+
+async function onRemoveInitiator(payload: { groupName: string; initiator: string }) {
+  try {
+    await modal.open({
+      component: DestructiveModal,
+      props: {
+        title: t('storage.hosts.actions.removeInitiator') as string,
+        message: payload.initiator,
+        confirmLabel: t('common.actions.confirm') as string,
+        inputConfirm: payload.initiator.split(':').pop() ?? payload.initiator.slice(-8),
+      },
+    })
+  } catch {
+    return
+  }
+  try {
+    await removeInitiator(payload.groupName, payload.initiator)
+    toast.success(t('storage.hosts.toasts.initiatorRemoved') as string, payload.initiator)
+  } catch (err: unknown) {
+    toastHostsError(err)
+  }
+}
+
+async function onRemoveGroup(groupName: string) {
+  const group = target.value?.groups.find(g => g.name === groupName)
+  const hasLuns = (group?.luns.length ?? 0) > 0
+  const expected = expectedDeleteGroupConfirmation(name.value, groupName)
+
+  try {
+    await modal.open({
+      component: DestructiveModal,
+      props: {
+        title: t('storage.hosts.modals.removeGroup.title', { name: groupName }) as string,
+        message: hasLuns
+          ? (t('storage.hosts.modals.removeGroup.messageWithLuns', { count: group!.luns.length }) as string)
+          : (t('storage.hosts.modals.removeGroup.message') as string),
+        confirmLabel: t('storage.hosts.modals.removeGroup.confirmLabel') as string,
+        inputConfirm: expected,
+      },
+    })
+  } catch {
+    return
+  }
+
+  try {
+    await deleteGroup(groupName, hasLuns ? { force: true, confirmation: expected } : undefined)
+    toast.success(t('storage.hosts.toasts.groupRemoved') as string, groupName)
+  } catch (err: unknown) {
+    toastHostsError(err)
+  }
+}
+
+function isDismiss(err: unknown): boolean {
+  return err === false || err === null || err === undefined
+}
+
+function toastHostsError(err: unknown) {
+  const e = err as { statusMessage?: string; message?: string; data?: { nodeResults?: unknown[] } }
+  const msg = e.statusMessage ?? e.message ?? (t('storage.targets.toasts.errorGeneric') as string)
+  if (e.data?.nodeResults) {
+    toast.error(t('storage.hosts.toasts.partialCluster') as string, msg)
+    return
+  }
+  toast.error(t('storage.hosts.toasts.errorTitle') as string, msg)
+}
 
 // ─── Activer / Désactiver ────────────────────────────────────────────────────
 const toggling = ref(false)
@@ -151,7 +354,7 @@ async function confirmDelete() {
       },
     })
   } catch {
-    return // dismissed
+    return
   }
 
   deleting.value = true

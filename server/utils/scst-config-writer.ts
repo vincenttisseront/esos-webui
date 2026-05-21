@@ -3,6 +3,13 @@ import { writeRemoteFileAtomicOrThrow } from './remote-file-writer'
 import { shellSingleQuoteForRemote } from './remote-config-paths'
 import { readScstConfig } from './scst-config-reader'
 import type { ScstConfig, Target, Group } from '~/types/esos'
+import {
+  validateGroupName,
+  validateInitiatorValue,
+  initiatorAlreadyOnTarget,
+  type InitiatorType,
+  type ValidateInitiatorOptions,
+} from '~/utils/scst-initiator-validation'
 import { invalidateCacheKey } from './cache'
 
 // ─── Path helpers ─────────────────────────────────────────────────────────────
@@ -219,57 +226,116 @@ export async function setTargetEnabled(
   await writeAndReloadScst(content)
 }
 
-// ─── Group mutators ───────────────────────────────────────────────────────────
+// ─── Group / initiator mutators ───────────────────────────────────────────────
+
+function findTargetInConfig(config: ScstConfig, targetName: string): Target | null {
+  for (const driver of config.drivers) {
+    const target = driver.targets.find(t => t.name === targetName)
+    if (target) return target
+  }
+  return null
+}
+
+function findGroup(target: Target, groupName: string): Group | null {
+  return target.groups.find(g => g.name === groupName) ?? null
+}
 
 export async function createGroup(
   targetName: string,
   groupName: string,
 ): Promise<void> {
-  if (!/^[A-Za-z0-9_.-]+$/.test(groupName)) {
-    throw new Error(`Nom de groupe invalide : ${groupName}`)
+  const v = validateGroupName(groupName)
+  if (!v.ok || !v.normalized) {
+    throw new Error(v.message ?? 'Nom de groupe invalide')
   }
 
   const config = await readScstConfig()
-  let found = false
+  const target = findTargetInConfig(config, targetName)
+  if (!target) throw new Error(`Target "${targetName}" introuvable`)
 
-  for (const driver of config.drivers) {
-    const target = driver.targets.find((t) => t.name === targetName)
-    if (target) {
-      if (target.groups.some((g) => g.name === groupName)) {
-        throw new Error(`Le groupe "${groupName}" existe déjà`)
-      }
-      const group: Group = { name: groupName, initiators: [], luns: [] }
-      target.groups.push(group)
-      found = true
-      break
-    }
+  if (target.groups.some(g => g.name === v.normalized)) {
+    throw new Error(`Le groupe "${v.normalized}" existe déjà`)
   }
 
-  if (!found) throw new Error(`Target "${targetName}" introuvable`)
-
+  target.groups.push({ name: v.normalized, initiators: [], luns: [] })
   await writeAndReloadScst(serializeScstConfig(config))
 }
 
 export async function deleteGroup(
   targetName: string,
   groupName: string,
+  options?: { force?: boolean },
 ): Promise<void> {
   const config = await readScstConfig()
-  let found = false
+  const target = findTargetInConfig(config, targetName)
+  if (!target) throw new Error(`Target "${targetName}" introuvable`)
 
-  for (const driver of config.drivers) {
-    const target = driver.targets.find((t) => t.name === targetName)
-    if (target) {
-      const idx = target.groups.findIndex((g) => g.name === groupName)
-      if (idx !== -1) {
-        target.groups.splice(idx, 1)
-        found = true
-      }
-      break
-    }
+  const group = findGroup(target, groupName)
+  if (!group) throw new Error(`Groupe "${groupName}" introuvable`)
+
+  if (group.luns.length > 0 && !options?.force) {
+    throw new Error(
+      `Le groupe "${groupName}" contient ${group.luns.length} LUN(s) — retirez les mappages ou confirmez la suppression forcée`,
+    )
   }
 
-  if (!found) throw new Error(`Groupe "${groupName}" introuvable`)
+  target.groups = target.groups.filter(g => g.name !== groupName)
+  await writeAndReloadScst(serializeScstConfig(config))
+}
+
+export async function addInitiator(
+  targetName: string,
+  groupName: string,
+  initiatorRaw: string,
+  options?: ValidateInitiatorOptions & { type?: InitiatorType },
+): Promise<{ initiator: string }> {
+  const config = await readScstConfig()
+  const target = findTargetInConfig(config, targetName)
+  if (!target) throw new Error(`Target "${targetName}" introuvable`)
+
+  const group = findGroup(target, groupName)
+  if (!group) throw new Error(`Groupe "${groupName}" introuvable`)
+
+  const validated = validateInitiatorValue(initiatorRaw, {
+    type: options?.type ?? 'auto',
+    ibOneTargetPerPort: options?.ibOneTargetPerPort,
+  })
+  if (!validated.ok || !validated.normalized) {
+    throw new Error(validated.message ?? 'Initiateur invalide')
+  }
+
+  const normalized = validated.normalized
+  if (group.initiators.some(i => i.trim().toLowerCase() === normalized.toLowerCase())) {
+    throw new Error(`L'initiateur est déjà présent dans le groupe "${groupName}"`)
+  }
+  if (initiatorAlreadyOnTarget(target.groups, normalized, groupName)) {
+    throw new Error(`L'initiateur est déjà utilisé dans un autre groupe de cette target`)
+  }
+
+  group.initiators.push(normalized)
+  await writeAndReloadScst(serializeScstConfig(config))
+  return { initiator: normalized }
+}
+
+export async function removeInitiator(
+  targetName: string,
+  groupName: string,
+  initiatorRaw: string,
+): Promise<void> {
+  const config = await readScstConfig()
+  const target = findTargetInConfig(config, targetName)
+  if (!target) throw new Error(`Target "${targetName}" introuvable`)
+
+  const group = findGroup(target, groupName)
+  if (!group) throw new Error(`Groupe "${groupName}" introuvable`)
+
+  const needle = initiatorRaw.trim().toLowerCase()
+  const idx = group.initiators.findIndex(i => i.trim().toLowerCase() === needle)
+  if (idx === -1) {
+    throw new Error(`Initiateur introuvable dans le groupe "${groupName}"`)
+  }
+
+  group.initiators.splice(idx, 1)
   await writeAndReloadScst(serializeScstConfig(config))
 }
 

@@ -2044,6 +2044,82 @@
         "readOnlyBadge": "R/O"
       }
     },
+    "hosts": {
+      "help": {
+        "title": "Hôtes et initiateurs",
+        "summary": "Les groupes d'accès définissent quels initiateurs peuvent accéder à quels LUNs sur cette target. Un initiateur est l'identité client : WWPN Fibre Channel, IQN iSCSI, GUID InfiniBand, ou un motif (* ? !).",
+        "wikiLink": "Wiki ESOS — Hôtes et initiateurs",
+        "lunPhase2": "Le mappage LUN→groupe sera disponible dans une prochaine phase (Devices)."
+      },
+      "clusterBanner": {
+        "title": "Mode cluster",
+        "body": "Les modifications sont appliquées sur chaque nœud du cluster (lecture/modification/écriture + rechargement SCST).",
+        "adminLink": "Administration cluster"
+      },
+      "actions": {
+        "addGroup": "Ajouter un groupe",
+        "removeGroup": "Supprimer le groupe",
+        "addInitiator": "Ajouter un initiateur",
+        "removeInitiator": "Retirer",
+        "assignLun": "Assigner un device…",
+        "addDiscovered": "Ajouter au groupe"
+      },
+      "discovered": {
+        "title": "Initiateurs découverts",
+        "empty": "Aucun initiateur non listé dans les sessions actives.",
+        "hint": "Ces initiateurs ont une session active mais ne figurent dans aucun groupe d'accès."
+      },
+      "modals": {
+        "addGroup": {
+          "title": "Ajouter un groupe d'accès",
+          "nameLabel": "Nom du groupe",
+          "namePlaceholder": "ex. hosts_fc"
+        },
+        "addInitiator": {
+          "title": "Ajouter un initiateur à {group}",
+          "valueLabel": "Initiateur",
+          "valuePlaceholder": "WWPN, IQN, GUID ou motif",
+          "typeLabel": "Type",
+          "types": {
+            "auto": "Détection auto",
+            "fc": "Fibre Channel (WWPN)",
+            "iscsi": "iSCSI (IQN)",
+            "ib": "InfiniBand (GUID)",
+            "pattern": "Motif"
+          }
+        },
+        "removeGroup": {
+          "title": "Supprimer le groupe « {name} » ?",
+          "message": "Cela retire le groupe et tous ses initiateurs de scst.conf.",
+          "messageWithLuns": "Ce groupe contient {count} mappage(s) LUN. La suppression forcée nécessite une confirmation.",
+          "confirmLabel": "Supprimer le groupe"
+        }
+      },
+      "clusterResults": {
+        "title": "Résultats par nœud",
+        "ok": "OK",
+        "failed": "Échec"
+      },
+      "toasts": {
+        "groupCreated": "Groupe créé",
+        "groupRemoved": "Groupe supprimé",
+        "initiatorAdded": "Initiateur ajouté",
+        "initiatorRemoved": "Initiateur retiré",
+        "errorTitle": "Échec de l'opération",
+        "partialCluster": "Mutation cluster partiellement échouée — voir les résultats par nœud."
+      },
+      "errors": {
+        "group_name_required": "Le nom du groupe est requis.",
+        "group_name_invalid": "Nom de groupe invalide (lettres, chiffres, _ . - uniquement).",
+        "initiator_required": "L'initiateur est requis.",
+        "fc_wwn_invalid": "WWPN Fibre Channel invalide (8 octets attendus : aa:bb:cc:dd:ee:ff:00:11).",
+        "iscsi_iqn_invalid": "IQN iSCSI invalide.",
+        "ib_guid_colons": "GUID IB invalide (format avec deux-points attendu).",
+        "ib_guid_hex": "GUID IB invalide (format 0x… attendu).",
+        "pattern_invalid": "Caractères de motif invalides.",
+        "initiator_type_unknown": "Type d'initiateur non détecté."
+      }
+    },
     "devices": {
       "list": {
         "countLine": "{count} device(s)",

@@ -274,6 +274,7 @@ export async function appendMdAttentionPoints(
       collectMdArrayLvmStates,
       filterMdClusterAsymmetryHardBlockers,
     } = await import('../../utils/md-lvm-cluster-symmetry')
+    const { filterMdHealthWarnings } = await import('../../utils/cluster-md-symmetry')
 
     if (primary) {
       for (const name of arrayNames) {
@@ -326,13 +327,14 @@ export async function appendMdAttentionPoints(
               source: 'md_detection',
               detectedAt: Date.now(),
             })
-          } else if (!assessment.okSymmetric && assessment.warnings.length) {
+          } else if (!assessment.structurallySymmetric && filterMdHealthWarnings(assessment.warnings).length) {
+            const healthWarnings = filterMdHealthWarnings(assessment.warnings)
             merged.push({
               id: `md_warn:${name}`,
               severity: 'warning',
               category: 'storage_md',
               title: `MD ${name} — état dégradé`,
-              summary: assessment.warnings[0] ?? 'Symétrie MD non confirmée',
+              summary: healthWarnings[0] ?? 'Symétrie MD non confirmée',
               affectedNodeIds: assessment.nodeReports.map(r => r.sanId),
               affectedNodeLabels: assessment.nodeReports.map(r => r.label),
               recommendedAction: 'open_raid',

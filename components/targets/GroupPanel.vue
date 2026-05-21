@@ -6,7 +6,7 @@
       class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
       @click="open = !open"
     >
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-3 flex-wrap">
         <span class="font-semibold text-gray-800 dark:text-gray-100">
           {{ group.name }}
         </span>
@@ -24,6 +24,24 @@
       v-if="open"
       class="border-t border-gray-100 dark:border-gray-800 px-4 py-4 space-y-5"
     >
+      <div v-if="!readOnly" class="flex flex-wrap gap-2 justify-end">
+        <UButton
+          size="xs"
+          variant="soft"
+          icon="i-heroicons-plus"
+          :label="t('storage.hosts.actions.addInitiator')"
+          @click="$emit('addInitiator', group.name)"
+        />
+        <UButton
+          size="xs"
+          color="error"
+          variant="outline"
+          icon="i-heroicons-trash"
+          :label="t('storage.hosts.actions.removeGroup')"
+          @click="$emit('removeGroup', group.name)"
+        />
+      </div>
+
       <div>
         <p
           class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2"
@@ -34,10 +52,20 @@
           <li
             v-for="init in group.initiators"
             :key="init"
-            class="flex items-center justify-between"
+            class="flex items-center justify-between gap-2"
           >
             <IqnDisplay :iqn="init" />
-            <CopyButton :value="init" />
+            <div class="flex items-center gap-1 shrink-0">
+              <CopyButton :value="init" />
+              <UButton
+                v-if="!readOnly"
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                :label="t('storage.hosts.actions.removeInitiator')"
+                @click="$emit('removeInitiator', { groupName: group.name, initiator: init })"
+              />
+            </div>
           </li>
         </ul>
         <p v-else class="text-sm text-gray-400 italic">
@@ -87,6 +115,16 @@
         <p v-else class="text-sm text-gray-400 italic">
           {{ t('storage.targets.groupPanel.noLuns') }}
         </p>
+        <div v-if="!readOnly" class="mt-2">
+          <UTooltip :text="t('storage.hosts.help.lunPhase2')">
+            <UButton
+              size="xs"
+              variant="outline"
+              disabled
+              :label="t('storage.hosts.actions.assignLun')"
+            />
+          </UTooltip>
+        </div>
       </div>
     </div>
   </div>
@@ -100,6 +138,13 @@ const { t } = useEsosI18n()
 defineProps<{
   group: Group
   devicesMap: Map<string, { handler: string; filename: string }>
+  readOnly?: boolean
+}>()
+
+defineEmits<{
+  addInitiator: [groupName: string]
+  removeInitiator: [payload: { groupName: string; initiator: string }]
+  removeGroup: [groupName: string]
 }>()
 
 const open = ref(true)

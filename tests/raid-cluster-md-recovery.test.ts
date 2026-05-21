@@ -123,6 +123,7 @@ describe('buildStopRecoveryAssessment', () => {
     expect(assessment.allowedRecoveryModes).not.toContain('stop_inconsistent_active')
     expect(assessment.recommendedRecoveryMode).toBe('stop_all_active')
     expect(assessment.okSymmetric).toBe(true)
+    expect(assessment.structurallySymmetric).toBe(true)
     expect(assessment.okDegraded).toBe(true)
     expect(assessment.uuidConflict).toBeUndefined()
     expect(getActiveUuidConflict(reports, 'md0').conflict).toBe(true)

@@ -56,6 +56,8 @@ export interface ClusterMdRecoveryAssessment {
   allowedRecoveryModes: ClusterMdRecoveryMode[]
   recommendedRecoveryMode: ClusterMdRecoveryMode | null
   okSymmetric: boolean
+  /** Structural match across nodes (ignores UUID in local_symmetric). Used for cluster health KPIs. */
+  structurallySymmetric: boolean
   okDegraded: boolean
   uuidConflict?: ClusterMdUuidConflict
 }
@@ -256,7 +258,14 @@ export function getActiveUuidConflict(
 
 type StopRecoveryAssessmentResult = Pick<
   ClusterMdRecoveryAssessment,
-  'hardBlockers' | 'warnings' | 'allowedRecoveryModes' | 'recommendedRecoveryMode' | 'okSymmetric' | 'okDegraded' | 'uuidConflict'
+  | 'hardBlockers'
+  | 'warnings'
+  | 'allowedRecoveryModes'
+  | 'recommendedRecoveryMode'
+  | 'okSymmetric'
+  | 'structurallySymmetric'
+  | 'okDegraded'
+  | 'uuidConflict'
 >
 
 export function buildStopRecoveryAssessment(
@@ -366,6 +375,7 @@ export function buildStopRecoveryAssessment(
     allowedRecoveryModes,
     recommendedRecoveryMode,
     okSymmetric,
+    structurallySymmetric,
     okDegraded,
     uuidConflict: storageMode === 'shared_identity' && uuidInfo.conflict
       ? { arrayName, nodes: uuidInfo.nodes }
@@ -445,11 +455,12 @@ export function buildClusterMdRecoveryAssessment(input: {
   arrayName: string
   uuid?: string
   nodes: ClusterStorageNodeInventory[]
+  storageMode?: ClusterMdStorageMode
 }): ClusterMdRecoveryAssessment {
   const nodeReports = classifyClusterMdNodeStates(input.nodes, input.arrayName, input.uuid)
   const stopOrAssemble = input.action === 'stop_md' || input.action === 'assemble_md'
   const partial = input.action === 'stop_md'
-    ? buildStopRecoveryAssessment(nodeReports, input.arrayName, input.nodes)
+    ? buildStopRecoveryAssessment(nodeReports, input.arrayName, input.nodes, input.storageMode)
     : input.action === 'assemble_md'
       ? buildAssembleRecoveryAssessment(nodeReports, input.arrayName)
       : {
@@ -458,6 +469,7 @@ export function buildClusterMdRecoveryAssessment(input: {
           allowedRecoveryModes: [] as ClusterMdRecoveryMode[],
           recommendedRecoveryMode: null as ClusterMdRecoveryMode | null,
           okSymmetric: false,
+          structurallySymmetric: false,
           okDegraded: false,
         }
 
@@ -467,6 +479,7 @@ export function buildClusterMdRecoveryAssessment(input: {
     uuid: input.uuid,
     nodeReports,
     ...partial,
+    structurallySymmetric: partial.structurallySymmetric ?? false,
     ...(stopOrAssemble ? {} : { okSymmetric: false, okDegraded: false }),
   }
 }

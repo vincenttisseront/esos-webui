@@ -4,7 +4,7 @@
  */
 import type { ClusterAttentionPoint } from '~/types/cluster-admin'
 import type { RaidActionableItem } from '~/types/raid'
-import { resolveClusterMdStorageMode } from '~/utils/cluster-md-symmetry'
+import { isMdUuidMismatchMessage, resolveClusterMdStorageMode } from '~/utils/cluster-md-symmetry'
 import type { RaidCockpitTranslate } from '~/utils/raid-cluster-health-view-model'
 
 function arrayNameFromAttentionId(id: string): string | undefined {
@@ -13,7 +13,7 @@ function arrayNameFromAttentionId(id: string): string | undefined {
 }
 
 function isUuidMismatchSummary(summary: string): boolean {
-  return summary.includes('UUID MD différents') || summary.toLowerCase().includes('different md uuid')
+  return isMdUuidMismatchMessage(summary)
 }
 
 function isSymmetricLvmOnlyMdAsymmetry(id: string, summary: string): boolean {

@@ -399,6 +399,21 @@ export function assessClusterArraySymmetry(input: {
   return findLocalSymmetricStructuralIssues(input)
 }
 
+/** True when message is only a cross-node MD UUID mismatch (not structural). */
+export function isMdUuidMismatchMessage(message: string): boolean {
+  return message.includes('UUID MD différents')
+    || message.toLowerCase().includes('different md uuid')
+}
+
+/** Drop UUID-only mismatch messages from cluster health in local_symmetric mode. */
+export function filterMdHealthWarnings(
+  warnings: string[],
+  mode?: ClusterMdStorageMode,
+): string[] {
+  if (resolveClusterMdStorageMode(mode) !== 'local_symmetric') return warnings
+  return warnings.filter(w => !isMdUuidMismatchMessage(w))
+}
+
 export function localSymmetricUuidTechnicalLine(
   arrayName: string,
   uniqueUuids: string[],

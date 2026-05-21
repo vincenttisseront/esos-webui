@@ -214,4 +214,21 @@ describe('parseScstConf — SDD v1.2 rev.1 (config réelle ESOS)', () => {
     const cm = c.drivers.find((d) => d.name === 'copy_manager')!
     expect(cm.targets[0].hwTarget).toBe(false)
   })
+
+  it('parse pattern initiator and IB-style initiator', () => {
+    const conf = `
+TARGET_DRIVER iscsi {
+    TARGET iqn.2000-01.com.example:t2 {
+        GROUP wild {
+            INITIATOR iqn.1994-05.com.redhat:*
+            INITIATOR 0x0002c902004098ecee8e13
+        }
+    }
+}
+`
+    const c = parseScstConf(conf)
+    const g = c.drivers[0].targets[0].groups[0]
+    expect(g.initiators).toContain('iqn.1994-05.com.redhat:*')
+    expect(g.initiators).toContain('0x0002c902004098ecee8e13')
+  })
 })

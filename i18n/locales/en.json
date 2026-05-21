@@ -2044,6 +2044,82 @@
         "readOnlyBadge": "R/O"
       }
     },
+    "hosts": {
+      "help": {
+        "title": "Hosts and initiators",
+        "summary": "Access groups control which initiators may access which LUNs on this target. An initiator is the client identity: Fibre Channel WWPN, iSCSI IQN, InfiniBand GUID, or a pattern (* ? !).",
+        "wikiLink": "ESOS wiki — Hosts and initiators",
+        "lunPhase2": "LUN-to-group mapping will be available in a later release (Devices phase)."
+      },
+      "clusterBanner": {
+        "title": "Cluster mode",
+        "body": "Changes are applied on every cluster node (read/modify/write + SCST reload).",
+        "adminLink": "Cluster administration"
+      },
+      "actions": {
+        "addGroup": "Add group",
+        "removeGroup": "Remove group",
+        "addInitiator": "Add initiator",
+        "removeInitiator": "Remove",
+        "assignLun": "Assign device…",
+        "addDiscovered": "Add to group"
+      },
+      "discovered": {
+        "title": "Discovered initiators",
+        "empty": "No unlisted initiators in active sessions.",
+        "hint": "These initiators have an active session but are not in any access group."
+      },
+      "modals": {
+        "addGroup": {
+          "title": "Add access group",
+          "nameLabel": "Group name",
+          "namePlaceholder": "e.g. hosts_fc"
+        },
+        "addInitiator": {
+          "title": "Add initiator to {group}",
+          "valueLabel": "Initiator",
+          "valuePlaceholder": "WWPN, IQN, GUID, or pattern",
+          "typeLabel": "Type",
+          "types": {
+            "auto": "Auto-detect",
+            "fc": "Fibre Channel (WWPN)",
+            "iscsi": "iSCSI (IQN)",
+            "ib": "InfiniBand (GUID)",
+            "pattern": "Pattern"
+          }
+        },
+        "removeGroup": {
+          "title": "Remove group \"{name}\"?",
+          "message": "This removes the group and all its initiators from scst.conf.",
+          "messageWithLuns": "This group has {count} LUN mapping(s). Forced removal requires confirmation.",
+          "confirmLabel": "Remove group"
+        }
+      },
+      "clusterResults": {
+        "title": "Per-node results",
+        "ok": "OK",
+        "failed": "Failed"
+      },
+      "toasts": {
+        "groupCreated": "Group created",
+        "groupRemoved": "Group removed",
+        "initiatorAdded": "Initiator added",
+        "initiatorRemoved": "Initiator removed",
+        "errorTitle": "Operation failed",
+        "partialCluster": "Cluster mutation partially failed — see per-node results."
+      },
+      "errors": {
+        "group_name_required": "Group name is required.",
+        "group_name_invalid": "Invalid group name (letters, digits, _ . - only).",
+        "initiator_required": "Initiator is required.",
+        "fc_wwn_invalid": "Invalid Fibre Channel WWPN (expected 8 bytes as aa:bb:cc:dd:ee:ff:00:11).",
+        "iscsi_iqn_invalid": "Invalid iSCSI IQN.",
+        "ib_guid_colons": "Invalid IB GUID (expected colon-separated format).",
+        "ib_guid_hex": "Invalid IB GUID (expected 0x… hex).",
+        "pattern_invalid": "Invalid pattern characters.",
+        "initiator_type_unknown": "Could not detect initiator type."
+      }
+    },
     "devices": {
       "list": {
         "countLine": "{count} device(s)",

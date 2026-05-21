@@ -79,6 +79,24 @@ describe('api-rbac (mutations default deny)', () => {
   it('RB09h — viewer cannot DELETE /api/lvm/pv', () => {
     expectForbidden(() => enforceMutationAccess('/api/lvm/pv', 'DELETE', 'viewer'))
   })
+
+  it('RB10 — operator can POST /api/targets/t1/groups', () => {
+    expect(() =>
+      enforceMutationAccess('/api/targets/iqn.t1/groups', 'POST', 'operator'),
+    ).not.toThrow()
+  })
+
+  it('RB10b — viewer cannot POST /api/targets/t1/groups/g1/initiators', () => {
+    expectForbidden(() =>
+      enforceMutationAccess('/api/targets/t1/groups/g1/initiators', 'POST', 'viewer'),
+    )
+  })
+
+  it('RB10c — viewer cannot POST initiators/remove', () => {
+    expectForbidden(() =>
+      enforceMutationAccess('/api/targets/t1/groups/g1/initiators/remove', 'POST', 'viewer'),
+    )
+  })
 })
 
 describe('api-rbac (auth-providers admin)', () => {
