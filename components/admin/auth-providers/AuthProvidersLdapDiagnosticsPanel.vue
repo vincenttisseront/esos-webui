@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { LdapStepProgress, LdapTestDiagnostic } from '~/server/utils/ldap-diagnostics'
+import type { LdapTestSuggestion } from '~/server/utils/ldap-test-response'
 import { formatLdapDiagnosticForCopy } from '~/server/utils/ldap-diagnostics'
 
 const props = defineProps<{
@@ -10,12 +11,22 @@ const props = defineProps<{
   searchSampleCount?: number
   userLookup?: boolean
   groupReadOk?: boolean
+  suggestions?: LdapTestSuggestion[]
+  readOnly?: boolean
+}>()
+
+const emit = defineEmits<{
+  'apply-root-base-dn': [baseDn: string]
+  'apply-ad-filter': [filter: string]
+  'apply-upn-bind': [bindDn: string]
+  'test-root-base-dn': []
 }>()
 
 const { t } = useEsosI18n()
 const { success: toastOk } = useAppToast()
 
 const commandsOpen = ref(false)
+const hintsOpen = ref(false)
 
 const summaryTitle = computed(() => {
   if (props.ok && props.connectOnly) {
@@ -116,6 +127,40 @@ function stepStatusClass(status: LdapStepProgress['status']) {
   }
 }
 
+function suggestionLabel(key: string): string {
+  if (key === 'root_base_dn_probe_ok') return t('admin.authProviders.ldap.diagnostics.suggestions.rootProbeOk')
+  if (key === 'root_base_dn_probe_failed') return t('admin.authProviders.ldap.diagnostics.suggestions.rootProbeFailed')
+  return t(`admin.authProviders.ldap.diagnostics.hints.${key}`)
+}
+
+function runSuggestion(s: LdapTestSuggestion) {
+  if (props.readOnly || !s.actionType) return
+  switch (s.actionType) {
+    case 'applyRootBaseDn':
+      if (s.payload?.baseDn) emit('apply-root-base-dn', s.payload.baseDn)
+      break
+    case 'applyAdFilter':
+      emit('apply-ad-filter', '(&(objectCategory=person)(objectClass=user)(sAMAccountName={{username}}))')
+      break
+    case 'applyUpnBind':
+      if (s.payload?.bindDn) emit('apply-upn-bind', s.payload.bindDn)
+      break
+    case 'testRootBaseDn':
+      emit('test-root-base-dn')
+      break
+    default:
+      break
+  }
+}
+
+async function copyCommand(cmd: string) {
+  if (!import.meta.client) return
+  try {
+    await navigator.clipboard.writeText(cmd)
+    toastOk(t('admin.authProviders.ldap.diagnostics.copyTitle'), t('admin.authProviders.ldap.diagnostics.copyCommandBody'))
+  } catch { /* ignore */ }
+}
+
 function stepStatusIcon(status: LdapStepProgress['status']) {
   switch (status) {
     case 'ok':      return 'i-heroicons-check-circle'
@@ -207,6 +252,48 @@ function stepStatusIcon(status: LdapStepProgress['status']) {
       </ul>
     </div>
 
+    <UAlert
+      v-if="diagnostic.rootBaseDnProbe"
+      :color="diagnostic.rootBaseDnProbe.ok ? 'green' : 'amber'"
+      icon="i-heroicons-map-pin"
+      :title="t('admin.authProviders.ldap.diagnostics.rootProbeTitle')"
+      :description="diagnostic.rootBaseDnProbe.message ?? diagnostic.rootBaseDnProbe.baseDn"
+    />
+
+    <div v-if="diagnostic.searchResultPreview" class="space-y-1 text-xs">
+      <p class="font-semibold text-gray-700 dark:text-gray-300">{{ t('admin.authProviders.ldap.diagnostics.searchResultTitle') }}</p>
+      <p class="font-mono break-all">{{ diagnostic.searchResultPreview.dn }}</p>
+      <p v-if="diagnostic.searchResultPreview.groupDns.length" class="text-gray-600 dark:text-gray-400">
+        {{ t('admin.authProviders.ldap.diagnostics.groupsCount', { count: diagnostic.searchResultPreview.groupDns.length }) }}
+      </p>
+    </div>
+
+    <div v-if="(suggestions?.length ?? 0) > 0 && !readOnly" class="space-y-2">
+      <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+        {{ t('admin.authProviders.ldap.diagnostics.suggestedActionsTitle') }}
+      </p>
+      <div class="flex flex-wrap gap-2">
+        <UButton
+          v-for="(s, i) in suggestions"
+          :key="`${s.key}-${i}`"
+          size="xs"
+          color="primary"
+          variant="soft"
+          :disabled="!s.actionType"
+          :label="suggestionLabel(s.key)"
+          @click="runSuggestion(s)"
+        />
+      </div>
+    </div>
+
+    <UAlert
+      v-if="diagnostic.referrals?.length"
+      color="amber"
+      icon="i-heroicons-arrow-top-right-on-square"
+      :title="t('admin.authProviders.ldap.diagnostics.referrals')"
+      :description="t('admin.authProviders.ldap.referrals.notFollowed')"
+    />
+
     <dl
       v-if="!ok && (diagnostic.ldapErrorName || diagnostic.ldapErrorCode !== undefined || diagnostic.diagnosticMessage || diagnostic.matchedDN || diagnostic.referrals?.length)"
       class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono"
@@ -235,7 +322,7 @@ function stepStatusIcon(status: LdapStepProgress['status']) {
 
     <div class="space-y-2">
       <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-        {{ t('admin.authProviders.ldap.diagnostics.configTitle') }}
+        {{ t('admin.authProviders.ldap.diagnostics.configTestedLabel') }}
       </p>
       <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
         <div>
@@ -282,10 +369,15 @@ function stepStatusIcon(status: LdapStepProgress['status']) {
     </div>
 
     <div v-if="hintLines.length" class="space-y-2">
-      <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-        {{ t('admin.authProviders.ldap.diagnostics.hintsTitle') }}
-      </p>
-      <ul class="list-disc pl-5 space-y-1 text-gray-700 dark:text-gray-300">
+      <button
+        type="button"
+        class="flex w-full items-center justify-between text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
+        @click="hintsOpen = !hintsOpen"
+      >
+        <span>{{ t('admin.authProviders.ldap.diagnostics.hintsTitle') }}</span>
+        <UIcon :name="hintsOpen ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'" class="h-4 w-4" />
+      </button>
+      <ul v-if="hintsOpen" class="list-disc pl-5 space-y-1 text-gray-700 dark:text-gray-300">
         <li v-for="(line, i) in hintLines" :key="i">{{ line }}</li>
       </ul>
     </div>
@@ -300,11 +392,10 @@ function stepStatusIcon(status: LdapStepProgress['status']) {
         <UIcon :name="commandsOpen ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'" class="h-4 w-4" />
       </button>
       <template v-if="commandsOpen">
-        <pre
-          v-for="(cmd, i) in commandLines"
-          :key="i"
-          class="overflow-x-auto rounded-md bg-gray-900 text-gray-100 p-3 text-xs font-mono"
-        >{{ cmd }}</pre>
+        <div v-for="(cmd, i) in commandLines" :key="i" class="space-y-1">
+          <pre class="overflow-x-auto rounded-md bg-gray-900 text-gray-100 p-3 text-xs font-mono">{{ cmd }}</pre>
+          <UButton size="2xs" color="gray" variant="ghost" icon="i-heroicons-clipboard" :label="t('admin.authProviders.ldap.diagnostics.copyCommandButton')" @click="copyCommand(cmd)" />
+        </div>
         <p class="text-xs text-gray-500 dark:text-gray-400">
           {{ t('admin.authProviders.ldap.diagnostics.commandsNote') }}
         </p>

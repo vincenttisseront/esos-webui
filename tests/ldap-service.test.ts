@@ -11,6 +11,7 @@ import {
   domainRootDnFromDn,
   domainRootDnFromUrl,
   ldapAdRecommendedDefaults,
+  ldapAdFullPreset,
   suggestUpnBindFromDn,
 } from '../server/utils/ldap-ad-defaults'
 
@@ -115,5 +116,15 @@ describe('ldap-ad-defaults', () => {
     expect(d.recommendedFilter).toContain('objectCategory=person')
     expect(d.recommendedBaseDn).toBe('DC=ar-systems,DC=fr')
     expect(d.recommendedBindUpn).toBe('svc_harbor@ar-systems.fr')
+  })
+
+  it('ldapAdFullPreset includes displayName and memberOf defaults', () => {
+    const preset = ldapAdFullPreset({
+      url:    baseLdap.url,
+      bindDn: 'CN=svc_harbor,OU=Services,DC=ar-systems,DC=fr',
+      baseDn: baseLdap.baseDn,
+    })
+    expect(preset.displayNameAttribute).toBe('displayName')
+    expect(preset.bindNetbios).toMatch(/^AR-SYSTEMS\\svc_harbor$/i)
   })
 })

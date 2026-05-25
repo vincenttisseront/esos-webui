@@ -11,6 +11,7 @@ import {
   truncateForSummary,
   type LdapTestClientState,
 } from '~/utils/auth-providers-admin-ui'
+import { domainRootDnFromDn, domainRootDnFromUrl, ldapAdFullPreset } from '~/utils/ldap-ad-defaults'
 
 const props = defineProps<{
   data: AdminAuthProvidersDto
@@ -21,6 +22,9 @@ const props = defineProps<{
   testingLdap: boolean
   testingLdapConnect: boolean
   testingLdapLookup: boolean
+  testingLdapGroup: boolean
+  testingLdapFull: boolean
+  testingLdapRoot: boolean
 }>()
 
 const form = defineModel<{
@@ -44,6 +48,9 @@ const emit = defineEmits<{
   'test-connect': []
   'test-bind': []
   'test-lookup': []
+  'test-group': []
+  'test-full': []
+  'test-root-base-dn': []
   save: []
   cancel: []
 }>()
@@ -124,6 +131,48 @@ const loginLdap = computed(() =>
     oidcUserCount:        0,
   }).ldap,
 )
+
+const ldapSuggestions = computed(() => props.lastLdapTest?.structured?.suggestions ?? [])
+
+const suggestedRootBaseDn = computed(() =>
+  domainRootDnFromDn(form.value.ldapBaseDn)
+  ?? domainRootDnFromUrl(form.value.ldapUrl),
+)
+
+const rootBaseDnDiffers = computed(() => {
+  const root = suggestedRootBaseDn.value
+  if (!root) return false
+  return form.value.ldapBaseDn.trim().toLowerCase() !== root.toLowerCase()
+})
+
+function applyAdPresetAll() {
+  if (props.readOnly) return
+  const preset = ldapAdFullPreset({
+    url:    form.value.ldapUrl,
+    bindDn: form.value.ldapBindDn,
+    baseDn: form.value.ldapBaseDn,
+  })
+  if (preset.baseDn) form.value.ldapBaseDn = preset.baseDn
+  form.value.ldapUserSearchFilter = preset.userFilter
+  form.value.ldapUsernameAttribute = preset.usernameAttribute
+  form.value.ldapDisplayNameAttribute = preset.displayNameAttribute
+  form.value.ldapGroupAttribute = preset.groupAttribute
+}
+
+function applyRootBaseDn(baseDn: string) {
+  if (props.readOnly) return
+  form.value.ldapBaseDn = baseDn
+}
+
+function applyAdFilter(filter: string) {
+  if (props.readOnly) return
+  form.value.ldapUserSearchFilter = filter
+}
+
+function applyUpnBind(bindDn: string) {
+  if (props.readOnly) return
+  form.value.ldapBindDn = bindDn
+}
 </script>
 
 <template>
@@ -271,12 +320,28 @@ const loginLdap = computed(() =>
         :bind-dn="form.ldapBindDn"
         :base-dn="form.ldapBaseDn"
         :read-only="readOnly"
-        @apply-filter="form.ldapUserSearchFilter = $event"
-        @apply-base-dn="form.ldapBaseDn = $event"
-        @apply-bind-upn="form.ldapBindDn = $event"
+        @apply-preset="applyAdPresetAll"
+        @apply-filter="applyAdFilter"
+        @apply-base-dn="applyRootBaseDn"
+        @apply-bind-upn="applyUpnBind"
       />
       <AppFormField :label="t('admin.authProviders.ldap.baseDnLabel')" :help="t('admin.authProviders.ldap.baseDnDesc')">
-        <AppTextInput v-model="form.ldapBaseDn" :disabled="readOnly" class="font-mono" :placeholder="t('admin.authProviders.ldap.baseDnPlaceholder')" />
+        <div class="space-y-2">
+          <AppTextInput v-model="form.ldapBaseDn" :disabled="readOnly" class="font-mono" :placeholder="t('admin.authProviders.ldap.baseDnPlaceholder')" />
+          <div v-if="rootBaseDnDiffers && suggestedRootBaseDn" class="flex flex-wrap items-center gap-2 text-xs">
+            <span class="text-gray-600 dark:text-gray-400">
+              {{ t('admin.authProviders.ldap.rootBaseDnHint', { baseDn: suggestedRootBaseDn }) }}
+            </span>
+            <UButton
+              v-if="!readOnly"
+              size="2xs"
+              color="gray"
+              variant="soft"
+              :label="t('admin.authProviders.ldap.testRootBaseDnApply')"
+              @click="applyRootBaseDn(suggestedRootBaseDn)"
+            />
+          </div>
+        </div>
       </AppFormField>
       <AppFormField
         :label="t('admin.authProviders.ldap.userFilterLabel')"
@@ -350,7 +415,41 @@ const loginLdap = computed(() =>
           variant="outline"
           @click="emit('test-bind')"
         />
+        <UButton
+          :label="t('admin.authProviders.ldap.testGroupButton')"
+          icon="i-heroicons-user-group"
+          :loading="testingLdapGroup"
+          :disabled="readOnly || !ldapLookupUsername.trim()"
+          color="gray"
+          variant="soft"
+          @click="emit('test-group')"
+        />
+        <UButton
+          :label="t('admin.authProviders.ldap.testFullButton')"
+          icon="i-heroicons-beaker"
+          :loading="testingLdapFull"
+          :disabled="readOnly"
+          color="gray"
+          variant="soft"
+          @click="emit('test-full')"
+        />
+        <UButton
+          v-if="rootBaseDnDiffers && suggestedRootBaseDn"
+          :label="t('admin.authProviders.ldap.testRootBaseDnButton')"
+          icon="i-heroicons-map-pin"
+          :loading="testingLdapRoot"
+          :disabled="readOnly || !ldapLookupUsername.trim()"
+          color="amber"
+          variant="soft"
+          @click="emit('test-root-base-dn')"
+        />
       </div>
+      <UCheckbox
+        :model-value="false"
+        disabled
+        :label="t('admin.authProviders.ldap.referrals.followLabel')"
+        :help="t('admin.authProviders.ldap.referrals.followHelp')"
+      />
       <AppFormField :label="t('admin.authProviders.ldap.testLookupLabel')" :help="t('admin.authProviders.ldap.testLookupDesc')">
         <div class="flex flex-col sm:flex-row gap-3">
           <AppTextInput
@@ -378,6 +477,12 @@ const loginLdap = computed(() =>
         :search-sample-count="lastLdapTest.ok ? lastLdapTest.searchSampleCount : undefined"
         :user-lookup="lastLdapTest.ok ? lastLdapTest.userLookup : undefined"
         :group-read-ok="lastLdapTest.ok ? lastLdapTest.groupReadOk : undefined"
+        :suggestions="ldapSuggestions"
+        :read-only="readOnly"
+        @apply-root-base-dn="applyRootBaseDn"
+        @apply-ad-filter="applyAdFilter"
+        @apply-upn-bind="applyUpnBind"
+        @test-root-base-dn="emit('test-root-base-dn')"
       />
     </section>
   </div>

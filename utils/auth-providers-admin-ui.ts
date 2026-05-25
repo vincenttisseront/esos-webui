@@ -21,6 +21,7 @@ import {
 } from '../server/utils/auth-providers-public'
 import type { AdminAuthProvidersDto } from '../server/utils/auth-providers-config'
 import type { LdapTestDiagnostic, LdapTestConfigSummary } from '../server/utils/ldap-diagnostics'
+import type { LdapStructuredTestResponse } from '../server/utils/ldap-test-response'
 import { buildInitialStepResults } from '../server/utils/ldap-diagnostics'
 
 export type { LdapTestDiagnostic }
@@ -30,20 +31,11 @@ export type AuthProviderTabId = 'local' | 'ldap' | 'oidc' | 'roles' | 'security'
 export const AUTH_PROVIDERS_TAB_STORAGE_KEY = 'auth-providers-active-tab'
 
 export type LdapTestClientState =
-  | { ok: true; searchSampleCount: number; userLookup?: boolean; bindOnly?: boolean; connectOnly?: boolean; groupReadOk?: boolean; diagnostic: LdapTestDiagnostic }
-  | { ok: false; error: string; diagnostic: LdapTestDiagnostic }
+  | { ok: true; searchSampleCount: number; userLookup?: boolean; bindOnly?: boolean; connectOnly?: boolean; groupReadOk?: boolean; diagnostic: LdapTestDiagnostic; structured?: LdapStructuredTestResponse }
+  | { ok: false; error: string; diagnostic: LdapTestDiagnostic; structured?: LdapStructuredTestResponse }
   | null
 
-export type LdapTestApiResponse = {
-  ok:                 boolean
-  searchSampleCount?: number
-  bindOnly?:          boolean
-  connectOnly?:       boolean
-  userLookup?:        boolean
-  groupReadOk?:       boolean
-  error?:             string
-  diagnostic?:        LdapTestDiagnostic
-}
+export type LdapTestApiResponse = LdapStructuredTestResponse
 
 export function mapLdapTestApiResponse(
   r: LdapTestApiResponse,
@@ -54,6 +46,7 @@ export function mapLdapTestApiResponse(
       ok:                true,
       searchSampleCount: r.searchSampleCount ?? 0,
       diagnostic:        r.diagnostic,
+      structured:        r,
       ...(r.bindOnly ? { bindOnly: true } : {}),
       ...(r.connectOnly ? { connectOnly: true } : {}),
       ...(r.userLookup !== undefined ? { userLookup: r.userLookup } : {}),
@@ -62,8 +55,9 @@ export function mapLdapTestApiResponse(
   }
   return {
     ok:         false,
-    error:      r.error ?? r.diagnostic.safeMessage,
+    error:      r.errorMessage ?? r.error?.message ?? r.diagnostic.safeMessage,
     diagnostic: r.diagnostic,
+    structured: r,
   }
 }
 

@@ -2628,6 +2628,29 @@
         "testLookupPrompt": "Saisissez un identifiant réel pour tester la recherche utilisateur.",
         "testLookupFound": "Utilisateur trouvé ({count} entrée(s) correspondante(s)).",
         "testLookupNotFound": "Aucun utilisateur correspondant (bind et recherche OK).",
+        "testGroupButton": "Tester les attributs de groupe",
+        "testFullButton": "Test LDAP complet",
+        "testRootBaseDnButton": "Tester avec le DN racine du domaine",
+        "testRootBaseDnApply": "Utiliser le DN racine du domaine",
+        "rootBaseDnHint": "DN racine suggéré : {baseDn}",
+        "referrals": {
+          "followLabel": "Suivre les références LDAP",
+          "followHelp": "Non activé dans cette version. Si des références apparaissent, liez-vous directement à un contrôleur de domaine.",
+          "notFollowed": "Des références LDAP ont été renvoyées mais ne sont pas suivies automatiquement. Liez-vous directement à un contrôleur de domaine."
+        },
+        "adAssistant": {
+          "title": "Assistant Active Directory",
+          "desc": "Valeurs recommandées pour Active Directory. Appliquer remplit les champs uniquement — enregistrez explicitement pour persister.",
+          "domain": "Domaine",
+          "baseDn": "Base DN suggéré",
+          "filter": "Filtre utilisateur suggéré",
+          "loginAttr": "Attribut de connexion",
+          "displayAttr": "Attribut d'affichage",
+          "groupAttr": "Attribut de groupe",
+          "bindUpn": "Bind UPN suggéré",
+          "bindNetbios": "Bind NetBIOS suggéré",
+          "applyAll": "Appliquer les recommandations AD"
+        },
         "validation": {
           "title": "Avertissements de configuration",
           "url_empty": "L’URL du serveur LDAP est vide.",
@@ -2682,6 +2705,17 @@
           "commandsTitle": "Exemples en ligne de commande (optionnel)",
           "commandsNote": "À exécuter depuis une machine qui atteint l’annuaire. Le mot de passe est demandé (-W) ; ne le collez pas dans les journaux.",
           "copyButton": "Copier le diagnostic LDAP",
+          "copyCommandButton": "Copier la commande",
+          "copyCommandBody": "Commande copiée dans le presse-papiers.",
+          "configTestedLabel": "Configuration testée",
+          "suggestedActionsTitle": "Actions suggérées",
+          "rootProbeTitle": "Test avec le DN racine du domaine",
+          "searchResultTitle": "Aperçu du résultat de recherche",
+          "groupsCount": "{count} groupe(s)",
+          "suggestions": {
+            "rootProbeOk": "Utiliser le DN racine du domaine (sonde OK)",
+            "rootProbeFailed": "La sonde avec le DN racine a aussi échoué"
+          },
           "copyTitle": "Copié",
           "copyBody": "Diagnostic LDAP copié dans le presse-papiers.",
           "steps": {

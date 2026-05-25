@@ -2628,6 +2628,29 @@
         "testLookupPrompt": "Enter a real login above to test user search.",
         "testLookupFound": "User found ({count} matching entries).",
         "testLookupNotFound": "No matching user in directory (bind and search succeeded).",
+        "testGroupButton": "Test group attributes",
+        "testFullButton": "Full LDAP test",
+        "testRootBaseDnButton": "Test with domain root base DN",
+        "testRootBaseDnApply": "Use domain root base DN",
+        "rootBaseDnHint": "Suggested domain root: {baseDn}",
+        "referrals": {
+          "followLabel": "Follow LDAP referrals",
+          "followHelp": "Not enabled in this version. If referrals appear, bind directly to a domain controller.",
+          "notFollowed": "Referrals were returned but are not followed automatically. Bind directly to a domain controller."
+        },
+        "adAssistant": {
+          "title": "Active Directory assistant",
+          "desc": "Recommended defaults for Active Directory. Apply fills form fields only — save explicitly to persist.",
+          "domain": "Domain",
+          "baseDn": "Suggested base DN",
+          "filter": "Suggested user filter",
+          "loginAttr": "Login attribute",
+          "displayAttr": "Display attribute",
+          "groupAttr": "Group attribute",
+          "bindUpn": "Suggested UPN bind",
+          "bindNetbios": "Suggested NetBIOS bind",
+          "applyAll": "Apply AD recommendations"
+        },
         "validation": {
           "title": "Configuration warnings",
           "url_empty": "LDAP server URL is empty.",
@@ -2682,6 +2705,17 @@
           "commandsTitle": "Command-line examples (optional)",
           "commandsNote": "Run from a machine that can reach the directory. Password is prompted (-W); never paste it into logs.",
           "copyButton": "Copy LDAP diagnostic",
+          "copyCommandButton": "Copy command",
+          "copyCommandBody": "Command copied to clipboard.",
+          "configTestedLabel": "Configuration tested",
+          "suggestedActionsTitle": "Suggested actions",
+          "rootProbeTitle": "Domain root base DN probe",
+          "searchResultTitle": "Search result preview",
+          "groupsCount": "{count} group(s)",
+          "suggestions": {
+            "rootProbeOk": "Use domain root base DN (probe succeeded)",
+            "rootProbeFailed": "Domain root probe also failed"
+          },
           "copyTitle": "Copied",
           "copyBody": "LDAP diagnostic copied to clipboard.",
           "steps": {

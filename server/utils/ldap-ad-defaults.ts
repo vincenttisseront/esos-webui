@@ -10,6 +10,17 @@ export type LdapAdRecommendedDefaults = {
   domainFqdn:           string | null
 }
 
+export type LdapAdFullPreset = {
+  domainFqdn:           string | null
+  baseDn:               string | null
+  userFilter:           string
+  usernameAttribute:    string
+  displayNameAttribute: string
+  groupAttribute:       string
+  bindUpn:              string | null
+  bindNetbios:          string | null
+}
+
 const AD_USER_FILTER
   = '(&(objectCategory=person)(objectClass=user)(sAMAccountName={{username}}))'
 
@@ -49,15 +60,36 @@ function fqdnFromDomainRoot(domainRoot: string | null): string | null {
   return labels.length >= 2 ? labels.join('.') : null
 }
 
+function netbiosFromDomainRoot(domainRoot: string | null): string | null {
+  const fqdn = fqdnFromDomainRoot(domainRoot)
+  if (!fqdn) return null
+  const first = fqdn.split('.')[0]
+  return first ? first.toUpperCase() : null
+}
+
+function samAccountFromBind(bindDn: string): string | null {
+  const s = bindDn.trim()
+  if (!s) return null
+  if (s.includes('@')) return s.split('@')[0] ?? null
+  if (s.includes('\\')) return s.split('\\').pop() ?? null
+  const cn = s.match(/^cn=([^,]+)/i)?.[1]
+  return cn?.trim() || null
+}
+
 /** Suggest UPN bind from CN=svc,…,DC=corp,DC=local → svc@corp.local */
 export function suggestUpnBindFromDn(bindDn: string, domainRoot: string | null): string | null {
   const fqdn = fqdnFromDomainRoot(domainRoot)
   if (!fqdn) return null
-  const cnMatch = bindDn.match(/^cn=([^,]+)/i)
-  if (!cnMatch?.[1]) return null
-  const sam = cnMatch[1].trim()
+  const sam = samAccountFromBind(bindDn)
   if (!sam || sam.includes('@')) return null
   return `${sam}@${fqdn}`
+}
+
+export function suggestNetbiosBindFromDn(bindDn: string, domainRoot: string | null): string | null {
+  const netbios = netbiosFromDomainRoot(domainRoot)
+  const sam = samAccountFromBind(bindDn)
+  if (!netbios || !sam) return null
+  return `${netbios}\\${sam}`
 }
 
 export function ldapAdRecommendedDefaults(params: {
@@ -65,18 +97,36 @@ export function ldapAdRecommendedDefaults(params: {
   bindDn: string
   baseDn: string
 }): LdapAdRecommendedDefaults {
+  const preset = ldapAdFullPreset(params)
+  return {
+    recommendedFilter:  preset.userFilter,
+    recommendedBaseDn:  preset.baseDn,
+    recommendedBindUpn: preset.bindUpn,
+    domainFqdn:         preset.domainFqdn,
+  }
+}
+
+export function ldapAdFullPreset(params: {
+  url:    string
+  bindDn: string
+  baseDn: string
+}): LdapAdFullPreset {
   const fromBase = domainRootDnFromDn(params.baseDn)
   const fromUrl  = domainRootDnFromUrl(params.url)
   const domainRoot = fromBase ?? fromUrl
   const domainFqdn = fqdnFromDomainRoot(domainRoot)
-  const recommendedBindUpn = params.bindDn.includes('@')
+  const bindUpn = params.bindDn.includes('@')
     ? params.bindDn.trim()
     : suggestUpnBindFromDn(params.bindDn.trim(), domainRoot)
 
   return {
-    recommendedFilter: AD_USER_FILTER,
-    recommendedBaseDn: domainRoot,
-    recommendedBindUpn,
     domainFqdn,
+    baseDn:               domainRoot,
+    userFilter:           AD_USER_FILTER,
+    usernameAttribute:    'sAMAccountName',
+    displayNameAttribute: 'displayName',
+    groupAttribute:       'memberOf',
+    bindUpn,
+    bindNetbios:          suggestNetbiosBindFromDn(params.bindDn, domainRoot),
   }
 }

@@ -102,6 +102,21 @@ export type LdapCommandExamples = {
   openssl?:     string
 }
 
+export type LdapRootBaseDnProbe = {
+  baseDn:     string
+  ok:         boolean
+  userFound?: boolean
+  message?:   string
+}
+
+export type SearchRowPreview = {
+  dn:                 string
+  displayName:        string | null
+  groupDns:           string[]
+  groupAttrPresent:   boolean
+  attributesPreview:  Record<string, string | string[]>
+}
+
 export type LdapTestDiagnostic = {
   step:           LdapTestStep
   ldapErrorName?: string
@@ -114,6 +129,8 @@ export type LdapTestDiagnostic = {
   renderedFilter?: string
   testedBaseDn?:  string
   testedBindPrincipalMasked?: string
+  rootBaseDnProbe?: LdapRootBaseDnProbe
+  searchResultPreview?: SearchRowPreview
   stepResults:    LdapStepProgress[]
   config:         LdapTestConfigSummary
   hints:          LdapDiagnosticHintId[]
@@ -128,6 +145,9 @@ export type LdapTestSuccess = {
   connectOnly?:      boolean
   userLookup?:       boolean
   groupReadOk?:      boolean
+  groupOnly?:        boolean
+  fullTest?:         boolean
+  searchRootTest?:   boolean
   diagnostic:        LdapTestDiagnostic
 }
 
