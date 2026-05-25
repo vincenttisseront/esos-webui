@@ -27,7 +27,11 @@ const config: ScstConfig = {
           name: 'iqn.test',
           enabled: true,
           groups: [
-            { name: 'g1', luns: [{ id: 2, device: 'vd1', readOnly: true }], initiators: [] },
+            {
+              name: 'g1',
+              luns: [{ id: 2, device: 'vd1', readOnly: true }],
+              initiators: ['iqn.1994-05.com.redhat:client'],
+            },
           ],
           luns: [],
         },
@@ -61,5 +65,10 @@ describe('fs-scst-inventory', () => {
     expect(luns[0].lunId).toBe(2)
     expect(luns[0].readOnly).toBe(true)
     expect(luns[0].handler).toBe('vdisk_fileio')
+  })
+
+  it('includes group initiators on LUN mappings', () => {
+    const luns = collectLunMappingsFromConfig(config)
+    expect(luns[0].initiators).toEqual(['iqn.1994-05.com.redhat:client'])
   })
 })

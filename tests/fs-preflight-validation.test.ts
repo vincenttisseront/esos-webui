@@ -3,6 +3,7 @@ import {
   expectedFormatFsConfirmation,
   validateCreateFsInput,
   validateMountPoint,
+  validateVdiskFileName,
   validateVdiskSize,
 } from '~/utils/fs-preflight-validation'
 
@@ -21,6 +22,12 @@ describe('fs-preflight-validation', () => {
     expect(validateVdiskSize(500, 1000)).toBeTruthy()
     expect(validateVdiskSize(900, 1000)).toBeTruthy()
     expect(validateVdiskSize(2 * 1024 * 1024, 1_000_000_000)).toBeNull()
+  })
+
+  it('rejects invalid vdisk file names', () => {
+    expect(validateVdiskFileName('')).toBeTruthy()
+    expect(validateVdiskFileName('../evil.img')).toBeTruthy()
+    expect(validateVdiskFileName('ok-file_01.img')).toBeNull()
   })
 
   it('create fs input aggregates blockers', () => {

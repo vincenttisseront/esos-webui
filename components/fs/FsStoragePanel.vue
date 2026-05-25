@@ -50,7 +50,17 @@
 
     <FsProvisioningChain :steps="chainSteps" />
 
-    <div v-if="!readOnly" class="flex flex-wrap gap-2">
+    <div v-if="!readOnly" class="flex flex-wrap gap-2 items-center">
+      <UButton
+        v-if="showNextStepButton"
+        size="sm"
+        color="primary"
+        variant="solid"
+        icon="i-heroicons-arrow-right-circle"
+        @click="runNextStep"
+      >
+        {{ t('storage.fs.next.action_button') }}
+      </UButton>
       <UButton
         size="sm"
         color="primary"
@@ -116,6 +126,24 @@
             :label="row.original.mapped ? t('storage.fs.table.mapped') : t('storage.fs.table.unmapped')"
           />
         </template>
+        <template #actions-cell="{ row }">
+          <div class="flex flex-wrap gap-2">
+            <NuxtLink
+              v-if="deviceViewMappingsUrl(row.original.name)"
+              :to="deviceViewMappingsUrl(row.original.name)!"
+              class="text-xs text-primary-600 hover:underline"
+            >
+              {{ t('storage.hosts.links.viewMappings') }}
+            </NuxtLink>
+            <NuxtLink
+              v-if="!readOnly && deviceExposeUrl(row.original.name)"
+              :to="deviceExposeUrl(row.original.name)!"
+              class="text-xs text-primary-600 hover:underline"
+            >
+              {{ t('storage.hosts.links.exposeToInitiators') }}
+            </NuxtLink>
+          </div>
+        </template>
       </UTable>
       <p v-else class="text-sm text-gray-500 dark:text-gray-400">{{ t('storage.fs.overview.empty_fileio') }}</p>
     </UCard>
@@ -127,10 +155,20 @@
       </template>
       <UTable v-if="displayedLuns.length" :data="displayedLuns" :columns="lunCols">
         <template #targetName-cell="{ row }">
-          <span class="font-mono text-xs">{{ row.original.targetName }}</span>
+          <NuxtLink
+            :to="`/targets/${encodeURIComponent(row.original.targetName)}`"
+            class="font-mono text-xs text-primary-600 hover:underline"
+          >
+            {{ row.original.targetName }}
+          </NuxtLink>
         </template>
         <template #groupName-cell="{ row }">
           <span class="text-xs">{{ row.original.groupName || '—' }}</span>
+        </template>
+        <template #initiators-cell="{ row }">
+          <span class="font-mono text-xs break-all">
+            {{ row.original.initiators?.length ? row.original.initiators.join(', ') : '—' }}
+          </span>
         </template>
         <template #filename-cell="{ row }">
           <button
@@ -311,8 +349,14 @@
     </details>
 
     <details v-if="diagnostics" class="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
-      <summary class="text-sm font-medium cursor-pointer select-none">
-        {{ t('storage.fs.overview.diagnostics_title') }}
+      <summary class="flex items-center justify-between gap-2 text-sm font-medium cursor-pointer select-none">
+        <span>{{ t('storage.fs.overview.diagnostics_title') }}</span>
+        <CopyButton
+          v-if="diagnosticsText"
+          :value="diagnosticsText"
+          class="shrink-0"
+          @click.stop
+        />
       </summary>
       <pre class="text-[11px] mt-2 overflow-x-auto text-gray-600 dark:text-gray-400">{{ diagnosticsText }}</pre>
     </details>
@@ -321,8 +365,12 @@
 
 <script setup lang="ts">
 import { formatBytes } from '~/utils/fs-provisioning-chain'
-import { buildFsFileioViewModel } from '~/utils/fs-fileio-view'
-import { fileioRelevantMounts } from '~/utils/fs-mount-classifier'
+import {
+  exposeDeviceUrl,
+  findDeviceMappings,
+  primaryMappingViewUrl,
+} from '~/utils/scst-device-mapping-links'
+import { isDeviceMapped } from '~/utils/scst-unmapped-devices'
 import { filterActionableScanWarnings } from '~/utils/fs-scan-warnings'
 import { buildFsSummaryStatus, formatScannedAt } from '~/utils/fs-summary-status'
 import { fsTableColumn, fsTableColumnId } from '~/utils/fs-table-columns'
@@ -341,6 +389,7 @@ const emit = defineEmits<{
 
 const { t } = useEsosI18n()
 const fs = useFsStore()
+const { overview, refresh: refreshOverview } = useOverview()
 const toast = useAppToast()
 const { open: openModal } = useAppModal()
 const refreshing = ref(false)
@@ -354,7 +403,7 @@ onMounted(async () => {
   await refreshAll()
 })
 
-const fileioView = computed(() => buildFsFileioViewModel(fs.overview))
+const fileioView = computed(() => fs.fileioView)
 const chainSteps = computed(() => fileioView.value?.chain ?? [])
 const backends = computed(() => fs.backends)
 const eligibleCandidates = computed(() => backends.value.filter(c => c.eligible))
@@ -398,12 +447,15 @@ const summaryStatus = computed(() =>
 
 const showStaleNotice = computed(() => fs.hasStaleData && !fs.error && !!fs.overview)
 
-const fileioDataMounts = computed(() => fileioRelevantMounts(fs.mounts))
+const fileioDataMounts = computed(() =>
+  (fileioView.value?.filesystems ?? []).filter(m => m.mounted && m.status === 'mounted'),
+)
 
 const displayedMounts = computed(() => {
-  const list = fs.mounts
-  if (showSystemMounts.value) return list
-  return list.filter(m => m.role !== 'system')
+  const fileioMounts = fileioView.value?.filesystems ?? []
+  if (!showSystemMounts.value) return fileioMounts
+  const systemMounts = fs.mounts.filter(m => m.role === 'system')
+  return [...fileioMounts, ...systemMounts]
 })
 
 const displayedLuns = computed(() => {
@@ -430,11 +482,34 @@ const diagnosticsText = computed(() => {
   return JSON.stringify(diagnostics.value, null, 2)
 })
 
+const nextAction = computed(() => fs.overview?.nextAction)
+
 const nextActionText = computed(() => {
-  const action = fs.overview?.nextAction
+  const action = nextAction.value
   if (!action?.messageKey || action.kind === 'none') return ''
   return t(action.messageKey, action.messageParams ?? {}) as string
 })
+
+const showNextStepButton = computed(() => {
+  const kind = nextAction.value?.kind
+  return kind === 'create_fs' || kind === 'create_vdisk' || kind === 'bind_fileio'
+})
+
+function runNextStep() {
+  const action = nextAction.value
+  if (!action) return
+  if (action.kind === 'create_fs') {
+    void openCreateFsWizard()
+  } else if (action.kind === 'create_vdisk') {
+    void openCreateVdiskWizard(action.mountPoint)
+  } else if (action.kind === 'bind_fileio') {
+    const path = action.messageParams?.path
+    const list = path
+      ? unmappedVdisks.value.filter(v => v.path === path)
+      : unmappedVdisks.value
+    void openFileioWizard(list.length ? list : unmappedVdisks.value, path)
+  }
+}
 
 const mountCols = [
   fsTableColumn<FileSystemMount>('mountPoint', t('storage.fs.table.mount_point')),
@@ -462,10 +537,22 @@ const fileioCols = [
   fsTableColumn<FileioDeviceRef>('filename', t('storage.fs.table.filename')),
   fsTableColumnId<FileioDeviceRef>('nv_cache', t('storage.fs.table.nv_cache')),
   fsTableColumn<FileioDeviceRef>('mapped', t('storage.fs.table.scst')),
+  fsTableColumnId<FileioDeviceRef>('actions', ''),
 ]
+
+function deviceViewMappingsUrl(deviceName: string): string | null {
+  if (!overview.value) return null
+  return primaryMappingViewUrl(findDeviceMappings(overview.value, deviceName))
+}
+
+function deviceExposeUrl(deviceName: string): string | null {
+  if (!overview.value || isDeviceMapped(overview.value, deviceName)) return null
+  return exposeDeviceUrl(overview.value, deviceName)
+}
 const lunCols = [
   fsTableColumn<ScstLunMappingRef>('targetName', t('storage.fs.table.target')),
   fsTableColumn<ScstLunMappingRef>('groupName', t('storage.fs.table.group')),
+  fsTableColumnId<ScstLunMappingRef>('initiators', t('storage.fs.table.initiators')),
   fsTableColumn<ScstLunMappingRef>('lunId', t('storage.fs.table.lun')),
   fsTableColumn<ScstLunMappingRef>('deviceName', t('storage.fs.table.device')),
   fsTableColumn<ScstLunMappingRef>('handler', t('storage.fs.table.handler')),
@@ -514,7 +601,7 @@ function wizardProps(extra: Record<string, unknown> = {}) {
 async function refreshAll() {
   refreshing.value = true
   try {
-    await fs.fetchOverview(true)
+    await Promise.all([fs.fetchOverview(true), refreshOverview()])
   } finally {
     refreshing.value = false
   }
@@ -531,23 +618,26 @@ async function openCreateFsWizard() {
   } catch { /* dismissed */ }
 }
 
-async function openCreateVdiskWizard() {
+async function openCreateVdiskWizard(initialMountPoint?: string) {
   const { default: Wizard } = await import('~/components/fs/CreateVdiskWizard.vue')
   try {
     await openModal({
       component: Wizard,
-      props: wizardProps({ mounts: fileioDataMounts.value }),
+      props: wizardProps({
+        mounts: fileioDataMounts.value,
+        initialMountPoint,
+      }),
     })
     await refreshAll()
   } catch { /* dismissed */ }
 }
 
-async function openFileioWizard(vdisks = unmappedVdisks.value) {
+async function openFileioWizard(vdisks = unmappedVdisks.value, initialVdiskPath?: string) {
   const { default: Wizard } = await import('~/components/fs/CreateFileioWizard.vue')
   try {
     await openModal({
       component: Wizard,
-      props: wizardProps({ vdisks }),
+      props: wizardProps({ vdisks, initialVdiskPath }),
     })
     await refreshAll()
   } catch { /* dismissed */ }

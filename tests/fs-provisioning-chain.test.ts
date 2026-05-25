@@ -103,6 +103,53 @@ describe('fs-provisioning-chain', () => {
     expect(steps.find(s => s.id === 'expose')?.status).toBe('created')
   })
 
+  it('full ESOS-like chain shows created expose with matching detail', () => {
+    const overview = baseOverview({
+      mounts: [{
+        mountPoint: '/mnt/vdisks',
+        backingDevice: '/dev/md0',
+        fsType: 'xfs',
+        totalBytes: 1e12,
+        freeBytes: 5e11,
+        usedPct: 50,
+        mounted: true,
+        status: 'mounted',
+        role: 'fileio_data',
+        source: 'findmnt',
+      }],
+      vdiskFiles: [{
+        path: '/mnt/vdisks/linux',
+        fileName: 'linux',
+        sizeBytes: 1e9,
+        mountPoint: '/mnt/vdisks',
+        scstDeviceNames: ['LINUX'],
+        mapped: true,
+      }],
+      fileioDevices: [{
+        name: 'LINUX',
+        handler: 'vdisk_fileio',
+        filename: '/mnt/vdisks/linux',
+        attrs: { nv_cache: '2' },
+        mapped: true,
+      }],
+      lunMappings: [{
+        targetName: '21:00:00:24:ff:91:60:bc',
+        groupName: 'default',
+        lunId: 0,
+        deviceName: 'LINUX',
+        handler: 'vdisk_fileio',
+        filename: '/mnt/vdisks/linux',
+        readOnly: false,
+      }],
+    })
+    overview.nextAction = computeFsNextAction(overview)
+    const steps = buildFsProvisioningSteps(overview)
+    expect(steps.find(s => s.id === 'vdisk')?.detail).toBe('/mnt/vdisks/linux')
+    expect(steps.find(s => s.id === 'fileio')?.detail).toBe('LINUX')
+    expect(steps.find(s => s.id === 'expose')?.status).toBe('created')
+    expect(steps.find(s => s.id === 'expose')?.detail).toContain('21:00:00:24:ff:91:60:bc')
+  })
+
   it('next action suggests vdisk in mount when mount exists without vdisk', () => {
     const overview = baseOverview({
       mounts: [{

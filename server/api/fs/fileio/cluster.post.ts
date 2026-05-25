@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
   assertFsWritable(sanId)
   const cluster = assertClusteredSanAllowsFsMutation(sanId, body.clusterExecution)
   if (!cluster) throw createError({ statusCode: 400, statusMessage: 'SAN non clusterisé' })
-  const result = await executeClusterFileioBind(cluster.clusterId, body)
+  const result = await executeClusterFileioBind(sanId, cluster.clusterId, body)
   const nextAction: FsNextAction = {
     route: '/targets',
     query: { exposeDevice: body.deviceName },

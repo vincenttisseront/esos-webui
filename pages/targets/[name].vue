@@ -100,6 +100,9 @@
         <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
           {{ t('storage.hosts.help.summary') }}
         </p>
+        <p class="text-sm text-gray-500 dark:text-gray-500 mt-2">
+          {{ t('storage.hosts.help.synonyms') }}
+        </p>
         <a
           href="https://github.com/quantum/esos/wiki/35_Hosts_and_Initiators"
           target="_blank"
@@ -110,8 +113,44 @@
         </a>
       </details>
 
+      <section v-if="target.luns.length > 0">
+        <SectionTitle
+          :title="t('storage.hosts.sections.targetLuns')"
+          :count="target.luns.length"
+        />
+        <table class="w-full text-sm bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
+          <thead class="bg-gray-50 dark:bg-gray-800/50">
+            <tr class="text-xs text-gray-400 uppercase">
+              <th class="text-left px-4 py-2">{{ t('storage.targets.groupPanel.lunTableHeaders.id') }}</th>
+              <th class="text-left px-4 py-2">{{ t('storage.targets.groupPanel.lunTableHeaders.device') }}</th>
+              <th class="text-left px-4 py-2">{{ t('storage.targets.groupPanel.lunTableHeaders.handler') }}</th>
+              <th class="text-left px-4 py-2">{{ t('storage.targets.groupPanel.lunTableHeaders.path') }}</th>
+              <th class="text-left px-4 py-2">{{ t('storage.targets.groupPanel.lunTableHeaders.ro') }}</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+            <tr v-for="lun in target.luns" :key="lun.id">
+              <td class="px-4 py-2 font-mono text-gray-500">{{ lun.id }}</td>
+              <td class="px-4 py-2 font-semibold">{{ lun.device }}</td>
+              <td class="px-4 py-2 text-gray-500">{{ devicesMap.get(lun.device)?.handler ?? '—' }}</td>
+              <td class="px-4 py-2 font-mono text-xs text-gray-500">{{ devicesMap.get(lun.device)?.filename ?? '—' }}</td>
+              <td class="px-4 py-2">
+                <UBadge
+                  v-if="lun.readOnly"
+                  color="orange"
+                  variant="soft"
+                  size="xs"
+                  :label="t('storage.targets.groupPanel.readOnlyBadge')"
+                />
+                <span v-else class="text-gray-300">—</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
       <section>
-        <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
+        <div class="flex items-center justify-between gap-3 flex-wrap mb-1">
           <SectionTitle :title="t('storage.targets.detail.sections.accessGroups')" :count="target.groups.length" />
           <UButton
             v-if="!isEffectiveReadOnly"
@@ -122,6 +161,9 @@
             @click="openAddGroup"
           />
         </div>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          {{ t('storage.hosts.sections.accessGroupsHint') }}
+        </p>
         <div
           v-if="exposeDevice && !isEffectiveReadOnly"
           class="rounded-lg border border-green-200 dark:border-green-900 bg-green-50/60 dark:bg-green-950/30 px-4 py-3 text-sm"
@@ -159,13 +201,13 @@
         <EmptyState v-else :message="t('storage.targets.detail.empty.noGroups')" icon="👥" />
       </section>
 
-      <section v-if="unmappedDevices.length > 0">
+      <section>
         <SectionTitle
           :title="t('storage.hosts.unmapped.title')"
-          :count="unmappedDevices.length"
+          :count="unmappedDevices.length || undefined"
         />
         <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">{{ t('storage.hosts.unmapped.hint') }}</p>
-        <ul class="space-y-2 text-sm">
+        <ul v-if="unmappedDevices.length > 0" class="space-y-2 text-sm">
           <li
             v-for="dev in unmappedDevices"
             :key="dev.name"
@@ -186,6 +228,9 @@
             </div>
           </li>
         </ul>
+        <p v-else class="text-sm text-gray-400 italic">
+          {{ t('storage.hosts.unmapped.empty') }}
+        </p>
       </section>
 
       <section v-if="!isEffectiveReadOnly && discoveredInitiators.length > 0">
@@ -255,6 +300,10 @@ const {
   deleteGroup,
   addInitiator,
   removeInitiator,
+  preflightCreateGroup,
+  preflightAddInitiator,
+  preflightRemoveInitiator,
+  preflightMapLun,
   mapLun,
   unmapLun,
 } = useTargetHosts(name, { refresh, refreshOverview })
@@ -277,12 +326,16 @@ const unmappedDevices = computed(() =>
 
 async function openAddGroup() {
   try {
-    const groupName = await modal.open<string>({
+    const payload = await modal.open<{ targetName: string; groupName: string }>({
       component: AddGroupModal,
-      props: { loading: hostsLoading.value },
+      props: {
+        targetName: name.value,
+        loading: hostsLoading.value,
+        runPreflight: (_target, group) => preflightCreateGroup(group),
+      },
     })
-    await createGroup(groupName)
-    toast.success(t('storage.hosts.toasts.groupCreated') as string, groupName)
+    await createGroup(payload.groupName)
+    toast.success(t('storage.hosts.toasts.groupCreated') as string, payload.groupName)
   } catch (err: unknown) {
     if (isDismiss(err)) return
     toastHostsError(err)
@@ -291,11 +344,23 @@ async function openAddGroup() {
 
 async function openAddInitiator(groupName: string, initialValue?: string) {
   try {
-    const payload = await modal.open<{ initiator: string; type: import('~/utils/scst-initiator-validation').InitiatorType }>({
+    const payload = await modal.open<{
+      targetName: string
+      groupName: string
+      initiator: string
+      type: import('~/utils/scst-initiator-validation').InitiatorType
+    }>({
       component: AddInitiatorModal,
-      props: { groupName, initialValue, loading: hostsLoading.value },
+      props: {
+        groupName,
+        targetName: name.value,
+        initialValue,
+        loading: hostsLoading.value,
+        runPreflight: (_target, group, initiator, type) =>
+          preflightAddInitiator(group, initiator, type),
+      },
     })
-    await addInitiator(groupName, payload.initiator, payload.type)
+    await addInitiator(payload.groupName, payload.initiator, payload.type)
     toast.success(t('storage.hosts.toasts.initiatorAdded') as string, payload.initiator)
   } catch (err: unknown) {
     if (isDismiss(err)) return
@@ -314,13 +379,27 @@ async function addDiscoveredToGroup(groupName: string, initiator: string) {
 }
 
 async function onRemoveInitiator(payload: { groupName: string; initiator: string }) {
+  let preflightWarnings: string[] = []
+  try {
+    const pre = await preflightRemoveInitiator(payload.groupName, payload.initiator)
+    preflightWarnings = pre.warnings
+  } catch {
+    /* preflight optional if SSH down */
+  }
+
+  const ioWarning = t('storage.hosts.modals.removeInitiator.ioWarning') as string
+  const warningBlock = [...preflightWarnings, ioWarning].filter(Boolean).join('\n\n')
+  const message = warningBlock
+    ? `${warningBlock}\n\n${payload.initiator}`
+    : payload.initiator
+
   try {
     await modal.open({
       component: DestructiveModal,
       props: {
-        title: t('storage.hosts.actions.removeInitiator') as string,
-        message: payload.initiator,
-        confirmLabel: t('common.actions.confirm') as string,
+        title: t('storage.hosts.modals.removeInitiator.title') as string,
+        message,
+        confirmLabel: t('storage.hosts.modals.removeInitiator.confirmLabel') as string,
         inputConfirm: payload.initiator.split(':').pop() ?? payload.initiator.slice(-8),
       },
     })
@@ -338,18 +417,27 @@ async function onRemoveInitiator(payload: { groupName: string; initiator: string
 async function openMapLun(groupName: string, initialDeviceName?: string) {
   if (!target.value || !overview.value) return
   try {
-    const payload = await modal.open<{ lunId: number; deviceName: string; readOnly: boolean }>({
+    const payload = await modal.open<{
+      targetName: string
+      groupName: string
+      lunId: number
+      deviceName: string
+      readOnly: boolean
+    }>({
       component: MapLunModal,
       props: {
+        targetName: name.value,
         groupName,
         target: target.value,
         overview: overview.value,
         unmappedDevices: unmappedDevices.value,
         initialDeviceName: initialDeviceName ?? exposeDevice.value,
         loading: hostsLoading.value,
+        runPreflight: (_target, group, lunId, deviceName, readOnly) =>
+          preflightMapLun(group, lunId, deviceName, readOnly),
       },
     })
-    await mapLun(groupName, payload.lunId, payload.deviceName, payload.readOnly)
+    await mapLun(payload.groupName, payload.lunId, payload.deviceName, payload.readOnly)
     toast.success(
       t('storage.hosts.luns.toasts.mapped') as string,
       `${payload.deviceName} → LUN ${payload.lunId}`,
@@ -392,19 +480,35 @@ async function onUnmapLun(payload: { groupName: string; lunId: number; device: s
 
 async function onRemoveGroup(groupName: string) {
   const group = target.value?.groups.find(g => g.name === groupName)
+  const hasInitiators = (group?.initiators.length ?? 0) > 0
   const hasLuns = (group?.luns.length ?? 0) > 0
+  const needsForce = hasInitiators || hasLuns
   const expected = expectedDeleteGroupConfirmation(name.value, groupName)
+
+  let message: string
+  if (hasInitiators && hasLuns) {
+    message = t('storage.hosts.modals.removeGroup.messageWithInitiatorsAndLuns', {
+      initiators: group!.initiators.length,
+      count: group!.luns.length,
+    }) as string
+  } else if (hasInitiators) {
+    message = t('storage.hosts.modals.removeGroup.messageWithInitiators', {
+      count: group!.initiators.length,
+    }) as string
+  } else if (hasLuns) {
+    message = t('storage.hosts.modals.removeGroup.messageWithLuns', { count: group!.luns.length }) as string
+  } else {
+    message = t('storage.hosts.modals.removeGroup.message') as string
+  }
 
   try {
     await modal.open({
       component: DestructiveModal,
       props: {
         title: t('storage.hosts.modals.removeGroup.title', { name: groupName }) as string,
-        message: hasLuns
-          ? (t('storage.hosts.modals.removeGroup.messageWithLuns', { count: group!.luns.length }) as string)
-          : (t('storage.hosts.modals.removeGroup.message') as string),
+        message,
         confirmLabel: t('storage.hosts.modals.removeGroup.confirmLabel') as string,
-        inputConfirm: expected,
+        inputConfirm: needsForce ? expected : undefined,
       },
     })
   } catch {
@@ -412,7 +516,7 @@ async function onRemoveGroup(groupName: string) {
   }
 
   try {
-    await deleteGroup(groupName, hasLuns ? { force: true, confirmation: expected } : undefined)
+    await deleteGroup(groupName, needsForce ? { force: true, confirmation: expected } : undefined)
     toast.success(t('storage.hosts.toasts.groupRemoved') as string, groupName)
   } catch (err: unknown) {
     toastHostsError(err)

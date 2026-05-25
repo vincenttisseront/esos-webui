@@ -72,6 +72,8 @@ export interface ScstLunMappingRef {
   handler: string
   filename: string
   readOnly: boolean
+  /** Initiators from the SCST group (when LUN is under a group). */
+  initiators?: string[]
 }
 
 export type FsNextActionKind = 'create_fs' | 'create_vdisk' | 'bind_fileio' | 'expose' | 'none'

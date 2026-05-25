@@ -1,5 +1,6 @@
 import type { Ref } from 'vue'
 import type { ClusterLvmNodeResult } from '~/types/lvm'
+import type { ScstPreflightResult } from '~/types/scst-hosts'
 import type { InitiatorType } from '~/utils/scst-initiator-validation'
 import { extractNodeResults } from '~/utils/scst-hosts-ui'
 
@@ -238,6 +239,73 @@ export function useTargetHosts(
     return res.initiators
   }
 
+  async function preflightCreateGroup(groupName: string): Promise<ScstPreflightResult> {
+    return $fetch<ScstPreflightResult>(
+      `/api/targets/${enc(targetName.value)}/groups/preflight`,
+      {
+        method: 'POST',
+        body: { action: 'create_group', groupName },
+        ...sanQuery(),
+      },
+    )
+  }
+
+  async function preflightDeleteGroup(groupName: string): Promise<ScstPreflightResult> {
+    return $fetch<ScstPreflightResult>(
+      `/api/targets/${enc(targetName.value)}/groups/preflight`,
+      {
+        method: 'POST',
+        body: { action: 'delete_group', groupName },
+        ...sanQuery(),
+      },
+    )
+  }
+
+  async function preflightAddInitiator(
+    groupName: string,
+    initiator: string,
+    type?: InitiatorType,
+  ): Promise<ScstPreflightResult> {
+    return $fetch<ScstPreflightResult>(
+      `/api/targets/${enc(targetName.value)}/groups/${enc(groupName)}/initiators/preflight`,
+      {
+        method: 'POST',
+        body: { action: 'add', initiator, type },
+        ...sanQuery(),
+      },
+    )
+  }
+
+  async function preflightRemoveInitiator(
+    groupName: string,
+    initiator: string,
+  ): Promise<ScstPreflightResult> {
+    return $fetch<ScstPreflightResult>(
+      `/api/targets/${enc(targetName.value)}/groups/${enc(groupName)}/initiators/preflight`,
+      {
+        method: 'POST',
+        body: { action: 'remove', initiator },
+        ...sanQuery(),
+      },
+    )
+  }
+
+  async function preflightMapLun(
+    groupName: string,
+    lunId: number,
+    deviceName: string,
+    readOnly?: boolean,
+  ): Promise<ScstPreflightResult> {
+    return $fetch<ScstPreflightResult>(
+      `/api/targets/${enc(targetName.value)}/groups/${enc(groupName)}/luns/preflight`,
+      {
+        method: 'POST',
+        body: { lunId, deviceName, readOnly },
+        ...sanQuery(),
+      },
+    )
+  }
+
   return {
     loading,
     isClusterMode,
@@ -251,6 +319,11 @@ export function useTargetHosts(
     unmapLun,
     fetchUnmappedDevices,
     fetchDiscovered,
+    preflightCreateGroup,
+    preflightDeleteGroup,
+    preflightAddInitiator,
+    preflightRemoveInitiator,
+    preflightMapLun,
     extractNodeResults,
   }
 }

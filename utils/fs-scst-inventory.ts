@@ -61,6 +61,9 @@ export function collectLunMappingsFromConfig(config: ScstConfig): ScstLunMapping
       for (const group of target.groups) {
         for (const lun of group.luns) {
           const dev = deviceByName.get(lun.device)
+          const initiators = group.initiators?.length
+            ? [...group.initiators]
+            : undefined
           out.push({
             targetName: target.name,
             groupName: group.name,
@@ -69,6 +72,7 @@ export function collectLunMappingsFromConfig(config: ScstConfig): ScstLunMapping
             handler: dev?.handler ?? '',
             filename: dev?.filename ?? '',
             readOnly: !!lun.readOnly,
+            initiators,
           })
         }
       }

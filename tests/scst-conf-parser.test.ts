@@ -215,6 +215,33 @@ describe('parseScstConf — SDD v1.2 rev.1 (config réelle ESOS)', () => {
     expect(cm.targets[0].hwTarget).toBe(false)
   })
 
+  it('groups are unique per target with distinct initiator and LUN sets', () => {
+    const conf = `
+TARGET_DRIVER iscsi {
+    TARGET iqn.2000-01.com.example:t1 {
+        GROUP hosts_a {
+            INITIATOR iqn.a
+            LUN 0 dev_a
+        }
+        GROUP hosts_b {
+            INITIATOR iqn.b
+            LUN 1 dev_b
+        }
+    }
+}
+HANDLER vdisk_fileio {
+    DEVICE dev_a { filename /a }
+    DEVICE dev_b { filename /b }
+}
+`
+    const c = parseScstConf(conf)
+    const t = c.drivers[0].targets[0]
+    expect(t.groups).toHaveLength(2)
+    expect(t.groups.map(g => g.name).sort()).toEqual(['hosts_a', 'hosts_b'])
+    expect(t.groups[0].initiators).toEqual(['iqn.a'])
+    expect(t.groups[1].luns[0].device).toBe('dev_b')
+  })
+
   it('parse pattern initiator and IB-style initiator', () => {
     const conf = `
 TARGET_DRIVER iscsi {

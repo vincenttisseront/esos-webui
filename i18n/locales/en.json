@@ -2935,8 +2935,17 @@
       "help": {
         "title": "Hosts and initiators",
         "summary": "Access groups control which initiators may access which LUNs on this target. An initiator is the client identity: Fibre Channel WWPN, iSCSI IQN, InfiniBand GUID, or a pattern (* ? !).",
+        "synonyms": "Host group, security group, and initiator group are the same concept — group names are unique per SCST target.",
         "wikiLink": "ESOS wiki — Hosts and initiators",
         "lunPhase2": "Map a registered SCST device (e.g. vdisk_blockio from LVM) to a LUN id in this group."
+      },
+      "sections": {
+        "accessGroupsHint": "Groups control which initiators can access which LUNs on this target.",
+        "targetLuns": "Target-level LUN mappings (no access group)"
+      },
+      "links": {
+        "viewMappings": "View mappings",
+        "exposeToInitiators": "Expose to initiators"
       },
       "unmapped": {
         "title": "Unmapped SCST devices",
@@ -2994,6 +3003,7 @@
         "addInitiator": "Add initiator",
         "removeInitiator": "Remove",
         "assignLun": "Assign device…",
+        "mapLun": "Map device…",
         "unmapLun": "Unmap",
         "addDiscovered": "Add to group"
       },
@@ -3002,17 +3012,34 @@
         "empty": "No unlisted initiators in active sessions.",
         "hint": "These initiators have an active session but are not in any access group."
       },
+      "wizard": {
+        "createGroup": {
+          "title": "Create access group"
+        },
+        "addInitiator": {
+          "title": "Add initiator"
+        },
+        "mapLun": {
+          "title": "Map device to LUN"
+        },
+        "selectTarget": "Target",
+        "selectTargetPlaceholder": "Choose a target",
+        "selectGroup": "Access group",
+        "selectGroupPlaceholder": "Choose a group"
+      },
       "modals": {
         "addGroup": {
           "title": "Add access group",
           "nameLabel": "Group name",
-          "namePlaceholder": "e.g. hosts_fc"
+          "namePlaceholder": "e.g. hosts_fc",
+          "preflightPreview": "Config preview"
         },
         "addInitiator": {
           "title": "Add initiator to {group}",
           "valueLabel": "Initiator",
           "valuePlaceholder": "WWPN, IQN, GUID, or pattern",
           "typeLabel": "Type",
+          "preflightPreview": "Config preview",
           "types": {
             "auto": "Auto-detect",
             "fc": "Fibre Channel (WWPN)",
@@ -3021,9 +3048,16 @@
             "pattern": "Pattern"
           }
         },
+        "removeInitiator": {
+          "title": "Remove initiator?",
+          "ioWarning": "Stop client I/O before removing this initiator from the access group.",
+          "confirmLabel": "Remove initiator"
+        },
         "removeGroup": {
           "title": "Remove group \"{name}\"?",
           "message": "This removes the group and all its initiators from scst.conf.",
+          "messageWithInitiators": "This group has {count} initiator(s). Forced removal requires typing the confirmation phrase.",
+          "messageWithInitiatorsAndLuns": "This group has {initiators} initiator(s) and {count} LUN mapping(s). Forced removal requires confirmation.",
           "messageWithLuns": "This group has {count} LUN mapping(s). Forced removal requires confirmation.",
           "confirmLabel": "Remove group"
         }
@@ -3106,12 +3140,17 @@
       },
       "next": {
         "title": "Recommended next step",
+        "action_button": "Do next step",
         "create_fs": "Create a filesystem on an eligible block backend.",
         "create_vdisk_in_mount": "Create a vdisk file under {mountPoint}.",
         "bind_fileio": "Register SCST FILEIO for {path}.",
         "expose": "Expose the device to clients via access groups.",
         "complete": "FILEIO chain is complete.",
         "none": "No action required."
+      },
+      "cluster": {
+        "partial_title": "Cluster operation partially failed",
+        "partial_body": "One or more nodes did not complete the operation. Review per-node results below."
       },
       "chain": {
         "title": "FILEIO provisioning chain",
@@ -3152,6 +3191,7 @@
         "nv_cache": "nv_cache",
         "target": "Target",
         "group": "Group",
+        "initiators": "Initiators",
         "lun": "LUN",
         "handler": "Handler"
       },

@@ -23,6 +23,7 @@
         type="submit"
         :label="confirmLabel ?? 'Enregistrer'"
         :loading="loading"
+        :disabled="confirmDisabled"
         @click="$emit('confirm')"
       />
     </template>
@@ -37,6 +38,7 @@ defineProps<{
   cancelLabel?:  string
   size?:         'sm' | 'md' | 'lg' | 'xl'
   loading?:      boolean
+  confirmDisabled?: boolean
 }>()
 defineEmits(['confirm', 'cancel'])
 </script>

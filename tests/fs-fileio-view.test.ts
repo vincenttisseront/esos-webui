@@ -99,14 +99,64 @@ describe('fs-fileio-view', () => {
     })
   })
 
+  it('FILEIO device appears in chain and table lists', () => {
+    const view = buildFsFileioViewModel(esosFileio)!
+    expect(view.chain.find(s => s.id === 'fileio')?.count).toBe(1)
+    expect(view.chain.find(s => s.id === 'fileio')?.detail).toBe('LINUX')
+    expect(view.fileioDevices[0].name).toBe('LINUX')
+  })
+
+  it('LUN mapping appears in chain expose step and lunMappings table', () => {
+    const view = buildFsFileioViewModel(esosFileio)!
+    const expose = view.chain.find(s => s.id === 'expose')
+    expect(expose?.status).toBe('created')
+    expect(expose?.count).toBe(1)
+    expect(expose?.detail).toContain('21:00:00:24:ff:91:60:bc')
+    expect(view.lunMappings).toHaveLength(1)
+  })
+
+  it('excludes blockio-only LUN from view model', () => {
+    const overview = baseOverview({
+      fileioDevices: [{
+        name: 'LINUX',
+        handler: 'vdisk_fileio',
+        filename: '/mnt/vdisks/linux',
+        attrs: {},
+        mapped: true,
+      }],
+      lunMappings: [
+        {
+          targetName: 't',
+          groupName: 'g',
+          lunId: 0,
+          deviceName: 'LINUX',
+          handler: 'vdisk_fileio',
+          filename: '',
+          readOnly: false,
+        },
+        {
+          targetName: 't',
+          groupName: 'g',
+          lunId: 1,
+          deviceName: 'blk1',
+          handler: 'vdisk_blockio',
+          filename: '/dev/sdb',
+          readOnly: false,
+        },
+      ],
+    })
+    const view = buildFsFileioViewModel(overview)!
+    expect(view.lunMappings).toHaveLength(1)
+    expect(view.counts.lunMappings).toBe(1)
+  })
+
   it('chain step details appear in matching inventory lists', () => {
     const view = buildFsFileioViewModel(esosFileio)!
     expect(chainDetailInInventory(view, 'filesystem')).toBe(true)
     expect(chainDetailInInventory(view, 'vdisk')).toBe(true)
     expect(chainDetailInInventory(view, 'fileio')).toBe(true)
     expect(chainDetailInInventory(view, 'expose')).toBe(true)
-    expect(view.chain.find(s => s.id === 'fileio')?.detail).toBe('LINUX')
-    expect(view.chain.find(s => s.id === 'expose')?.detail).toContain('21:00:00:24:ff:91:60:bc')
+    expect(view.chain.find(s => s.id === 'vdisk')?.detail).toBe('/mnt/vdisks/linux')
   })
 
   it('inventory is unchanged when SAN is read-only (UI-only flag)', () => {
@@ -115,5 +165,6 @@ describe('fs-fileio-view', () => {
     const devices = readOnly ? view.fileioDevices : view.fileioDevices
     expect(devices).toHaveLength(1)
     expect(view.lunMappings).toHaveLength(1)
+    expect(view.partial).toBe(false)
   })
 })

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { mergeFsOverview } from '~/utils/fs-overview-merge'
-import { buildFsDisplayCounts } from '~/utils/fs-display-counts'
 import { buildFsFileioViewModel } from '~/utils/fs-fileio-view'
 import type { FsOverview } from '~/types/filesystem'
 
@@ -69,7 +68,7 @@ function priorOverview(): FsOverview {
       blkid: true,
     },
     nextAction: { kind: 'none', messageKey: 'storage.fs.next.complete' },
-    scanWarnings: [],
+    scanWarnings: ['prior-warn'],
   }
 }
 
@@ -85,6 +84,10 @@ describe('mergeFsOverview', () => {
       lunMappings: [],
       partial: true,
       errors: [{ scanner: 'mounts', message: 'Channel open failure: open failed' }],
+      diagnostics: {
+        ...emptyDiagnostics,
+        scst: { configBytes: 0, handlers: 0, fileioDevices: 0, lunMappings: 0, sysfsDevices: 0 },
+      },
     }
     const merged = mergeFsOverview(prior, partial)
     expect(merged.fileioDevices).toHaveLength(1)
@@ -93,13 +96,27 @@ describe('mergeFsOverview', () => {
     expect(merged.vdiskFiles).toHaveLength(1)
   })
 
-  it('display counts use diagnostics when arrays populated', () => {
+  it('merges diagnostics counts on partial refresh', () => {
+    const prior = priorOverview()
+    const partial: FsOverview = {
+      ...prior,
+      partial: true,
+      diagnostics: {
+        ...emptyDiagnostics,
+        scst: { configBytes: 0, handlers: 0, fileioDevices: 0, lunMappings: 0, sysfsDevices: 0 },
+      },
+    }
+    const merged = mergeFsOverview(prior, partial)
+    expect(merged.diagnostics?.scst.fileioDevices).toBe(3)
+    expect(merged.diagnostics?.scst.lunMappings).toBe(9)
+    expect(merged.diagnostics?.mountCounts.fileioData).toBe(1)
+  })
+
+  it('view model counts match inventory array lengths', () => {
     const o = priorOverview()
-    const counts = buildFsDisplayCounts(o)
-    expect(counts.fileioDevices).toBeGreaterThanOrEqual(1)
-    expect(counts.lunMappings).toBeGreaterThanOrEqual(1)
     const view = buildFsFileioViewModel(o)!
     expect(view.fileioDevices.length).toBe(1)
-    expect(view.counts.fileioDevices).toBeGreaterThanOrEqual(1)
+    expect(view.counts.fileioDevices).toBe(1)
+    expect(view.counts.lunMappings).toBe(1)
   })
 })

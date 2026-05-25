@@ -30,6 +30,18 @@ const config: ScstConfig = {
         { name: 'disk_b', handler: 'vdisk_blockio', filename: '/dev/y', attrs: {} },
       ],
     },
+    {
+      name: 'vdisk_fileio',
+      devices: [
+        { name: 'file_a', handler: 'vdisk_fileio', filename: '/mnt/vdisk', attrs: {} },
+      ],
+    },
+    {
+      name: 'nullio',
+      devices: [
+        { name: 'null_dev', handler: 'nullio', filename: '', attrs: {} },
+      ],
+    },
   ],
   drivers: [],
 }
@@ -57,6 +69,24 @@ describe('validateMapLun', () => {
       { config, target, groupName: 'g2' },
     )
     expect(r.ok).toBe(false)
+  })
+
+  it('accepts vdisk_fileio device', () => {
+    const r = validateMapLun(
+      { lunId: 1, deviceName: 'file_a' },
+      { config, target, groupName: 'g2' },
+    )
+    expect(r.ok).toBe(true)
+    expect(r.previewLine).toContain('file_a')
+  })
+
+  it('rejects handler outside allowlist', () => {
+    const r = validateMapLun(
+      { lunId: 1, deviceName: 'null_dev' },
+      { config, target, groupName: 'g2' },
+    )
+    expect(r.ok).toBe(false)
+    expect(r.errorKey).toContain('handler_not_allowed')
   })
 })
 

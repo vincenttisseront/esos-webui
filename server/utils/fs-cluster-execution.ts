@@ -54,11 +54,45 @@ async function runPreflightOnNode(
   })
 }
 
+/** Primary-node preflight + typed confirmation before cluster fan-out. */
+async function assertClusterPayloadPreflight(
+  primarySanId: string,
+  req: FsPreflightRequest,
+  confirmation?: string,
+): Promise<void> {
+  const manager = getSSHPool().get(primarySanId)
+  if (!manager || manager.getStatus() !== 'connected') {
+    throw createError({ statusCode: 503, statusMessage: 'SSH non connecté sur le nœud primaire' })
+  }
+  const pre = await withSanContext(primarySanId, async () => {
+    const overview = await collectFsOverview(manager)
+    return runFsPreflight(manager, overview, req)
+  })
+  if (!pre.ok) {
+    throw createError({
+      statusCode: 422,
+      statusMessage: pre.blockers.join(' · ') || 'Préflight échoué',
+      data: { preflight: pre },
+    })
+  }
+  if (confirmation?.trim() !== pre.requiredConfirmation) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: `Confirmation requise : ${pre.requiredConfirmation}`,
+    })
+  }
+}
+
 export async function executeClusterFsCreate(
   primarySanId: string,
   clusterId: string,
   payload: CreateFsPayload,
 ): Promise<ClusterFsExecutionResult> {
+  await assertClusterPayloadPreflight(
+    primarySanId,
+    { action: 'create_fs', payload },
+    payload.confirmation,
+  )
   assertClusterNodesWritable(clusterId)
   const nodes = resolveClusterEnabledNodes(clusterId)
   const nodeResults: ClusterLvmNodeResult[] = []
@@ -105,6 +139,11 @@ export async function executeClusterVdiskCreate(
   clusterId: string,
   payload: CreateVdiskPayload,
 ): Promise<ClusterFsExecutionResult> {
+  await assertClusterPayloadPreflight(
+    primarySanId,
+    { action: 'create_vdisk', payload },
+    payload.confirmation,
+  )
   assertClusterNodesWritable(clusterId)
   const nodes = resolveClusterEnabledNodes(clusterId)
   const nodeResults: ClusterLvmNodeResult[] = []
@@ -143,9 +182,15 @@ export async function executeClusterVdiskCreate(
 }
 
 export async function executeClusterFileioBind(
+  primarySanId: string,
   clusterId: string,
   payload: CreateFileioPayload,
 ): Promise<ClusterFsExecutionResult> {
+  await assertClusterPayloadPreflight(
+    primarySanId,
+    { action: 'bind_fileio', payload },
+    payload.confirmation,
+  )
   assertClusterNodesWritable(clusterId)
   const nodes = resolveClusterEnabledNodes(clusterId)
   const nodeResults: ClusterLvmNodeResult[] = []

@@ -62,6 +62,15 @@
         <UFormGroup :label="t('storage.fs.wizard.create_fs.confirm_phrase')">
           <UInput v-model="confirmation" class="font-mono" :placeholder="preflight?.requiredConfirmation" />
         </UFormGroup>
+        <ScstClusterNodeResults v-if="clusterNodeResults?.length" :node-results="clusterNodeResults" />
+        <UAlert
+          v-if="clusterNodeResults?.length"
+          color="amber"
+          variant="soft"
+          :title="t('storage.fs.cluster.partial_title')"
+          :description="t('storage.fs.cluster.partial_body')"
+          class="mt-2"
+        />
         <UAlert v-if="executeError" color="red" variant="soft" :description="executeError" />
       </template>
     </div>
@@ -97,8 +106,11 @@
 </template>
 
 <script setup lang="ts">
+import ScstClusterNodeResults from '~/components/targets/ScstClusterNodeResults.vue'
 import type { FsBackendCandidate, FsType, PartitionStrategy } from '~/types/filesystem'
+import type { ClusterLvmNodeResult } from '~/types/lvm'
 import { validateMountPoint, validateFsLabel } from '~/utils/fs-preflight-validation'
+import { parseFsWizardExecuteFailure } from '~/utils/fs-wizard-execute'
 import { pickDefaultFsBackend } from '~/utils/fs-wizard-ui'
 
 const props = defineProps<{
@@ -123,6 +135,14 @@ const preflight = ref<Awaited<ReturnType<typeof fs.preflight>> | null>(null)
 const preflightLoading = ref(false)
 const busy = ref(false)
 const executeError = ref<string | null>(null)
+const clusterNodeResults = ref<ClusterLvmNodeResult[] | null>(null)
+
+function mountFromLabel(l: string) {
+  const slug = l.trim().replace(/[^a-zA-Z0-9._-]/g, '_') || 'fs01'
+  return `/mnt/vdisks/${slug}`
+}
+
+const lastSuggestedMount = ref(mountFromLabel('fs01'))
 
 const eligibleBackends = computed(() => props.candidates.filter(c => c.eligible))
 const backendOptions = computed(() =>
@@ -161,10 +181,19 @@ const canExecute = computed(() =>
   && confirmation.value.trim() === preflight.value.requiredConfirmation,
 )
 
+watch(label, (l) => {
+  const next = mountFromLabel(l)
+  if (mountPoint.value === lastSuggestedMount.value) {
+    mountPoint.value = next
+  }
+  lastSuggestedMount.value = next
+})
+
 onMounted(() => {
   fs.setSanId(props.sanId)
   if (props.clusterId) fs.setClusterContext(props.clusterId, props.sanId)
   backendPath.value = pickDefaultFsBackend(eligibleBackends.value)
+  lastSuggestedMount.value = mountFromLabel(label.value)
 })
 
 async function loadPreflight() {
@@ -202,6 +231,7 @@ async function execute() {
   if (!canExecute.value) return
   busy.value = true
   executeError.value = null
+  clusterNodeResults.value = null
   try {
     const clusterExecution = props.isClustered && props.clusterId
       ? { clusterId: props.clusterId, primarySanId: props.sanId }
@@ -217,7 +247,12 @@ async function execute() {
     toast.success(t('storage.fs.wizard.create_fs.success'))
     emit('close')
   } catch (e: unknown) {
-    executeError.value = (e as { message?: string })?.message ?? t('common.error')
+    const failure = parseFsWizardExecuteFailure(e, t('common.error') as string)
+    executeError.value = failure.executeError
+    clusterNodeResults.value = failure.clusterNodeResults
+    if (failure.isPartialCluster) {
+      toast.error(t('storage.fs.cluster.partial_title') as string, failure.executeError)
+    }
   } finally {
     busy.value = false
   }

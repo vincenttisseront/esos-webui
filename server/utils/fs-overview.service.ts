@@ -212,6 +212,7 @@ async function buildVdiskInventory(
     const cmd = [
       `if [ -d ${q} ]; then`,
       `find ${q} -maxdepth 3 -type f \\( -name '${VDISK_GLOB}' -o -name 'vdisk*' \\) -printf '%p %s\\n' 2>/dev/null;`,
+      `find ${q} -maxdepth 3 -type f ! -name '.*' -printf '%p %s\\n' 2>/dev/null | head -n 500;`,
       'fi',
     ].join(' ')
     const r = await manager.exec(cmd, 30_000)

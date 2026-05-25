@@ -88,6 +88,14 @@ describe('api-rbac (mutations default deny)', () => {
     expectForbidden(() => enforceMutationAccess('/api/fs/vdisk', 'DELETE', 'viewer'))
   })
 
+  it('RB10e — viewer cannot POST /api/fs/vdisk', () => {
+    expectForbidden(() => enforceMutationAccess('/api/fs/vdisk', 'POST', 'viewer'))
+  })
+
+  it('RB10f — viewer cannot POST /api/fs/fileio', () => {
+    expectForbidden(() => enforceMutationAccess('/api/fs/fileio', 'POST', 'viewer'))
+  })
+
   it('RB09g — operator can POST /api/lvm/pv/remove/cluster', () => {
     expect(() => enforceMutationAccess('/api/lvm/pv/remove/cluster', 'POST', 'operator')).not.toThrow()
   })
@@ -100,6 +108,12 @@ describe('api-rbac (mutations default deny)', () => {
     expect(() =>
       enforceMutationAccess('/api/targets/iqn.t1/groups', 'POST', 'operator'),
     ).not.toThrow()
+  })
+
+  it('RB10a — viewer cannot POST /api/targets/t1/groups', () => {
+    expectForbidden(() =>
+      enforceMutationAccess('/api/targets/iqn.t1/groups', 'POST', 'viewer'),
+    )
   })
 
   it('RB10b — viewer cannot POST /api/targets/t1/groups/g1/initiators', () => {
@@ -118,6 +132,12 @@ describe('api-rbac (mutations default deny)', () => {
     expect(() =>
       enforceMutationAccess('/api/targets/t1/groups/g1/luns', 'POST', 'operator'),
     ).not.toThrow()
+  })
+
+  it('RB11a — viewer cannot POST /api/targets/t1/groups/g1/luns', () => {
+    expectForbidden(() =>
+      enforceMutationAccess('/api/targets/t1/groups/g1/luns', 'POST', 'viewer'),
+    )
   })
 
   it('RB11b — viewer cannot POST luns/remove', () => {
@@ -260,6 +280,14 @@ describe('selection DTO allowlists (Batch 2A.1a)', () => {
     const allowed = new Set<string>(CLUSTER_NODE_SELECTION_DTO_KEYS as readonly string[])
     expect(allowed.has('host')).toBe(false)
     expect(allowed.has('username')).toBe(false)
+  })
+})
+
+describe('api-rbac (targets access-control read)', () => {
+  it('RB-AC-01 — viewer can GET /api/targets/access-control', () => {
+    expect(() =>
+      enforceReadAccess('/api/targets/access-control', 'GET', 'viewer'),
+    ).not.toThrow()
   })
 })
 

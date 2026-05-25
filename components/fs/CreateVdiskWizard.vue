@@ -30,6 +30,7 @@
         <p v-if="selectedMount" class="text-xs text-gray-500 dark:text-gray-400">
           {{ t('storage.fs.wizard.create_vdisk.free_hint', { free: formatFsBytes(selectedMount.freeBytes) }) }}
         </p>
+        <p v-if="sizeError" class="text-sm text-red-500 mt-1">{{ sizeError }}</p>
         <UFormGroup :label="t('storage.fs.wizard.create_vdisk.alloc')">
           <USelect v-model="allocMode" :options="allocOptions" />
         </UFormGroup>
@@ -56,6 +57,15 @@
         <UFormGroup :label="t('storage.fs.wizard.create_fs.confirm_phrase')">
           <UInput v-model="confirmation" class="font-mono" :placeholder="preflight?.requiredConfirmation" />
         </UFormGroup>
+        <ScstClusterNodeResults v-if="clusterNodeResults?.length" :node-results="clusterNodeResults" />
+        <UAlert
+          v-if="clusterNodeResults?.length"
+          color="amber"
+          variant="soft"
+          :title="t('storage.fs.cluster.partial_title')"
+          :description="t('storage.fs.cluster.partial_body')"
+          class="mt-2"
+        />
         <UAlert v-if="executeError" color="red" variant="soft" :description="executeError" />
       </template>
     </div>
@@ -91,8 +101,11 @@
 </template>
 
 <script setup lang="ts">
+import ScstClusterNodeResults from '~/components/targets/ScstClusterNodeResults.vue'
 import type { FileSystemMount } from '~/types/filesystem'
-import { validateVdiskFileName } from '~/utils/fs-preflight-validation'
+import type { ClusterLvmNodeResult } from '~/types/lvm'
+import { validateVdiskFileName, validateVdiskSize } from '~/utils/fs-preflight-validation'
+import { parseFsWizardExecuteFailure } from '~/utils/fs-wizard-execute'
 import { formatFsBytes, parseFsSizeToBytes, type FsSizeUnit } from '~/utils/fs-wizard-ui'
 
 const props = defineProps<{
@@ -100,6 +113,7 @@ const props = defineProps<{
   clusterId?: string
   isClustered?: boolean
   mounts: FileSystemMount[]
+  initialMountPoint?: string
 }>()
 const emit = defineEmits<{ cancel: []; close: [] }>()
 const { t } = useEsosI18n()
@@ -117,6 +131,7 @@ const preflight = ref<Awaited<ReturnType<typeof fs.preflight>> | null>(null)
 const preflightLoading = ref(false)
 const busy = ref(false)
 const executeError = ref<string | null>(null)
+const clusterNodeResults = ref<ClusterLvmNodeResult[] | null>(null)
 
 const sizeUnitOptions = [
   { label: 'GiB', value: 'gib' },
@@ -131,11 +146,18 @@ const mountOptions = computed(() => props.mounts.map(m => ({ label: m.mountPoint
 const selectedMount = computed(() => props.mounts.find(m => m.mountPoint === mountPoint.value))
 const sizeBytes = computed(() => parseFsSizeToBytes(Number(sizeValue.value), sizeUnit.value))
 
+const sizeError = computed(() => {
+  if (!selectedMount.value) return ''
+  const key = validateVdiskSize(sizeBytes.value, selectedMount.value.freeBytes)
+  return key ? (t(key) as string) : ''
+})
+
 const step1Valid = computed(() =>
   !!mountPoint.value
   && !!fileName.value.trim()
   && !validateVdiskFileName(fileName.value)
-  && sizeBytes.value >= 1024 * 1024,
+  && sizeBytes.value >= 1024 * 1024
+  && !sizeError.value,
 )
 
 const preflightBlockers = computed(() => preflight.value?.blockers?.join(' · ') || '')
@@ -151,7 +173,12 @@ const canExecute = computed(() =>
 onMounted(() => {
   fs.setSanId(props.sanId)
   if (props.clusterId) fs.setClusterContext(props.clusterId, props.sanId)
-  if (mountOptions.value[0]) mountPoint.value = mountOptions.value[0].value
+  const preferred = props.initialMountPoint
+  if (preferred && props.mounts.some(m => m.mountPoint === preferred)) {
+    mountPoint.value = preferred
+  } else if (mountOptions.value[0]) {
+    mountPoint.value = mountOptions.value[0].value
+  }
 })
 
 async function loadPreflight() {
@@ -188,6 +215,7 @@ async function execute() {
   if (!canExecute.value) return
   busy.value = true
   executeError.value = null
+  clusterNodeResults.value = null
   try {
     const clusterExecution = props.isClustered && props.clusterId
       ? { clusterId: props.clusterId, primarySanId: props.sanId }
@@ -202,7 +230,12 @@ async function execute() {
     toast.success(t('storage.fs.wizard.create_vdisk.success'))
     emit('close')
   } catch (e: unknown) {
-    executeError.value = (e as { message?: string })?.message ?? t('common.error')
+    const failure = parseFsWizardExecuteFailure(e, t('common.error') as string)
+    executeError.value = failure.executeError
+    clusterNodeResults.value = failure.clusterNodeResults
+    if (failure.isPartialCluster) {
+      toast.error(t('storage.fs.cluster.partial_title') as string, failure.executeError)
+    }
   } finally {
     busy.value = false
   }

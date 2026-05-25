@@ -30,6 +30,18 @@ export function unmappedDevicesFromOverview(overview: Overview): UnmappedDeviceI
     }))
 }
 
+const MAP_LUN_HANDLERS = new Set(['vdisk_blockio', 'vdisk_fileio'])
+
+/** Unmapped BLOCKIO/FILEIO devices eligible for LUN mapping. */
+export function listUnmappedDevicesForMap(overview: Overview): UnmappedDeviceInfo[] {
+  return unmappedDevicesFromOverview(overview).filter(d => MAP_LUN_HANDLERS.has(d.handler))
+}
+
+export function canMapLunFromOverview(overview: Overview): boolean {
+  const hasGroup = overview.targets.some(t => t.groups.length > 0)
+  return hasGroup && listUnmappedDevicesForMap(overview).length > 0
+}
+
 /** Unmapped devices for a single target context (same global pool — SCST devices are cluster-wide in conf). */
 export function unmappedDevicesForTarget(overview: Overview, _targetName: string): UnmappedDeviceInfo[] {
   return unmappedDevicesFromOverview(overview)

@@ -284,9 +284,14 @@ export async function deleteGroup(
   const group = findGroup(target, groupName)
   if (!group) throw new Error(`Groupe "${groupName}" introuvable`)
 
-  if (group.luns.length > 0 && !options?.force) {
+  const hasInitiators = group.initiators.length > 0
+  const hasLuns = group.luns.length > 0
+  if ((hasInitiators || hasLuns) && !options?.force) {
+    const parts: string[] = []
+    if (hasInitiators) parts.push(`${group.initiators.length} initiateur(s)`)
+    if (hasLuns) parts.push(`${group.luns.length} LUN(s)`)
     throw new Error(
-      `Le groupe "${groupName}" contient ${group.luns.length} LUN(s) — retirez les mappages ou confirmez la suppression forcée`,
+      `Le groupe "${groupName}" contient ${parts.join(' et ')} — confirmez la suppression forcée`,
     )
   }
 

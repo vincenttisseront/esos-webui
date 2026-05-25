@@ -48,6 +48,15 @@
         <UFormGroup :label="t('storage.fs.wizard.create_fs.confirm_phrase')">
           <UInput v-model="confirmation" class="font-mono" :placeholder="preflight?.requiredConfirmation" />
         </UFormGroup>
+        <ScstClusterNodeResults v-if="clusterNodeResults?.length" :node-results="clusterNodeResults" />
+        <UAlert
+          v-if="clusterNodeResults?.length"
+          color="amber"
+          variant="soft"
+          :title="t('storage.fs.cluster.partial_title')"
+          :description="t('storage.fs.cluster.partial_body')"
+          class="mt-2"
+        />
         <UAlert v-if="executeError" color="red" variant="soft" :description="executeError" />
       </template>
     </div>
@@ -83,14 +92,18 @@
 </template>
 
 <script setup lang="ts">
+import ScstClusterNodeResults from '~/components/targets/ScstClusterNodeResults.vue'
 import type { VDiskFile } from '~/types/filesystem'
+import type { ClusterLvmNodeResult } from '~/types/lvm'
 import { suggestedScstDeviceName, validateScstDeviceName } from '~/utils/lvm-scst-device-ui'
+import { parseFsWizardExecuteFailure } from '~/utils/fs-wizard-execute'
 
 const props = defineProps<{
   sanId: string
   clusterId?: string
   isClustered?: boolean
   vdisks: VDiskFile[]
+  initialVdiskPath?: string
 }>()
 const emit = defineEmits<{ cancel: []; close: [] }>()
 const { t } = useEsosI18n()
@@ -107,6 +120,7 @@ const preflight = ref<Awaited<ReturnType<typeof fs.preflight>> | null>(null)
 const preflightLoading = ref(false)
 const busy = ref(false)
 const executeError = ref<string | null>(null)
+const clusterNodeResults = ref<ClusterLvmNodeResult[] | null>(null)
 
 const vdiskOptions = computed(() =>
   props.vdisks.map(v => ({ label: `${v.fileName} — ${v.path}`, value: v.path })),
@@ -139,10 +153,13 @@ const canExecute = computed(() =>
 onMounted(() => {
   fs.setSanId(props.sanId)
   if (props.clusterId) fs.setClusterContext(props.clusterId, props.sanId)
-  if (vdiskOptions.value[0]) {
+  const preferred = props.initialVdiskPath
+  if (preferred && props.vdisks.some(v => v.path === preferred)) {
+    selectedPath.value = preferred
+  } else if (vdiskOptions.value[0]) {
     selectedPath.value = vdiskOptions.value[0].value
-    syncDeviceName()
   }
+  syncDeviceName()
 })
 
 watch(selectedPath, syncDeviceName)
@@ -188,6 +205,7 @@ async function execute() {
   if (!canExecute.value || !selectedVdisk.value) return
   busy.value = true
   executeError.value = null
+  clusterNodeResults.value = null
   try {
     const clusterExecution = props.isClustered && props.clusterId
       ? { clusterId: props.clusterId, primarySanId: props.sanId }
@@ -205,7 +223,12 @@ async function execute() {
       await router.push({ path: next.route, query: next.query })
     }
   } catch (e: unknown) {
-    executeError.value = (e as { message?: string })?.message ?? t('common.error')
+    const failure = parseFsWizardExecuteFailure(e, t('common.error') as string)
+    executeError.value = failure.executeError
+    clusterNodeResults.value = failure.clusterNodeResults
+    if (failure.isPartialCluster) {
+      toast.error(t('storage.fs.cluster.partial_title') as string, failure.executeError)
+    }
   } finally {
     busy.value = false
   }

@@ -42,4 +42,17 @@ describe('serializeScstConfig — groups and initiators', () => {
     expect(text).toContain('LUN 1 disk01 {')
     expect(text).toContain('read_only 1')
   })
+
+  it('emits FILEIO LUN with read_only in group', () => {
+    const cfg = structuredClone(base)
+    cfg.drivers[0].targets[0].groups[0].luns.push({
+      id: 2,
+      device: 'fileio_vdisk',
+      readOnly: true,
+      attrs: {},
+    })
+    const text = serializeScstConfig(cfg)
+    expect(text).toContain('LUN 2 fileio_vdisk {')
+    expect(text).toContain('read_only 1')
+  })
 })

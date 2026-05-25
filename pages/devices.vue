@@ -22,7 +22,14 @@
       <template #usage="{ device: d }">
         <span>{{ lunUsage(d.name) }}</span>
         <NuxtLink
-          v-if="targetLinks(d.name).length === 1"
+          v-if="viewMappingsUrl(d.name)"
+          :to="viewMappingsUrl(d.name)!"
+          class="text-primary-500 hover:underline ml-1 text-xs"
+        >
+          {{ t('storage.hosts.links.viewMappings') }}
+        </NuxtLink>
+        <NuxtLink
+          v-else-if="targetLinks(d.name).length === 1"
           :to="`/targets/${encodeURIComponent(targetLinks(d.name)[0])}`"
           class="text-primary-500 hover:underline ml-1 text-xs"
         >
@@ -42,6 +49,7 @@
 
 <script setup lang="ts">
 import { isDeviceMapped, deviceUsageByTarget } from '~/utils/scst-unmapped-devices'
+import { findDeviceMappings, primaryMappingViewUrl } from '~/utils/scst-device-mapping-links'
 
 const { t } = useEsosI18n()
 const { overview, pending } = useOverview()
@@ -71,9 +79,8 @@ function lunUsage(deviceName: string): string {
     return t('storage.devices.usage.unmapped') as string
   }
   const allLuns = overview.value.targets
-    .flatMap((tg) => tg.groups)
-    .flatMap((g) => g.luns)
-    .filter((l) => l.device === deviceName)
+    .flatMap(tg => [...tg.luns, ...tg.groups.flatMap(g => g.luns)])
+    .filter(l => l.device === deviceName)
   if (allLuns.length === 0) return t('storage.devices.usage.unmapped') as string
   const ro = allLuns.filter((l) => l.readOnly).length
   const base = t('storage.devices.usage.count', { count: allLuns.length }) as string
@@ -88,5 +95,10 @@ function lunTooltip(deviceName: string): string | undefined {
 
 function targetLinks(deviceName: string): string[] {
   return overview.value ? deviceUsageByTarget(overview.value, deviceName) : []
+}
+
+function viewMappingsUrl(deviceName: string): string | null {
+  if (!overview.value || !isDeviceMapped(overview.value, deviceName)) return null
+  return primaryMappingViewUrl(findDeviceMappings(overview.value, deviceName))
 }
 </script>

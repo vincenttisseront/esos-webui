@@ -1,13 +1,16 @@
 import type {
   FileioDeviceRef,
   FileSystemMount,
+  FsBackendRef,
+  FsDetectionDiagnostics,
   FsOverview,
+  FsScanError,
   ScstLunMappingRef,
   VDiskFile,
 } from '~/types/filesystem'
 import { buildFsProvisioningSteps } from '~/utils/fs-provisioning-chain'
-import { buildFsDisplayCounts } from '~/utils/fs-display-counts'
-import { fileioRelevantMounts } from '~/utils/fs-mount-classifier'
+import { buildFsDisplayCountsFromInventory } from '~/utils/fs-display-counts'
+import { collectFileioWarnings, extractFileioInventory } from '~/utils/fs-fileio-inventory'
 import type { ProvisioningStepView } from '~/utils/lvm-provisioning-chain'
 
 export interface FsFileioDetectionCounts {
@@ -23,23 +26,28 @@ export interface FsFileioViewModel {
   vdiskFiles: VDiskFile[]
   fileioDevices: FileioDeviceRef[]
   lunMappings: ScstLunMappingRef[]
+  backendCandidates: FsBackendRef[]
   chain: ProvisioningStepView[]
   counts: FsFileioDetectionCounts
+  diagnostics: FsDetectionDiagnostics | null
+  warnings: string[]
+  partial: boolean
+  errors?: FsScanError[]
 }
 
 export function buildFsFileioViewModel(overview: FsOverview | null): FsFileioViewModel | null {
   if (!overview) return null
 
-  const filesystems = fileioRelevantMounts(overview.mounts)
-  const { vdiskFiles, fileioDevices, lunMappings } = overview
+  const inventory = extractFileioInventory(overview)
 
   return {
-    filesystems,
-    vdiskFiles,
-    fileioDevices,
-    lunMappings,
-    chain: buildFsProvisioningSteps(overview),
-    counts: buildFsDisplayCounts(overview),
+    ...inventory,
+    chain: buildFsProvisioningSteps(overview, inventory),
+    counts: buildFsDisplayCountsFromInventory(inventory),
+    diagnostics: overview.diagnostics ?? null,
+    warnings: collectFileioWarnings(overview),
+    partial: Boolean(overview.partial),
+    errors: overview.errors,
   }
 }
 

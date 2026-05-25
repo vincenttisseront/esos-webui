@@ -2935,8 +2935,17 @@
       "help": {
         "title": "Hôtes et initiateurs",
         "summary": "Les groupes d'accès définissent quels initiateurs peuvent accéder à quels LUNs sur cette target. Un initiateur est l'identité client : WWPN Fibre Channel, IQN iSCSI, GUID InfiniBand, ou un motif (* ? !).",
+        "synonyms": "Groupe hôte, groupe de sécurité et groupe d'initiateurs désignent la même notion — les noms de groupe sont uniques par target SCST.",
         "wikiLink": "Wiki ESOS — Hôtes et initiateurs",
         "lunPhase2": "Associez un device SCST enregistré (ex. vdisk_blockio depuis LVM) à un numéro de LUN dans ce groupe."
+      },
+      "sections": {
+        "accessGroupsHint": "Les groupes définissent quels initiateurs peuvent accéder à quels LUNs sur cette target.",
+        "targetLuns": "Mappings LUN au niveau target (sans groupe d'accès)"
+      },
+      "links": {
+        "viewMappings": "Voir mappings",
+        "exposeToInitiators": "Exposer aux initiateurs"
       },
       "unmapped": {
         "title": "Devices SCST non mappés",
@@ -2994,6 +3003,7 @@
         "addInitiator": "Ajouter un initiateur",
         "removeInitiator": "Retirer",
         "assignLun": "Assigner un device…",
+        "mapLun": "Mapper un device…",
         "unmapLun": "Démapper",
         "addDiscovered": "Ajouter au groupe"
       },
@@ -3002,17 +3012,34 @@
         "empty": "Aucun initiateur non listé dans les sessions actives.",
         "hint": "Ces initiateurs ont une session active mais ne figurent dans aucun groupe d'accès."
       },
+      "wizard": {
+        "createGroup": {
+          "title": "Créer un groupe d'accès"
+        },
+        "addInitiator": {
+          "title": "Ajouter un initiateur"
+        },
+        "mapLun": {
+          "title": "Mapper un device en LUN"
+        },
+        "selectTarget": "Target",
+        "selectTargetPlaceholder": "Choisir une target",
+        "selectGroup": "Groupe d'accès",
+        "selectGroupPlaceholder": "Choisir un groupe"
+      },
       "modals": {
         "addGroup": {
           "title": "Ajouter un groupe d'accès",
           "nameLabel": "Nom du groupe",
-          "namePlaceholder": "ex. hosts_fc"
+          "namePlaceholder": "ex. hosts_fc",
+          "preflightPreview": "Aperçu configuration"
         },
         "addInitiator": {
           "title": "Ajouter un initiateur à {group}",
           "valueLabel": "Initiateur",
           "valuePlaceholder": "WWPN, IQN, GUID ou motif",
           "typeLabel": "Type",
+          "preflightPreview": "Aperçu configuration",
           "types": {
             "auto": "Détection auto",
             "fc": "Fibre Channel (WWPN)",
@@ -3021,9 +3048,16 @@
             "pattern": "Motif"
           }
         },
+        "removeInitiator": {
+          "title": "Retirer l'initiateur ?",
+          "ioWarning": "Arrêtez les I/O côté client avant de retirer cet initiateur du groupe d'accès.",
+          "confirmLabel": "Retirer l'initiateur"
+        },
         "removeGroup": {
           "title": "Supprimer le groupe « {name} » ?",
           "message": "Cela retire le groupe et tous ses initiateurs de scst.conf.",
+          "messageWithInitiators": "Ce groupe contient {count} initiateur(s). La suppression forcée nécessite de saisir la phrase de confirmation.",
+          "messageWithInitiatorsAndLuns": "Ce groupe contient {initiators} initiateur(s) et {count} mappage(s) LUN. La suppression forcée nécessite une confirmation.",
           "messageWithLuns": "Ce groupe contient {count} mappage(s) LUN. La suppression forcée nécessite une confirmation.",
           "confirmLabel": "Supprimer le groupe"
         }
@@ -3106,12 +3140,17 @@
       },
       "next": {
         "title": "Prochaine étape recommandée",
+        "action_button": "Étape suivante",
         "create_fs": "Créez un filesystem sur un backend bloc éligible.",
         "create_vdisk_in_mount": "Créez un fichier vdisk dans {mountPoint}.",
         "bind_fileio": "Enregistrez un device SCST FILEIO pour {path}.",
         "expose": "Exposez le device aux clients via les groupes d'accès.",
         "complete": "Chaîne FILEIO complète.",
         "none": "Aucune action requise."
+      },
+      "cluster": {
+        "partial_title": "Opération cluster partiellement échouée",
+        "partial_body": "Un ou plusieurs nœuds n'ont pas terminé l'opération. Consultez les résultats par nœud ci-dessous."
       },
       "chain": {
         "title": "Chaîne FILEIO",
@@ -3152,6 +3191,7 @@
         "nv_cache": "nv_cache",
         "target": "Target",
         "group": "Groupe",
+        "initiators": "Initiateurs",
         "lun": "LUN",
         "handler": "Handler"
       },
