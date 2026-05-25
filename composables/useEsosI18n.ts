@@ -31,6 +31,15 @@ export function apiErrorCodeToI18nKey(code: string): string {
   return `errors.${code}`
 }
 
+/**
+ * i18n for Pinia actions, timers, and other callbacks outside `setup`.
+ * `useI18n()` must run at setup top-level; this uses the Nuxt app composer instead.
+ */
+export function getEsosI18n(): Pick<Composer, 't' | 'te' | 'locale'> {
+  const i18n = useNuxtApp().$i18n as Composer
+  return i18n
+}
+
 export function useEsosI18n() {
   const i18n = useI18n() as Composer
 

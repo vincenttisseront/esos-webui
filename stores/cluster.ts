@@ -31,7 +31,7 @@ export const useClusterStore = defineStore('cluster', {
 
   actions: {
     async fetch(nodeIds?: string[], clusterId?: string) {
-      const { t } = useEsosI18n()
+      const { t } = getEsosI18n()
       if (clusterId) {
         this.activeClusterId = clusterId
         this.activeNodeIds = nodeIds?.length ? nodeIds : null
@@ -66,7 +66,7 @@ export const useClusterStore = defineStore('cluster', {
     },
 
     async sync(explicitNodeIds?: string[], explicitClusterId?: string) {
-      const { t } = useEsosI18n()
+      const { t } = getEsosI18n()
       const clusterId = explicitClusterId ?? this.activeClusterId ?? this.overview?.clusterId ?? null
       const nodeIds = explicitNodeIds?.length ? explicitNodeIds : this.activeNodeIds ?? []
 
@@ -98,7 +98,7 @@ export const useClusterStore = defineStore('cluster', {
     },
 
     async toggleService(nodeId: string, service: 'corosync' | 'pacemaker', action: 'start' | 'stop') {
-      const { t } = useEsosI18n()
+      const { t } = getEsosI18n()
       const confirmed = await modalConfirm({
         title:   t(action === 'start' ? 'cluster.toasts.service_confirm_start_title' : 'cluster.toasts.service_confirm_stop_title', { service }),
         message: t('cluster.toasts.service_confirm_message', { action, service, nodeId }),
@@ -126,7 +126,7 @@ export const useClusterStore = defineStore('cluster', {
     },
 
     startPolling(intervalMs = 15_000) {
-      const { t } = useEsosI18n()
+      const { t } = getEsosI18n()
       if (!useAuthStore().isAuthenticated) return
       this.stopPolling()
       if (!this.activeClusterId && !this.activeNodeIds?.length) {

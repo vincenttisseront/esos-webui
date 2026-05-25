@@ -55,7 +55,7 @@ export const usePerfStore = defineStore('perf', {
     },
 
     async fetchConfig() {
-      const { t } = useEsosI18n()
+      const { t } = getEsosI18n()
       this.configLoading = true
       try {
         this.config = await $fetch<PerfAgentConfig>('/api/perf/config', { query: this.query() })
@@ -70,7 +70,7 @@ export const usePerfStore = defineStore('perf', {
     },
 
     async saveConfig(update: import('~/server/utils/perf-agent-types').PerfAgentConfigUpdate) {
-      const { t } = useEsosI18n()
+      const { t } = getEsosI18n()
       this.configLoading = true
       this.error = null
       try {
@@ -89,7 +89,7 @@ export const usePerfStore = defineStore('perf', {
     },
 
     async fetchService() {
-      const { t } = useEsosI18n()
+      const { t } = getEsosI18n()
       this.serviceLoading = true
       try {
         this.service = await $fetch<PerfAgentServiceStatus>('/api/perf/service', { query: this.query() })
@@ -101,7 +101,7 @@ export const usePerfStore = defineStore('perf', {
     },
 
     async serviceAction(action: PerfServiceAction) {
-      const { t } = useEsosI18n()
+      const { t } = getEsosI18n()
       this.serviceLoading = true
       this.error = null
       try {
@@ -139,7 +139,7 @@ export const usePerfStore = defineStore('perf', {
     },
 
     async fetchSummary() {
-      const { t } = useEsosI18n()
+      const { t } = getEsosI18n()
       if (!this.selectedSystem) return
       try {
         this.devices = await $fetch<PerfDeviceSummary[]>('/api/perf/summary', {
@@ -154,7 +154,7 @@ export const usePerfStore = defineStore('perf', {
     },
 
     async fetchSeries() {
-      const { t } = useEsosI18n()
+      const { t } = getEsosI18n()
       if (!this.selectedSystem || !this.selectedDevice) return
       try {
         this.series = await $fetch<PerfDeviceSeries>('/api/perf/series', {

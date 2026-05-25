@@ -1,7 +1,7 @@
 <script setup lang="ts">
-defineProps<{
+const props = defineProps<{
   saving: boolean
-  readOnly: boolean
+  authProvidersReadOnly: boolean
   dirty: boolean
   formValid: boolean
 }>()
@@ -13,18 +13,18 @@ const emit = defineEmits<{
 
 const { t } = useEsosI18n()
 
-const showActionBar = computed(() => !readOnly && dirty)
-const showNoChanges = computed(() => !readOnly && !dirty)
+const showActionBar = computed(() => !props.authProvidersReadOnly && props.dirty)
+const showNoChanges = computed(() => !props.authProvidersReadOnly && !props.dirty)
 </script>
 
 <template>
   <div
-    v-if="readOnly || showActionBar || showNoChanges"
+    v-if="authProvidersReadOnly || showActionBar || showNoChanges"
     class="sticky bottom-0 z-10 border-t border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur"
   >
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
       <UAlert
-        v-if="readOnly"
+        v-if="authProvidersReadOnly"
         color="blue"
         icon="i-heroicons-eye"
         :title="t('admin.authProviders.readonly.bannerTitle')"

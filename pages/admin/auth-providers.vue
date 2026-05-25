@@ -20,6 +20,11 @@ import {
   snapshotFromFormInput,
   type AuthProvidersFormSnapshot,
 } from '~/utils/auth-providers-form-state'
+import {
+  authProvidersReadOnly as isAuthProvidersReadOnly,
+  canEditAuthProviders as userCanEditAuthProviders,
+  canViewAuthProviders,
+} from '~/utils/auth-providers-permissions'
 
 definePageMeta({ layout: 'default' })
 
@@ -28,12 +33,10 @@ const router    = useRouter()
 const { success: toastOk, error: toastErr } = useAppToast()
 const { t, tError } = useEsosI18n()
 
-const canAccess = computed(() => {
-  const role = authStore.user?.role
-  return role === 'admin' || role === 'operator' || role === 'viewer'
-})
+const canAccess = computed(() => canViewAuthProviders(authStore.user?.role))
 
-const readOnly = computed(() => authStore.user?.role !== 'admin')
+const canEditAuthProviders = computed(() => userCanEditAuthProviders(authStore.user?.role))
+const authProvidersReadOnly = computed(() => isAuthProvidersReadOnly(authStore.user?.role))
 
 const { data, refresh, pending } = await useFetch<AdminAuthProvidersDto>('/api/admin/auth-providers', {
   key: 'admin-auth-providers',
@@ -145,6 +148,7 @@ function selectTab(tab: AuthProviderTabId) {
 }
 
 async function save() {
+  if (!canEditAuthProviders.value) return
   const parsed = parseMappingRulesJsonForUi(form.mappingRulesJson)
   if (!parsed.ok) {
     toastErr(
@@ -228,7 +232,7 @@ function ldapConfigFromForm() {
 }
 
 async function testLdapBind() {
-  if (readOnly.value) return
+  if (!canEditAuthProviders.value) return
   testingLdap.value = true
   lastLdapTest.value = null
   try {
@@ -258,7 +262,7 @@ async function testLdapBind() {
 }
 
 async function testLdapLookup() {
-  if (readOnly.value || !ldapLookupUsername.value.trim()) return
+  if (!canEditAuthProviders.value || !ldapLookupUsername.value.trim()) return
   testingLdapLookup.value = true
   const lookupUser = ldapLookupUsername.value.trim()
   try {
@@ -306,7 +310,7 @@ const testingOidc = ref(false)
 const lastOidcTest = ref<OidcTestClientState>(null)
 
 async function testOidc() {
-  if (readOnly.value) return
+  if (!canEditAuthProviders.value) return
   testingOidc.value = true
   lastOidcTest.value = null
   try {
@@ -372,7 +376,7 @@ async function testOidc() {
           @select-tab="selectTab"
         />
 
-        <AuthProvidersTabBar v-model="activeTab" :read-only="readOnly" />
+        <AuthProvidersTabBar v-model="activeTab" :read-only="authProvidersReadOnly" />
 
         <div class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6 lg:p-8">
           <AuthProvidersLocalTab v-show="activeTab === 'local'" :data="data" />
@@ -382,7 +386,7 @@ async function testOidc() {
             v-model:ldap-bind-pw="ldapBindPw"
             v-model:ldap-lookup-username="ldapLookupUsername"
             :data="data"
-            :read-only="readOnly"
+            :read-only="authProvidersReadOnly"
             :last-ldap-test="lastLdapTest"
             :testing-ldap="testingLdap"
             :testing-ldap-lookup="testingLdapLookup"
@@ -394,7 +398,7 @@ async function testOidc() {
             v-model:form="form"
             v-model:oidc-secret="oidcSecret"
             :data="data"
-            :read-only="readOnly"
+            :read-only="authProvidersReadOnly"
             :public-origin="publicOrigin"
             :last-oidc-test="lastOidcTest"
             :testing-oidc="testingOidc"
@@ -404,12 +408,12 @@ async function testOidc() {
           <AuthProvidersRolesTab
             v-show="activeTab === 'roles'"
             v-model:form="form"
-            :read-only="readOnly"
+            :read-only="authProvidersReadOnly"
           />
           <AuthProvidersSecurityTab
             v-show="activeTab === 'security'"
             v-model:form="form"
-            :read-only="readOnly"
+            :read-only="authProvidersReadOnly"
             :show-oidc-mfa-recommendation="showOidcMfaRecommendation"
           />
         </div>
@@ -419,7 +423,7 @@ async function testOidc() {
     <AuthProvidersPageFooter
       v-if="data && !pending"
       :saving="saving"
-      :read-only="readOnly"
+      :auth-providers-read-only="authProvidersReadOnly"
       :dirty="dirty"
       :form-valid="formValid"
       @save="save"
