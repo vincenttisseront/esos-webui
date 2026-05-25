@@ -5,6 +5,7 @@ import {
   ldapCardTopWarningFromForm,
   ldapConfigCompleteFromForm,
   ldapConnectionModeChoiceFromForm,
+  ldapFormValidationWarnings,
   ldapUrlSchemeHint,
   loginSummaryFromForm,
   truncateForSummary,
@@ -18,6 +19,7 @@ const props = defineProps<{
   saving: boolean
   lastLdapTest: LdapTestClientState
   testingLdap: boolean
+  testingLdapConnect: boolean
   testingLdapLookup: boolean
 }>()
 
@@ -39,6 +41,7 @@ const ldapBindPw = defineModel<string>('ldapBindPw', { required: true })
 const ldapLookupUsername = defineModel<string>('ldapLookupUsername', { required: true })
 
 const emit = defineEmits<{
+  'test-connect': []
   'test-bind': []
   'test-lookup': []
   save: []
@@ -68,6 +71,21 @@ const ldapUrlHelp = computed(() =>
 
 const ldapUrlSchemeMismatch = computed(() =>
   ldapUrlSchemeHint(ldapConnectionMode.value, form.value.ldapUrl) === 'wrong_scheme',
+)
+
+const ldapValidationWarnings = computed(() =>
+  ldapFormValidationWarnings({
+    ldapUrl:              form.value.ldapUrl,
+    ldapStartTls:         form.value.ldapStartTls,
+    ldapTlsVerify:        form.value.ldapTlsVerify,
+    ldapBindDn:           form.value.ldapBindDn,
+    ldapBaseDn:           form.value.ldapBaseDn,
+    ldapUserSearchFilter: form.value.ldapUserSearchFilter,
+    ldapUsernameAttribute: form.value.ldapUsernameAttribute,
+    ldapTimeoutSec:       form.value.ldapTimeoutSec,
+    ldapBindPasswordSet:  props.data.ldap.bindPasswordSet,
+    ldapBindPwDraft:      ldapBindPw.value,
+  }),
 )
 
 const ldapCardTopWarning = computed(() =>
@@ -248,6 +266,15 @@ const loginLdap = computed(() =>
       <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
         {{ t('admin.authProviders.ldap.sectionSearch') }}
       </h3>
+      <AuthProvidersLdapAdSuggestions
+        :url="form.ldapUrl"
+        :bind-dn="form.ldapBindDn"
+        :base-dn="form.ldapBaseDn"
+        :read-only="readOnly"
+        @apply-filter="form.ldapUserSearchFilter = $event"
+        @apply-base-dn="form.ldapBaseDn = $event"
+        @apply-bind-upn="form.ldapBindDn = $event"
+      />
       <AppFormField :label="t('admin.authProviders.ldap.baseDnLabel')" :help="t('admin.authProviders.ldap.baseDnDesc')">
         <AppTextInput v-model="form.ldapBaseDn" :disabled="readOnly" class="font-mono" :placeholder="t('admin.authProviders.ldap.baseDnPlaceholder')" />
       </AppFormField>
@@ -292,10 +319,31 @@ const loginLdap = computed(() =>
         {{ t('admin.authProviders.ldap.testSection') }}
       </h3>
       <p class="text-sm text-gray-600 dark:text-gray-400">{{ t('admin.authProviders.ldap.testDesc') }}</p>
+      <UAlert
+        v-if="ldapValidationWarnings.length"
+        color="amber"
+        icon="i-heroicons-exclamation-triangle"
+        :title="t('admin.authProviders.ldap.validation.title')"
+      >
+        <ul class="list-disc pl-5 space-y-1 text-sm">
+          <li v-for="id in ldapValidationWarnings" :key="id">
+            {{ t(`admin.authProviders.ldap.validation.${id}`) }}
+          </li>
+        </ul>
+      </UAlert>
       <div class="flex flex-wrap gap-3">
         <UButton
+          :label="t('admin.authProviders.ldap.testConnectButton')"
+          icon="i-heroicons-signal"
+          :loading="testingLdapConnect"
+          :disabled="readOnly || !form.ldapUrl.trim()"
+          color="gray"
+          variant="outline"
+          @click="emit('test-connect')"
+        />
+        <UButton
           :label="t('admin.authProviders.ldap.testButton')"
-          icon="i-heroicons-arrow-path"
+          icon="i-heroicons-key"
           :loading="testingLdap"
           :disabled="readOnly"
           color="primary"
@@ -326,8 +374,10 @@ const loginLdap = computed(() =>
         :diagnostic="lastLdapTest.diagnostic"
         :ok="lastLdapTest.ok"
         :bind-only="lastLdapTest.ok ? lastLdapTest.bindOnly : undefined"
+        :connect-only="lastLdapTest.ok ? lastLdapTest.connectOnly : undefined"
         :search-sample-count="lastLdapTest.ok ? lastLdapTest.searchSampleCount : undefined"
         :user-lookup="lastLdapTest.ok ? lastLdapTest.userLookup : undefined"
+        :group-read-ok="lastLdapTest.ok ? lastLdapTest.groupReadOk : undefined"
       />
     </section>
   </div>

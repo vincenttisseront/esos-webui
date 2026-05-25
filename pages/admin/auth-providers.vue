@@ -244,6 +244,7 @@ async function save() {
 }
 
 const testingLdap = ref(false)
+const testingLdapConnect = ref(false)
 const testingLdapLookup = ref(false)
 const lastLdapTest = ref<LdapTestClientState>(null)
 
@@ -264,6 +265,36 @@ function ldapConfigFromForm() {
   })
 }
 
+async function testLdapConnect() {
+  if (!canEditAuthProviders.value) return
+  testingLdapConnect.value = true
+  lastLdapTest.value = null
+  try {
+    const r = await $fetch<LdapTestApiResponse>('/api/admin/auth-providers/ldap/test', {
+      method: 'POST',
+      body: { action: 'connect' },
+    })
+    const mapped = mapLdapTestApiResponse(r)
+    if (mapped) {
+      lastLdapTest.value = mapped
+      if (r.ok) {
+        toastOk(
+          t('admin.authProviders.toasts.ldapTitle'),
+          t('admin.authProviders.toasts.ldapConnectOk'),
+        )
+      } else {
+        toastErr(t('admin.authProviders.toasts.ldapTitle'), mapped.error)
+      }
+    }
+  } catch (e: unknown) {
+    const msg = tError(e)
+    lastLdapTest.value = ldapTestClientNetworkFailure(msg, ldapConfigFromForm())
+    toastErr(t('admin.authProviders.toasts.ldapTitle'), msg)
+  } finally {
+    testingLdapConnect.value = false
+  }
+}
+
 async function testLdapBind() {
   if (!canEditAuthProviders.value) return
   testingLdap.value = true
@@ -271,7 +302,10 @@ async function testLdapBind() {
   try {
     const r = await $fetch<LdapTestApiResponse>('/api/admin/auth-providers/ldap/test', {
       method: 'POST',
-      body: ldapBindPw.value ? { bindPassword: ldapBindPw.value } : {},
+      body: {
+        action: 'bind',
+        ...(ldapBindPw.value ? { bindPassword: ldapBindPw.value } : {}),
+      },
     })
     const mapped = mapLdapTestApiResponse(r)
     if (mapped) {
@@ -297,11 +331,13 @@ async function testLdapBind() {
 async function testLdapLookup() {
   if (!canEditAuthProviders.value || !ldapLookupUsername.value.trim()) return
   testingLdapLookup.value = true
+  lastLdapTest.value = null
   const lookupUser = ldapLookupUsername.value.trim()
   try {
     const r = await $fetch<LdapTestApiResponse>('/api/admin/auth-providers/ldap/test', {
       method: 'POST',
       body: {
+        action: 'search',
         ...(ldapBindPw.value ? { bindPassword: ldapBindPw.value } : {}),
         username: lookupUser,
       },
@@ -309,7 +345,14 @@ async function testLdapLookup() {
     const mapped = mapLdapTestApiResponse(r)
     if (mapped) {
       lastLdapTest.value = mapped
-      if (!r.ok) toastErr(t('admin.authProviders.toasts.ldapTitle'), mapped.error)
+      if (!r.ok) {
+        toastErr(t('admin.authProviders.toasts.ldapTitle'), mapped.error)
+      } else if (r.userLookup) {
+        toastOk(
+          t('admin.authProviders.toasts.ldapTitle'),
+          t('admin.authProviders.toasts.ldapSearchOk', { count: r.searchSampleCount ?? 1 }),
+        )
+      }
     }
   } catch (e: unknown) {
     const msg = tError(e)
@@ -432,7 +475,9 @@ async function testOidc() {
             :saving="saving"
             :last-ldap-test="lastLdapTest"
             :testing-ldap="testingLdap"
+            :testing-ldap-connect="testingLdapConnect"
             :testing-ldap-lookup="testingLdapLookup"
+            @test-connect="testLdapConnect"
             @test-bind="testLdapBind"
             @test-lookup="testLdapLookup"
             @save="save"

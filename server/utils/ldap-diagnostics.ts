@@ -40,15 +40,23 @@ export type LdapDiagnosticSafeCode =
   | 'tls_policy_rejected'
   | 'connection_failed'
   | 'starttls_failed'
+  | 'tls_failed'
   | 'invalid_credentials'
   | 'operations_error'
   | 'timeout'
+  | 'time_limit_exceeded'
+  | 'size_limit_exceeded'
   | 'insufficient_access'
   | 'no_such_object'
   | 'filter_error'
+  | 'strong_auth_required'
+  | 'confidentiality_required'
+  | 'referral'
+  | 'connect_ok'
   | 'bind_ok'
   | 'search_ok'
   | 'user_not_found'
+  | 'group_read_ok'
   | 'unknown'
 
 /** Stable hint ids → i18n `admin.authProviders.ldap.diagnostics.hints.<id>` */
@@ -62,6 +70,19 @@ export type LdapDiagnosticHintId =
   | 'check_hostname_sni'
   | 'verify_timeout'
   | 'verify_bind_password'
+  | 'try_domain_root_base_dn'
+  | 'try_upn_bind_format'
+  | 'check_ad_referrals'
+  | 'check_filter_syntax'
+  | 'verify_memberof_read'
+  | 'referrals_not_followed'
+
+export type LdapStepStatus = 'ok' | 'failed' | 'skipped' | 'pending'
+
+export type LdapStepProgress = {
+  step:   LdapTestStep
+  status: LdapStepStatus
+}
 
 export type LdapTestConfigSummary = {
   serverUrl:      string
@@ -85,8 +106,15 @@ export type LdapTestDiagnostic = {
   step:           LdapTestStep
   ldapErrorName?: string
   ldapErrorCode?: string | number
+  diagnosticMessage?: string
+  matchedDN?:     string
+  referrals?:     string[]
   safeMessage:    string
   safeCode:       LdapDiagnosticSafeCode
+  renderedFilter?: string
+  testedBaseDn?:  string
+  testedBindPrincipalMasked?: string
+  stepResults:    LdapStepProgress[]
   config:         LdapTestConfigSummary
   hints:          LdapDiagnosticHintId[]
   commandExamples?: LdapCommandExamples
@@ -97,7 +125,9 @@ export type LdapTestSuccess = {
   bindOk:            boolean
   searchSampleCount: number
   bindOnly?:         boolean
+  connectOnly?:      boolean
   userLookup?:       boolean
+  groupReadOk?:      boolean
   diagnostic:        LdapTestDiagnostic
 }
 
@@ -219,28 +249,55 @@ export function buildLdapCommandExamples(
 }
 
 type ParsedLdapError = {
-  ldapErrorName?: string
-  ldapErrorCode?: string | number
-  rawMessage:     string
+  ldapErrorName?:    string
+  ldapErrorCode?:    string | number
+  diagnosticMessage?: string
+  matchedDN?:        string
+  referrals?:        string[]
+  rawMessage:        string
+}
+
+function extractReferralsFromMessage(msg: string): string[] | undefined {
+  const refs: string[] = []
+  const re = /ldap[s]?:\/\/[^\s,;]+/gi
+  let m: RegExpExecArray | null
+  while ((m = re.exec(msg)) !== null) {
+    if (!refs.includes(m[0])) refs.push(m[0])
+  }
+  return refs.length ? refs : undefined
 }
 
 function parseLdapJsError(err: unknown): ParsedLdapError {
   const e = err as {
-    name?:     string
-    message?:  string
-    code?:     string | number
-    errno?:    string | number
-    lde_errno?: number
-    lde_message?: string
+    name?:          string
+    message?:       string
+    code?:          string | number
+    errno?:         string | number
+    lde_errno?:     number
+    lde_message?:   string
+    matchedDN?:     string
+    referral?:      string
+    referrals?:     string[]
   }
   const ldapErrorName = e?.name?.trim() || undefined
   const ldapErrorCode = e?.lde_errno ?? e?.code ?? e?.errno
+  const diagnosticMessage = (e?.lde_message ?? '').trim() || undefined
   const rawMessage
-    = (e?.lde_message ?? e?.message ?? (typeof err === 'string' ? err : '')).trim()
+    = (diagnosticMessage ?? e?.message ?? (typeof err === 'string' ? err : '')).trim()
       || 'LDAP error'
+  const matchedDN = e?.matchedDN?.trim() || undefined
+  const fromMsg   = extractReferralsFromMessage(rawMessage)
+  const referrals = e?.referrals?.length
+    ? e.referrals
+    : e?.referral
+      ? [e.referral, ...(fromMsg ?? [])]
+      : fromMsg
   return {
     ldapErrorName,
     ldapErrorCode: ldapErrorCode !== undefined ? ldapErrorCode : undefined,
+    diagnosticMessage,
+    matchedDN,
+    referrals,
     rawMessage,
   }
 }
@@ -253,12 +310,27 @@ function inferSafeCode(parsed: ParsedLdapError, step: LdapTestStep): LdapDiagnos
   if (code === 49 || name.includes('invalidcredentials') || msg.includes('invalid credentials')) {
     return 'invalid_credentials'
   }
+  if (code === 10 || name.includes('referral') || msg.includes('referral')) {
+    return 'referral'
+  }
   if (
     name.includes('operationserror')
     || msg.includes('operations error')
     || code === 1
   ) {
     return 'operations_error'
+  }
+  if (code === 4 || name.includes('sizelimitexceeded') || msg.includes('size limit exceeded')) {
+    return 'size_limit_exceeded'
+  }
+  if (code === 3 || name.includes('timelimitexceeded') || msg.includes('time limit exceeded')) {
+    return 'time_limit_exceeded'
+  }
+  if (code === 8 || name.includes('strongauthrequired') || msg.includes('stronger authentication')) {
+    return 'strong_auth_required'
+  }
+  if (code === 13 || name.includes('confidentialityrequired') || msg.includes('confidentiality required')) {
+    return 'confidentiality_required'
   }
   if (name.includes('timeout') || msg.includes('timeout') || code === 85) {
     return 'timeout'
@@ -282,7 +354,11 @@ function inferSafeCode(parsed: ParsedLdapError, step: LdapTestStep): LdapDiagnos
     || msg.includes('enotfound')
     || msg.includes('getaddrinfo')
     || msg.includes('connect')
+    || msg.includes('certificate')
+    || msg.includes('tls')
   ) {
+    if (step === 'starttls' || msg.includes('starttls')) return 'starttls_failed'
+    if (msg.includes('certificate') || msg.includes('tls')) return 'tls_failed'
     return 'connection_failed'
   }
   if (step === 'starttls' || msg.includes('starttls')) {
@@ -294,42 +370,66 @@ function inferSafeCode(parsed: ParsedLdapError, step: LdapTestStep): LdapDiagnos
   return 'unknown'
 }
 
-function hintsForSafeCode(code: LdapDiagnosticSafeCode, config: LdapTestConfigSummary): LdapDiagnosticHintId[] {
+function hintsForSafeCode(
+  code: LdapDiagnosticSafeCode,
+  config: LdapTestConfigSummary,
+  failedStep?: LdapTestStep,
+): LdapDiagnosticHintId[] {
   const hints: LdapDiagnosticHintId[] = []
 
   if (code === 'operations_error') {
     hints.push(
+      'try_domain_root_base_dn',
+      'try_upn_bind_format',
       'use_ldaps_or_starttls',
       'verify_bind_format',
       'verify_base_dn',
       'verify_search_filter',
+      'check_filter_syntax',
       'verify_service_account_read',
+      'verify_memberof_read',
       'check_tls_certificate',
       'check_hostname_sni',
+      'check_ad_referrals',
+      'referrals_not_followed',
     )
     return hints
   }
 
-  if (code === 'invalid_credentials' || code === 'bind_password_missing') {
-    hints.push('verify_bind_format', 'verify_bind_password')
+  if (code === 'referral') {
+    hints.push('check_ad_referrals', 'referrals_not_followed', 'try_domain_root_base_dn', 'use_ldaps_or_starttls')
+    return hints
   }
-  if (code === 'connection_failed' || code === 'starttls_failed') {
+
+  if (code === 'strong_auth_required' || code === 'confidentiality_required') {
+    hints.push('use_ldaps_or_starttls', 'check_tls_certificate', 'check_hostname_sni')
+  }
+  if (code === 'invalid_credentials' || code === 'bind_password_missing') {
+    hints.push('verify_bind_format', 'verify_bind_password', 'try_upn_bind_format')
+  }
+  if (code === 'connection_failed' || code === 'starttls_failed' || code === 'tls_failed') {
     hints.push('use_ldaps_or_starttls', 'check_tls_certificate', 'check_hostname_sni', 'verify_timeout')
   }
   if (code === 'insufficient_access') {
-    hints.push('verify_service_account_read', 'verify_bind_format')
+    hints.push('verify_service_account_read', 'verify_bind_format', 'try_upn_bind_format')
   }
   if (code === 'no_such_object') {
-    hints.push('verify_base_dn')
+    hints.push('verify_base_dn', 'try_domain_root_base_dn')
   }
   if (code === 'filter_error') {
-    hints.push('verify_search_filter')
+    hints.push('verify_search_filter', 'check_filter_syntax')
   }
-  if (code === 'timeout') {
+  if (code === 'timeout' || code === 'time_limit_exceeded') {
     hints.push('verify_timeout')
+  }
+  if (code === 'size_limit_exceeded') {
+    hints.push('verify_search_filter', 'verify_base_dn')
   }
   if (code === 'config_incomplete') {
     hints.push('verify_base_dn', 'verify_bind_format', 'verify_search_filter')
+  }
+  if (failedStep === 'userSearch' && !hints.includes('verify_base_dn')) {
+    hints.push('verify_base_dn', 'try_domain_root_base_dn')
   }
 
   if (
@@ -355,26 +455,98 @@ export function ldapSafeMessageForCode(code: LdapDiagnosticSafeCode, parsed: Par
       return 'Could not connect to the LDAP server.'
     case 'starttls_failed':
       return 'StartTLS negotiation failed.'
+    case 'tls_failed':
+      return 'TLS handshake failed (LDAPS or StartTLS).'
     case 'invalid_credentials':
       return 'Bind failed: invalid credentials or bind principal format.'
     case 'operations_error':
-      return 'LDAP Operations Error — common with Active Directory when signing, channel binding, or bind format is incorrect.'
+      return 'LDAP Operations Error — common with Active Directory when signing, channel binding, bind format, or base DN is incorrect.'
     case 'timeout':
       return 'LDAP operation timed out.'
+    case 'time_limit_exceeded':
+      return 'LDAP server time limit exceeded for the search.'
+    case 'size_limit_exceeded':
+      return 'LDAP search returned too many entries (size limit exceeded).'
     case 'insufficient_access':
       return 'Insufficient access rights for this operation.'
     case 'no_such_object':
       return 'Base DN or search path not found.'
     case 'filter_error':
       return 'User search filter is invalid.'
+    case 'strong_auth_required':
+      return 'Strong authentication required (often LDAP signing or channel binding on Active Directory).'
+    case 'confidentiality_required':
+      return 'Confidentiality required — use LDAPS or StartTLS.'
+    case 'referral':
+      return 'LDAP referral returned — the server pointed to another directory partition.'
+    case 'connect_ok':
+      return 'Connection and TLS check succeeded. Bind was not attempted.'
     case 'bind_ok':
       return 'Service account bind succeeded. User search was not run.'
     case 'search_ok':
       return 'Bind and user search succeeded.'
     case 'user_not_found':
       return 'Bind and search succeeded but no user matched the lookup identifier.'
+    case 'group_read_ok':
+      return 'Group membership attribute read succeeded.'
     default:
       return parsed.rawMessage.slice(0, 240) || 'LDAP test failed.'
+  }
+}
+
+export const LDAP_TEST_PIPELINE: LdapTestStep[] = [
+  'connection',
+  'starttls',
+  'bind',
+  'userSearch',
+  'groupRead',
+]
+
+export function ldapTlsStepNeeded(urlStr: string, startTls: boolean): boolean {
+  const u = urlStr.trim().toLowerCase()
+  return u.startsWith('ldaps://') || (u.startsWith('ldap://') && startTls)
+}
+
+export function buildInitialStepResults(
+  urlStr: string,
+  startTls: boolean,
+  includeBind = true,
+  includeSearch = false,
+): LdapStepProgress[] {
+  const tlsNeeded = ldapTlsStepNeeded(urlStr, startTls)
+  return LDAP_TEST_PIPELINE.map((step) => {
+    if (step === 'starttls' && !tlsNeeded) return { step, status: 'skipped' as const }
+    if (step === 'bind' && !includeBind) return { step, status: 'skipped' as const }
+    if ((step === 'userSearch' || step === 'groupRead') && !includeSearch) {
+      return { step, status: 'skipped' as const }
+    }
+    return { step, status: 'pending' as const }
+  })
+}
+
+export function markStepOk(results: LdapStepProgress[], step: LdapTestStep): void {
+  const row = results.find((r) => r.step === step)
+  if (row) row.status = 'ok'
+}
+
+export function markStepFailed(results: LdapStepProgress[], step: LdapTestStep): void {
+  const row = results.find((r) => r.step === step)
+  if (row) row.status = 'failed'
+  const idx = LDAP_TEST_PIPELINE.indexOf(step)
+  for (let i = idx + 1; i < LDAP_TEST_PIPELINE.length; i++) {
+    const later = results.find((r) => r.step === LDAP_TEST_PIPELINE[i])
+    if (later && later.status === 'pending') later.status = 'skipped'
+  }
+}
+
+function enrichDiagnosticFields(
+  config: LdapTestConfigSummary,
+  extra?: { renderedFilter?: string },
+): Pick<LdapTestDiagnostic, 'testedBaseDn' | 'testedBindPrincipalMasked' | 'renderedFilter'> {
+  return {
+    testedBaseDn:               config.baseDn,
+    testedBindPrincipalMasked:  config.bindPrincipal,
+    ...(extra?.renderedFilter ? { renderedFilter: extra.renderedFilter } : {}),
   }
 }
 
@@ -383,18 +555,27 @@ export function buildLdapFailureDiagnostic(
   step: LdapTestStep,
   dto: AdminAuthProvidersDto['ldap'],
   config: LdapTestConfigSummary,
+  stepResults: LdapStepProgress[],
 ): LdapTestDiagnostic {
   const parsed   = parseLdapJsError(err)
   const safeCode = inferSafeCode(parsed, step)
+  markStepFailed(stepResults, step)
   return {
     step,
     ldapErrorName: parsed.ldapErrorName,
     ldapErrorCode: parsed.ldapErrorCode,
+    diagnosticMessage: parsed.diagnosticMessage,
+    matchedDN:     parsed.matchedDN,
+    referrals:     parsed.referrals,
     safeCode,
     safeMessage:   ldapSafeMessageForCode(safeCode, parsed),
+    stepResults,
     config,
-    hints:         hintsForSafeCode(safeCode, config),
+    hints:         hintsForSafeCode(safeCode, config, step),
     commandExamples: buildLdapCommandExamples(dto, config),
+    ...enrichDiagnosticFields(config, {
+      renderedFilter: config.userFilter.includes('{{username}}') ? undefined : config.userFilter,
+    }),
   }
 }
 
@@ -403,61 +584,93 @@ export function buildLdapValidationFailure(
   safeCode: LdapDiagnosticSafeCode,
   dto: AdminAuthProvidersDto['ldap'],
   config: LdapTestConfigSummary,
+  stepResults: LdapStepProgress[],
 ): LdapTestFailure {
   const parsed = { rawMessage: ldapSafeMessageForCode(safeCode, { rawMessage: '' }) }
+  markStepFailed(stepResults, step)
   return {
     ok: false,
     diagnostic: {
       step,
       safeCode,
       safeMessage: parsed.rawMessage,
+      stepResults,
       config,
-      hints:       hintsForSafeCode(safeCode, config),
+      hints:       hintsForSafeCode(safeCode, config, step),
       commandExamples: buildLdapCommandExamples(dto, config),
+      ...enrichDiagnosticFields(config),
     },
+  }
+}
+
+export function buildLdapConnectSuccessDiagnostic(
+  dto: AdminAuthProvidersDto['ldap'],
+  config: LdapTestConfigSummary,
+  stepResults: LdapStepProgress[],
+): LdapTestDiagnostic {
+  return {
+    step:        'connection',
+    safeCode:    'connect_ok',
+    safeMessage: ldapSafeMessageForCode('connect_ok', { rawMessage: '' }),
+    stepResults,
+    config,
+    hints:       [],
+    commandExamples: buildLdapCommandExamples(dto, config),
+    ...enrichDiagnosticFields(config),
   }
 }
 
 export function buildLdapBindOnlySuccessDiagnostic(
   dto: AdminAuthProvidersDto['ldap'],
   config: LdapTestConfigSummary,
+  stepResults: LdapStepProgress[],
 ): LdapTestDiagnostic {
   return {
     step:        'bind',
     safeCode:    'bind_ok',
     safeMessage: ldapSafeMessageForCode('bind_ok', { rawMessage: '' }),
+    stepResults,
     config,
     hints:       [],
     commandExamples: buildLdapCommandExamples(dto, config),
+    ...enrichDiagnosticFields(config),
   }
 }
 
 export function buildLdapSearchSuccessDiagnostic(
   dto: AdminAuthProvidersDto['ldap'],
   config: LdapTestConfigSummary,
-  searchSampleCount: number,
+  _searchSampleCount: number,
+  stepResults: LdapStepProgress[],
+  renderedFilter: string,
 ): LdapTestDiagnostic {
   return {
     step:        'userSearch',
     safeCode:    'search_ok',
     safeMessage: ldapSafeMessageForCode('search_ok', { rawMessage: '' }),
+    stepResults,
     config,
     hints:       [],
     commandExamples: buildLdapCommandExamples(dto, config),
+    ...enrichDiagnosticFields(config, { renderedFilter }),
   }
 }
 
 export function buildLdapUserNotFoundDiagnostic(
   dto: AdminAuthProvidersDto['ldap'],
   config: LdapTestConfigSummary,
+  stepResults: LdapStepProgress[],
+  renderedFilter: string,
 ): LdapTestDiagnostic {
   return {
     step:        'userSearch',
     safeCode:    'user_not_found',
     safeMessage: ldapSafeMessageForCode('user_not_found', { rawMessage: '' }),
+    stepResults,
     config,
-    hints:       ['verify_search_filter', 'verify_base_dn'],
+    hints:       ['verify_search_filter', 'verify_base_dn', 'try_domain_root_base_dn'],
     commandExamples: buildLdapCommandExamples(dto, config),
+    ...enrichDiagnosticFields(config, { renderedFilter }),
   }
 }
 
@@ -467,14 +680,32 @@ export function buildLdapSuccessDiagnostic(
   config: LdapTestConfigSummary,
   searchSampleCount: number,
   userLookup?: boolean,
+  stepResults: LdapStepProgress[] = buildInitialStepResults(dto.url ?? '', dto.startTls, true, userLookup !== undefined),
 ): LdapTestDiagnostic {
   if (userLookup === false) {
-    return buildLdapUserNotFoundDiagnostic(dto, config)
+    return buildLdapUserNotFoundDiagnostic(dto, config, stepResults, config.userFilter)
   }
   if (userLookup === true) {
-    return buildLdapSearchSuccessDiagnostic(dto, config, searchSampleCount)
+    return buildLdapSearchSuccessDiagnostic(dto, config, searchSampleCount, stepResults, config.userFilter)
   }
-  return buildLdapBindOnlySuccessDiagnostic(dto, config)
+  return buildLdapBindOnlySuccessDiagnostic(dto, config, stepResults)
+}
+
+/** Safe server log line (no passwords). */
+export function logLdapTestSafe(
+  action: string,
+  dto: AdminAuthProvidersDto['ldap'],
+  diagnostic: LdapTestDiagnostic,
+): void {
+  console.warn('[ldap-test]', JSON.stringify({
+    action,
+    step:      diagnostic.step,
+    safeCode:  diagnostic.safeCode,
+    url:       dto.url?.trim() || '',
+    baseDn:    dto.baseDn?.trim() || '',
+    errorName: diagnostic.ldapErrorName ?? null,
+    errorCode: diagnostic.ldapErrorCode ?? null,
+  }))
 }
 
 /** Plain-text block for “Copy LDAP diagnostic” (no secrets). */
@@ -485,6 +716,12 @@ export function formatLdapDiagnosticForCopy(d: LdapTestDiagnostic, lines: {
   safeMessage:    string
   errorName?:     string
   errorCode?:     string
+  diagnosticMessage?: string
+  matchedDN?:     string
+  referrals?:     string
+  renderedFilter?: string
+  stepProgressTitle?: string
+  stepProgressLines?: string[]
   configTitle:    string
   hintsTitle?:    string
   hintLines?:     string[]
@@ -501,6 +738,22 @@ export function formatLdapDiagnosticForCopy(d: LdapTestDiagnostic, lines: {
   }
   if (lines.errorCode != null && d.ldapErrorCode !== undefined) {
     out.push(`${lines.errorCode}: ${d.ldapErrorCode}`)
+  }
+  if (lines.diagnosticMessage && d.diagnosticMessage) {
+    out.push(`${lines.diagnosticMessage}: ${d.diagnosticMessage}`)
+  }
+  if (lines.matchedDN && d.matchedDN) {
+    out.push(`${lines.matchedDN}: ${d.matchedDN}`)
+  }
+  if (lines.referrals && d.referrals?.length) {
+    out.push(`${lines.referrals}: ${d.referrals.join(', ')}`)
+  }
+  if (lines.renderedFilter && (d.renderedFilter ?? d.config.userFilter)) {
+    out.push(`${lines.renderedFilter}: ${d.renderedFilter ?? d.config.userFilter}`)
+  }
+  if (lines.stepProgressLines?.length) {
+    out.push('', lines.stepProgressTitle ?? 'Steps')
+    for (const s of lines.stepProgressLines) out.push(`  ${s}`)
   }
   out.push('', lines.configTitle)
   out.push(`  URL: ${d.config.serverUrl}`)

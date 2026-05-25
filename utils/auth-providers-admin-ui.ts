@@ -21,6 +21,7 @@ import {
 } from '../server/utils/auth-providers-public'
 import type { AdminAuthProvidersDto } from '../server/utils/auth-providers-config'
 import type { LdapTestDiagnostic, LdapTestConfigSummary } from '../server/utils/ldap-diagnostics'
+import { buildInitialStepResults } from '../server/utils/ldap-diagnostics'
 
 export type { LdapTestDiagnostic }
 
@@ -29,7 +30,7 @@ export type AuthProviderTabId = 'local' | 'ldap' | 'oidc' | 'roles' | 'security'
 export const AUTH_PROVIDERS_TAB_STORAGE_KEY = 'auth-providers-active-tab'
 
 export type LdapTestClientState =
-  | { ok: true; searchSampleCount: number; userLookup?: boolean; bindOnly?: boolean; diagnostic: LdapTestDiagnostic }
+  | { ok: true; searchSampleCount: number; userLookup?: boolean; bindOnly?: boolean; connectOnly?: boolean; groupReadOk?: boolean; diagnostic: LdapTestDiagnostic }
   | { ok: false; error: string; diagnostic: LdapTestDiagnostic }
   | null
 
@@ -37,7 +38,9 @@ export type LdapTestApiResponse = {
   ok:                 boolean
   searchSampleCount?: number
   bindOnly?:          boolean
+  connectOnly?:       boolean
   userLookup?:        boolean
+  groupReadOk?:       boolean
   error?:             string
   diagnostic?:        LdapTestDiagnostic
 }
@@ -52,7 +55,9 @@ export function mapLdapTestApiResponse(
       searchSampleCount: r.searchSampleCount ?? 0,
       diagnostic:        r.diagnostic,
       ...(r.bindOnly ? { bindOnly: true } : {}),
+      ...(r.connectOnly ? { connectOnly: true } : {}),
       ...(r.userLookup !== undefined ? { userLookup: r.userLookup } : {}),
+      ...(r.groupReadOk !== undefined ? { groupReadOk: r.groupReadOk } : {}),
     }
   }
   return {
@@ -65,7 +70,10 @@ export function mapLdapTestApiResponse(
 export function ldapTestClientNetworkFailure(
   message: string,
   config: LdapTestConfigSummary,
+  url = config.serverUrl,
+  startTls = config.tlsMode === 'ldap_start_tls',
 ): LdapTestClientState {
+  const stepResults = buildInitialStepResults(url, startTls, true, false)
   return {
     ok:         false,
     error:      message,
@@ -73,6 +81,7 @@ export function ldapTestClientNetworkFailure(
       step:        'connection',
       safeCode:    'connection_failed',
       safeMessage: message,
+      stepResults,
       config,
       hints:       ['verify_timeout', 'check_tls_certificate', 'use_ldaps_or_starttls'],
     },
@@ -607,4 +616,44 @@ export function ldapCardTopWarningFromForm(params: {
     }
   }
   return null
+}
+
+export type LdapFormValidationWarningId =
+  | 'url_empty'
+  | 'url_scheme_mismatch'
+  | 'base_dn_empty'
+  | 'base_dn_format'
+  | 'filter_no_username_placeholder'
+  | 'timeout_invalid'
+  | 'bind_dn_empty'
+  | 'bind_password_missing'
+  | 'tls_verify_disabled'
+
+export function ldapFormValidationWarnings(params: {
+  ldapUrl: string
+  ldapStartTls: boolean
+  ldapTlsVerify: boolean
+  ldapBindDn: string
+  ldapBaseDn: string
+  ldapUserSearchFilter: string
+  ldapUsernameAttribute: string
+  ldapTimeoutSec: number
+  ldapBindPasswordSet: boolean
+  ldapBindPwDraft: string
+}): LdapFormValidationWarningId[] {
+  const warnings: LdapFormValidationWarningId[] = []
+  const mode = ldapConnectionModeChoiceFromForm(params.ldapUrl, params.ldapStartTls)
+  if (!params.ldapUrl.trim()) warnings.push('url_empty')
+  else if (ldapUrlSchemeHint(mode, params.ldapUrl) === 'wrong_scheme') warnings.push('url_scheme_mismatch')
+  if (!params.ldapBaseDn.trim()) warnings.push('base_dn_empty')
+  else if (!/(^|,)\s*(dc|ou|cn)=/i.test(params.ldapBaseDn)) warnings.push('base_dn_format')
+  const filter = params.ldapUserSearchFilter.trim()
+  if (filter && !filter.includes('{{username}}') && !params.ldapUsernameAttribute.trim()) {
+    warnings.push('filter_no_username_placeholder')
+  }
+  if (params.ldapTimeoutSec <= 0) warnings.push('timeout_invalid')
+  if (!params.ldapBindDn.trim()) warnings.push('bind_dn_empty')
+  if (!params.ldapBindPasswordSet && !params.ldapBindPwDraft.trim()) warnings.push('bind_password_missing')
+  if (!params.ldapTlsVerify) warnings.push('tls_verify_disabled')
+  return warnings
 }
