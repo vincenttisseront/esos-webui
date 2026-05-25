@@ -6,77 +6,16 @@
       {{ title }}
     </h1>
 
-    <!-- Sélecteur contexte global (SANs standalone + clusters) -->
-    <div v-if="sanSelector.isMultiSan.value" class="flex items-center gap-1.5 overflow-x-auto">
-
-      <!-- Bouton "Tous" (mode agrégé, visible si plusieurs SANs standalone) -->
-      <template v-if="sanSelector.standaloneSans.value.length > 1">
-        <button
-          class="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium border transition-colors shrink-0"
-          :class="sanSelector.isAll.value
-            ? 'bg-primary-600 text-white border-primary-600'
-            : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-primary-400 hover:text-primary-600 dark:hover:text-primary-400'"
-          @click="switchSan(ALL_SANS_ID)"
-        >
-          <UIcon name="i-heroicons-server-stack" class="w-3 h-3" />
-          {{ t('common.all') }}
-        </button>
-        <span class="h-4 w-px bg-gray-200 dark:bg-gray-700 shrink-0" />
-      </template>
-
-      <!-- SANs standalone -->
-      <button
-        v-for="san in sanSelector.standaloneSans.value"
-        :key="san.id"
-        class="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition-colors shrink-0"
-        :class="!sanSelector.isAll.value && sanSelector.selected.value?.id === san.id
-          ? 'bg-primary-600 text-white border-primary-600'
-          : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-primary-400 hover:text-primary-600 dark:hover:text-primary-400'"
-        @click="switchSan(san.id)"
-      >
-        <span
-          class="w-1.5 h-1.5 rounded-full shrink-0"
-          :class="{
-            'bg-green-400': sanSelector.sshStatuses.value[san.id] === 'connected',
-            'bg-orange-400 animate-pulse': sanSelector.sshStatuses.value[san.id] === 'reconnecting',
-            'bg-red-500': sanSelector.sshStatuses.value[san.id] === 'error',
-            'bg-gray-400': !sanSelector.sshStatuses.value[san.id] || sanSelector.sshStatuses.value[san.id] === 'connecting',
-          }"
-        />
-        <span class="font-mono">{{ san.label }}</span>
-      </button>
-
-      <!-- Séparateur si les deux groupes sont présents -->
-      <template v-if="sanSelector.standaloneSans.value.length > 0 && sanSelector.clusters.value.length > 0">
-        <span class="h-4 w-px bg-gray-200 dark:bg-gray-700 shrink-0" />
-      </template>
-
-      <!-- Clusters -->
-      <button
-        v-for="cluster in sanSelector.clusters.value"
-        :key="cluster.id"
-        class="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition-colors shrink-0"
-        :class="sanSelector.selectedCluster.value?.id === cluster.id
-          ? 'bg-indigo-600 text-white border-indigo-600'
-          : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400'"
-        @click="switchSan(cluster.id)"
-      >
-        <UIcon name="i-heroicons-server-stack" class="w-3 h-3 shrink-0" />
-        <span>{{ cluster.name }}</span>
-        <!-- Badge mode cluster -->
-        <span
-          class="ml-0.5 text-[9px] px-1 py-0.5 rounded font-semibold uppercase tracking-wide"
-          :class="sanSelector.selectedCluster.value?.id === cluster.id
-            ? 'bg-indigo-500 text-indigo-100'
-            : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'"
-        >HA</span>
-      </button>
-    </div>
+    <ContextSelectorBar
+      :show-top-context-selector="nav.showTopContextSelector.value"
+      :show-multi-selector="nav.showMultiSelector.value"
+      @switch="switchContext"
+    />
 
     <div class="flex items-center gap-4 shrink-0 ml-auto">
       <RefreshBadge :last-refresh="overviewStore.lastRefresh" />
 
-      <template v-if="!sanSelector.isMultiSan.value">
+      <template v-if="!nav.showMultiSelector.value">
         <NuxtLink
           v-if="sshStore.isUnconfigured"
           to="/admin"
@@ -112,7 +51,6 @@
         @click="overviewStore.fetch()"
       />
 
-      <!-- Menu utilisateur -->
       <UDropdownMenu :items="userMenuItems" :content="{ side: 'bottom', align: 'end' }">
         <button
           class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -165,6 +103,7 @@ const sshStore = useSSHStore()
 const overviewStore = useOverviewStore()
 const authStore = useAuthStore()
 const sanSelector = useSelectedSan()
+const nav = useNavigationContext()
 const { t } = useEsosI18n()
 
 const hwStore = useHardwareStore()
@@ -224,22 +163,31 @@ onBeforeUnmount(() => {
   unregisterPagePoller('header-selection')
 })
 
-async function switchSan(id: string) {
-  if (id === ALL_SANS_ID) {
-    sanSelector.selectAll()
-  } else {
-    sanSelector.select(id)
-  }
-  // Reset stale data immediately
+async function refreshStoresForContext() {
   overviewStore.invalidate()
   hwStore.$patch({ data: null, alerts: [] })
   statsStore.$patch({ sessions: [], devices: [] })
-  // Refetch with new SAN context
   await Promise.all([
     overviewStore.fetch(),
     hwStore.fetch(),
     statsStore.fetchAll(),
   ])
+}
+
+async function switchContext(id: string) {
+  if (id === ALL_SANS_ID) {
+    sanSelector.selectAll()
+  } else {
+    sanSelector.select(id)
+  }
+
+  const target = nav.targetForSwitch(id)
+  if (target) {
+    await navigateTo(target)
+    return
+  }
+
+  await refreshStoresForContext()
 }
 
 const authSourceLabel = computed(() => {

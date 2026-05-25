@@ -67,6 +67,7 @@
           </NuxtLink>
 
           <NuxtLink
+            v-if="nav.showClusterHaNav.value"
             to="/admin/cluster"
             class="flex items-center gap-3 pl-12 pr-3 py-1.5 rounded-md text-xs transition-colors text-gray-500 hover:bg-gray-200 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
             active-class="bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
@@ -182,6 +183,7 @@ const esosVersionStore = useESOSVersionStore()
 const clusterStore     = useClusterStore()
 const authStore        = useAuthStore()
 const appVersionStore  = useAppVersionStore()
+const nav              = useNavigationContext()
 const { t }            = useEsosI18n()
 
 onMounted(() => {
@@ -193,6 +195,24 @@ watchEffect(() => {
   if (!depsStore.report && authStore.user && authStore.user.role !== 'viewer') {
     depsStore.fetch()
   }
+})
+
+const monitoringItems = computed(() => {
+  const items = [
+    { to: '/stats',     icon: 'i-heroicons-chart-bar',                label: t('nav.items.stats')      },
+    { to: '/history',   icon: 'i-heroicons-chart-bar-square',         label: t('nav.items.history')    },
+    { to: '/hardware',  icon: 'i-heroicons-cpu-chip',                 label: t('nav.items.hardware')   },
+    { to: '/topology',  icon: 'i-heroicons-share',                    label: t('nav.items.topology')   },
+    { to: '/inventory', icon: 'i-heroicons-clipboard-document-list',  label: t('nav.items.inventory')  },
+  ]
+  if (nav.showClusterHaNav.value) {
+    items.splice(4, 0, {
+      to: '/cluster',
+      icon: 'i-heroicons-server-stack',
+      label: t('nav.items.cluster_ha'),
+    })
+  }
+  return items
 })
 
 const navSections = computed(() => [
@@ -212,14 +232,7 @@ const navSections = computed(() => [
   },
   {
     label: t('nav.sections.monitoring'),
-    items: [
-      { to: '/stats',     icon: 'i-heroicons-chart-bar',                label: t('nav.items.stats')      },
-      { to: '/history',   icon: 'i-heroicons-chart-bar-square',         label: t('nav.items.history')    },
-      { to: '/hardware',  icon: 'i-heroicons-cpu-chip',                 label: t('nav.items.hardware')   },
-      { to: '/topology',  icon: 'i-heroicons-share',                    label: t('nav.items.topology')   },
-      { to: '/cluster',   icon: 'i-heroicons-server-stack',             label: t('nav.items.cluster_ha') },
-      { to: '/inventory', icon: 'i-heroicons-clipboard-document-list',  label: t('nav.items.inventory')  },
-    ],
+    items: monitoringItems.value,
   },
 ])
 </script>
