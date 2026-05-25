@@ -2628,9 +2628,9 @@
           },
           "hints": {
             "use_ldaps_or_starttls": "Utilisez LDAPS (ldaps://) ou ldap:// avec StartTLS — Active Directory exige souvent la signature ou le channel binding en LDAP clair.",
-            "verify_bind_format": "Vérifiez le format du compte de liaison : UPN (user@domaine.local), DOMAINE\\\\user ou DN complet (CN=...,DC=...).",
+            "verify_bind_format": "{'Vérifiez le format du compte de liaison : UPN (user@domaine.local), DOMAINE\\\\user ou DN complet (CN=...,DC=...).'}",
             "verify_base_dn": "Vérifiez le DN de base de recherche (ex. DC=corp,DC=local).",
-            "verify_search_filter": "Vérifiez le filtre utilisateur et le placeholder {{username}} (ex. (sAMAccountName={{username}})).",
+            "verify_search_filter": "{'Vérifiez le filtre utilisateur et le placeholder {{username}} (ex. (sAMAccountName={{username}})).'}",
             "verify_service_account_read": "Le compte de service doit pouvoir lire les utilisateurs et memberOf (ou votre attribut groupe) sous le DN de base.",
             "check_tls_certificate": "Vérifiez la chaîne de certificats (CA) et le nom d’hôte/SNI en LDAPS.",
             "check_hostname_sni": "Le nom d’hôte LDAPS doit correspondre au certificat (inspectez avec openssl s_client).",
