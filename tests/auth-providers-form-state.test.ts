@@ -3,7 +3,9 @@ import type { AdminAuthProvidersDto } from '../server/utils/auth-providers-confi
 import {
   authProvidersFormDirty,
   authProvidersLdapDirty,
+  authProvidersMappingDirty,
   authProvidersOidcDirty,
+  authProvidersSecurityDirty,
   normalizeMappingRulesJson,
   snapshotFromDto,
   snapshotFromFormInput,
@@ -132,6 +134,16 @@ describe('auth-providers-form-state', () => {
     const baseline = snapshotFromDto(dto)
     const current  = snapshotFromFormInput(formFromDto(dto), { oidcClientSecret: 'sec' })
     expect(authProvidersOidcDirty(baseline, current)).toBe(true)
+  })
+
+  it('mfa change => security dirty only, not mapping', () => {
+    const dto = baseDto()
+    const baseline = snapshotFromDto(dto)
+    const form     = formFromDto(dto)
+    form.mfaMode   = 'idp_required'
+    const current  = snapshotFromFormInput(form)
+    expect(authProvidersSecurityDirty(baseline, current)).toBe(true)
+    expect(authProvidersMappingDirty(baseline, current)).toBe(false)
   })
 
   it('normalizeMappingRulesJson treats whitespace-only array as equivalent', () => {

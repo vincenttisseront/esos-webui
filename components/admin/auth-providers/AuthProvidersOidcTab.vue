@@ -11,6 +11,8 @@ import {
 const props = defineProps<{
   data: AdminAuthProvidersDto
   readOnly: boolean
+  dirty: boolean
+  saving: boolean
   oidcSecret: string
   publicOrigin: string
   lastOidcTest: OidcTestClientState
@@ -31,6 +33,8 @@ const oidcSecret = defineModel<string>('oidcSecret', { required: true })
 const emit = defineEmits<{
   'test-discovery': []
   'go-roles-tab': []
+  save: []
+  cancel: []
 }>()
 
 const { t } = useEsosI18n()
@@ -122,6 +126,14 @@ async function copyCallback() {
         </div>
       </dl>
     </div>
+
+    <AuthProvidersSectionActions
+      v-if="!readOnly"
+      :dirty="dirty"
+      :saving="saving"
+      @save="emit('save')"
+      @cancel="emit('cancel')"
+    />
 
     <UCheckbox
       v-model="form.oidcEnabled"

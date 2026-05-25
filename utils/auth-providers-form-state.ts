@@ -211,15 +211,42 @@ export function authProvidersOidcDirty(
   )
 }
 
-export function authProvidersRolesDirty(
+export function authProvidersMappingDirty(
   baseline: AuthProvidersFormSnapshot | null,
   current: AuthProvidersFormSnapshot | null,
 ): boolean {
   if (!baseline || !current) return false
-  return JSON.stringify(baseline.auth) !== JSON.stringify(current.auth)
+  return mappingAuthSubset(baseline.auth) !== mappingAuthSubset(current.auth)
 }
 
-export function applySnapshotToFormInput(
+export function authProvidersSecurityDirty(
+  baseline: AuthProvidersFormSnapshot | null,
+  current: AuthProvidersFormSnapshot | null,
+): boolean {
+  if (!baseline || !current) return false
+  return baseline.auth.mfaMode !== current.auth.mfaMode
+}
+
+/** @deprecated Use authProvidersMappingDirty */
+export function authProvidersRolesDirty(
+  baseline: AuthProvidersFormSnapshot | null,
+  current: AuthProvidersFormSnapshot | null,
+): boolean {
+  return authProvidersMappingDirty(baseline, current)
+}
+
+function mappingAuthSubset(auth: AuthProvidersAuthFormSnapshot): string {
+  return JSON.stringify({
+    jitEnabled:       auth.jitEnabled,
+    jitDefaultRole:   auth.jitDefaultRole,
+    jitDefaultActive: auth.jitDefaultActive,
+    mappingRulesJson: auth.mappingRulesJson,
+    oidcMaxRole:      auth.oidcMaxRole,
+    ldapMaxRole:      auth.ldapMaxRole,
+  })
+}
+
+export function applyLdapSnapshotToFormInput(
   target: AuthProvidersFormInput,
   snap: AuthProvidersFormSnapshot,
 ): void {
@@ -234,21 +261,47 @@ export function applySnapshotToFormInput(
   target.ldapDisplayNameAttribute = snap.ldap.displayNameAttribute
   target.ldapGroupAttribute       = snap.ldap.groupAttribute
   target.ldapTimeoutSec           = snap.ldap.timeoutSec
+}
 
+export function applyOidcSnapshotToFormInput(
+  target: AuthProvidersFormInput,
+  snap: AuthProvidersFormSnapshot,
+): void {
   target.oidcEnabled       = snap.oidc.enabled
   target.oidcIssuer        = snap.oidc.issuer
   target.oidcClientId      = snap.oidc.clientId
   target.oidcScopes        = snap.oidc.scopes
   target.oidcRedirectPath  = snap.oidc.redirectPath
   target.oidcClockSkewSec  = snap.oidc.clockSkewSec
+}
 
-  target.jitEnabled        = snap.auth.jitEnabled
-  target.jitDefaultRole    = snap.auth.jitDefaultRole
-  target.jitDefaultActive  = snap.auth.jitDefaultActive
-  target.mfaMode           = snap.auth.mfaMode
-  target.mappingRulesJson  = snap.auth.mappingRulesJson
-  target.oidcMaxRole       = snap.auth.oidcMaxRole
-  target.ldapMaxRole       = snap.auth.ldapMaxRole
+export function applyMappingSnapshotToFormInput(
+  target: AuthProvidersFormInput,
+  snap: AuthProvidersFormSnapshot,
+): void {
+  target.jitEnabled       = snap.auth.jitEnabled
+  target.jitDefaultRole   = snap.auth.jitDefaultRole
+  target.jitDefaultActive = snap.auth.jitDefaultActive
+  target.mappingRulesJson = snap.auth.mappingRulesJson
+  target.oidcMaxRole      = snap.auth.oidcMaxRole
+  target.ldapMaxRole      = snap.auth.ldapMaxRole
+}
+
+export function applySecuritySnapshotToFormInput(
+  target: AuthProvidersFormInput,
+  snap: AuthProvidersFormSnapshot,
+): void {
+  target.mfaMode = snap.auth.mfaMode
+}
+
+export function applySnapshotToFormInput(
+  target: AuthProvidersFormInput,
+  snap: AuthProvidersFormSnapshot,
+): void {
+  applyLdapSnapshotToFormInput(target, snap)
+  applyOidcSnapshotToFormInput(target, snap)
+  applyMappingSnapshotToFormInput(target, snap)
+  applySecuritySnapshotToFormInput(target, snap)
 }
 
 export function authProvidersFormValidationOk(mappingRulesJson: string): boolean {

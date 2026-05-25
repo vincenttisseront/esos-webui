@@ -3,7 +3,14 @@ import { authProviderSecurityAlerts } from '~/utils/auth-providers-admin-ui'
 
 const props = defineProps<{
   readOnly: boolean
+  dirty: boolean
+  saving: boolean
   showOidcMfaRecommendation: boolean
+}>()
+
+const emit = defineEmits<{
+  save: []
+  cancel: []
 }>()
 
 const form = defineModel<{
@@ -43,6 +50,14 @@ const mfaModeItems = computed(() => [
 
 <template>
   <div class="space-y-8">
+    <AuthProvidersSectionActions
+      v-if="!readOnly"
+      :dirty="dirty"
+      :saving="saving"
+      @save="emit('save')"
+      @cancel="emit('cancel')"
+    />
+
     <p class="text-sm text-gray-600 dark:text-gray-400">
       {{ t('admin.authProviders.security.intro') }}
     </p>

@@ -13,9 +13,16 @@ import {
   type OidcTestClientState,
 } from '~/utils/auth-providers-admin-ui'
 import {
+  applyLdapSnapshotToFormInput,
+  applyMappingSnapshotToFormInput,
+  applyOidcSnapshotToFormInput,
+  applySecuritySnapshotToFormInput,
   applySnapshotToFormInput,
-  authProvidersFormDirty,
   authProvidersFormValidationOk,
+  authProvidersLdapDirty,
+  authProvidersMappingDirty,
+  authProvidersOidcDirty,
+  authProvidersSecurityDirty,
   snapshotFromDto,
   snapshotFromFormInput,
   type AuthProvidersFormSnapshot,
@@ -128,15 +135,41 @@ const currentSnapshot = computed(() =>
   }),
 )
 
-const dirty = computed(() => authProvidersFormDirty(baseline.value, currentSnapshot.value))
+const ldapDirty = computed(() =>
+  authProvidersLdapDirty(baseline.value, currentSnapshot.value),
+)
+const oidcDirty = computed(() =>
+  authProvidersOidcDirty(baseline.value, currentSnapshot.value),
+)
+const mappingDirty = computed(() =>
+  authProvidersMappingDirty(baseline.value, currentSnapshot.value),
+)
+const securityDirty = computed(() =>
+  authProvidersSecurityDirty(baseline.value, currentSnapshot.value),
+)
 
-const formValid = computed(() => authProvidersFormValidationOk(form.mappingRulesJson))
+const mappingFormValid = computed(() => authProvidersFormValidationOk(form.mappingRulesJson))
 
-function cancelEdits() {
+function cancelLdapEdits() {
   if (!baseline.value) return
-  applySnapshotToFormInput(form, baseline.value)
+  applyLdapSnapshotToFormInput(form, baseline.value)
   ldapBindPw.value = ''
+}
+
+function cancelOidcEdits() {
+  if (!baseline.value) return
+  applyOidcSnapshotToFormInput(form, baseline.value)
   oidcSecret.value = ''
+}
+
+function cancelMappingEdits() {
+  if (!baseline.value) return
+  applyMappingSnapshotToFormInput(form, baseline.value)
+}
+
+function cancelSecurityEdits() {
+  if (!baseline.value) return
+  applySecuritySnapshotToFormInput(form, baseline.value)
 }
 
 const showOidcMfaRecommendation = computed(
@@ -344,8 +377,8 @@ async function testOidc() {
 </script>
 
 <template>
-  <div v-if="canAccess" class="min-h-screen flex flex-col">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full space-y-8">
+  <div v-if="canAccess" class="min-h-screen">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-8">
       <header class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div class="space-y-2 min-w-0">
           <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
@@ -365,6 +398,14 @@ async function testOidc() {
       </div>
 
       <template v-else-if="data">
+        <UAlert
+          v-if="authProvidersReadOnly"
+          color="blue"
+          icon="i-heroicons-eye"
+          :title="t('admin.authProviders.readonly.bannerTitle')"
+          :description="t('admin.authProviders.readonly.bannerDesc')"
+        />
+
         <AuthProvidersSummaryCards
           :active-tab="activeTab"
           :data="data"
@@ -387,11 +428,15 @@ async function testOidc() {
             v-model:ldap-lookup-username="ldapLookupUsername"
             :data="data"
             :read-only="authProvidersReadOnly"
+            :dirty="ldapDirty"
+            :saving="saving"
             :last-ldap-test="lastLdapTest"
             :testing-ldap="testingLdap"
             :testing-ldap-lookup="testingLdapLookup"
             @test-bind="testLdapBind"
             @test-lookup="testLdapLookup"
+            @save="save"
+            @cancel="cancelLdapEdits"
           />
           <AuthProvidersOidcTab
             v-show="activeTab === 'oidc'"
@@ -399,35 +444,38 @@ async function testOidc() {
             v-model:oidc-secret="oidcSecret"
             :data="data"
             :read-only="authProvidersReadOnly"
+            :dirty="oidcDirty"
+            :saving="saving"
             :public-origin="publicOrigin"
             :last-oidc-test="lastOidcTest"
             :testing-oidc="testingOidc"
             @test-discovery="testOidc"
             @go-roles-tab="selectTab('roles')"
+            @save="save"
+            @cancel="cancelOidcEdits"
           />
           <AuthProvidersRolesTab
             v-show="activeTab === 'roles'"
             v-model:form="form"
             :read-only="authProvidersReadOnly"
+            :dirty="mappingDirty"
+            :saving="saving"
+            :form-valid="mappingFormValid"
+            @save="save"
+            @cancel="cancelMappingEdits"
           />
           <AuthProvidersSecurityTab
             v-show="activeTab === 'security'"
             v-model:form="form"
             :read-only="authProvidersReadOnly"
+            :dirty="securityDirty"
+            :saving="saving"
             :show-oidc-mfa-recommendation="showOidcMfaRecommendation"
+            @save="save"
+            @cancel="cancelSecurityEdits"
           />
         </div>
       </template>
     </div>
-
-    <AuthProvidersPageFooter
-      v-if="data && !pending"
-      :saving="saving"
-      :auth-providers-read-only="authProvidersReadOnly"
-      :dirty="dirty"
-      :form-valid="formValid"
-      @save="save"
-      @cancel="cancelEdits"
-    />
   </div>
 </template>

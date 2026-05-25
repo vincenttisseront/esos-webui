@@ -9,6 +9,14 @@ import type { UserRole } from '~/server/utils/types'
 
 defineProps<{
   readOnly: boolean
+  dirty: boolean
+  saving: boolean
+  formValid: boolean
+}>()
+
+const emit = defineEmits<{
+  save: []
+  cancel: []
 }>()
 
 const form = defineModel<{
@@ -91,6 +99,15 @@ function runLdapPreview() {
 
 <template>
   <div class="space-y-8">
+    <AuthProvidersSectionActions
+      v-if="!readOnly"
+      :dirty="dirty"
+      :saving="saving"
+      :form-valid="formValid"
+      @save="emit('save')"
+      @cancel="emit('cancel')"
+    />
+
     <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
       {{ t('admin.authProviders.mapping.cardSubtitle') }}
     </p>

@@ -13,6 +13,8 @@ import {
 const props = defineProps<{
   data: AdminAuthProvidersDto
   readOnly: boolean
+  dirty: boolean
+  saving: boolean
   lastLdapTest: LdapTestClientState
   testingLdap: boolean
   testingLdapLookup: boolean
@@ -38,6 +40,8 @@ const ldapLookupUsername = defineModel<string>('ldapLookupUsername', { required:
 const emit = defineEmits<{
   'test-bind': []
   'test-lookup': []
+  save: []
+  cancel: []
 }>()
 
 const { t } = useEsosI18n()
@@ -135,6 +139,14 @@ const loginLdap = computed(() =>
         </div>
       </dl>
     </div>
+
+    <AuthProvidersSectionActions
+      v-if="!readOnly"
+      :dirty="dirty"
+      :saving="saving"
+      @save="emit('save')"
+      @cancel="emit('cancel')"
+    />
 
     <UCheckbox
       v-model="form.ldapEnabled"
