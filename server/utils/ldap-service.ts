@@ -118,13 +118,17 @@ function searchUserEntries(
 
 export async function testLdapSettings(
   dto: AdminAuthProvidersDto['ldap'],
-  bindPasswordOverride?: string,
-): Promise<{ ok: true; bindOk: boolean; searchSampleCount: number } | { ok: false; error: string }> {
+  options?: { bindPasswordOverride?: string; username?: string },
+): Promise<
+  | { ok: true; bindOk: boolean; searchSampleCount: number; userLookup?: boolean }
+  | { ok: false; error: string }
+> {
   try {
     assertLdapTlsPolicyForProduction(dto.url, dto.startTls)
     if (!dto.url || !dto.baseDn || !dto.bindDn) {
       return { ok: false, error: 'ldap.url, ldap.base_dn et ldap.bind_dn requis' }
     }
+    const bindPasswordOverride = options?.bindPasswordOverride
     const pwd = bindPasswordOverride ?? ''
     if (!bindPasswordOverride && !dto.bindPasswordSet) {
       return { ok: false, error: 'Mot de passe bind LDAP non configuré' }
@@ -135,9 +139,14 @@ export async function testLdapSettings(
         await startTlsAsync(client, dto.tlsVerify)
       }
       await bindAsync(client, dto.bindDn, pwd)
-      const filter = dto.userSearchFilter.includes('{{username}}')
-        ? dto.userSearchFilter.split('{{username}}').join(escapeLdapFilterValue('__probe__'))
-        : dto.userSearchFilter
+      const lookupUser = options?.username?.trim()
+      const filter = lookupUser
+        ? (dto.userSearchFilter.includes('{{username}}')
+            ? dto.userSearchFilter.split('{{username}}').join(escapeLdapFilterValue(lookupUser))
+            : `(&${dto.userSearchFilter}(${dto.usernameAttribute}=${escapeLdapFilterValue(lookupUser)}))`)
+        : dto.userSearchFilter.includes('{{username}}')
+          ? dto.userSearchFilter.split('{{username}}').join(escapeLdapFilterValue('__probe__'))
+          : dto.userSearchFilter
       const rows = await searchUserEntries(
         client,
         dto.baseDn,
@@ -146,7 +155,12 @@ export async function testLdapSettings(
         dto.groupAttribute,
       )
       await unbindAsync(client)
-      return { ok: true, bindOk: true, searchSampleCount: rows.length }
+      return {
+        ok:                true,
+        bindOk:            true,
+        searchSampleCount: rows.length,
+        ...(lookupUser ? { userLookup: rows.length > 0 } : {}),
+      }
     } catch (e) {
       try {
         await unbindAsync(client)

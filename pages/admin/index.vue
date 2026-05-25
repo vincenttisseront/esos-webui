@@ -116,7 +116,11 @@ function formatDate(s: string): string {
       </AdminSection>
 
       <!-- Fournisseurs d’authentification (admin) -->
-      <AdminSection v-if="authStore.user?.role === 'admin'" :title="t('admin.index.auth_providers_section')" icon="i-heroicons-shield-check">
+      <AdminSection
+        v-if="authStore.user?.role === 'admin' || authStore.user?.role === 'operator' || authStore.user?.role === 'viewer'"
+        :title="t('admin.index.auth_providers_section')"
+        icon="i-heroicons-shield-check"
+      >
         <div class="flex items-center justify-between gap-4">
           <p class="text-sm text-gray-500 dark:text-gray-400">
             {{ t('admin.index.auth_providers_desc') }}

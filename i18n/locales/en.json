@@ -2388,7 +2388,63 @@
         "subtitle": "Configure SSO (OIDC) and directory (LDAP). Changes apply after save. Secrets are never returned in clear text by the API.",
         "back": "Back",
         "loading": "Loading…",
-        "securityHeading": "Security notices"
+        "securityHeading": "Security notices",
+        "tabsAria": "Authentication provider sections",
+        "tabs": {
+          "local": "Local",
+          "ldap": "LDAP / AD",
+          "oidc": "SSO / OIDC",
+          "roles": "Roles & provisioning",
+          "security": "Security"
+        }
+      },
+      "summary": {
+        "cards": {
+          "local": "Local",
+          "ldap": "LDAP / AD",
+          "oidc": "SSO / OIDC",
+          "roles": "Roles"
+        },
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "configComplete": "Configuration complete",
+        "configIncomplete": "Configuration incomplete",
+        "configLabel": "Configuration",
+        "testNotRun": "Test not run",
+        "testOk": "Last test: success",
+        "testFailed": "Last test: failed",
+        "discoveryOk": "Discovery OK",
+        "userCount": "{count} active user(s)",
+        "userCountLabel": "Active users",
+        "loginAvailable": "Visible on sign-in page",
+        "loginHidden": "Hidden on sign-in ({reason})",
+        "loginOnSignIn": "Sign-in page",
+        "jitOn": "JIT provisioning on",
+        "jitOff": "JIT provisioning off",
+        "jitDefault": "default role",
+        "rulesCount": "{count} mapping rule(s)",
+        "rulesInvalid": "Invalid mapping JSON",
+        "loginReason": {
+          "disabled": "disabled",
+          "config_incomplete": "incomplete configuration",
+          "no_provisioned_users": "no provisioned users (JIT off)"
+        }
+      },
+      "readonly": {
+        "bannerTitle": "Read-only view",
+        "bannerDesc": "Only administrators can change authentication settings or run connectivity tests."
+      },
+      "local": {
+        "statusTitle": "Local authentication",
+        "statusLabel": "Status",
+        "body": "Local accounts use passwords stored in this application. Manage users from the user management page.",
+        "manageUsers": "Manage local users"
+      },
+      "security": {
+        "intro": "Cross-provider security policy, MFA on OIDC tokens, and sign-in page visibility rules.",
+        "noAlerts": "No security notices for the current draft.",
+        "loginVisibilityTitle": "Sign-in page providers",
+        "loginVisibilityDesc": "LDAP and SSO buttons on the sign-in page follow the same rules as GET /api/auth/providers (enabled, complete config, JIT or existing users)."
       },
       "mfa": {
         "off": "Off",
@@ -2457,9 +2513,17 @@
         "correlationBody": "preferred_username, else local-part of email, else sub (not configurable here).",
         "mappingRolesTitle": "Role mapping",
         "mappingRolesBody": "Fine-grained group/claim to ESOS role mapping is done via JSON rules (dedicated section).",
+        "statusTitle": "OIDC status",
+        "discoveryLabel": "Discovery",
+        "sectionClaims": "Claims and scopes",
+        "goRolesMapping": "Configure role mapping rules (Roles tab) →",
+        "callbackCopiedTitle": "Copied",
+        "callbackCopiedBody": "Callback URL copied to clipboard.",
+        "copyCallback": "Copy callback URL",
         "testSection": "Connectivity test",
         "testDesc": "Checks that issuer and client_id can fetch OpenID metadata (no secrets displayed).",
-        "testButton": "Test OIDC discovery"
+        "testButton": "Test OIDC discovery",
+        "testLoginButton": "Open SSO login (new tab)"
       },
       "ldap": {
         "cardTitle": "LDAP / Active Directory",
@@ -2511,9 +2575,17 @@
         "searchLimitDesc": "User search is limited to {limit} entries on the server (not configurable).",
         "customCaTitle": "Custom CA certificate",
         "customCaDesc": "Not supported in this version: TLS trust follows the OS / Node trust store.",
+        "statusTitle": "LDAP status",
+        "testResultLabel": "Last test",
         "testSection": "Connectivity test",
         "testDesc": "Tests service account bind and a sample search (no end-user password). You can enter a bind password above for this test without saving configuration.",
-        "testButton": "Test LDAP connection and search"
+        "testButton": "Test bind and sample search",
+        "testLookupLabel": "Test user lookup",
+        "testLookupDesc": "Optional: search for a specific sign-in identifier using the current filter and attributes.",
+        "testLookupPlaceholder": "Sign-in name (e.g. jdupont)",
+        "testLookupButton": "Test lookup",
+        "testLookupFound": "User found in directory.",
+        "testLookupNotFound": "No matching user in directory."
       },
       "mapping": {
         "cardTitle": "Role mapping and provisioning",
@@ -2531,7 +2603,21 @@
         "ldapMaxRoleDesc": "Upper bound for the role from LDAP groups (after mapping).",
         "rulesJsonLabel": "Mapping rules (JSON)",
         "rulesJsonDesc": "Array of objects with match and role fields. OIDC rules use type oidc_claim; LDAP uses ldap_group_dn.",
-        "exampleLabel": "Example structure (copy / adapt)"
+        "exampleLabel": "Show example structure",
+        "hideExample": "Hide example",
+        "jitSection": "Just-in-time provisioning",
+        "capsSection": "Role caps",
+        "preview": {
+          "title": "Preview / simulate",
+          "oidcTitle": "OIDC claims (JSON)",
+          "ldapTitle": "LDAP group DNs (one per line)",
+          "simulate": "Simulate",
+          "effectiveRole": "Effective role: {role}",
+          "matchedRule": "Matched rule index: {index}",
+          "defaultRule": "No rule matched — default JIT role applied.",
+          "error_invalid_claims": "Invalid claims JSON.",
+          "error_invalid_rules": "Invalid mapping rules JSON."
+        }
       },
       "save": {
         "cardTitle": "Save and diagnostics",

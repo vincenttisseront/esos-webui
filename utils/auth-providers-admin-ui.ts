@@ -5,6 +5,209 @@
  * User-visible copy is resolved in Vue via i18n keys under `admin.authProviders.*`
  * using stable ids returned by these helpers.
  */
+import {
+  parseAuthMappingRulesJson,
+  resolveRoleFromLdapGroups,
+  resolveRoleFromOidcClaims,
+  type AuthMappingRule,
+} from '../server/utils/auth-providers-role-map'
+import type { UserRole } from '../server/utils/types'
+import {
+  evaluateLdapAvailability,
+  evaluateOidcAvailability,
+  isLdapConfigSufficientForLogin,
+  isOidcConfigSufficientForLogin,
+  type PublicProviderReasonCode,
+} from '../server/utils/auth-providers-public'
+import type { AdminAuthProvidersDto } from '../server/utils/auth-providers-config'
+
+export type AuthProviderTabId = 'local' | 'ldap' | 'oidc' | 'roles' | 'security'
+
+export const AUTH_PROVIDERS_TAB_STORAGE_KEY = 'auth-providers-active-tab'
+
+export type LdapTestClientState =
+  | { ok: true; searchSampleCount: number; userLookup?: boolean; bindOnly?: boolean }
+  | { ok: false; error: string }
+  | null
+
+export type OidcTestClientState =
+  | { ok: true; authorizationEndpoint?: boolean; tokenEndpoint?: boolean; jwksUri?: boolean }
+  | { ok: false; error: string }
+  | null
+
+export function defaultAuthProviderTab(dto: AdminAuthProvidersDto | null): AuthProviderTabId {
+  if (!dto) return 'local'
+  if (dto.ldap.enabled) return 'ldap'
+  if (dto.oidc.enabled) return 'oidc'
+  return 'local'
+}
+
+export function truncateForSummary(value: string, max = 40): string {
+  const t = value.trim()
+  if (!t) return '—'
+  return t.length <= max ? t : `${t.slice(0, max - 1)}…`
+}
+
+export function ldapConfigCompleteFromForm(p: {
+  ldapUrl: string
+  ldapBindDn: string
+  ldapBaseDn: string
+  ldapUserSearchFilter: string
+  ldapBindPasswordSet: boolean
+}): boolean {
+  return isLdapConfigSufficientForLogin({
+    enabled:           true,
+    url:               p.ldapUrl,
+    startTls:          false,
+    tlsVerify:         true,
+    bindDn:            p.ldapBindDn,
+    bindPasswordSet:   p.ldapBindPasswordSet,
+    baseDn:            p.ldapBaseDn,
+    userSearchFilter:  p.ldapUserSearchFilter,
+    usernameAttribute: '',
+    displayNameAttribute: '',
+    groupAttribute:    '',
+    timeoutSec:        10,
+  })
+}
+
+export function oidcConfigCompleteFromForm(p: {
+  oidcIssuer: string
+  oidcClientId: string
+  oidcClientSecretSet: boolean
+}): boolean {
+  return isOidcConfigSufficientForLogin({
+    enabled:         true,
+    issuer:          p.oidcIssuer,
+    clientId:        p.oidcClientId,
+    clientSecretSet: p.oidcClientSecretSet,
+    scopes:          '',
+    redirectPath:    '',
+    clockSkewSec:    60,
+  })
+}
+
+export function loginSummaryFromForm(params: {
+  ldapEnabled: boolean
+  ldapUrl: string
+  ldapBindDn: string
+  ldapBaseDn: string
+  ldapUserSearchFilter: string
+  ldapBindPasswordSet: boolean
+  oidcEnabled: boolean
+  oidcIssuer: string
+  oidcClientId: string
+  oidcClientSecretSet: boolean
+  jitEnabled: boolean
+  ldapUserCount: number
+  oidcUserCount: number
+}): {
+  ldap: { available: boolean; reason?: PublicProviderReasonCode }
+  oidc: { available: boolean; reason?: PublicProviderReasonCode }
+} {
+  const dto = {
+    ldap: {
+      enabled:            params.ldapEnabled,
+      url:                params.ldapUrl,
+      startTls:           false,
+      tlsVerify:          true,
+      bindDn:             params.ldapBindDn,
+      bindPasswordSet:    params.ldapBindPasswordSet,
+      baseDn:             params.ldapBaseDn,
+      userSearchFilter:   params.ldapUserSearchFilter,
+      usernameAttribute:  'sAMAccountName',
+      displayNameAttribute: 'displayName',
+      groupAttribute:     'memberOf',
+      timeoutSec:         10,
+    },
+    oidc: {
+      enabled:          params.oidcEnabled,
+      issuer:           params.oidcIssuer,
+      clientId:         params.oidcClientId,
+      clientSecretSet:  params.oidcClientSecretSet,
+      scopes:           'openid profile email',
+      redirectPath:     '/api/auth/oidc/callback',
+      clockSkewSec:     60,
+    },
+    auth: {
+      jitEnabled:       params.jitEnabled,
+      jitDefaultRole:   'viewer' as UserRole,
+      jitDefaultActive: true,
+      mfaMode:          'off' as const,
+      mappingRulesJson: '[]',
+      oidcMaxRole:      null,
+      ldapMaxRole:      null,
+    },
+  }
+  const counts = { ldap: params.ldapUserCount, oidc: params.oidcUserCount }
+  return {
+    ldap: evaluateLdapAvailability(dto, counts),
+    oidc: evaluateOidcAvailability(dto, counts),
+  }
+}
+
+export type MappingPreviewResult = {
+  effectiveRole: UserRole
+  matchedRuleIndex: number | null
+  rules: AuthMappingRule[]
+}
+
+export function simulateOidcRoleMapping(params: {
+  claimsJson: string
+  mappingRulesJson: string
+  defaultRole: UserRole
+  maxRole: UserRole | null
+}): { ok: true; result: MappingPreviewResult } | { ok: false; code: 'invalid_claims' | 'invalid_rules' } {
+  let claims: Record<string, unknown>
+  try {
+    const v = JSON.parse(params.claimsJson.trim() || '{}') as unknown
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return { ok: false, code: 'invalid_claims' }
+    claims = v as Record<string, unknown>
+  } catch {
+    return { ok: false, code: 'invalid_claims' }
+  }
+  const rules = parseAuthMappingRulesJson(params.mappingRulesJson)
+  const effectiveRole = resolveRoleFromOidcClaims(claims, rules, params.defaultRole, params.maxRole)
+  let matchedRuleIndex: number | null = null
+  for (let i = 0; i < rules.length; i++) {
+    const rule = rules[i]
+    if (rule.match.type !== 'oidc_claim') continue
+    const vals = Array.isArray(claims[rule.match.claim])
+      ? (claims[rule.match.claim] as unknown[]).filter((x): x is string => typeof x === 'string')
+      : typeof claims[rule.match.claim] === 'string'
+        ? [claims[rule.match.claim] as string]
+        : []
+    if (vals.some((s) => s.includes(rule.match.contains))) {
+      matchedRuleIndex = i
+      break
+    }
+  }
+  return { ok: true, result: { effectiveRole, matchedRuleIndex, rules } }
+}
+
+export function simulateLdapRoleMapping(params: {
+  groupDnsText: string
+  mappingRulesJson: string
+  defaultRole: UserRole
+  maxRole: UserRole | null
+}): { ok: true; result: MappingPreviewResult } | { ok: false; code: 'invalid_rules' } {
+  const groupDns = params.groupDnsText
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+  const rules = parseAuthMappingRulesJson(params.mappingRulesJson)
+  const effectiveRole = resolveRoleFromLdapGroups(groupDns, rules, params.defaultRole, params.maxRole)
+  let matchedRuleIndex: number | null = null
+  for (let i = 0; i < rules.length; i++) {
+    const rule = rules[i]
+    if (rule.match.type !== 'ldap_group_dn') continue
+    if (groupDns.some((dn) => dn.includes(rule.match.contains))) {
+      matchedRuleIndex = i
+      break
+    }
+  }
+  return { ok: true, result: { effectiveRole, matchedRuleIndex, rules } }
+}
 
 export const LDAP_USER_SEARCH_SIZE_LIMIT = 5
 

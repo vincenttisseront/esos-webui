@@ -7,10 +7,15 @@ import { oidcClaimsAllowAutoLinkToExistingAccount } from '../server/utils/oidc-u
 import {
   authProviderSecurityAlerts,
   authProviderSummaryBadges,
+  defaultAuthProviderTab,
+  ldapConfigCompleteFromForm,
   ldapConnectionModeKind,
   oidcCallbackPreview,
   parseMappingRulesJsonForUi,
+  simulateLdapRoleMapping,
+  simulateOidcRoleMapping,
 } from '../utils/auth-providers-admin-ui'
+import type { AdminAuthProvidersDto } from '../server/utils/auth-providers-config'
 
 describe('ldap-filter-escape', () => {
   it('escapes RFC4515 special characters', () => {
@@ -198,5 +203,64 @@ describe('auth-providers-admin-ui', () => {
       oidcEnabled:         true,
     })
     expect(secretsIncomplete.some((b) => b.id === 'secrets_incomplete')).toBe(true)
+  })
+
+  it('defaultAuthProviderTab prefers ldap then oidc then local', () => {
+    const base: AdminAuthProvidersDto = {
+      summary: {
+        counts: { local: 0, ldap: 0, oidc: 0 },
+        config: { ldapComplete: false, oidcComplete: false },
+        login: { ldap: { available: false }, oidc: { available: false } },
+      },
+      ldap: { enabled: false, url: '', startTls: false, tlsVerify: true, bindDn: '', bindPasswordSet: false, baseDn: '', userSearchFilter: '', usernameAttribute: 'sAMAccountName', displayNameAttribute: 'displayName', groupAttribute: 'memberOf', timeoutSec: 10 },
+      oidc: { enabled: false, issuer: '', clientId: '', clientSecretSet: false, scopes: '', redirectPath: '/api/auth/oidc/callback', clockSkewSec: 60 },
+      auth: { jitEnabled: false, jitDefaultRole: 'viewer', jitDefaultActive: true, mfaMode: 'off', mappingRulesJson: '[]', oidcMaxRole: null, ldapMaxRole: null },
+    }
+    expect(defaultAuthProviderTab(base)).toBe('local')
+    expect(defaultAuthProviderTab({ ...base, ldap: { ...base.ldap, enabled: true } })).toBe('ldap')
+    expect(defaultAuthProviderTab({ ...base, oidc: { ...base.oidc, enabled: true } })).toBe('oidc')
+  })
+
+  it('ldapConfigCompleteFromForm requires bind password set flag', () => {
+    expect(
+      ldapConfigCompleteFromForm({
+        ldapUrl: 'ldaps://x',
+        ldapBindDn: 'cn=svc',
+        ldapBaseDn: 'dc=x',
+        ldapUserSearchFilter: '(uid={{username}})',
+        ldapBindPasswordSet: false,
+      }),
+    ).toBe(false)
+    expect(
+      ldapConfigCompleteFromForm({
+        ldapUrl: 'ldaps://x',
+        ldapBindDn: 'cn=svc',
+        ldapBaseDn: 'dc=x',
+        ldapUserSearchFilter: '(uid={{username}})',
+        ldapBindPasswordSet: true,
+      }),
+    ).toBe(true)
+  })
+
+  it('simulateOidcRoleMapping resolves admin from groups claim', () => {
+    const r = simulateOidcRoleMapping({
+      claimsJson: '{"groups":["ESOS-Admins"]}',
+      mappingRulesJson: '[{"match":{"type":"oidc_claim","claim":"groups","contains":"ESOS-Admins"},"role":"admin"}]',
+      defaultRole: 'viewer',
+      maxRole: null,
+    })
+    expect(r.ok).toBe(true)
+    if (r.ok) expect(r.result.effectiveRole).toBe('admin')
+  })
+
+  it('simulateLdapRoleMapping resolves operator from group DN', () => {
+    const r = simulateLdapRoleMapping({
+      groupDnsText: 'CN=ESOS-Operators,OU=Groups,DC=example,DC=com',
+      mappingRulesJson: '[{"match":{"type":"ldap_group_dn","contains":"ESOS-Operators"},"role":"operator"}]',
+      defaultRole: 'viewer',
+      maxRole: null,
+    })
+    expect(r.ok).toBe(true)
+    if (r.ok) expect(r.result.effectiveRole).toBe('operator')
   })
 })

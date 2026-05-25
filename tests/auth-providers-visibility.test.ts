@@ -12,8 +12,18 @@ import {
 } from '../server/utils/auth-login-errors'
 import { createError } from 'h3'
 
+const defaultSummary = {
+  counts: { local: 1, ldap: 0, oidc: 0 },
+  config: { ldapComplete: false, oidcComplete: false },
+  login: {
+    ldap: { available: false, reason: 'disabled' as const },
+    oidc: { available: false, reason: 'disabled' as const },
+  },
+}
+
 function baseDto(overrides?: Partial<AdminAuthProvidersDto>): AdminAuthProvidersDto {
   return {
+    summary: defaultSummary,
     ldap: {
       enabled:            false,
       url:                '',

@@ -2388,7 +2388,63 @@
         "subtitle": "Configurez l’accès SSO (OIDC) et annuaire (LDAP). Les changements s’appliquent après enregistrement. Les secrets ne sont jamais renvoyés en clair par l’API.",
         "back": "Retour",
         "loading": "Chargement…",
-        "securityHeading": "Avertissements de sécurité"
+        "securityHeading": "Avertissements de sécurité",
+        "tabsAria": "Sections des fournisseurs d’authentification",
+        "tabs": {
+          "local": "Local",
+          "ldap": "LDAP / AD",
+          "oidc": "SSO / OIDC",
+          "roles": "Rôles & provisioning",
+          "security": "Sécurité"
+        }
+      },
+      "summary": {
+        "cards": {
+          "local": "Local",
+          "ldap": "LDAP / AD",
+          "oidc": "SSO / OIDC",
+          "roles": "Rôles"
+        },
+        "enabled": "Activé",
+        "disabled": "Désactivé",
+        "configComplete": "Configuration complète",
+        "configIncomplete": "Configuration incomplète",
+        "configLabel": "Configuration",
+        "testNotRun": "Test non exécuté",
+        "testOk": "Dernier test : succès",
+        "testFailed": "Dernier test : échec",
+        "discoveryOk": "Discovery OK",
+        "userCount": "{count} utilisateur(s) actif(s)",
+        "userCountLabel": "Utilisateurs actifs",
+        "loginAvailable": "Visible sur la page de connexion",
+        "loginHidden": "Masqué à la connexion ({reason})",
+        "loginOnSignIn": "Page de connexion",
+        "jitOn": "Provisioning JIT activé",
+        "jitOff": "Provisioning JIT désactivé",
+        "jitDefault": "rôle par défaut",
+        "rulesCount": "{count} règle(s) de mapping",
+        "rulesInvalid": "JSON de mapping invalide",
+        "loginReason": {
+          "disabled": "désactivé",
+          "config_incomplete": "configuration incomplète",
+          "no_provisioned_users": "aucun utilisateur provisionné (JIT off)"
+        }
+      },
+      "readonly": {
+        "bannerTitle": "Vue en lecture seule",
+        "bannerDesc": "Seuls les administrateurs peuvent modifier les paramètres d’authentification ou lancer des tests de connectivité."
+      },
+      "local": {
+        "statusTitle": "Authentification locale",
+        "statusLabel": "État",
+        "body": "Les comptes locaux utilisent des mots de passe stockés dans cette application. Gérez les utilisateurs depuis la page de gestion des utilisateurs.",
+        "manageUsers": "Gérer les utilisateurs locaux"
+      },
+      "security": {
+        "intro": "Politique de sécurité transverse, MFA sur les jetons OIDC et règles de visibilité sur la page de connexion.",
+        "noAlerts": "Aucun avertissement de sécurité pour le brouillon actuel.",
+        "loginVisibilityTitle": "Fournisseurs sur la page de connexion",
+        "loginVisibilityDesc": "Les boutons LDAP et SSO sur la page de connexion suivent les mêmes règles que GET /api/auth/providers (activé, configuration complète, JIT ou utilisateurs existants)."
       },
       "mfa": {
         "off": "Désactivé",
@@ -2457,9 +2513,17 @@
         "correlationBody": "preferred_username, sinon partie locale de l’email, sinon sub (non configurable ici).",
         "mappingRolesTitle": "Cartographie des rôles",
         "mappingRolesBody": "La cartographie fine des groupes / claims vers les rôles ESOS se fait via les règles JSON (section dédiée).",
+        "statusTitle": "État OIDC",
+        "discoveryLabel": "Découverte",
+        "sectionClaims": "Claims et scopes",
+        "goRolesMapping": "Configurer les règles de cartographie (onglet Rôles) →",
+        "callbackCopiedTitle": "Copié",
+        "callbackCopiedBody": "URL de callback copiée dans le presse-papiers.",
+        "copyCallback": "Copier l’URL de callback",
         "testSection": "Test de connectivité",
         "testDesc": "Vérifie que l’issuer et le client_id permettent de récupérer les métadonnées OpenID (sans afficher de secrets).",
-        "testButton": "Tester la découverte OIDC"
+        "testButton": "Tester la découverte OIDC",
+        "testLoginButton": "Ouvrir la connexion SSO (nouvel onglet)"
       },
       "ldap": {
         "cardTitle": "LDAP / Active Directory",
@@ -2511,9 +2575,17 @@
         "searchLimitDesc": "La recherche utilisateur est limitée à {limit} entrées côté serveur (non configurable).",
         "customCaTitle": "Certificat d’autorité personnalisé",
         "customCaDesc": "Non pris en charge dans cette version : la confiance TLS suit le magasin du système d’exploitation / Node.",
+        "statusTitle": "État LDAP",
+        "testResultLabel": "Dernier test",
         "testSection": "Test de connectivité",
         "testDesc": "Teste le bind du compte de service et une recherche exemple (sans mot de passe utilisateur final). Vous pouvez saisir un mot de passe de liaison ci-dessus pour ce test sans enregistrer la configuration.",
-        "testButton": "Tester la connexion et la recherche LDAP"
+        "testButton": "Tester bind et recherche exemple",
+        "testLookupLabel": "Test de recherche utilisateur",
+        "testLookupDesc": "Optionnel : recherche d’un identifiant de connexion avec le filtre et les attributs actuels.",
+        "testLookupPlaceholder": "Identifiant (ex. jdupont)",
+        "testLookupButton": "Tester la recherche",
+        "testLookupFound": "Utilisateur trouvé dans l’annuaire.",
+        "testLookupNotFound": "Aucun utilisateur correspondant dans l’annuaire."
       },
       "mapping": {
         "cardTitle": "Cartographie des rôles et provisionnement",
@@ -2531,7 +2603,21 @@
         "ldapMaxRoleDesc": "Limite supérieure du rôle issu des groupes LDAP (après cartographie).",
         "rulesJsonLabel": "Règles de cartographie (JSON)",
         "rulesJsonDesc": "Tableau d'objets avec les champs match et role. Les règles OIDC utilisent type « oidc_claim » ; LDAP utilise « ldap_group_dn ».",
-        "exampleLabel": "Exemple de structure (copier / adapter)"
+        "exampleLabel": "Afficher un exemple de structure",
+        "hideExample": "Masquer l’exemple",
+        "jitSection": "Provisionnement juste-à-temps (JIT)",
+        "capsSection": "Plafonds de rôle",
+        "preview": {
+          "title": "Aperçu / simulation",
+          "oidcTitle": "Claims OIDC (JSON)",
+          "ldapTitle": "DN de groupes LDAP (un par ligne)",
+          "simulate": "Simuler",
+          "effectiveRole": "Rôle effectif : {role}",
+          "matchedRule": "Index de règle correspondante : {index}",
+          "defaultRule": "Aucune règle — rôle JIT par défaut appliqué.",
+          "error_invalid_claims": "JSON de claims invalide.",
+          "error_invalid_rules": "JSON de règles de mapping invalide."
+        }
       },
       "save": {
         "cardTitle": "Enregistrement et diagnostics",

@@ -9,6 +9,15 @@ import { getAllSettings, getSetting, setSetting } from '../db/repositories/setti
 import type { UserRole } from './types'
 import type { AuthMfaMode } from './auth-providers-role-map'
 import { parseUserRole } from './auth-providers-role-map'
+import {
+  evaluateLdapAvailability,
+  evaluateOidcAvailability,
+  isLdapConfigSufficientForLogin,
+  isOidcConfigSufficientForLogin,
+  type ProviderLoginSummary,
+  type PublicProviderReasonCode,
+} from './auth-providers-public'
+import { countActiveUsersByAuthSource } from '../db/repositories/user.repository'
 
 export const AUTH_PROVIDER_DEFAULTS: Array<{ key: string; value: string; type: 'string' | 'number' | 'boolean' | 'secret' }> = [
   { key: 'ldap.enabled', value: 'false', type: 'boolean' },
@@ -60,7 +69,26 @@ function int(s: string | undefined, d: number): number {
   return Number.isFinite(n) ? n : d
 }
 
+export interface AdminAuthProvidersSummary {
+  counts: {
+    local: number
+    ldap:  number
+    oidc:  number
+  }
+  config: {
+    ldapComplete: boolean
+    oidcComplete: boolean
+  }
+  login: {
+    ldap: ProviderLoginSummary
+    oidc: ProviderLoginSummary
+  }
+}
+
+export type { PublicProviderReasonCode }
+
 export interface AdminAuthProvidersDto {
+  summary: AdminAuthProvidersSummary
   ldap: {
     enabled:           boolean
     url:               string
@@ -105,8 +133,7 @@ export async function buildAdminAuthProvidersDto(): Promise<AdminAuthProvidersDt
   const oidcMaxRaw = (s['auth.oidc.max_role'] ?? '').trim()
   const ldapMaxRaw = (s['auth.ldap.max_role'] ?? '').trim()
 
-  return {
-    ldap: {
+  const ldap = {
       enabled:            bool(s['ldap.enabled'], false),
       url:                s['ldap.url'] ?? '',
       startTls:           bool(s['ldap.starttls'], false),
@@ -119,8 +146,9 @@ export async function buildAdminAuthProvidersDto(): Promise<AdminAuthProvidersDt
       displayNameAttribute: s['ldap.display_name_attribute'] ?? 'displayName',
       groupAttribute:     s['ldap.group_attribute'] ?? 'memberOf',
       timeoutSec:         int(s['ldap.timeout_sec'], 10),
-    },
-    oidc: {
+    }
+
+  const oidc = {
       enabled:          bool(s['oidc.enabled'], false),
       issuer:           s['oidc.issuer'] ?? '',
       clientId:         s['oidc.client_id'] ?? '',
@@ -128,8 +156,9 @@ export async function buildAdminAuthProvidersDto(): Promise<AdminAuthProvidersDt
       scopes:           s['oidc.scopes'] ?? 'openid profile email',
       redirectPath:     s['oidc.redirect_path'] ?? '/api/auth/oidc/callback',
       clockSkewSec:     int(s['oidc.clock_skew_sec'], 60),
-    },
-    auth: {
+    }
+
+  const auth = {
       jitEnabled:       bool(s['auth.jit.enabled'], false),
       jitDefaultRole:   parseUserRole(s['auth.jit.default_role'], 'viewer'),
       jitDefaultActive: bool(s['auth.jit.default_active'], true),
@@ -137,7 +166,30 @@ export async function buildAdminAuthProvidersDto(): Promise<AdminAuthProvidersDt
       mappingRulesJson: s['auth.mapping_rules_json'] ?? '[]',
       oidcMaxRole:      oidcMaxRaw === '' ? null : parseUserRole(oidcMaxRaw, 'viewer'),
       ldapMaxRole:      ldapMaxRaw === '' ? null : parseUserRole(ldapMaxRaw, 'viewer'),
+    }
+
+  const [localCount, ldapCount, oidcCount] = await Promise.all([
+    countActiveUsersByAuthSource('local'),
+    countActiveUsersByAuthSource('ldap'),
+    countActiveUsersByAuthSource('oidc'),
+  ])
+
+  const counts = { local: localCount, ldap: ldapCount, oidc: oidcCount }
+  const dtoBody = { ldap, oidc, auth }
+
+  return {
+    summary: {
+      counts,
+      config: {
+        ldapComplete: isLdapConfigSufficientForLogin(ldap),
+        oidcComplete: isOidcConfigSufficientForLogin(oidc),
+      },
+      login: {
+        ldap: evaluateLdapAvailability(dtoBody, counts),
+        oidc: evaluateOidcAvailability(dtoBody, counts),
+      },
     },
+    ...dtoBody,
   }
 }
 

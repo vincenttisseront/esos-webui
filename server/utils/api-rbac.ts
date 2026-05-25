@@ -25,7 +25,7 @@ export const MUTATION_ROUTE_PERMISSIONS: RoutePermission[] = [
 
   [/^\/api\/admin\/upgrade\//, ['POST', 'PUT', 'PATCH', 'DELETE'], ['admin']],
 
-  [/^\/api\/admin\/auth-providers/, ['*'], ['admin']],
+  [/^\/api\/admin\/auth-providers/, ['POST', 'PATCH', 'PUT', 'DELETE'], ['admin']],
 
   [/^\/api\/admin\/users/, ['*'], ['admin']],
   [/^\/api\/san\/[^/]+\/system-config/, ['POST', 'PATCH', 'DELETE'], ['admin']],
@@ -55,7 +55,7 @@ export const MUTATION_ROUTE_PERMISSIONS: RoutePermission[] = [
  */
 export const READ_ROUTE_PERMISSIONS: RoutePermission[] = [
   [/^\/api\/admin\/users/, ['*'], ['admin']],
-  [/^\/api\/admin\/auth-providers/, ['*'], ['admin']],
+  [/^\/api\/admin\/auth-providers/, ['GET', 'HEAD'], ['admin', 'operator', 'viewer']],
   [/^\/api\/san\/[^/]+\/system-config/, ['POST', 'PATCH', 'DELETE'], ['admin']],
   [/^\/api\/admin\/sans\/[^/]+$/, ['DELETE'], ['admin']],
   [/^\/api\/admin\/dependencies/, ['*'], ['admin', 'operator']],

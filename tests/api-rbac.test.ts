@@ -168,8 +168,12 @@ describe('api-rbac (auth-providers admin)', () => {
     ).not.toThrow()
   })
 
-  it('RB44 — viewer cannot GET /api/admin/auth-providers', () => {
-    expectForbidden(() => enforceReadAccess('/api/admin/auth-providers', 'GET', 'viewer'))
+  it('RB44 — viewer can GET /api/admin/auth-providers (read-only)', () => {
+    expect(() => enforceReadAccess('/api/admin/auth-providers', 'GET', 'viewer')).not.toThrow()
+  })
+
+  it('RB44b — operator can GET /api/admin/auth-providers (read-only)', () => {
+    expect(() => enforceReadAccess('/api/admin/auth-providers', 'GET', 'operator')).not.toThrow()
   })
 
   it('RB45 — admin can GET /api/admin/auth-providers', () => {

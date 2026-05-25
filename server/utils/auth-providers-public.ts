@@ -3,6 +3,9 @@
  */
 import type { AdminAuthProvidersDto } from './auth-providers-config'
 
+/** Settings slice used for login availability (no summary / counts). */
+export type AuthProvidersEvalDto = Pick<AdminAuthProvidersDto, 'ldap' | 'oidc' | 'auth'>
+
 export type AuthProviderKey = 'local' | 'ldap' | 'oidc'
 
 export type PublicProviderReasonCode =
@@ -24,8 +27,14 @@ export type PublicAuthProvidersResponse = {
 }
 
 export type AuthProviderUserCounts = {
+  local?: number
   ldap: number
   oidc: number
+}
+
+export type ProviderLoginSummary = {
+  available: boolean
+  reason?: PublicProviderReasonCode
 }
 
 const PROVIDER_LABELS: Record<AuthProviderKey, string> = {
@@ -54,10 +63,10 @@ export function isOidcConfigSufficientForLogin(oidc: AdminAuthProvidersDto['oidc
   )
 }
 
-function evaluateLdapAvailability(
-  dto: AdminAuthProvidersDto,
+export function evaluateLdapAvailability(
+  dto: AuthProvidersEvalDto,
   counts: AuthProviderUserCounts,
-): { available: boolean; reason?: PublicProviderReasonCode } {
+): ProviderLoginSummary {
   if (!dto.ldap.enabled) {
     return { available: false, reason: 'disabled' }
   }
@@ -70,10 +79,10 @@ function evaluateLdapAvailability(
   return { available: true }
 }
 
-function evaluateOidcAvailability(
-  dto: AdminAuthProvidersDto,
+export function evaluateOidcAvailability(
+  dto: AuthProvidersEvalDto,
   counts: AuthProviderUserCounts,
-): { available: boolean; reason?: PublicProviderReasonCode } {
+): ProviderLoginSummary {
   if (!dto.oidc.enabled) {
     return { available: false, reason: 'disabled' }
   }
@@ -90,7 +99,7 @@ function evaluateOidcAvailability(
  * Build the public provider list for GET /api/auth/providers.
  */
 export function buildPublicAuthProviders(
-  dto: AdminAuthProvidersDto,
+  dto: AuthProvidersEvalDto,
   counts: AuthProviderUserCounts,
 ): PublicAuthProvidersResponse {
   const ldapEval = evaluateLdapAvailability(dto, counts)
@@ -130,7 +139,7 @@ export function buildPublicAuthProviders(
 
 /** Whether LDAP login endpoint should accept requests. */
 export function isLdapLoginAvailable(
-  dto: AdminAuthProvidersDto,
+  dto: AuthProvidersEvalDto,
   counts: AuthProviderUserCounts,
 ): boolean {
   return evaluateLdapAvailability(dto, counts).available
@@ -138,7 +147,7 @@ export function isLdapLoginAvailable(
 
 /** Whether OIDC login redirect should be allowed. */
 export function isOidcLoginAvailable(
-  dto: AdminAuthProvidersDto,
+  dto: AuthProvidersEvalDto,
   counts: AuthProviderUserCounts,
 ): boolean {
   return evaluateOidcAvailability(dto, counts).available
