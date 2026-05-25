@@ -20,15 +20,64 @@ import {
   type PublicProviderReasonCode,
 } from '../server/utils/auth-providers-public'
 import type { AdminAuthProvidersDto } from '../server/utils/auth-providers-config'
+import type { LdapTestDiagnostic, LdapTestConfigSummary } from '../server/utils/ldap-diagnostics'
+
+export type { LdapTestDiagnostic }
 
 export type AuthProviderTabId = 'local' | 'ldap' | 'oidc' | 'roles' | 'security'
 
 export const AUTH_PROVIDERS_TAB_STORAGE_KEY = 'auth-providers-active-tab'
 
 export type LdapTestClientState =
-  | { ok: true; searchSampleCount: number; userLookup?: boolean; bindOnly?: boolean }
-  | { ok: false; error: string }
+  | { ok: true; searchSampleCount: number; userLookup?: boolean; bindOnly?: boolean; diagnostic: LdapTestDiagnostic }
+  | { ok: false; error: string; diagnostic: LdapTestDiagnostic }
   | null
+
+export type LdapTestApiResponse = {
+  ok:                 boolean
+  searchSampleCount?: number
+  userLookup?:        boolean
+  error?:             string
+  diagnostic?:        LdapTestDiagnostic
+}
+
+export function mapLdapTestApiResponse(
+  r: LdapTestApiResponse,
+  extra?: { bindOnly?: boolean },
+): LdapTestClientState | null {
+  if (!r.diagnostic) return null
+  if (r.ok) {
+    return {
+      ok:                true,
+      searchSampleCount: r.searchSampleCount ?? 0,
+      diagnostic:        r.diagnostic,
+      ...(r.userLookup !== undefined ? { userLookup: r.userLookup } : {}),
+      ...(extra?.bindOnly ? { bindOnly: true } : {}),
+    }
+  }
+  return {
+    ok:         false,
+    error:      r.error ?? r.diagnostic.safeMessage,
+    diagnostic: r.diagnostic,
+  }
+}
+
+export function ldapTestClientNetworkFailure(
+  message: string,
+  config: LdapTestConfigSummary,
+): LdapTestClientState {
+  return {
+    ok:         false,
+    error:      message,
+    diagnostic: {
+      step:        'connection',
+      safeCode:    'connection_failed',
+      safeMessage: message,
+      config,
+      hints:       ['verify_timeout', 'check_tls_certificate', 'use_ldaps_or_starttls'],
+    },
+  }
+}
 
 export type OidcTestClientState =
   | { ok: true; authorizationEndpoint?: boolean; tokenEndpoint?: boolean; jwksUri?: boolean }

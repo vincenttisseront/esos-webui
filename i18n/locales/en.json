@@ -2585,7 +2585,59 @@
         "testLookupPlaceholder": "Sign-in name (e.g. jdupont)",
         "testLookupButton": "Test lookup",
         "testLookupFound": "User found in directory.",
-        "testLookupNotFound": "No matching user in directory."
+        "testLookupNotFound": "No matching user in directory.",
+        "diagnostics": {
+          "successTitle": "LDAP test succeeded",
+          "failureTitle": "LDAP test failed",
+          "failedStep": "Failed step",
+          "safeMessage": "Summary",
+          "errorName": "LDAP error name",
+          "errorCode": "LDAP error code",
+          "configTitle": "Tested configuration",
+          "tlsMode": "TLS mode",
+          "lookupUser": "Lookup user",
+          "verifyTlsOn": "Certificate verification enabled",
+          "verifyTlsOff": "Certificate verification disabled",
+          "hintsTitle": "Troubleshooting suggestions",
+          "commandsTitle": "Command-line examples (optional)",
+          "commandsNote": "Run from a machine that can reach the directory. Password is prompted (-W); never paste it into logs.",
+          "copyButton": "Copy LDAP diagnostic",
+          "copyTitle": "Copied",
+          "copyBody": "LDAP diagnostic copied to clipboard.",
+          "steps": {
+            "config": "Configuration check",
+            "connection": "TCP connection",
+            "starttls": "StartTLS",
+            "bind": "Service account bind",
+            "userSearch": "User search",
+            "groupRead": "Group attributes (memberOf)"
+          },
+          "codes": {
+            "config_incomplete": "Incomplete configuration",
+            "bind_password_missing": "Bind password not stored",
+            "tls_policy_rejected": "TLS policy rejected",
+            "connection_failed": "Connection failed",
+            "starttls_failed": "StartTLS failed",
+            "invalid_credentials": "Invalid bind credentials",
+            "operations_error": "Operations Error (common with Active Directory)",
+            "timeout": "Timeout",
+            "insufficient_access": "Insufficient access",
+            "no_such_object": "Object not found",
+            "filter_error": "Invalid search filter",
+            "unknown": "Unknown LDAP error"
+          },
+          "hints": {
+            "use_ldaps_or_starttls": "Use LDAPS (ldaps://) or ldap:// with StartTLS — Active Directory often requires signing or channel binding on plain LDAP.",
+            "verify_bind_format": "Verify bind account format: UPN (user@domain.com), DOMAIN\\\\user, or full DN (CN=...,DC=...).",
+            "verify_base_dn": "Verify the search base DN (e.g. DC=corp,DC=local) matches your directory.",
+            "verify_search_filter": "Verify the user search filter and {{username}} placeholder (e.g. (sAMAccountName={{username}})).",
+            "verify_service_account_read": "Ensure the service account can read users and memberOf (or your group attribute) under the base DN.",
+            "check_tls_certificate": "Check TLS certificate trust (CA) and hostname/SNI when using LDAPS.",
+            "check_hostname_sni": "LDAPS hostname in the URL must match the certificate (use openssl s_client to inspect).",
+            "verify_timeout": "Increase the timeout if the directory or network is slow.",
+            "verify_bind_password": "Re-enter the bind password and save, or supply it only for this test."
+          }
+        }
       },
       "mapping": {
         "cardTitle": "Role mapping and provisioning",

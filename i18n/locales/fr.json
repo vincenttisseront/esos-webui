@@ -2585,7 +2585,59 @@
         "testLookupPlaceholder": "Identifiant (ex. jdupont)",
         "testLookupButton": "Tester la recherche",
         "testLookupFound": "Utilisateur trouvé dans l’annuaire.",
-        "testLookupNotFound": "Aucun utilisateur correspondant dans l’annuaire."
+        "testLookupNotFound": "Aucun utilisateur correspondant dans l’annuaire.",
+        "diagnostics": {
+          "successTitle": "Test LDAP réussi",
+          "failureTitle": "Échec du test LDAP",
+          "failedStep": "Étape en échec",
+          "safeMessage": "Résumé",
+          "errorName": "Nom d’erreur LDAP",
+          "errorCode": "Code d’erreur LDAP",
+          "configTitle": "Configuration testée",
+          "tlsMode": "Mode TLS",
+          "lookupUser": "Utilisateur recherché",
+          "verifyTlsOn": "Vérification du certificat activée",
+          "verifyTlsOff": "Vérification du certificat désactivée",
+          "hintsTitle": "Pistes de dépannage",
+          "commandsTitle": "Exemples en ligne de commande (optionnel)",
+          "commandsNote": "À exécuter depuis une machine qui atteint l’annuaire. Le mot de passe est demandé (-W) ; ne le collez pas dans les journaux.",
+          "copyButton": "Copier le diagnostic LDAP",
+          "copyTitle": "Copié",
+          "copyBody": "Diagnostic LDAP copié dans le presse-papiers.",
+          "steps": {
+            "config": "Vérification de la configuration",
+            "connection": "Connexion TCP",
+            "starttls": "StartTLS",
+            "bind": "Bind compte de service",
+            "userSearch": "Recherche utilisateur",
+            "groupRead": "Attributs de groupe (memberOf)"
+          },
+          "codes": {
+            "config_incomplete": "Configuration incomplète",
+            "bind_password_missing": "Mot de passe bind non enregistré",
+            "tls_policy_rejected": "Politique TLS refusée",
+            "connection_failed": "Échec de connexion",
+            "starttls_failed": "Échec StartTLS",
+            "invalid_credentials": "Identifiants bind invalides",
+            "operations_error": "Operations Error (fréquent avec Active Directory)",
+            "timeout": "Délai dépassé",
+            "insufficient_access": "Droits insuffisants",
+            "no_such_object": "Objet introuvable",
+            "filter_error": "Filtre de recherche invalide",
+            "unknown": "Erreur LDAP inconnue"
+          },
+          "hints": {
+            "use_ldaps_or_starttls": "Utilisez LDAPS (ldaps://) ou ldap:// avec StartTLS — Active Directory exige souvent la signature ou le channel binding en LDAP clair.",
+            "verify_bind_format": "Vérifiez le format du compte de liaison : UPN (user@domaine.local), DOMAINE\\\\user ou DN complet (CN=...,DC=...).",
+            "verify_base_dn": "Vérifiez le DN de base de recherche (ex. DC=corp,DC=local).",
+            "verify_search_filter": "Vérifiez le filtre utilisateur et le placeholder {{username}} (ex. (sAMAccountName={{username}})).",
+            "verify_service_account_read": "Le compte de service doit pouvoir lire les utilisateurs et memberOf (ou votre attribut groupe) sous le DN de base.",
+            "check_tls_certificate": "Vérifiez la chaîne de certificats (CA) et le nom d’hôte/SNI en LDAPS.",
+            "check_hostname_sni": "Le nom d’hôte LDAPS doit correspondre au certificat (inspectez avec openssl s_client).",
+            "verify_timeout": "Augmentez le délai si l’annuaire ou le réseau est lent.",
+            "verify_bind_password": "Saisissez à nouveau le mot de passe bind et enregistrez, ou fournissez-le uniquement pour ce test."
+          }
+        }
       },
       "mapping": {
         "cardTitle": "Cartographie des rôles et provisionnement",

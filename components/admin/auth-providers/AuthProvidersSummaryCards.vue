@@ -121,7 +121,9 @@ function cardClass(tab: AuthProviderTabId): string {
               ? t('admin.authProviders.summary.testNotRun')
               : lastLdapTest.ok
                 ? t('admin.authProviders.summary.testOk')
-                : t('admin.authProviders.summary.testFailed')
+                : lastLdapTest.diagnostic
+                  ? t(`admin.authProviders.ldap.diagnostics.steps.${lastLdapTest.diagnostic.step}`)
+                  : t('admin.authProviders.summary.testFailed')
           }}
         </li>
         <li>{{ t('admin.authProviders.summary.userCount', { count: data.summary.counts.ldap }) }}</li>

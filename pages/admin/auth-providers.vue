@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import type { AdminAuthProvidersDto } from '~/server/utils/auth-providers-config'
+import { buildLdapTestConfigSummary } from '~/server/utils/ldap-diagnostics'
 import {
   AUTH_PROVIDERS_TAB_STORAGE_KEY,
   defaultAuthProviderTab,
+  ldapTestClientNetworkFailure,
+  mapLdapTestApiResponse,
   parseMappingRulesJsonForUi,
   type AuthProviderTabId,
+  type LdapTestApiResponse,
   type LdapTestClientState,
   type OidcTestClientState,
 } from '~/utils/auth-providers-admin-ui'
@@ -200,33 +204,47 @@ const testingLdap = ref(false)
 const testingLdapLookup = ref(false)
 const lastLdapTest = ref<LdapTestClientState>(null)
 
+function ldapConfigFromForm() {
+  return buildLdapTestConfigSummary({
+    enabled:            form.ldapEnabled,
+    url:                form.ldapUrl,
+    startTls:           form.ldapStartTls,
+    tlsVerify:          form.ldapTlsVerify,
+    bindDn:             form.ldapBindDn,
+    bindPasswordSet:    data.value?.ldap.bindPasswordSet ?? false,
+    baseDn:             form.ldapBaseDn,
+    userSearchFilter:   form.ldapUserSearchFilter,
+    usernameAttribute:  form.ldapUsernameAttribute,
+    displayNameAttribute: form.ldapDisplayNameAttribute,
+    groupAttribute:     form.ldapGroupAttribute,
+    timeoutSec:         form.ldapTimeoutSec,
+  })
+}
+
 async function testLdapBind() {
   if (readOnly.value) return
   testingLdap.value = true
   lastLdapTest.value = null
   try {
-    const r = await $fetch<{
-      ok: boolean
-      bindOk?: boolean
-      searchSampleCount?: number
-      error?: string
-    }>('/api/admin/auth-providers/ldap/test', {
+    const r = await $fetch<LdapTestApiResponse>('/api/admin/auth-providers/ldap/test', {
       method: 'POST',
       body: ldapBindPw.value ? { bindPassword: ldapBindPw.value } : {},
     })
-    if (r.ok) {
-      lastLdapTest.value = { ok: true, searchSampleCount: r.searchSampleCount ?? 0, bindOnly: true }
-      toastOk(
-        t('admin.authProviders.toasts.ldapTitle'),
-        t('admin.authProviders.toasts.ldapBindOk', { count: r.searchSampleCount ?? 0 }),
-      )
-    } else {
-      lastLdapTest.value = { ok: false, error: r.error ?? t('admin.authProviders.toasts.failure') }
-      toastErr(t('admin.authProviders.toasts.ldapTitle'), r.error ?? t('admin.authProviders.toasts.failure'))
+    const mapped = mapLdapTestApiResponse(r, { bindOnly: true })
+    if (mapped) {
+      lastLdapTest.value = mapped
+      if (r.ok) {
+        toastOk(
+          t('admin.authProviders.toasts.ldapTitle'),
+          t('admin.authProviders.toasts.ldapBindOk', { count: r.searchSampleCount ?? 0 }),
+        )
+      } else {
+        toastErr(t('admin.authProviders.toasts.ldapTitle'), mapped.error)
+      }
     }
   } catch (e: unknown) {
     const msg = tError(e)
-    lastLdapTest.value = { ok: false, error: msg }
+    lastLdapTest.value = ldapTestClientNetworkFailure(msg, ldapConfigFromForm())
     toastErr(t('admin.authProviders.toasts.ldapTitle'), msg)
   } finally {
     testingLdap.value = false
@@ -236,32 +254,42 @@ async function testLdapBind() {
 async function testLdapLookup() {
   if (readOnly.value || !ldapLookupUsername.value.trim()) return
   testingLdapLookup.value = true
+  const lookupUser = ldapLookupUsername.value.trim()
   try {
-    const r = await $fetch<{
-      ok: boolean
-      searchSampleCount?: number
-      userLookup?: boolean
-      error?: string
-    }>('/api/admin/auth-providers/ldap/test', {
+    const r = await $fetch<LdapTestApiResponse>('/api/admin/auth-providers/ldap/test', {
       method: 'POST',
       body: {
         ...(ldapBindPw.value ? { bindPassword: ldapBindPw.value } : {}),
-        username: ldapLookupUsername.value.trim(),
+        username: lookupUser,
       },
     })
-    if (r.ok) {
-      lastLdapTest.value = {
-        ok:                true,
-        searchSampleCount: r.searchSampleCount ?? 0,
-        userLookup:        r.userLookup,
-      }
-    } else {
-      lastLdapTest.value = { ok: false, error: r.error ?? t('admin.authProviders.toasts.failure') }
-      toastErr(t('admin.authProviders.toasts.ldapTitle'), r.error ?? t('admin.authProviders.toasts.failure'))
+    const mapped = mapLdapTestApiResponse(r)
+    if (mapped) {
+      lastLdapTest.value = mapped
+      if (!r.ok) toastErr(t('admin.authProviders.toasts.ldapTitle'), mapped.error)
     }
   } catch (e: unknown) {
     const msg = tError(e)
-    lastLdapTest.value = { ok: false, error: msg }
+    lastLdapTest.value = ldapTestClientNetworkFailure(
+      msg,
+      buildLdapTestConfigSummary(
+        {
+          enabled:            form.ldapEnabled,
+          url:                form.ldapUrl,
+          startTls:           form.ldapStartTls,
+          tlsVerify:          form.ldapTlsVerify,
+          bindDn:             form.ldapBindDn,
+          bindPasswordSet:    data.value?.ldap.bindPasswordSet ?? false,
+          baseDn:             form.ldapBaseDn,
+          userSearchFilter:   form.ldapUserSearchFilter,
+          usernameAttribute:  form.ldapUsernameAttribute,
+          displayNameAttribute: form.ldapDisplayNameAttribute,
+          groupAttribute:     form.ldapGroupAttribute,
+          timeoutSec:         form.ldapTimeoutSec,
+        },
+        { username: lookupUser },
+      ),
+    )
     toastErr(t('admin.authProviders.toasts.ldapTitle'), msg)
   } finally {
     testingLdapLookup.value = false

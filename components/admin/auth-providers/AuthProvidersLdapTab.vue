@@ -114,8 +114,10 @@ const loginLdap = computed(() =>
               lastLdapTest === null
                 ? t('admin.authProviders.summary.testNotRun')
                 : lastLdapTest.ok
-                  ? t('admin.authProviders.save.ldapSuccessSample', { count: lastLdapTest.searchSampleCount })
-                  : lastLdapTest.error
+                  ? t('admin.authProviders.summary.testOk')
+                  : lastLdapTest.diagnostic
+                    ? t(`admin.authProviders.ldap.diagnostics.steps.${lastLdapTest.diagnostic.step}`)
+                    : lastLdapTest.error
             }}
           </dd>
         </div>
@@ -282,27 +284,13 @@ const loginLdap = computed(() =>
           />
         </div>
       </AppFormField>
-      <div
-        v-if="lastLdapTest"
-        class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-950/50 text-sm"
-      >
-        <p v-if="lastLdapTest.ok" class="text-green-700 dark:text-green-400 font-medium">
-          {{ t('admin.authProviders.save.ldapSuccessSample', { count: lastLdapTest.searchSampleCount }) }}
-          <span v-if="lastLdapTest.userLookup === false" class="block text-amber-700 dark:text-amber-400 mt-1">
-            {{ t('admin.authProviders.ldap.testLookupNotFound') }}
-          </span>
-          <span v-else-if="lastLdapTest.userLookup === true" class="block text-green-600 mt-1">
-            {{ t('admin.authProviders.ldap.testLookupFound') }}
-          </span>
-        </p>
-        <UAlert
-          v-else
-          color="red"
-          icon="i-heroicons-x-circle"
-          :title="t('admin.authProviders.save.ldapFailTitle')"
-          :description="lastLdapTest.error"
-        />
-      </div>
+      <AuthProvidersLdapDiagnosticsPanel
+        v-if="lastLdapTest?.diagnostic"
+        :diagnostic="lastLdapTest.diagnostic"
+        :ok="lastLdapTest.ok"
+        :search-sample-count="lastLdapTest.ok ? lastLdapTest.searchSampleCount : undefined"
+        :user-lookup="lastLdapTest.ok ? lastLdapTest.userLookup : undefined"
+      />
     </section>
   </div>
 </template>

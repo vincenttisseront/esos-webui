@@ -2,6 +2,14 @@ import { createError } from 'h3'
 import ldap from 'ldapjs'
 import type { AdminAuthProvidersDto } from './auth-providers-config'
 import { escapeLdapFilterValue } from './ldap-filter-escape'
+import {
+  buildLdapFailureDiagnostic,
+  buildLdapSuccessDiagnostic,
+  buildLdapTestConfigSummary,
+  buildLdapValidationFailure,
+  type LdapTestResult,
+  type LdapTestStep,
+} from './ldap-diagnostics'
 
 export function assertLdapTlsPolicyForProduction(urlStr: string, startTls: boolean): void {
   const isProd = process.env.NODE_ENV === 'production'
@@ -116,60 +124,91 @@ function searchUserEntries(
   })
 }
 
+function buildUserSearchFilter(
+  dto: AdminAuthProvidersDto['ldap'],
+  lookupUser?: string,
+): string {
+  if (lookupUser) {
+    return dto.userSearchFilter.includes('{{username}}')
+      ? dto.userSearchFilter.split('{{username}}').join(escapeLdapFilterValue(lookupUser))
+      : `(&${dto.userSearchFilter}(${dto.usernameAttribute}=${escapeLdapFilterValue(lookupUser)}))`
+  }
+  return dto.userSearchFilter.includes('{{username}}')
+    ? dto.userSearchFilter.split('{{username}}').join(escapeLdapFilterValue('__probe__'))
+    : dto.userSearchFilter
+}
+
 export async function testLdapSettings(
   dto: AdminAuthProvidersDto['ldap'],
   options?: { bindPasswordOverride?: string; username?: string },
-): Promise<
-  | { ok: true; bindOk: boolean; searchSampleCount: number; userLookup?: boolean }
-  | { ok: false; error: string }
-> {
+): Promise<LdapTestResult> {
+  const lookupUser = options?.username?.trim()
+  const filter     = buildUserSearchFilter(dto, lookupUser || undefined)
+  const config     = buildLdapTestConfigSummary(dto, {
+    username:   lookupUser || undefined,
+    userFilter: filter,
+  })
+
   try {
     assertLdapTlsPolicyForProduction(dto.url, dto.startTls)
-    if (!dto.url || !dto.baseDn || !dto.bindDn) {
-      return { ok: false, error: 'ldap.url, ldap.base_dn et ldap.bind_dn requis' }
-    }
-    const bindPasswordOverride = options?.bindPasswordOverride
-    const pwd = bindPasswordOverride ?? ''
-    if (!bindPasswordOverride && !dto.bindPasswordSet) {
-      return { ok: false, error: 'Mot de passe bind LDAP non configuré' }
-    }
-    const client = createLdapClient(dto.url, dto.timeoutSec, dto.tlsVerify)
-    try {
-      if (dto.url.startsWith('ldap:') && dto.startTls) {
-        await startTlsAsync(client, dto.tlsVerify)
-      }
-      await bindAsync(client, dto.bindDn, pwd)
-      const lookupUser = options?.username?.trim()
-      const filter = lookupUser
-        ? (dto.userSearchFilter.includes('{{username}}')
-            ? dto.userSearchFilter.split('{{username}}').join(escapeLdapFilterValue(lookupUser))
-            : `(&${dto.userSearchFilter}(${dto.usernameAttribute}=${escapeLdapFilterValue(lookupUser)}))`)
-        : dto.userSearchFilter.includes('{{username}}')
-          ? dto.userSearchFilter.split('{{username}}').join(escapeLdapFilterValue('__probe__'))
-          : dto.userSearchFilter
-      const rows = await searchUserEntries(
-        client,
-        dto.baseDn,
-        filter,
-        dto.displayNameAttribute,
-        dto.groupAttribute,
-      )
-      await unbindAsync(client)
-      return {
-        ok:                true,
-        bindOk:            true,
-        searchSampleCount: rows.length,
-        ...(lookupUser ? { userLookup: rows.length > 0 } : {}),
-      }
-    } catch (e) {
-      try {
-        await unbindAsync(client)
-      } catch { /* ignore */ }
-      return { ok: false, error: (e as Error).message || 'LDAP erreur' }
-    }
   } catch (e) {
     if ((e as { statusCode?: number }).statusCode) throw e
-    return { ok: false, error: (e as Error).message || 'LDAP erreur' }
+    return buildLdapValidationFailure('config', 'tls_policy_rejected', dto, config)
+  }
+
+  if (!dto.url?.trim() || !dto.baseDn?.trim() || !dto.bindDn?.trim()) {
+    return buildLdapValidationFailure('config', 'config_incomplete', dto, config)
+  }
+
+  const bindPasswordOverride = options?.bindPasswordOverride
+  if (!bindPasswordOverride && !dto.bindPasswordSet) {
+    return buildLdapValidationFailure('bind', 'bind_password_missing', dto, config)
+  }
+
+  const pwd    = bindPasswordOverride ?? ''
+  let step: LdapTestStep = 'connection'
+  const client = createLdapClient(dto.url, dto.timeoutSec, dto.tlsVerify)
+
+  try {
+    if (dto.url.startsWith('ldap:') && dto.startTls) {
+      step = 'starttls'
+      await startTlsAsync(client, dto.tlsVerify)
+    }
+
+    step = 'bind'
+    await bindAsync(client, dto.bindDn, pwd)
+
+    step = 'userSearch'
+    const rows = await searchUserEntries(
+      client,
+      dto.baseDn,
+      filter,
+      dto.displayNameAttribute,
+      dto.groupAttribute,
+    )
+
+    step = 'groupRead'
+
+    await unbindAsync(client)
+
+    const userLookup = lookupUser ? rows.length > 0 : undefined
+    const diagnostic = buildLdapSuccessDiagnostic(dto, config, rows.length, userLookup)
+
+    return {
+      ok:                true,
+      bindOk:            true,
+      searchSampleCount: rows.length,
+      diagnostic,
+      ...(userLookup !== undefined ? { userLookup } : {}),
+    }
+  } catch (e) {
+    try {
+      await unbindAsync(client)
+    } catch { /* ignore */ }
+    return {
+      ok:         false,
+      diagnostic: buildLdapFailureDiagnostic(e, step, dto, config),
+    }
   }
 }
 

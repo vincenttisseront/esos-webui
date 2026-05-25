@@ -1,7 +1,4 @@
-import {
-  buildAdminAuthProvidersDto,
-  loadAuthProviderSecretsForServer,
-} from '../../../../utils/auth-providers-config'
+import { buildAdminAuthProvidersDto } from '../../../../utils/auth-providers-config'
 import { testLdapSettings } from '../../../../utils/ldap-service'
 
 export default defineEventHandler(async (event) => {
@@ -11,13 +8,20 @@ export default defineEventHandler(async (event) => {
     bindPasswordOverride: body.bindPassword,
     username:           body.username,
   })
+
   if (!result.ok) {
-    return { ok: false, error: result.error }
+    return {
+      ok:         false,
+      error:      result.diagnostic.safeMessage,
+      diagnostic: result.diagnostic,
+    }
   }
+
   return {
     ok:                true,
     bindOk:            result.bindOk,
     searchSampleCount: result.searchSampleCount,
+    diagnostic:        result.diagnostic,
     ...(result.userLookup !== undefined ? { userLookup: result.userLookup } : {}),
   }
 })
