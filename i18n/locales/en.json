@@ -2466,6 +2466,7 @@
         "errorTitle": "Error",
         "ldapTitle": "LDAP",
         "ldapBindOk": "Bind OK — search sample — {count} entries.",
+        "ldapBindOnlyOk": "Service account bind succeeded.",
         "oidcTitle": "OIDC",
         "oidcDiscoveryOk": "Discovery OK.",
         "failure": "Failed"
@@ -2531,7 +2532,44 @@
         "enableLabel": "Enable LDAP",
         "enableHelp": "Shows the directory sign-in form on the sign-in page.",
         "sectionTransport": "Transport and server",
-        "modeSummaryLabel": "Connection mode (summary)",
+        "connectionMode": {
+          "label": "Connection mode",
+          "help": "Choose how the application connects to the LDAP server. This updates the URL scheme and StartTLS flag sent to the server.",
+          "options": {
+            "ldaps": {
+              "label": "LDAPS (recommended)",
+              "help": "Direct TLS on port 636. Use an ldaps:// URL."
+            },
+            "starttls": {
+              "label": "LDAP + StartTLS",
+              "help": "Connect with ldap:// then negotiate TLS on port 389."
+            },
+            "plain": {
+              "label": "Unencrypted LDAP",
+              "help": "Avoid in production. Allowed only in lab or on localhost."
+            }
+          },
+          "plainWarning": {
+            "title": "Unencrypted LDAP",
+            "description": "Credentials and directory data travel in clear text. Use only on localhost or in an isolated lab."
+          },
+          "urlPlaceholder": {
+            "ldaps": "ldaps://dc.example.com:636",
+            "starttls": "ldap://dc.example.com:389",
+            "plain": "ldap://127.0.0.1:389"
+          },
+          "urlHelp": {
+            "ldaps": "Use ldaps:// in production. StartTLS is not used with LDAPS.",
+            "starttls": "Use ldap://; TLS is negotiated after connect (StartTLS).",
+            "plain": "Use ldap:// without TLS. Remote hosts are strongly discouraged."
+          },
+          "urlSchemeMismatch": {
+            "ldaps": "This mode requires a URL starting with ldaps://.",
+            "starttls": "This mode requires a URL starting with ldap://.",
+            "plain": "This mode requires a URL starting with ldap://."
+          }
+        },
+        "modeSummaryLabel": "Connection mode",
         "modeSummaryDesc": "Derived from the URL and StartTLS. In production, remote ldap:// requires StartTLS or use ldaps://.",
         "urlLabel": "LDAP server URL",
         "urlDesc": "Prefer ldaps:// in production. Plain ldap:// without StartTLS is acceptable only to localhost in development.",
@@ -2578,16 +2616,22 @@
         "statusTitle": "LDAP status",
         "testResultLabel": "Last test",
         "testSection": "Connectivity test",
-        "testDesc": "Tests service account bind and a sample search (no end-user password). You can enter a bind password above for this test without saving configuration.",
-        "testButton": "Test bind and sample search",
-        "testLookupLabel": "Test user lookup",
-        "testLookupDesc": "Optional: search for a specific sign-in identifier using the current filter and attributes.",
+        "testDesc": "Tests service account bind only (no end-user password). Enter a bind password above for this test without saving configuration.",
+        "testButton": "Test bind",
+        "testLookupLabel": "Test user search",
+        "testLookupDesc": "Search for a real sign-in identifier using the current filter. The filter is built with your login attribute and escaped for LDAP.",
         "testLookupPlaceholder": "Sign-in name (e.g. jdupont)",
-        "testLookupButton": "Test lookup",
+        "testLookupButton": "Test user search",
+        "testLookupPrompt": "Enter a sign-in identifier above to test user search.",
         "testLookupFound": "User found in directory.",
-        "testLookupNotFound": "No matching user in directory.",
+        "testLookupNotFound": "No matching user in directory (bind and search succeeded).",
         "diagnostics": {
           "successTitle": "LDAP test succeeded",
+          "bindSuccessTitle": "Bind succeeded",
+          "searchSuccessTitle": "User search succeeded",
+          "userNotFoundTitle": "No user found",
+          "bindOnlyBody": "Service account bind succeeded. User search was not run.",
+          "renderedFilter": "Rendered filter",
           "failureTitle": "LDAP test failed",
           "failedStep": "Failed step",
           "safeMessage": "Summary",
@@ -2624,6 +2668,9 @@
             "insufficient_access": "Insufficient access",
             "no_such_object": "Object not found",
             "filter_error": "Invalid search filter",
+            "bind_ok": "Bind succeeded",
+            "search_ok": "User search succeeded",
+            "user_not_found": "No user found (search returned no results)",
             "unknown": "Unknown LDAP error"
           },
           "hints": {

@@ -5,11 +5,14 @@ import { idTokenSatisfiesMfaPolicy, hasIdpMfaIndicators } from '../server/utils/
 import { hashAuthOpaqueToken } from '../server/utils/auth-state-hash'
 import { oidcClaimsAllowAutoLinkToExistingAccount } from '../server/utils/oidc-user-resolve'
 import {
+  applyLdapConnectionModeChoice,
   authProviderSecurityAlerts,
   authProviderSummaryBadges,
   defaultAuthProviderTab,
   ldapConfigCompleteFromForm,
+  ldapConnectionModeChoiceFromForm,
   ldapConnectionModeKind,
+  ldapUrlSchemeHint,
   oidcCallbackPreview,
   parseMappingRulesJsonForUi,
   simulateLdapRoleMapping,
@@ -127,6 +130,31 @@ describe('auth-providers-admin-ui', () => {
     expect(ldapConnectionModeKind('ldap://dc.example.com', true)).toBe('ldap_start_tls')
     expect(ldapConnectionModeKind('ldap://dc.example.com', false)).toBe('ldap_plain_remote')
     expect(ldapConnectionModeKind('', false)).toBe('empty')
+  })
+
+  it('ldapConnectionModeChoice maps form state and applies mode changes', () => {
+    expect(ldapConnectionModeChoiceFromForm('ldaps://dc.example.com', false)).toBe('ldaps')
+    expect(ldapConnectionModeChoiceFromForm('ldap://dc.example.com', true)).toBe('starttls')
+    expect(ldapConnectionModeChoiceFromForm('ldap://dc.example.com', false)).toBe('plain')
+    expect(ldapConnectionModeChoiceFromForm('ldap://127.0.0.1', false)).toBe('plain')
+
+    const form = { ldapUrl: 'ldap://dc.example.com:389', ldapStartTls: false }
+    applyLdapConnectionModeChoice(form, 'ldaps')
+    expect(form).toEqual({ ldapUrl: 'ldaps://dc.example.com:389', ldapStartTls: false })
+
+    applyLdapConnectionModeChoice(form, 'starttls')
+    expect(form).toEqual({ ldapUrl: 'ldap://dc.example.com:389', ldapStartTls: true })
+
+    applyLdapConnectionModeChoice(form, 'plain')
+    expect(form).toEqual({ ldapUrl: 'ldap://dc.example.com:389', ldapStartTls: false })
+  })
+
+  it('ldapUrlSchemeHint validates URL prefix for selected mode', () => {
+    expect(ldapUrlSchemeHint('ldaps', 'ldaps://x')).toBe('ok')
+    expect(ldapUrlSchemeHint('ldaps', 'ldap://x')).toBe('wrong_scheme')
+    expect(ldapUrlSchemeHint('starttls', 'ldap://x')).toBe('ok')
+    expect(ldapUrlSchemeHint('starttls', 'ldaps://x')).toBe('wrong_scheme')
+    expect(ldapUrlSchemeHint('plain', '')).toBe('empty')
   })
 
   it('authProviderSecurityAlerts flags TLS verify off when LDAP enabled', () => {

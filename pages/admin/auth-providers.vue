@@ -273,13 +273,13 @@ async function testLdapBind() {
       method: 'POST',
       body: ldapBindPw.value ? { bindPassword: ldapBindPw.value } : {},
     })
-    const mapped = mapLdapTestApiResponse(r, { bindOnly: true })
+    const mapped = mapLdapTestApiResponse(r)
     if (mapped) {
       lastLdapTest.value = mapped
       if (r.ok) {
         toastOk(
           t('admin.authProviders.toasts.ldapTitle'),
-          t('admin.authProviders.toasts.ldapBindOk', { count: r.searchSampleCount ?? 0 }),
+          t('admin.authProviders.toasts.ldapBindOnlyOk'),
         )
       } else {
         toastErr(t('admin.authProviders.toasts.ldapTitle'), mapped.error)

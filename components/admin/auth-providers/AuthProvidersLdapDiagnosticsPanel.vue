@@ -5,6 +5,7 @@ import { formatLdapDiagnosticForCopy } from '~/server/utils/ldap-diagnostics'
 const props = defineProps<{
   diagnostic: LdapTestDiagnostic
   ok: boolean
+  bindOnly?: boolean
   searchSampleCount?: number
   userLookup?: boolean
 }>()
@@ -12,11 +13,20 @@ const props = defineProps<{
 const { t } = useEsosI18n()
 const { success: toastOk } = useAppToast()
 
-const summaryTitle = computed(() =>
-  props.ok
+const summaryTitle = computed(() => {
+  if (props.ok && props.bindOnly) {
+    return t('admin.authProviders.ldap.diagnostics.bindSuccessTitle')
+  }
+  if (props.ok && props.userLookup === true) {
+    return t('admin.authProviders.ldap.diagnostics.searchSuccessTitle')
+  }
+  if (props.ok && props.userLookup === false) {
+    return t('admin.authProviders.ldap.diagnostics.userNotFoundTitle')
+  }
+  return props.ok
     ? t('admin.authProviders.ldap.diagnostics.successTitle')
-    : t('admin.authProviders.ldap.diagnostics.failureTitle'),
-)
+    : t('admin.authProviders.ldap.diagnostics.failureTitle')
+})
 
 const safeCodeLabel = computed(() =>
   t(`admin.authProviders.ldap.diagnostics.codes.${props.diagnostic.safeCode}`),
@@ -69,25 +79,37 @@ async function copyDiagnostic() {
 <template>
   <div
     class="rounded-lg border p-4 space-y-4 text-sm"
-    :class="ok
-      ? 'border-green-200 dark:border-green-800 bg-green-50/80 dark:bg-green-950/30'
-      : 'border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20'"
+    :class="ok && !bindOnly && userLookup === false
+      ? 'border-amber-200 dark:border-amber-800 bg-amber-50/80 dark:bg-amber-950/30'
+      : ok
+        ? 'border-green-200 dark:border-green-800 bg-green-50/80 dark:bg-green-950/30'
+        : 'border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20'"
   >
     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div class="space-y-1 min-w-0">
-        <p class="font-semibold" :class="ok ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'">
+        <p class="font-semibold" :class="ok && userLookup === false
+          ? 'text-amber-800 dark:text-amber-300'
+          : ok
+            ? 'text-green-800 dark:text-green-300'
+            : 'text-red-800 dark:text-red-300'">
           {{ summaryTitle }}
         </p>
-        <p v-if="ok && searchSampleCount != null" class="text-green-700 dark:text-green-400">
-          {{ t('admin.authProviders.save.ldapSuccessSample', { count: searchSampleCount }) }}
+        <p v-if="ok && bindOnly" class="text-green-700 dark:text-green-400">
+          {{ t('admin.authProviders.ldap.diagnostics.bindOnlyBody') }}
         </p>
-        <p v-if="ok && userLookup === false" class="text-amber-700 dark:text-amber-400">
-          {{ t('admin.authProviders.ldap.testLookupNotFound') }}
+        <p v-if="ok && bindOnly" class="text-sm text-gray-600 dark:text-gray-400">
+          {{ t('admin.authProviders.ldap.testLookupPrompt') }}
         </p>
-        <p v-else-if="ok && userLookup === true" class="text-green-600 dark:text-green-400">
+        <p v-if="ok && !bindOnly && userLookup === true" class="text-green-700 dark:text-green-400">
           {{ t('admin.authProviders.ldap.testLookupFound') }}
         </p>
-        <template v-else-if="!ok">
+        <p v-if="ok && !bindOnly && userLookup === false" class="text-amber-700 dark:text-amber-400">
+          {{ t('admin.authProviders.ldap.testLookupNotFound') }}
+        </p>
+        <p v-if="ok && diagnostic.config.userFilter && !bindOnly" class="text-xs font-mono text-gray-600 dark:text-gray-400 break-all">
+          {{ t('admin.authProviders.ldap.diagnostics.renderedFilter') }}: {{ diagnostic.config.userFilter }}
+        </p>
+        <template v-if="!ok">
           <p class="text-red-700 dark:text-red-300">
             <span class="font-medium">{{ t('admin.authProviders.ldap.diagnostics.failedStep') }}:</span>
             {{ stepLabel }}

@@ -46,6 +46,9 @@ export type LdapDiagnosticSafeCode =
   | 'insufficient_access'
   | 'no_such_object'
   | 'filter_error'
+  | 'bind_ok'
+  | 'search_ok'
+  | 'user_not_found'
   | 'unknown'
 
 /** Stable hint ids → i18n `admin.authProviders.ldap.diagnostics.hints.<id>` */
@@ -93,6 +96,7 @@ export type LdapTestSuccess = {
   ok:                true
   bindOk:            boolean
   searchSampleCount: number
+  bindOnly?:         boolean
   userLookup?:       boolean
   diagnostic:        LdapTestDiagnostic
 }
@@ -125,17 +129,26 @@ export function maskBindPrincipal(bindDn: string): string {
   return `${s.slice(0, 3)}***`
 }
 
+/** Filter template with {{username}} placeholder (never a synthetic probe value). */
+export function ldapUserSearchFilterTemplate(dto: AdminAuthProvidersDto['ldap']): string {
+  const filter = dto.userSearchFilter.trim()
+  if (filter.includes('{{username}}')) return filter
+  const attr = dto.usernameAttribute.trim() || 'username'
+  return `(&${filter}(${attr}={{username}}))`
+}
+
 export function buildLdapTestConfigSummary(
   dto: AdminAuthProvidersDto['ldap'],
   options?: { username?: string; userFilter?: string },
 ): LdapTestConfigSummary {
+  const filterTemplate = ldapUserSearchFilterTemplate(dto)
   return {
     serverUrl:      dto.url?.trim() || '—',
     tlsMode:        ldapTlsModeFromUrl(dto.url ?? '', dto.startTls),
     verifyTls:      dto.tlsVerify,
     bindPrincipal:  maskBindPrincipal(dto.bindDn ?? ''),
     baseDn:         dto.baseDn?.trim() || '—',
-    userFilter:     (options?.userFilter ?? dto.userSearchFilter)?.trim() || '—',
+    userFilter:     (options?.userFilter ?? filterTemplate)?.trim() || '—',
     loginAttribute: dto.usernameAttribute?.trim() || '—',
     groupAttribute: dto.groupAttribute?.trim() || '—',
     timeoutSec:     dto.timeoutSec,
@@ -354,6 +367,12 @@ export function ldapSafeMessageForCode(code: LdapDiagnosticSafeCode, parsed: Par
       return 'Base DN or search path not found.'
     case 'filter_error':
       return 'User search filter is invalid.'
+    case 'bind_ok':
+      return 'Service account bind succeeded. User search was not run.'
+    case 'search_ok':
+      return 'Bind and user search succeeded.'
+    case 'user_not_found':
+      return 'Bind and search succeeded but no user matched the lookup identifier.'
     default:
       return parsed.rawMessage.slice(0, 240) || 'LDAP test failed.'
   }
@@ -399,23 +418,63 @@ export function buildLdapValidationFailure(
   }
 }
 
+export function buildLdapBindOnlySuccessDiagnostic(
+  dto: AdminAuthProvidersDto['ldap'],
+  config: LdapTestConfigSummary,
+): LdapTestDiagnostic {
+  return {
+    step:        'bind',
+    safeCode:    'bind_ok',
+    safeMessage: ldapSafeMessageForCode('bind_ok', { rawMessage: '' }),
+    config,
+    hints:       [],
+    commandExamples: buildLdapCommandExamples(dto, config),
+  }
+}
+
+export function buildLdapSearchSuccessDiagnostic(
+  dto: AdminAuthProvidersDto['ldap'],
+  config: LdapTestConfigSummary,
+  searchSampleCount: number,
+): LdapTestDiagnostic {
+  return {
+    step:        'userSearch',
+    safeCode:    'search_ok',
+    safeMessage: ldapSafeMessageForCode('search_ok', { rawMessage: '' }),
+    config,
+    hints:       [],
+    commandExamples: buildLdapCommandExamples(dto, config),
+  }
+}
+
+export function buildLdapUserNotFoundDiagnostic(
+  dto: AdminAuthProvidersDto['ldap'],
+  config: LdapTestConfigSummary,
+): LdapTestDiagnostic {
+  return {
+    step:        'userSearch',
+    safeCode:    'user_not_found',
+    safeMessage: ldapSafeMessageForCode('user_not_found', { rawMessage: '' }),
+    config,
+    hints:       ['verify_search_filter', 'verify_base_dn'],
+    commandExamples: buildLdapCommandExamples(dto, config),
+  }
+}
+
+/** @deprecated Use buildLdapBindOnlySuccessDiagnostic / buildLdapSearchSuccessDiagnostic */
 export function buildLdapSuccessDiagnostic(
   dto: AdminAuthProvidersDto['ldap'],
   config: LdapTestConfigSummary,
   searchSampleCount: number,
   userLookup?: boolean,
 ): LdapTestDiagnostic {
-  const step: LdapTestStep = userLookup !== undefined ? 'userSearch' : 'groupRead'
-  return {
-    step,
-    safeCode:    'unknown',
-    safeMessage: userLookup === false
-      ? 'Bind and search succeeded but no user matched the lookup.'
-      : `Bind and search succeeded (${searchSampleCount} sample entries).`,
-    config,
-    hints:       userLookup === false ? ['verify_search_filter', 'verify_base_dn'] : [],
-    commandExamples: buildLdapCommandExamples(dto, config),
+  if (userLookup === false) {
+    return buildLdapUserNotFoundDiagnostic(dto, config)
   }
+  if (userLookup === true) {
+    return buildLdapSearchSuccessDiagnostic(dto, config, searchSampleCount)
+  }
+  return buildLdapBindOnlySuccessDiagnostic(dto, config)
 }
 
 /** Plain-text block for “Copy LDAP diagnostic” (no secrets). */

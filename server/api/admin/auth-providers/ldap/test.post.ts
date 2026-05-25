@@ -1,8 +1,12 @@
 import { buildAdminAuthProvidersDto } from '../../../../utils/auth-providers-config'
+import { assertSafeLdapLoginUsername } from '../../../../utils/ldap-filter-escape'
 import { testLdapSettings } from '../../../../utils/ldap-service'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody<{ bindPassword?: string; username?: string }>(event).catch(() => ({}))
+  if (body.username?.trim()) {
+    assertSafeLdapLoginUsername(body.username.trim())
+  }
   const dto    = await buildAdminAuthProvidersDto()
   const result = await testLdapSettings(dto.ldap, {
     bindPasswordOverride: body.bindPassword,
@@ -22,6 +26,7 @@ export default defineEventHandler(async (event) => {
     bindOk:            result.bindOk,
     searchSampleCount: result.searchSampleCount,
     diagnostic:        result.diagnostic,
+    ...(result.bindOnly ? { bindOnly: true } : {}),
     ...(result.userLookup !== undefined ? { userLookup: result.userLookup } : {}),
   }
 })

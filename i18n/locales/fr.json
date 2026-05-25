@@ -2466,6 +2466,7 @@
         "errorTitle": "Erreur",
         "ldapTitle": "LDAP",
         "ldapBindOk": "Bind OK — échantillon recherche — {count} entrée(s).",
+        "ldapBindOnlyOk": "Bind du compte de service réussi.",
         "oidcTitle": "OIDC",
         "oidcDiscoveryOk": "Discovery OK.",
         "failure": "Échec"
@@ -2531,7 +2532,44 @@
         "enableLabel": "Activer LDAP",
         "enableHelp": "Affiche le formulaire de connexion annuaire sur la page de connexion.",
         "sectionTransport": "Transport et serveur",
-        "modeSummaryLabel": "Mode de connexion (résumé)",
+        "connectionMode": {
+          "label": "Mode de connexion",
+          "help": "Choisissez comment l'application se connecte au serveur LDAP. Cela met à jour le schéma d'URL et l'option StartTLS envoyée au serveur.",
+          "options": {
+            "ldaps": {
+              "label": "LDAPS (recommandé)",
+              "help": "TLS direct sur le port 636. Utilisez une URL ldaps://."
+            },
+            "starttls": {
+              "label": "LDAP + StartTLS",
+              "help": "Connexion ldap:// puis négociation TLS sur le port 389."
+            },
+            "plain": {
+              "label": "LDAP non chiffré",
+              "help": "À éviter. Autorisé seulement en laboratoire ou localhost."
+            }
+          },
+          "plainWarning": {
+            "title": "LDAP non chiffré",
+            "description": "Les identifiants et les données annuaire transitent en clair. À utiliser uniquement sur localhost ou en laboratoire isolé."
+          },
+          "urlPlaceholder": {
+            "ldaps": "ldaps://dc.example.com:636",
+            "starttls": "ldap://dc.example.com:389",
+            "plain": "ldap://127.0.0.1:389"
+          },
+          "urlHelp": {
+            "ldaps": "Utilisez ldaps:// en production. StartTLS n'est pas utilisé avec LDAPS.",
+            "starttls": "Utilisez ldap:// ; le TLS est négocié après connexion (StartTLS).",
+            "plain": "Utilisez ldap:// sans TLS. Fortement déconseillé hors localhost."
+          },
+          "urlSchemeMismatch": {
+            "ldaps": "Ce mode exige une URL commençant par ldaps://.",
+            "starttls": "Ce mode exige une URL commençant par ldap://.",
+            "plain": "Ce mode exige une URL commençant par ldap://."
+          }
+        },
+        "modeSummaryLabel": "Mode de connexion",
         "modeSummaryDesc": "Dérivé de l’URL et de StartTLS. En production, ldap:// distant exige StartTLS ou utilisez ldaps://.",
         "urlLabel": "URL du serveur LDAP",
         "urlDesc": "Préférez ldaps:// en production. ldap:// sans StartTLS n’est acceptable que vers localhost en développement.",
@@ -2578,16 +2616,22 @@
         "statusTitle": "État LDAP",
         "testResultLabel": "Dernier test",
         "testSection": "Test de connectivité",
-        "testDesc": "Teste le bind du compte de service et une recherche exemple (sans mot de passe utilisateur final). Vous pouvez saisir un mot de passe de liaison ci-dessus pour ce test sans enregistrer la configuration.",
-        "testButton": "Tester bind et recherche exemple",
+        "testDesc": "Teste uniquement le bind du compte de service (sans mot de passe utilisateur). Vous pouvez saisir un mot de passe de liaison ci-dessus pour ce test sans enregistrer la configuration.",
+        "testButton": "Tester le bind",
         "testLookupLabel": "Test de recherche utilisateur",
-        "testLookupDesc": "Optionnel : recherche d’un identifiant de connexion avec le filtre et les attributs actuels.",
+        "testLookupDesc": "Recherche d’un identifiant de connexion réel avec le filtre actuel. Le filtre est construit avec l’attribut de connexion et échappé pour LDAP.",
         "testLookupPlaceholder": "Identifiant (ex. jdupont)",
         "testLookupButton": "Tester la recherche",
+        "testLookupPrompt": "Saisissez un identifiant pour tester la recherche utilisateur.",
         "testLookupFound": "Utilisateur trouvé dans l’annuaire.",
-        "testLookupNotFound": "Aucun utilisateur correspondant dans l’annuaire.",
+        "testLookupNotFound": "Aucun utilisateur correspondant (bind et recherche OK).",
         "diagnostics": {
           "successTitle": "Test LDAP réussi",
+          "bindSuccessTitle": "Bind réussi",
+          "searchSuccessTitle": "Recherche utilisateur réussie",
+          "userNotFoundTitle": "Aucun utilisateur trouvé",
+          "bindOnlyBody": "Bind du compte de service réussi. La recherche utilisateur n’a pas été exécutée.",
+          "renderedFilter": "Filtre appliqué",
           "failureTitle": "Échec du test LDAP",
           "failedStep": "Étape en échec",
           "safeMessage": "Résumé",
@@ -2624,6 +2668,9 @@
             "insufficient_access": "Droits insuffisants",
             "no_such_object": "Objet introuvable",
             "filter_error": "Filtre de recherche invalide",
+            "bind_ok": "Bind réussi",
+            "search_ok": "Recherche utilisateur réussie",
+            "user_not_found": "Aucun utilisateur trouvé (recherche sans résultat)",
             "unknown": "Erreur LDAP inconnue"
           },
           "hints": {

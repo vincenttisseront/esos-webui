@@ -36,6 +36,7 @@ export type LdapTestClientState =
 export type LdapTestApiResponse = {
   ok:                 boolean
   searchSampleCount?: number
+  bindOnly?:          boolean
   userLookup?:        boolean
   error?:             string
   diagnostic?:        LdapTestDiagnostic
@@ -43,7 +44,6 @@ export type LdapTestApiResponse = {
 
 export function mapLdapTestApiResponse(
   r: LdapTestApiResponse,
-  extra?: { bindOnly?: boolean },
 ): LdapTestClientState | null {
   if (!r.diagnostic) return null
   if (r.ok) {
@@ -51,8 +51,8 @@ export function mapLdapTestApiResponse(
       ok:                true,
       searchSampleCount: r.searchSampleCount ?? 0,
       diagnostic:        r.diagnostic,
+      ...(r.bindOnly ? { bindOnly: true } : {}),
       ...(r.userLookup !== undefined ? { userLookup: r.userLookup } : {}),
-      ...(extra?.bindOnly ? { bindOnly: true } : {}),
     }
   }
   return {
@@ -429,6 +429,69 @@ export function ldapConnectionModeKind(urlStr: string, startTls: boolean): LdapC
   return 'unknown_url'
 }
 
+/** User-facing LDAP transport choice (maps to ldap.url + ldap.startTls). */
+export type LdapConnectionModeChoice = 'ldaps' | 'starttls' | 'plain'
+
+export function ldapConnectionModeChoiceFromForm(
+  urlStr: string,
+  startTls: boolean,
+): LdapConnectionModeChoice {
+  const kind = ldapConnectionModeKind(urlStr, startTls)
+  if (kind === 'ldaps') return 'ldaps'
+  if (kind === 'ldap_start_tls') return 'starttls'
+  if (kind === 'ldap_localhost_plain' || kind === 'ldap_plain_remote') return 'plain'
+  const u = urlStr.trim().toLowerCase()
+  if (u.startsWith('ldaps://')) return 'ldaps'
+  if (startTls) return 'starttls'
+  if (u.startsWith('ldap://')) return 'plain'
+  return 'ldaps'
+}
+
+function swapLdapUrlScheme(urlStr: string, scheme: 'ldap' | 'ldaps'): string {
+  const trimmed = urlStr.trim()
+  if (!trimmed) return `${scheme}://`
+  const lower = trimmed.toLowerCase()
+  if (lower.startsWith('ldaps://')) {
+    return scheme === 'ldaps' ? trimmed : `ldap://${trimmed.slice(8)}`
+  }
+  if (lower.startsWith('ldap://')) {
+    return scheme === 'ldap' ? trimmed : `ldaps://${trimmed.slice(7)}`
+  }
+  return `${scheme}://${trimmed.replace(/^\/+/, '')}`
+}
+
+export function applyLdapConnectionModeChoice(
+  target: { ldapUrl: string; ldapStartTls: boolean },
+  mode: LdapConnectionModeChoice,
+): void {
+  switch (mode) {
+    case 'ldaps':
+      target.ldapStartTls = false
+      target.ldapUrl = swapLdapUrlScheme(target.ldapUrl, 'ldaps')
+      break
+    case 'starttls':
+      target.ldapStartTls = true
+      target.ldapUrl = swapLdapUrlScheme(target.ldapUrl, 'ldap')
+      break
+    case 'plain':
+      target.ldapStartTls = false
+      target.ldapUrl = swapLdapUrlScheme(target.ldapUrl, 'ldap')
+      break
+  }
+}
+
+export type LdapUrlSchemeHint = 'ok' | 'wrong_scheme' | 'empty'
+
+export function ldapUrlSchemeHint(
+  mode: LdapConnectionModeChoice,
+  urlStr: string,
+): LdapUrlSchemeHint {
+  const u = urlStr.trim().toLowerCase()
+  if (!u) return 'empty'
+  if (mode === 'ldaps') return u.startsWith('ldaps://') ? 'ok' : 'wrong_scheme'
+  return u.startsWith('ldap://') ? 'ok' : 'wrong_scheme'
+}
+
 /** @deprecated Use ldapConnectionModeKind + i18n; kept for gradual migration if needed */
 export function ldapConnectionModeLabel(urlStr: string, startTls: boolean): string {
   const kind = ldapConnectionModeKind(urlStr, startTls)
@@ -522,6 +585,13 @@ export function ldapCardTopWarningFromForm(params: {
   const host = ldapHostnameFromUrl(params.ldapUrl)?.toLowerCase() ?? ''
   const local  = host === 'localhost' || host === '127.0.0.1'
   const u      = params.ldapUrl.trim().toLowerCase()
+  if (u.startsWith('ldap://') && host && local && !params.ldapStartTls) {
+    return {
+      id:    'ldap_localhost_plain',
+      color: 'blue',
+      icon:  'i-heroicons-information-circle',
+    }
+  }
   if (u.startsWith('ldap://') && host && !local && !params.ldapStartTls) {
     return {
       id:    'ldap_plain_no_starttls_remote',

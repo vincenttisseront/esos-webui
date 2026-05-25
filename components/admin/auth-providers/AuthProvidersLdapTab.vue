@@ -4,7 +4,8 @@ import {
   LDAP_USER_SEARCH_SIZE_LIMIT,
   ldapCardTopWarningFromForm,
   ldapConfigCompleteFromForm,
-  ldapConnectionModeKind,
+  ldapConnectionModeChoiceFromForm,
+  ldapUrlSchemeHint,
   loginSummaryFromForm,
   truncateForSummary,
   type LdapTestClientState,
@@ -46,8 +47,27 @@ const emit = defineEmits<{
 
 const { t } = useEsosI18n()
 
-const ldapModeSummary = computed(() =>
-  t(`admin.authProviders.ldapMode.${ldapConnectionModeKind(form.value.ldapUrl, form.value.ldapStartTls)}`),
+const ldapModeSummary = computed(() => {
+  const url = form.value.ldapUrl.trim()
+  if (!url) return t('admin.authProviders.ldapMode.empty')
+  const choice = ldapConnectionModeChoiceFromForm(form.value.ldapUrl, form.value.ldapStartTls)
+  return t(`admin.authProviders.ldap.connectionMode.options.${choice}.label`)
+})
+
+const ldapConnectionMode = computed(() =>
+  ldapConnectionModeChoiceFromForm(form.value.ldapUrl, form.value.ldapStartTls),
+)
+
+const ldapUrlPlaceholder = computed(() =>
+  t(`admin.authProviders.ldap.connectionMode.urlPlaceholder.${ldapConnectionMode.value}`),
+)
+
+const ldapUrlHelp = computed(() =>
+  t(`admin.authProviders.ldap.connectionMode.urlHelp.${ldapConnectionMode.value}`),
+)
+
+const ldapUrlSchemeMismatch = computed(() =>
+  ldapUrlSchemeHint(ldapConnectionMode.value, form.value.ldapUrl) === 'wrong_scheme',
 )
 
 const ldapCardTopWarning = computed(() =>
@@ -166,19 +186,24 @@ const loginLdap = computed(() =>
         :title="t(`admin.authProviders.alerts.${ldapCardTopWarning.id}.title`)"
         :description="t(`admin.authProviders.alerts.${ldapCardTopWarning.id}.description`)"
       />
-      <AppFormField :label="t('admin.authProviders.ldap.modeSummaryLabel')" :help="t('admin.authProviders.ldap.modeSummaryDesc')">
-        <AppTextInput :model-value="ldapModeSummary" readonly />
-      </AppFormField>
-      <AppFormField :label="t('admin.authProviders.ldap.urlLabel')" :help="t('admin.authProviders.ldap.urlDesc')">
+      <AuthProvidersLdapConnectionMode
+        v-model:ldap-url="form.ldapUrl"
+        v-model:ldap-start-tls="form.ldapStartTls"
+        :read-only="readOnly"
+      />
+      <AppFormField :label="t('admin.authProviders.ldap.urlLabel')" :help="ldapUrlHelp">
         <AppTextInput
           v-model="form.ldapUrl"
           :disabled="readOnly"
           class="font-mono"
-          :placeholder="t('admin.authProviders.ldap.urlPlaceholder')"
+          :placeholder="ldapUrlPlaceholder"
         />
-      </AppFormField>
-      <AppFormField :label="t('admin.authProviders.ldap.startTlsLabel')" :help="t('admin.authProviders.ldap.startTlsDesc')">
-        <UCheckbox v-model="form.ldapStartTls" :disabled="readOnly" :label="t('admin.authProviders.ldap.startTlsCheckbox')" />
+        <p
+          v-if="ldapUrlSchemeMismatch"
+          class="mt-1.5 text-xs text-orange-600 dark:text-orange-400"
+        >
+          {{ t(`admin.authProviders.ldap.connectionMode.urlSchemeMismatch.${ldapConnectionMode}`) }}
+        </p>
       </AppFormField>
       <AppFormField :label="t('admin.authProviders.ldap.tlsVerifyLabel')" :help="t('admin.authProviders.ldap.tlsVerifyDesc')">
         <UCheckbox v-model="form.ldapTlsVerify" :disabled="readOnly" :label="t('admin.authProviders.ldap.tlsVerifyCheckbox')" />
@@ -300,6 +325,7 @@ const loginLdap = computed(() =>
         v-if="lastLdapTest?.diagnostic"
         :diagnostic="lastLdapTest.diagnostic"
         :ok="lastLdapTest.ok"
+        :bind-only="lastLdapTest.ok ? lastLdapTest.bindOnly : undefined"
         :search-sample-count="lastLdapTest.ok ? lastLdapTest.searchSampleCount : undefined"
         :user-lookup="lastLdapTest.ok ? lastLdapTest.userLookup : undefined"
       />

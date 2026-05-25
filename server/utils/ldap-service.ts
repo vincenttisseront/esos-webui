@@ -3,10 +3,13 @@ import ldap from 'ldapjs'
 import type { AdminAuthProvidersDto } from './auth-providers-config'
 import { escapeLdapFilterValue } from './ldap-filter-escape'
 import {
+  buildLdapBindOnlySuccessDiagnostic,
   buildLdapFailureDiagnostic,
-  buildLdapSuccessDiagnostic,
+  buildLdapSearchSuccessDiagnostic,
   buildLdapTestConfigSummary,
+  buildLdapUserNotFoundDiagnostic,
   buildLdapValidationFailure,
+  ldapUserSearchFilterTemplate,
   type LdapTestResult,
   type LdapTestStep,
 } from './ldap-diagnostics'
@@ -124,18 +127,15 @@ function searchUserEntries(
   })
 }
 
-function buildUserSearchFilter(
+/** Build LDAP filter for a real sign-in identifier (RFC 4515 escaped). */
+export function buildUserSearchFilter(
   dto: AdminAuthProvidersDto['ldap'],
-  lookupUser?: string,
+  lookupUser: string,
 ): string {
-  if (lookupUser) {
-    return dto.userSearchFilter.includes('{{username}}')
-      ? dto.userSearchFilter.split('{{username}}').join(escapeLdapFilterValue(lookupUser))
-      : `(&${dto.userSearchFilter}(${dto.usernameAttribute}=${escapeLdapFilterValue(lookupUser)}))`
-  }
+  const esc = escapeLdapFilterValue(lookupUser)
   return dto.userSearchFilter.includes('{{username}}')
-    ? dto.userSearchFilter.split('{{username}}').join(escapeLdapFilterValue('__probe__'))
-    : dto.userSearchFilter
+    ? dto.userSearchFilter.split('{{username}}').join(esc)
+    : `(&${dto.userSearchFilter}(${dto.usernameAttribute}=${esc}))`
 }
 
 export async function testLdapSettings(
@@ -143,11 +143,12 @@ export async function testLdapSettings(
   options?: { bindPasswordOverride?: string; username?: string },
 ): Promise<LdapTestResult> {
   const lookupUser = options?.username?.trim()
-  const filter     = buildUserSearchFilter(dto, lookupUser || undefined)
-  const config     = buildLdapTestConfigSummary(dto, {
-    username:   lookupUser || undefined,
-    userFilter: filter,
-  })
+  const config = buildLdapTestConfigSummary(
+    dto,
+    lookupUser
+      ? { username: lookupUser, userFilter: buildUserSearchFilter(dto, lookupUser) }
+      : {},
+  )
 
   try {
     assertLdapTlsPolicyForProduction(dto.url, dto.startTls)
@@ -178,7 +179,19 @@ export async function testLdapSettings(
     step = 'bind'
     await bindAsync(client, dto.bindDn, pwd)
 
+    if (!lookupUser) {
+      await unbindAsync(client)
+      return {
+        ok:                true,
+        bindOk:            true,
+        bindOnly:          true,
+        searchSampleCount: 0,
+        diagnostic:        buildLdapBindOnlySuccessDiagnostic(dto, config),
+      }
+    }
+
     step = 'userSearch'
+    const filter = buildUserSearchFilter(dto, lookupUser)
     const rows = await searchUserEntries(
       client,
       dto.baseDn,
@@ -187,19 +200,24 @@ export async function testLdapSettings(
       dto.groupAttribute,
     )
 
-    step = 'groupRead'
-
     await unbindAsync(client)
 
-    const userLookup = lookupUser ? rows.length > 0 : undefined
-    const diagnostic = buildLdapSuccessDiagnostic(dto, config, rows.length, userLookup)
+    if (rows.length === 0) {
+      return {
+        ok:                true,
+        bindOk:            true,
+        userLookup:        false,
+        searchSampleCount: 0,
+        diagnostic:        buildLdapUserNotFoundDiagnostic(dto, config),
+      }
+    }
 
     return {
       ok:                true,
       bindOk:            true,
+      userLookup:        true,
       searchSampleCount: rows.length,
-      diagnostic,
-      ...(userLookup !== undefined ? { userLookup } : {}),
+      diagnostic:        buildLdapSearchSuccessDiagnostic(dto, config, rows.length),
     }
   } catch (e) {
     try {
@@ -225,10 +243,7 @@ export async function authenticateLdapUser(
   if (!dto.url || !dto.baseDn || !dto.bindDn || !bindPassword) {
     throw createError({ statusCode: 503, message: 'LDAP non configuré' })
   }
-  const esc   = escapeLdapFilterValue(username)
-  const filter = dto.userSearchFilter.includes('{{username}}')
-    ? dto.userSearchFilter.split('{{username}}').join(esc)
-    : `(&${dto.userSearchFilter}(${dto.usernameAttribute}=${esc}))`
+  const filter = buildUserSearchFilter(dto, username)
 
   const client = createLdapClient(dto.url, dto.timeoutSec, dto.tlsVerify)
   try {
