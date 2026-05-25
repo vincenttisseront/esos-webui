@@ -2677,6 +2677,8 @@
         "actionsSection": "Actions principales",
         "actionsIntro": "L’enregistrement envoie la configuration au serveur. Les tests ci-dessous ne modifient pas les paramètres enregistrés.",
         "saveButton": "Enregistrer la configuration",
+        "noChanges": "Aucune modification",
+        "unsavedChanges": "Modifications non enregistrées",
         "cancelButton": "Annuler",
         "quickTestsSection": "Tests rapides (même action que dans les cartes)",
         "quickTestsIntro": "Relancez les tests depuis ici après avoir modifié issuer, client_id, URL LDAP ou identifiants de liaison.",

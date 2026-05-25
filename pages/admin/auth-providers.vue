@@ -12,6 +12,14 @@ import {
   type LdapTestClientState,
   type OidcTestClientState,
 } from '~/utils/auth-providers-admin-ui'
+import {
+  applySnapshotToFormInput,
+  authProvidersFormDirty,
+  authProvidersFormValidationOk,
+  snapshotFromDto,
+  snapshotFromFormInput,
+  type AuthProvidersFormSnapshot,
+} from '~/utils/auth-providers-form-state'
 
 definePageMeta({ layout: 'default' })
 
@@ -96,39 +104,37 @@ const form = reactive({
   ldapMaxRole: 'none' as 'none' | 'admin' | 'operator' | 'viewer',
 })
 
-watch(
-  data,
-  (d) => {
-    if (!d) return
-    form.ldapEnabled              = d.ldap.enabled
-    form.ldapUrl                  = d.ldap.url
-    form.ldapStartTls             = d.ldap.startTls
-    form.ldapTlsVerify            = d.ldap.tlsVerify
-    form.ldapBindDn               = d.ldap.bindDn
-    form.ldapBaseDn               = d.ldap.baseDn
-    form.ldapUserSearchFilter     = d.ldap.userSearchFilter
-    form.ldapUsernameAttribute    = d.ldap.usernameAttribute
-    form.ldapDisplayNameAttribute = d.ldap.displayNameAttribute
-    form.ldapGroupAttribute       = d.ldap.groupAttribute
-    form.ldapTimeoutSec           = d.ldap.timeoutSec
+const baseline = ref<AuthProvidersFormSnapshot | null>(null)
 
-    form.oidcEnabled       = d.oidc.enabled
-    form.oidcIssuer        = d.oidc.issuer
-    form.oidcClientId      = d.oidc.clientId
-    form.oidcScopes        = d.oidc.scopes
-    form.oidcRedirectPath  = d.oidc.redirectPath
-    form.oidcClockSkewSec  = d.oidc.clockSkewSec
+function loadFromDto(d: AdminAuthProvidersDto) {
+  const snap = snapshotFromDto(d)
+  baseline.value = snap
+  applySnapshotToFormInput(form, snap)
+  ldapBindPw.value = ''
+  oidcSecret.value = ''
+}
 
-    form.jitEnabled        = d.auth.jitEnabled
-    form.jitDefaultRole    = d.auth.jitDefaultRole
-    form.jitDefaultActive  = d.auth.jitDefaultActive
-    form.mfaMode           = d.auth.mfaMode
-    form.mappingRulesJson  = d.auth.mappingRulesJson
-    form.oidcMaxRole       = (d.auth.oidcMaxRole ?? 'none') as typeof form.oidcMaxRole
-    form.ldapMaxRole       = (d.auth.ldapMaxRole ?? 'none') as typeof form.ldapMaxRole
-  },
-  { immediate: true },
+watch(data, (d) => {
+  if (d) loadFromDto(d)
+}, { immediate: true })
+
+const currentSnapshot = computed(() =>
+  snapshotFromFormInput(form, {
+    ldapBindPassword: ldapBindPw.value,
+    oidcClientSecret: oidcSecret.value,
+  }),
 )
+
+const dirty = computed(() => authProvidersFormDirty(baseline.value, currentSnapshot.value))
+
+const formValid = computed(() => authProvidersFormValidationOk(form.mappingRulesJson))
+
+function cancelEdits() {
+  if (!baseline.value) return
+  applySnapshotToFormInput(form, baseline.value)
+  ldapBindPw.value = ''
+  oidcSecret.value = ''
+}
 
 const showOidcMfaRecommendation = computed(
   () => form.oidcEnabled && form.mfaMode !== 'idp_required',
@@ -414,7 +420,10 @@ async function testOidc() {
       v-if="data && !pending"
       :saving="saving"
       :read-only="readOnly"
+      :dirty="dirty"
+      :form-valid="formValid"
       @save="save"
+      @cancel="cancelEdits"
     />
   </div>
 </template>

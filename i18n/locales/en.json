@@ -2677,6 +2677,8 @@
         "actionsSection": "Primary actions",
         "actionsIntro": "Save sends configuration to the server. The tests below do not change stored settings.",
         "saveButton": "Save configuration",
+        "noChanges": "No unsaved changes",
+        "unsavedChanges": "Unsaved changes",
         "cancelButton": "Cancel",
         "quickTestsSection": "Quick tests (same as in cards)",
         "quickTestsIntro": "Re-run tests after changing issuer, client_id, LDAP URL, or bind credentials.",
