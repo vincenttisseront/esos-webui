@@ -1,5 +1,5 @@
-import { applyAluaClusterPlan } from '../../../../utils/alua-cluster-apply'
-import { consumePlanToken } from '../../../../utils/alua-plan-token'
+import { applyAluaClusterPlan } from '../../../utils/alua-cluster-apply'
+import { consumePlanToken } from '../../../utils/alua-plan-token'
 import type { AluaClusterPlan } from '../../../../types/alua'
 
 export default defineEventHandler(async (event) => {

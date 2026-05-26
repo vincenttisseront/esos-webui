@@ -1,6 +1,6 @@
 import type { AluaWizardRequest } from '../../../../types/alua'
-import { resolveClusterMembers } from '../../../../utils/cluster-resolve'
-import { collectPreflightNodes, runAluaWizardPreflight } from '../../../../utils/alua-wizard-preflight'
+import { resolveClusterMembers } from '../../../utils/cluster-resolve'
+import { collectPreflightNodes, runAluaWizardPreflight } from '../../../utils/alua-wizard-preflight'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody<Partial<AluaWizardRequest>>(event).catch(() => ({}))

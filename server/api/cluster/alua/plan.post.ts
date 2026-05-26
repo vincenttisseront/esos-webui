@@ -1,7 +1,7 @@
 import type { AluaWizardRequest } from '../../../../types/alua'
-import { resolveClusterMembers } from '../../../../utils/cluster-resolve'
-import { collectPreflightNodes, runAluaWizardPreflight } from '../../../../utils/alua-wizard-preflight'
-import { buildAluaClusterPlan } from '../../../../utils/alua-wizard-plan'
+import { resolveClusterMembers } from '../../../utils/cluster-resolve'
+import { collectPreflightNodes, runAluaWizardPreflight } from '../../../utils/alua-wizard-preflight'
+import { buildAluaClusterPlan } from '../../../utils/alua-wizard-plan'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody<AluaWizardRequest>(event)
