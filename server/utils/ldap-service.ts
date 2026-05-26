@@ -141,6 +141,7 @@ function searchUserEntries(
   filter: string,
   dto: AdminAuthProvidersDto['ldap'],
   timeoutSec: number,
+  sizeLimit = LDAP_SEARCH_SIZE_LIMIT,
 ): Promise<SearchRow[]> {
   const displayAttr = dto.displayNameAttribute?.trim() || 'displayName'
   const groupAttr   = dto.groupAttribute?.trim() || 'memberOf'
@@ -153,7 +154,7 @@ function searchUserEntries(
       baseDn,
       {
         scope:     'sub',
-        sizeLimit: LDAP_SEARCH_SIZE_LIMIT,
+        sizeLimit,
         timeLimit: timeoutSec,
         filter,
         attributes,
@@ -174,6 +175,8 @@ function searchUserEntries(
           let groupAttrPresent = false
           const groupDns: string[] = []
           const attributesPreview: Record<string, string | string[]> = {}
+          let loginValue: string | null = null
+          let mailValue: string | null = null
 
           for (const a of p.attributes ?? []) {
             const vals = (a.values ?? []).map((v) => sanitizeAttrValue(String(v)))
@@ -183,8 +186,12 @@ function searchUserEntries(
             if (a.type === displayAttr && a.values?.length) {
               displayName = sanitizeAttrValue(String(a.values[0]))
             }
-            if (a.type === loginAttr && a.values?.length && !attributesPreview[loginAttr]) {
-              attributesPreview[loginAttr] = sanitizeAttrValue(String(a.values[0]))
+            if (a.type === loginAttr && a.values?.length) {
+              loginValue = sanitizeAttrValue(String(a.values[0]))
+              attributesPreview[loginAttr] = loginValue
+            }
+            if (a.type === 'mail' && a.values?.length) {
+              mailValue = sanitizeAttrValue(String(a.values[0]))
             }
             if (a.type === groupAttr) {
               groupAttrPresent = true
@@ -194,6 +201,8 @@ function searchUserEntries(
             }
           }
           attributesPreview.distinguishedName = dn
+          if (loginValue) attributesPreview[loginAttr] = loginValue
+          if (mailValue) attributesPreview.mail = mailValue
           rows.push({ dn, displayName, groupDns, groupAttrPresent, attributesPreview })
         })
         res.on('error', reject)
@@ -505,6 +514,49 @@ export async function testLdapSettings(
       ok:         false,
       diagnostic,
     }
+  }
+}
+
+const LDAP_DIRECTORY_MAX_LIMIT = 50
+
+/** Service bind + directory search (admin provisioning). */
+export async function runLdapDirectorySearch(
+  dto: AdminAuthProvidersDto['ldap'],
+  bindPassword: string,
+  filter: string,
+  limit: number,
+): Promise<SearchRow[]> {
+  if (!dto.url?.trim() || !dto.baseDn?.trim() || !dto.bindDn?.trim()) {
+    throw createError({ statusCode: 400, message: 'Configuration LDAP incomplète' })
+  }
+  const sizeLimit = Math.min(Math.max(1, limit), LDAP_DIRECTORY_MAX_LIMIT)
+  const client = createLdapClient(dto.url, dto.timeoutSec, dto.tlsVerify)
+  try {
+    if (dto.url.startsWith('ldap:') && dto.startTls) {
+      await startTlsAsync(client, dto.tlsVerify)
+    } else {
+      await probeConnectionAsync(client, dto.timeoutSec * 1000)
+    }
+    await bindAsync(client, dto.bindDn, bindPassword)
+    const rows = await searchUserEntries(
+      client,
+      dto.baseDn,
+      filter,
+      dto,
+      dto.timeoutSec,
+      sizeLimit,
+    )
+    await unbindAsync(client)
+    return rows
+  } catch (e) {
+    try {
+      await unbindAsync(client)
+    } catch { /* ignore */ }
+    if ((e as { statusCode?: number }).statusCode) throw e
+    throw createError({
+      statusCode: 502,
+      message:    (e as { message?: string }).message ?? 'Recherche annuaire LDAP échouée',
+    })
   }
 }
 

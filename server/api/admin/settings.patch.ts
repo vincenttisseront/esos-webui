@@ -2,7 +2,11 @@ import { createError, defineEventHandler, readBody } from 'h3'
 import { getAllSettings, setSettings } from '../../db/repositories/settings.repository'
 import { invalidateCache } from '../../utils/cache'
 import { reloadCollector } from '../../plugins/collector'
-import { assertValidAlertSettingsPatch, ALERT_SETTINGS_KEYS } from '../../utils/alert-settings'
+import {
+  assertValidAlertSettingsPatch,
+  ALERT_SETTINGS_KEYS,
+  normalizeSessionPolicyForStorage,
+} from '../../utils/alert-settings'
 
 const COLLECTOR_KEYS = new Set([
   'collector.enabled',
@@ -23,6 +27,10 @@ export default defineEventHandler(async (event) => {
   }
 
   assertValidAlertSettingsPatch(body)
+
+  if (body['alerts.session_policy'] !== undefined && body['alerts.session_policy'] !== '') {
+    body['alerts.session_policy'] = normalizeSessionPolicyForStorage(body['alerts.session_policy'])
+  }
 
   if (body['alerts.volume_warn_pct'] !== undefined || body['alerts.volume_critical_pct'] !== undefined) {
     const current = await getAllSettings()

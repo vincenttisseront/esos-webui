@@ -54,4 +54,21 @@ describe('assertValidAlertSettingsPatch', () => {
       assertValidAlertSettingsPatch({ 'alerts.session_policy': 'rr' }),
     ).toThrow()
   })
+
+  it('accepte volume 0-100 et session_min_active 0', () => {
+    expect(() =>
+      assertValidAlertSettingsPatch({
+        'alerts.volume_warn_pct':     '0',
+        'alerts.volume_critical_pct': '100',
+        'alerts.session_min_active':  '0',
+      }),
+    ).not.toThrow()
+  })
+
+  it('accepte session_policy normal (alias multipath)', () => {
+    expect(() =>
+      assertValidAlertSettingsPatch({ 'alerts.session_policy': 'normal' }),
+    ).not.toThrow()
+    expect(parseAlertSettingsFromMap({ 'alerts.session_policy': 'normal' }).sessionPolicy).toBe('multipath')
+  })
 })

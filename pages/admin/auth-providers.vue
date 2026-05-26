@@ -471,15 +471,19 @@ async function testOidc() {
             @save="save"
             @cancel="cancelOidcEdits"
           />
-          <AuthProvidersRolesTab
+          <AuthProvidersProvisioningTab
             v-show="activeTab === 'roles'"
             v-model:form="form"
+            :data="data"
             :read-only="authProvidersReadOnly"
+            :can-edit="canEditAuthProviders"
             :dirty="mappingDirty"
             :saving="saving"
             :form-valid="mappingFormValid"
+            :ldap-bind-password="ldapBindPw"
             @save="save"
             @cancel="cancelMappingEdits"
+            @go-ldap-tab="selectTab('ldap')"
           />
           <AuthProvidersSecurityTab
             v-show="activeTab === 'security'"

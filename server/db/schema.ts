@@ -105,6 +105,9 @@ export const users = sqliteTable('users', {
   authSource: text('auth_source').notNull().default('local'),
   externalIssuer: text('external_issuer'),
   externalSubject: text('external_subject'),
+  /** Directory login (e.g. sAMAccountName) for provisioned users. */
+  externalLogin: text('external_login'),
+  externalEmail: text('external_email'),
   lastExternalLoginAt: text('last_external_login_at'),
   /** Préférence i18n (`fr` | `en` | null). NULL = suit le cookie / navigateur. */
   preferredLocale: text('preferred_locale'),

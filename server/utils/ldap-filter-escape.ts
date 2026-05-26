@@ -20,3 +20,14 @@ export function assertSafeLdapLoginUsername(username: string): void {
     throw createError({ statusCode: 400, message: 'Caractères non autorisés dans l’identifiant' })
   }
 }
+
+/** Directory browse query (substring search). */
+export function assertSafeLdapSearchQuery(query: string): void {
+  const q = query.trim()
+  if (q.length < 2 || q.length > 64) {
+    throw createError({ statusCode: 400, message: 'La recherche doit contenir entre 2 et 64 caractères' })
+  }
+  if (/[*()\0]/.test(q)) {
+    throw createError({ statusCode: 400, message: 'Caractères non autorisés dans la recherche' })
+  }
+}

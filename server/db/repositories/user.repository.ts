@@ -95,6 +95,8 @@ export async function createUser(
     authSource:          'local',
     externalIssuer:      null,
     externalSubject:     null,
+    externalLogin:       null,
+    externalEmail:       null,
     lastExternalLoginAt: null,
   }).run()
 
@@ -109,7 +111,21 @@ export interface CreateJitExternalUserInput {
   authSource:       AuthSource
   externalIssuer:   string
   externalSubject:  string
+  externalLogin?:   string | null
+  externalEmail?:   string | null
   forcePasswordChange?: boolean
+}
+
+export type ProvisionedLdapUserRow = {
+  id:            string
+  username:      string
+  displayName:   string | null
+  role:          UserRole
+  active:        boolean
+  externalLogin: string | null
+  externalEmail: string | null
+  dn:            string
+  lastLoginAt:   string | null
 }
 
 export function createJitExternalUser(input: CreateJitExternalUserInput): string {
@@ -131,9 +147,69 @@ export function createJitExternalUser(input: CreateJitExternalUserInput): string
     authSource:          input.authSource,
     externalIssuer:      input.externalIssuer,
     externalSubject:     input.externalSubject,
+    externalLogin:       input.externalLogin ?? null,
+    externalEmail:       input.externalEmail ?? null,
     lastExternalLoginAt: now,
   }).run()
   return id
+}
+
+export async function listLdapUsersByIssuer(issuer: string): Promise<ProvisionedLdapUserRow[]> {
+  const db   = getDB()
+  const rows = db
+    .select()
+    .from(users)
+    .where(and(eq(users.authSource, 'ldap'), eq(users.externalIssuer, issuer)))
+    .orderBy(users.username)
+    .all()
+  return rows.map((u) => ({
+    id:            u.id,
+    username:      u.username,
+    displayName:   u.displayName ?? null,
+    role:          u.role as UserRole,
+    active:        u.active,
+    externalLogin: u.externalLogin ?? null,
+    externalEmail: u.externalEmail ?? null,
+    dn:            u.externalSubject ?? '',
+    lastLoginAt:   u.lastLoginAt ?? null,
+  }))
+}
+
+export async function countLdapUsersByIssuer(issuer: string): Promise<number> {
+  const db   = getDB()
+  const rows = db
+    .select({ count: sql<number>`count(*)` })
+    .from(users)
+    .where(and(eq(users.authSource, 'ldap'), eq(users.externalIssuer, issuer)))
+    .all()
+  return Number(rows[0]?.count ?? 0)
+}
+
+export async function updateProvisionedExternalUser(
+  id: string,
+  input: {
+    displayName?:  string | null
+    role?:         UserRole
+    active?:       boolean
+    externalLogin?: string | null
+    externalEmail?: string | null
+  },
+): Promise<void> {
+  const db  = getDB()
+  const now = new Date().toISOString()
+  db.update(users).set({ ...input, updatedAt: now }).where(eq(users.id, id)).run()
+}
+
+export async function uniqueUsernameForBase(base: string): Promise<string> {
+  let uname = base.slice(0, 64)
+  if (!(await getUserByUsername(uname))) return uname
+  let n = 0
+  while (await getUserByUsername(uname)) {
+    n += 1
+    const suffix = `_ldap${n}`
+    uname = `${base.slice(0, Math.max(1, 64 - suffix.length))}${suffix}`
+  }
+  return uname
 }
 
 export async function updateUser(id: string, input: UpdateUserInput): Promise<void> {

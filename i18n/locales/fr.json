@@ -1852,6 +1852,98 @@
       "login_success": "Succès",
       "login_failure": "Échec"
     },
+    "alertThresholds": {
+      "page": {
+        "title": "Seuils d'alerte",
+        "subtitle": "Configurer les alertes passives globales pour les volumes, les sessions SCST et les ports Fibre Channel.",
+        "loading": "Chargement…",
+        "back": "Retour à l'administration"
+      },
+      "scope": {
+        "title": "Périmètre",
+        "globalBanner": "Valeurs par défaut globales de la WebUI — appliquées à tous les SAN lors de l'évaluation des alertes.",
+        "perSanNote": "Pas de surcharge par SAN ou par cluster. Le délai de grâce des sessions est suivi par SAN à l'exécution.",
+        "notSupported": "Les seuils par SAN ou par cluster ne sont pas pris en charge dans cette version."
+      },
+      "defaults": {
+        "hint": "Défauts : avertissement {warn} %, critique {critical} %, grâce {grace} s, initiateurs min. {min}.",
+        "restore": "Rétablir les valeurs par défaut"
+      },
+      "volume": {
+        "title": "Utilisation des volumes",
+        "warnLabel": "Seuil d'avertissement",
+        "warnHelp": "Pourcentage d'espace utilisé déclenchant une alerte d'avertissement.",
+        "criticalLabel": "Seuil critique",
+        "criticalHelp": "Pourcentage d'espace utilisé déclenchant une alerte critique.",
+        "previewTitle": "Volumes actuels (aperçu)",
+        "previewEmpty": "Aucune donnée de volume pour le SAN sélectionné.",
+        "colMount": "Point de montage",
+        "colUsed": "Utilisé",
+        "colStatus": "État",
+        "statusOk": "OK",
+        "statusWarning": "Avertissement",
+        "statusCritical": "Critique"
+      },
+      "sessions": {
+        "title": "Sessions SCST",
+        "modeLabel": "Mode de détection",
+        "modeDisabled": "Désactivé",
+        "modeDisabledHelp": "Pas d'alerte session perdue ou insuffisante. Les targets désactivées sont toujours signalées à part.",
+        "modeStrict": "Strict",
+        "modeStrictHelp": "Chaque initiateur configuré du groupe doit avoir au moins une session active sur la target.",
+        "modeNormal": "Normal (multipathing)",
+        "modeNormalHelp": "Alerte si le nombre d'initiateurs distincts avec session est inférieur au minimum (chemins standby tolérés).",
+        "graceLabel": "Délai de grâce",
+        "graceHelp": "Secondes avant d'émettre l'alerte session. 0 = immédiat.",
+        "minActiveLabel": "Initiateurs actifs minimum",
+        "minActiveHelp": "Mode Normal uniquement — nombre minimal d'initiateurs distincts avec au moins une session.",
+        "disabledTargetsNote": "Les targets désactivées génèrent toujours un avertissement, quel que soit le mode session.",
+        "previewTitle": "Déclencherait une alerte (aperçu)",
+        "previewEmpty": "Aucune violation session avec les seuils actuels.",
+        "previewDisabled": "Les alertes session sont désactivées.",
+        "colTarget": "Target",
+        "colGroup": "Groupe",
+        "colDetail": "Détail",
+        "colTiming": "Délai d'alerte",
+        "timingImmediate": "Immédiat",
+        "timingAfterGrace": "Après {seconds} s de grâce"
+      },
+      "fc": {
+        "title": "Ports Fibre Channel",
+        "enabledLabel": "Alerter si le port est hors ligne",
+        "enabledHelp": "Désactiver si l'état FC n'est pas pertinent ou génère des faux positifs.",
+        "debounceFuture": "Le debounce / délai de grâce FC n'est pas encore configurable (version ultérieure).",
+        "previewTitle": "Ports FC (aperçu)",
+        "previewEmpty": "Aucune donnée de port FC pour le SAN sélectionné.",
+        "colHost": "Hôte",
+        "colPort": "Port",
+        "colState": "État",
+        "colAlert": "Alerterait",
+        "yes": "Oui",
+        "no": "Non"
+      },
+      "preview": {
+        "noteTitle": "À propos de cet aperçu",
+        "noteBody": "Utilise les données matériel et SCST du SAN actuellement sélectionné. L'aperçu session indique les violations immédiates ou après le délai de grâce ; la bannière d'alertes peut retarder l'affichage jusqu'à la fin de la grâce."
+      },
+      "validation": {
+        "volume_warn_range": "Le seuil d'avertissement doit être un entier entre 0 et 100.",
+        "volume_critical_range": "Le seuil critique doit être un entier entre 0 et 100.",
+        "volume_warn_lt_critical": "Le seuil d'avertissement doit être strictement inférieur au seuil critique.",
+        "session_grace_range": "Le délai de grâce doit être entre 0 et 3600 secondes.",
+        "session_min_active_range": "Le nombre minimal d'initiateurs actifs doit être entre 0 et 4096."
+      },
+      "actions": {
+        "unsavedChanges": "Modifications non enregistrées",
+        "save": "Enregistrer les seuils",
+        "cancel": "Annuler"
+      },
+      "toasts": {
+        "saveOk": "Seuils d'alerte enregistrés",
+        "saveErr": "Impossible d'enregistrer les seuils",
+        "restored": "Valeurs par défaut rétablies (non enregistrées)"
+      }
+    },
     "version": {
       "cache": {
         "source": {
@@ -2394,7 +2486,7 @@
           "local": "Local",
           "ldap": "LDAP / AD",
           "oidc": "SSO / OIDC",
-          "roles": "Rôles & provisioning",
+          "roles": "Provisionnement",
           "security": "Sécurité"
         }
       },
@@ -2458,6 +2550,70 @@
         "viewer": "viewer",
         "operator": "operator",
         "admin": "admin"
+      },
+      "provisioning": {
+        "intro": "Recherchez dans l’annuaire LDAP, attribuez les rôles ESOS et importez les utilisateurs pour qu’ils puissent se connecter. Si le JIT est désactivé, au moins un utilisateur LDAP actif doit être importé avant que LDAP n’apparaisse sur la page de connexion.",
+        "readOnlyHint": "La recherche annuaire et l’import nécessitent les droits administrateur.",
+        "oidcComingSoon": "Le provisionnement des utilisateurs SSO depuis l’IdP sera disponible dans une prochaine version.",
+        "steps": {
+          "connect": "1. Connexion & visibilité",
+          "search": "2. Recherche annuaire",
+          "select": "3. Sélection",
+          "assign": "4. Rôles",
+          "import": "5. Utilisateurs importés"
+        },
+        "status": {
+          "filter": "Filtre utilisateur",
+          "counts": "{active} actif(s) / {total} utilisateur(s) LDAP dans ESOS",
+          "openLdapTab": "Paramètres LDAP & test de connexion",
+          "esos_not_imported": "Non importé",
+          "esos_imported": "Importé",
+          "esos_imported_inactive": "Importé (inactif)"
+        },
+        "search": {
+          "title": "Recherche annuaire",
+          "placeholder": "Identifiant, nom affiché ou e-mail (min. 2 caractères)",
+          "button": "Rechercher",
+          "queryTooShort": "Saisissez au moins 2 caractères."
+        },
+        "bulk": {
+          "selected": "{count} sélectionné(s)",
+          "applyRole": "Appliquer le rôle",
+          "applySuggested": "Appliquer les rôles suggérés",
+          "import": "Importer / mettre à jour"
+        },
+        "table": {
+          "login": "Identifiant annuaire",
+          "displayName": "Nom affiché",
+          "mail": "E-mail",
+          "esosStatus": "Statut ESOS",
+          "role": "Rôle"
+        },
+        "groups": {
+          "summary": "Groupes dans les résultats ({count})"
+        },
+        "import": {
+          "title": "Import",
+          "result": "Importés : {imported}, mis à jour : {updated}, échecs : {failed}"
+        },
+        "imported": {
+          "title": "Utilisateurs importés",
+          "active": "Actif",
+          "confirmDelete": "Supprimer le compte ESOS « {name} » ?",
+          "deleted": "Utilisateur supprimé."
+        },
+        "advanced": {
+          "title": "Avancé — JIT & mapping des rôles"
+        },
+        "preview": {
+          "fromSelection": "Groupes des {count} utilisateur(s) sélectionné(s)"
+        },
+        "empty": {
+          "noImported": "Aucun utilisateur LDAP importé.",
+          "searchPrompt": "Recherchez dans l’annuaire pour trouver des utilisateurs à importer.",
+          "noResults": "Aucun utilisateur ne correspond à la recherche.",
+          "ldapDisabled": "Activez et configurez LDAP dans l’onglet LDAP / AD avant le provisionnement."
+        }
       },
       "toasts": {
         "mappingRulesTitle": "Règles JSON",

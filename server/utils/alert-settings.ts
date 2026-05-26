@@ -50,7 +50,13 @@ function parseIntSafe(s: string | undefined, fallback: number): number {
 
 function parsePolicy(s: string | undefined): SessionAlertPolicy {
   const v = (s ?? '').trim().toLowerCase()
-  return v === 'multipath' ? 'multipath' : 'strict'
+  if (v === 'multipath' || v === 'normal') return 'multipath'
+  return 'strict'
+}
+
+/** Normalize policy string for storage (accept UI alias `normal`). */
+export function normalizeSessionPolicyForStorage(policy: string): SessionAlertPolicy {
+  return parsePolicy(policy)
 }
 
 /** Construit la config à partir des lignes app_settings (valeurs manquantes → défauts). */
@@ -71,16 +77,16 @@ export function assertValidAlertSettingsPatch(body: Record<string, string>): voi
   const warn = body['alerts.volume_warn_pct']
   if (warn !== undefined && warn !== '') {
     const v = parseInt(warn, 10)
-    if (Number.isNaN(v) || v < 1 || v > 99) {
-      throw createError({ statusCode: 400, message: 'alerts.volume_warn_pct doit être entre 1 et 99' })
+    if (Number.isNaN(v) || v < 0 || v > 100) {
+      throw createError({ statusCode: 400, message: 'alerts.volume_warn_pct doit être entre 0 et 100' })
     }
   }
 
   const crit = body['alerts.volume_critical_pct']
   if (crit !== undefined && crit !== '') {
     const v = parseInt(crit, 10)
-    if (Number.isNaN(v) || v < 1 || v > 100) {
-      throw createError({ statusCode: 400, message: 'alerts.volume_critical_pct doit être entre 1 et 100' })
+    if (Number.isNaN(v) || v < 0 || v > 100) {
+      throw createError({ statusCode: 400, message: 'alerts.volume_critical_pct doit être entre 0 et 100' })
     }
   }
 
@@ -109,16 +115,16 @@ export function assertValidAlertSettingsPatch(body: Record<string, string>): voi
   const minA = body['alerts.session_min_active']
   if (minA !== undefined && minA !== '') {
     const v = parseInt(minA, 10)
-    if (Number.isNaN(v) || v < 1 || v > 4096) {
-      throw createError({ statusCode: 400, message: 'alerts.session_min_active doit être entre 1 et 4096' })
+    if (Number.isNaN(v) || v < 0 || v > 4096) {
+      throw createError({ statusCode: 400, message: 'alerts.session_min_active doit être entre 0 et 4096' })
     }
   }
 
   const pol = body['alerts.session_policy']
   if (pol !== undefined && pol !== '') {
     const p = pol.trim().toLowerCase()
-    if (p !== 'strict' && p !== 'multipath') {
-      throw createError({ statusCode: 400, message: 'alerts.session_policy doit être strict ou multipath' })
+    if (p !== 'strict' && p !== 'multipath' && p !== 'normal') {
+      throw createError({ statusCode: 400, message: 'alerts.session_policy doit être strict, multipath ou normal' })
     }
   }
 }

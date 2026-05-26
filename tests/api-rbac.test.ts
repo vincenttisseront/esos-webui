@@ -179,6 +179,24 @@ describe('api-rbac (auth-providers admin)', () => {
   it('RB45 — admin can GET /api/admin/auth-providers', () => {
     expect(() => enforceReadAccess('/api/admin/auth-providers', 'GET', 'admin')).not.toThrow()
   })
+
+  it('RB46 — viewer cannot GET ldap provisioning status', () => {
+    expectForbidden(() =>
+      enforceReadAccess('/api/admin/auth-providers/ldap/status', 'GET', 'viewer'),
+    )
+  })
+
+  it('RB47 — admin can GET ldap provisioning status', () => {
+    expect(() =>
+      enforceReadAccess('/api/admin/auth-providers/ldap/status', 'GET', 'admin'),
+    ).not.toThrow()
+  })
+
+  it('RB48 — operator cannot POST ldap directory search', () => {
+    expectForbidden(() =>
+      enforceMutationAccess('/api/admin/auth-providers/ldap/search', 'POST', 'operator'),
+    )
+  })
 })
 
 describe('api-rbac (reads)', () => {

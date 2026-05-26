@@ -15,15 +15,8 @@ interface CollectorSettings {
   retentionHours: number
 }
 
-export interface AlertThresholdForm {
-  volumeWarnPct: number
-  volumeCriticalPct: number
-  sessionEnabled: boolean
-  sessionPolicy: 'strict' | 'multipath'
-  sessionGraceSec: number
-  sessionMinActive: number
-  fcPortEnabled: boolean
-}
+export type { AlertThresholdForm } from '~/utils/alert-thresholds-validation'
+import type { AlertThresholdForm } from '~/utils/alert-thresholds-validation'
 
 function mapAlertThresholdsFromSettings(settings: Record<string, string>): AlertThresholdForm {
   return {

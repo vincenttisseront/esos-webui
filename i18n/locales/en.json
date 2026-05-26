@@ -1852,6 +1852,98 @@
       "login_success": "Success",
       "login_failure": "Failed"
     },
+    "alertThresholds": {
+      "page": {
+        "title": "Alert thresholds",
+        "subtitle": "Configure global passive alerts for volumes, SCST sessions, and Fibre Channel ports.",
+        "loading": "Loading…",
+        "back": "Back to administration"
+      },
+      "scope": {
+        "title": "Scope",
+        "globalBanner": "Global WebUI defaults — applied to all SANs when alerts are evaluated.",
+        "perSanNote": "Per-SAN or cluster overrides are not available. Session grace timing is tracked per SAN at runtime.",
+        "notSupported": "Per-SAN and per-cluster threshold overrides are not supported in this version."
+      },
+      "defaults": {
+        "hint": "Defaults: warning {warn}%, critical {critical}%, grace {grace}s, min initiators {min}.",
+        "restore": "Restore defaults"
+      },
+      "volume": {
+        "title": "Volume usage",
+        "warnLabel": "Warning threshold",
+        "warnHelp": "Percentage of used space that triggers a warning alert.",
+        "criticalLabel": "Critical threshold",
+        "criticalHelp": "Percentage of used space that triggers a critical alert.",
+        "previewTitle": "Current volumes (preview)",
+        "previewEmpty": "No volume data for the selected SAN.",
+        "colMount": "Mount point",
+        "colUsed": "Used",
+        "colStatus": "Status",
+        "statusOk": "OK",
+        "statusWarning": "Warning",
+        "statusCritical": "Critical"
+      },
+      "sessions": {
+        "title": "SCST sessions",
+        "modeLabel": "Detection mode",
+        "modeDisabled": "Disabled",
+        "modeDisabledHelp": "No session loss or low-session alerts. Disabled targets are still reported separately.",
+        "modeStrict": "Strict",
+        "modeStrictHelp": "Each configured initiator in a group must have at least one active session on the target.",
+        "modeNormal": "Normal (multipathing)",
+        "modeNormalHelp": "Alert when fewer than the minimum number of distinct initiators have sessions (standby paths tolerated).",
+        "graceLabel": "Grace period",
+        "graceHelp": "Seconds to wait before emitting a session alert. 0 = immediate.",
+        "minActiveLabel": "Minimum active initiators",
+        "minActiveHelp": "Used in Normal mode only — minimum distinct initiators with at least one session.",
+        "disabledTargetsNote": "Disabled targets always generate a warning regardless of session mode.",
+        "previewTitle": "Would trigger (preview)",
+        "previewEmpty": "No session violations with current thresholds.",
+        "previewDisabled": "Session alerts are disabled.",
+        "colTarget": "Target",
+        "colGroup": "Group",
+        "colDetail": "Detail",
+        "colTiming": "Alert timing",
+        "timingImmediate": "Immediate",
+        "timingAfterGrace": "After {seconds}s grace"
+      },
+      "fc": {
+        "title": "Fibre Channel ports",
+        "enabledLabel": "Alert when port is offline",
+        "enabledHelp": "Disable if FC link state is not monitored or causes false positives in your environment.",
+        "debounceFuture": "Port debounce/grace is not configurable yet (future release).",
+        "previewTitle": "FC ports (preview)",
+        "previewEmpty": "No FC port data for the selected SAN.",
+        "colHost": "Host",
+        "colPort": "Port",
+        "colState": "State",
+        "colAlert": "Would alert",
+        "yes": "Yes",
+        "no": "No"
+      },
+      "preview": {
+        "noteTitle": "About this preview",
+        "noteBody": "Uses hardware and SCST data for the currently selected SAN. Session preview shows violations that would fire immediately or after the grace period; the alert banner may delay session alerts until grace elapses."
+      },
+      "validation": {
+        "volume_warn_range": "Warning threshold must be an integer between 0 and 100.",
+        "volume_critical_range": "Critical threshold must be an integer between 0 and 100.",
+        "volume_warn_lt_critical": "Warning threshold must be strictly lower than critical.",
+        "session_grace_range": "Grace period must be between 0 and 3600 seconds.",
+        "session_min_active_range": "Minimum active initiators must be between 0 and 4096."
+      },
+      "actions": {
+        "unsavedChanges": "Unsaved changes",
+        "save": "Save thresholds",
+        "cancel": "Cancel"
+      },
+      "toasts": {
+        "saveOk": "Alert thresholds saved",
+        "saveErr": "Could not save alert thresholds",
+        "restored": "Default values restored (not saved yet)"
+      }
+    },
     "version": {
       "cache": {
         "source": {
@@ -2394,7 +2486,7 @@
           "local": "Local",
           "ldap": "LDAP / AD",
           "oidc": "SSO / OIDC",
-          "roles": "Roles & provisioning",
+          "roles": "Provisioning",
           "security": "Security"
         }
       },
@@ -2458,6 +2550,70 @@
         "viewer": "viewer",
         "operator": "operator",
         "admin": "admin"
+      },
+      "provisioning": {
+        "intro": "Search your LDAP directory, assign ESOS roles, and import users so they can sign in. When JIT is off, at least one active LDAP user must be imported before LDAP appears on the sign-in page.",
+        "readOnlyHint": "Directory search and import require administrator rights.",
+        "oidcComingSoon": "SSO user provisioning from the IdP directory will be available in a later release.",
+        "steps": {
+          "connect": "1. Connection & visibility",
+          "search": "2. Directory search",
+          "select": "3. Select users",
+          "assign": "4. Assign roles",
+          "import": "5. Imported users"
+        },
+        "status": {
+          "filter": "User filter template",
+          "counts": "{active} active / {total} LDAP user(s) in ESOS",
+          "openLdapTab": "LDAP settings & connection test",
+          "esos_not_imported": "Not imported",
+          "esos_imported": "Imported",
+          "esos_imported_inactive": "Imported (inactive)"
+        },
+        "search": {
+          "title": "Directory search",
+          "placeholder": "Login, display name, or email (min. 2 characters)",
+          "button": "Search",
+          "queryTooShort": "Enter at least 2 characters."
+        },
+        "bulk": {
+          "selected": "{count} selected",
+          "applyRole": "Apply role",
+          "applySuggested": "Apply suggested roles",
+          "import": "Import / update"
+        },
+        "table": {
+          "login": "Directory login",
+          "displayName": "Display name",
+          "mail": "Email",
+          "esosStatus": "ESOS status",
+          "role": "Role"
+        },
+        "groups": {
+          "summary": "Groups in results ({count})"
+        },
+        "import": {
+          "title": "Import",
+          "result": "Imported: {imported}, updated: {updated}, failed: {failed}"
+        },
+        "imported": {
+          "title": "Imported users",
+          "active": "Active",
+          "confirmDelete": "Remove ESOS account « {name} »?",
+          "deleted": "User removed."
+        },
+        "advanced": {
+          "title": "Advanced — JIT & role mapping"
+        },
+        "preview": {
+          "fromSelection": "Using groups from {count} selected user(s)"
+        },
+        "empty": {
+          "noImported": "No LDAP users imported yet.",
+          "searchPrompt": "Search the directory to find users to import.",
+          "noResults": "No directory users matched your search.",
+          "ldapDisabled": "Enable and configure LDAP on the LDAP / AD tab before provisioning."
+        }
       },
       "toasts": {
         "mappingRulesTitle": "Mapping JSON",

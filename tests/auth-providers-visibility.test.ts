@@ -88,6 +88,21 @@ describe('auth-providers-public', () => {
     expect(ldap?.reason).toBeUndefined()
   })
 
+  it('ldap available when JIT off but at least one active ldap user', () => {
+    const dto = baseDto({
+      ldap: {
+        ...baseDto().ldap,
+        enabled:         true,
+        url:             'ldaps://dc.example.com',
+        bindDn:          'cn=bind,dc=example,dc=com',
+        bindPasswordSet: true,
+        baseDn:          'dc=example,dc=com',
+      },
+    })
+    const res = buildPublicAuthProviders(dto, { ldap: 1, oidc: 0 })
+    expect(res.providers.find((p) => p.key === 'ldap')).toMatchObject({ available: true })
+  })
+
   it('ldap unavailable when JIT off and no ldap users', () => {
     const dto = baseDto({
       ldap: {
