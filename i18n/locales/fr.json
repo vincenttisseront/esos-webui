@@ -1285,11 +1285,13 @@
         "created": "Créé",
         "missing": "Manquant",
         "blocked": "Bloqué",
-        "next": "Suivant"
+        "next": "Suivant",
+        "optional": "Optionnel"
       },
       "scst": {
         "bound": "{names}",
-        "unbound": "Non exposé"
+        "unbound": "Non exposé",
+        "blockio_complete_fileio_optional": "SCST BLOCKIO est configuré. FILEIO est optionnel et nécessite un backend inutilisé séparé."
       },
       "next": {
         "title": "Prochaine étape recommandée",
@@ -1299,6 +1301,7 @@
         "bind_scst": "Créer un device SCST blockio pour {lvPath}.",
         "need_source": "Préparer un device MD ou RAID matériel avant de créer un PV.",
         "complete": "Chaîne LVM complète ; utilisez les listes ci-dessous pour la maintenance.",
+        "blockio_complete": "Le provisionnement BLOCKIO est complet sur ce nœud.",
         "readonly": "Ce SAN est en lecture seule ; les actions de provisionnement sont désactivées.",
         "blocked": "Provisionnement bloqué : {reason}",
         "blocked_no_orphan_pv": "Tous les volumes physiques sont déjà dans un groupe de volumes ; ajoutez un PV ou supprimez un VG.",
@@ -3820,7 +3823,13 @@
         "count_luns": "{n} LUN",
         "status_ok": "OK",
         "status_attention": "Attention",
-        "last_scan": "Dernier scan : {time}"
+        "last_scan": "Dernier scan : {time}",
+        "block_provisioning": "Provisionnement bloc",
+        "block_complete": "complet",
+        "block_incomplete": "incomplet",
+        "fileio_track": "FILEIO",
+        "fileio_configured": "configuré",
+        "fileio_optional_not_configured": "optionnel — non configuré"
       },
       "refresh": {
         "incomplete_title": "Rafraîchissement incomplet",
@@ -3853,12 +3862,12 @@
           "disk": "Disque"
         },
         "reason": {
-          "scst_blockio": "Utilisé par SCST BLOCKIO",
+          "scst_blockio": "Déjà utilisé en SCST BLOCKIO",
           "scst": "Utilisé par SCST",
           "mounted": "Monté",
           "mounted_at": "Monté sur {mount}",
           "filesystem_signature": "Signature ou système de fichiers détecté",
-          "lvm_pv": "Volume physique LVM",
+          "lvm_pv": "Ce device sert déjà de base LVM",
           "lvm_lv": "Volume logique LVM sur ce chemin",
           "md_member": "Membre ou métadonnées MD",
           "unknown": "{detail}"
@@ -3887,6 +3896,16 @@
           "view_block_devices": "Voir les périphériques bloc"
         }
       },
+      "workflow": {
+        "blockio_exposed": {
+          "title": "Votre stockage actuel est déjà exposé en BLOCKIO.",
+          "body": "Les volumes logiques ci-dessous sont liés à des devices SCST blockio. Ils ne peuvent pas servir de backend pour un filesystem FILEIO.",
+          "fileio_separate": "FILEIO nécessite un backend bloc séparé et inutilisé (par exemple un volume logique dédié).",
+          "cta_create_lv": "Créer un LV dédié pour FILEIO",
+          "next_hint": "BLOCKIO est complet. FILEIO est optionnel — créez un LV dédié si vous avez besoin de vdisks FILEIO."
+        },
+        "fileio_optional_hint": "Le provisionnement BLOCKIO est complet. FILEIO (vdisk sur filesystem) est optionnel et n'est pas encore configuré."
+      },
       "next": {
         "title": "Prochaine étape recommandée",
         "action_button": "Étape suivante",
@@ -3914,7 +3933,12 @@
           "created": "OK",
           "missing": "Manquant",
           "blocked": "Bloqué",
-          "next": "Suivant"
+          "next": "Suivant",
+          "optional": "Optionnel"
+        },
+        "hint": {
+          "filesystem_optional": "Non requis lorsque BLOCKIO est déjà complet.",
+          "fileio_optional": "La piste FILEIO est optionnelle si vous n'avez besoin que de BLOCKIO."
         }
       },
       "actions": {
@@ -4006,6 +4030,19 @@
         "vdisk_name_invalid": "Nom de fichier vdisk invalide",
         "vdisk_size_min": "Taille vdisk trop petite (min 1 Mio)",
         "vdisk_size_free": "Taille supérieure à l'espace libre"
+      }
+    },
+    "workflow": {
+      "lv_usage": {
+        "column": "Usage",
+        "scst_blockio": "SCST BLOCKIO",
+        "available": "Disponible",
+        "fileio_backend": "Backend FILEIO",
+        "unknown": "Inconnu"
+      },
+      "lvm": {
+        "blockio_banner_title": "Provisionnement SCST BLOCKIO complet",
+        "blockio_banner_body": "Les volumes logiques ci-dessous sont exposés en bloc. FILEIO est optionnel et nécessite un LV inutilisé séparé pour des exports vdisk."
       }
     },
     "devices": {

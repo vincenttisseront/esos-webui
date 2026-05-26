@@ -59,6 +59,7 @@ const statusKeys: Record<ProvisioningStepStatus, string> = {
   missing: 'lvm.provisioning.status.missing',
   blocked: 'lvm.provisioning.status.blocked',
   next: 'lvm.provisioning.status.next',
+  optional: 'lvm.provisioning.status.optional',
 }
 
 function stepLabel(id: ProvisioningStepId) {
@@ -75,6 +76,7 @@ function statusBadgeColor(status: ProvisioningStepStatus): 'green' | 'amber' | '
     case 'next': return 'blue'
     case 'missing': return 'amber'
     case 'blocked': return 'red'
+    case 'optional': return 'gray'
     default: return 'gray'
   }
 }

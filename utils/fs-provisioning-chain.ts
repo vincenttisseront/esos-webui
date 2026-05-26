@@ -118,23 +118,38 @@ export function buildFsProvisioningSteps(
   const unmappedFileio = fileioDevices.find(d => !d.mapped && d.filename)
   const hasVdiskOrFileioPath = vdisks.length > 0 || fileioDevices.some(d => d.filename)
 
-  const fsStatus: ProvisioningStepStatus = dataMounts.length ? 'created' : 'missing'
+  const blockioOnly = !dataMounts.length
+    && !fileioDevices.length
+    && inv.backendCandidates.some(b => b.kind === 'lvm_lv')
+    && !inv.backendCandidates.some(b => b.eligible)
+
+  const fsStatus: ProvisioningStepStatus = dataMounts.length
+    ? 'created'
+    : blockioOnly
+      ? 'optional'
+      : 'missing'
   const vdiskStatus: ProvisioningStepStatus = hasVdiskOrFileioPath
     ? (unmappedVdisk || unmappedFileio ? 'next' : 'created')
     : dataMounts.length
       ? 'next'
-      : 'missing'
+      : blockioOnly
+        ? 'optional'
+        : 'missing'
   const fileioStatus: ProvisioningStepStatus = fileioDevices.length
     ? (hasMappedFileio && !unmappedFileio ? 'created' : unmappedVdisk || unmappedFileio ? 'next' : 'created')
     : hasVdiskOrFileioPath
       ? 'next'
-      : 'missing'
+      : blockioOnly
+        ? 'optional'
+        : 'missing'
   const fileioLuns = inv.lunMappings
   const exposeStatus: ProvisioningStepStatus = fileioLuns.length
     ? 'created'
     : hasMappedFileio
       ? 'next'
-      : 'missing'
+      : blockioOnly
+        ? 'optional'
+        : 'missing'
 
   const next = overview.nextAction ?? DEFAULT_NEXT
 
@@ -144,7 +159,11 @@ export function buildFsProvisioningSteps(
       status: fsStatus,
       detail: stepDetailForInventory(overview, inv, 'filesystem'),
       count: dataMounts.length || undefined,
-      hintKey: dataMounts.length ? undefined : 'storage.fs.chain.step.filesystem',
+      hintKey: dataMounts.length
+        ? undefined
+        : blockioOnly
+          ? 'storage.fs.chain.hint.filesystem_optional'
+          : 'storage.fs.chain.step.filesystem',
     },
     {
       id: 'vdisk',
@@ -167,7 +186,11 @@ export function buildFsProvisioningSteps(
       status: exposeStatus,
       detail: stepDetailForInventory(overview, inv, 'expose'),
       count: fileioLuns.length || undefined,
-      hintKey: next.kind === 'expose' ? next.messageKey : undefined,
+      hintKey: blockioOnly
+        ? 'storage.fs.chain.hint.fileio_optional'
+        : next.kind === 'expose'
+          ? next.messageKey
+          : undefined,
     },
   ]
 }

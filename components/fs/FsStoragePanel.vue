@@ -6,7 +6,9 @@
       :counts="summaryCounts"
       :status="summaryStatus"
       :scanned-at-label="scannedAtLabel"
-      :next-action-hint="nextActionText || undefined"
+      :next-action-hint="workflowNextHint || undefined"
+      :block-provisioning-complete="workflowSituation.blockProvisioningComplete"
+      :fileio-track-configured="workflowSituation.fileioTrackConfigured"
       :refreshing="refreshing"
       @refresh="refreshAll"
     />
@@ -290,8 +292,13 @@
 
     <FsFileioBackendsPanel
       :backends="backends"
+      :blockio-only-gap="workflowSituation.blockioOnlyGap"
+      :blockio-bound-lvs="workflowSituation.blockioBoundLvs"
+      :suggested-lv-name="workflowSituation.suggestedLvName"
+      :suggested-vg-name="workflowSituation.suggestedVgName"
       @navigate-block-devices="emit('navigate-block-devices', $event)"
       @navigate-lvm="emit('navigate-lvm')"
+      @create-fileio-lv="emit('create-fileio-lv', $event)"
     />
 
     <details v-if="actionableScanWarnings.length" class="rounded-lg border border-amber-200 dark:border-amber-800/50 px-3 py-2">
@@ -349,8 +356,10 @@ import {
   primaryMappingViewUrl,
 } from '~/utils/scst-device-mapping-links'
 import { isDeviceMapped } from '~/utils/scst-unmapped-devices'
+import { fileioRelevantMounts } from '~/utils/fs-mount-classifier'
 import { filterActionableScanWarnings } from '~/utils/fs-scan-warnings'
 import { buildFsSummaryStatus, formatScannedAt } from '~/utils/fs-summary-status'
+import { analyzeFileioBackendSituation } from '~/utils/storage-workflow-guidance'
 import { fsTableColumn, fsTableColumnId } from '~/utils/fs-table-columns'
 import type { FileioDeviceRef, FileSystemMount, FsMountRole, MountHealth, ScstLunMappingRef, VDiskFile } from '~/types/filesystem'
 
@@ -364,10 +373,12 @@ const props = defineProps<{
 const emit = defineEmits<{
   'navigate-block-devices': [path?: string]
   'navigate-lvm': []
+  'create-fileio-lv': [payload: { lvName: string; vgName?: string }]
 }>()
 
 const { t } = useEsosI18n()
 const fs = useFsStore()
+const lvm = useLvmStore()
 const { overview, refresh: refreshOverview } = useOverview()
 const toast = useAppToast()
 const { open: openModal } = useAppModal()
@@ -378,6 +389,7 @@ const vdiskFilterMount = ref<string | null>(null)
 
 onMounted(async () => {
   fs.setSanId(props.sanId)
+  lvm.setSanId(props.sanId)
   if (props.clusterId) fs.setClusterContext(props.clusterId, props.sanId)
   await refreshAll()
 })
@@ -415,12 +427,30 @@ const scannedAtLabel = computed(() =>
   formatScannedAt(fs.overview?.scannedAt ?? fs.lastRefresh?.getTime()),
 )
 
+const fileioTrackConfigured = computed(() => {
+  const ov = fs.overview
+  if (!ov) return false
+  return fileioRelevantMounts(ov.mounts.filter(m => m.mounted)).length > 0
+    || ov.fileioDevices.length > 0
+})
+
+const workflowSituation = computed(() =>
+  analyzeFileioBackendSituation({
+    backends: backends.value,
+    lvs: lvm.lvs,
+    vgs: lvm.vgs.map(v => ({ name: v.name, freeBytes: v.freeBytes, clustered: v.clustered })),
+    fileioTrackConfigured: fileioTrackConfigured.value,
+  }),
+)
+
 const summaryStatus = computed(() =>
   buildFsSummaryStatus({
     fileioView: fileioView.value,
     fetchError: fs.error,
     actionableWarnings: actionableScanWarnings.value,
     hasStaleData: fs.hasStaleData || fs.partialRefresh,
+    blockProvisioningComplete: workflowSituation.value.blockProvisioningComplete,
+    fileioTrackConfigured: workflowSituation.value.fileioTrackConfigured,
   }),
 )
 
@@ -468,8 +498,30 @@ const nextActionText = computed(() => {
   return t(action.messageKey, action.messageParams ?? {}) as string
 })
 
+const workflowNextHint = computed(() => {
+  if (workflowSituation.value.blockioOnlyGap) {
+    return t('storage.fs.workflow.blockio_exposed.next_hint') as string
+  }
+  if (
+    workflowSituation.value.blockProvisioningComplete
+    && !workflowSituation.value.fileioTrackConfigured
+    && nextAction.value?.kind === 'create_fs'
+  ) {
+    return t('storage.fs.workflow.fileio_optional_hint') as string
+  }
+  return nextActionText.value
+})
+
 const showNextStepButton = computed(() => {
+  if (workflowSituation.value.blockioOnlyGap) return false
   const kind = nextAction.value?.kind
+  if (
+    kind === 'create_fs'
+    && workflowSituation.value.blockProvisioningComplete
+    && !workflowSituation.value.fileioTrackConfigured
+  ) {
+    return false
+  }
   return kind === 'create_fs' || kind === 'create_vdisk' || kind === 'bind_fileio'
 })
 
@@ -565,7 +617,11 @@ function wizardProps(extra: Record<string, unknown> = {}) {
 async function refreshAll() {
   refreshing.value = true
   try {
-    await Promise.all([fs.fetchOverview(true), refreshOverview()])
+    await Promise.all([
+      fs.fetchOverview(true),
+      refreshOverview(),
+      lvm.fetchOverview(true).catch(() => undefined),
+    ])
   } finally {
     refreshing.value = false
   }

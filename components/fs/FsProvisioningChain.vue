@@ -14,6 +14,9 @@
             <UBadge :color="badgeColor(step.status)" variant="soft" size="xs" :label="statusLabel(step.status)" />
           </div>
           <p class="font-mono text-[11px] truncate" :title="step.detail">{{ step.detail }}</p>
+          <p v-if="step.hintKey" class="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
+            {{ t(step.hintKey) }}
+          </p>
         </div>
         <span v-if="index < steps.length - 1" class="hidden sm:flex items-center text-gray-400">→</span>
       </template>
@@ -45,6 +48,7 @@ function statusLabel(s: ProvisioningStepStatus) {
 
 function badgeColor(s: ProvisioningStepStatus) {
   if (s === 'created') return 'green'
+  if (s === 'optional') return 'gray'
   if (s === 'next' || s === 'ready') return 'primary'
   if (s === 'blocked') return 'red'
   return 'gray'
@@ -52,6 +56,7 @@ function badgeColor(s: ProvisioningStepStatus) {
 
 function stepCardClass(s: ProvisioningStepStatus) {
   if (s === 'created') return 'border-green-200 dark:border-green-900'
+  if (s === 'optional') return 'border-gray-200 dark:border-gray-700 opacity-80'
   if (s === 'next') return 'border-primary-300 dark:border-primary-800'
   if (s === 'blocked') return 'border-red-200 dark:border-red-900'
   return 'border-gray-200 dark:border-gray-700'

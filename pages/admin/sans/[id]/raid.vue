@@ -336,6 +336,7 @@
         :read-only="isReadOnly"
         @navigate-block-devices="onFsNavigateBlockDevices"
         @navigate-lvm="activeTab = 'lvm'"
+        @create-fileio-lv="onFsCreateFileioLv"
       />
     </div>
 
@@ -552,6 +553,7 @@ async function fetchClusterAttention() {
 
 const raid = useRaidStore()
 const lvm = useLvmStore()
+const { requestLvWizardPrefill } = useLvWizardPrefill()
 const { t, tRaidAlert } = useEsosI18n()
 const toast = useAppToast()
 
@@ -731,6 +733,11 @@ function goToDevicesForPath(path: string) {
 function onFsNavigateBlockDevices(path?: string) {
   if (path) goToDevicesForPath(path)
   else activeTab.value = 'devices'
+}
+
+function onFsCreateFileioLv(payload: { lvName: string; vgName?: string }) {
+  requestLvWizardPrefill({ lvName: payload.lvName, vgName: payload.vgName })
+  activeTab.value = 'lvm'
 }
 
 function peerRaidLink(peerSanId: string): string {

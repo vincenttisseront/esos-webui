@@ -18,6 +18,38 @@
       {{ t('storage.fs.overview.empty_candidates') }}
     </div>
 
+    <div
+      v-else-if="blockioOnlyGap"
+      class="rounded-lg border border-blue-200 dark:border-blue-800/60 bg-blue-50/50 dark:bg-blue-950/20 p-4 space-y-3"
+    >
+      <p class="text-sm font-medium text-blue-900 dark:text-blue-100">
+        {{ t('storage.fs.workflow.blockio_exposed.title') }}
+      </p>
+      <p class="text-xs text-blue-800 dark:text-blue-200">
+        {{ t('storage.fs.workflow.blockio_exposed.body') }}
+      </p>
+      <ul class="text-xs font-mono text-blue-900 dark:text-blue-100 space-y-1 pl-1">
+        <li v-for="row in blockioBoundLvs" :key="row.path">
+          {{ formatBlockioLvArrow(row) }}
+        </li>
+      </ul>
+      <p class="text-xs text-blue-800 dark:text-blue-200">
+        {{ t('storage.fs.workflow.blockio_exposed.fileio_separate') }}
+      </p>
+      <div class="flex flex-wrap gap-2">
+        <UButton
+          size="sm"
+          color="primary"
+          @click="emit('create-fileio-lv', { lvName: suggestedLvName, vgName: suggestedVgName ?? undefined })"
+        >
+          {{ t('storage.fs.workflow.blockio_exposed.cta_create_lv') }}
+        </UButton>
+        <UButton size="sm" color="gray" variant="soft" @click="emit('navigate-lvm')">
+          {{ t('storage.fs.backend.actions.open_lvm') }}
+        </UButton>
+      </div>
+    </div>
+
     <div v-else-if="!hasEligible" class="rounded-lg border border-amber-200 dark:border-amber-800/60 bg-amber-50/50 dark:bg-amber-950/20 p-4 space-y-3">
       <p class="text-sm font-medium text-amber-900 dark:text-amber-100">
         {{ t('storage.fs.backend.empty.title') }}
@@ -113,20 +145,31 @@ import {
   type FsBackendStatusGroup,
 } from '~/utils/fs-backend-eligibility'
 import type { FsBackendRef } from '~/types/filesystem'
+import type { BlockioBoundLvRow } from '~/utils/storage-workflow-guidance'
+import { formatBlockioLvArrow } from '~/utils/storage-workflow-guidance'
 
 const props = defineProps<{
   backends: FsBackendRef[]
+  blockioOnlyGap?: boolean
+  blockioBoundLvs?: BlockioBoundLvRow[]
+  suggestedLvName?: string
+  suggestedVgName?: string | null
 }>()
 
 const emit = defineEmits<{
   'navigate-block-devices': [path?: string]
   'navigate-lvm': []
+  'create-fileio-lv': [payload: { lvName: string; vgName?: string }]
 }>()
 
 const { t } = useEsosI18n()
 
 const grouped = computed(() => groupFileioBackends(props.backends))
 const hasEligible = computed(() => hasEligibleFileioBackend(props.backends))
+const blockioOnlyGap = computed(() => props.blockioOnlyGap ?? false)
+const blockioBoundLvs = computed(() => props.blockioBoundLvs ?? [])
+const suggestedLvName = computed(() => props.suggestedLvName ?? 'fileio_store')
+const suggestedVgName = computed(() => props.suggestedVgName ?? null)
 
 const sections = computed(() => {
   const order: FsBackendStatusGroup[] = ['available', 'in_use', 'ineligible']

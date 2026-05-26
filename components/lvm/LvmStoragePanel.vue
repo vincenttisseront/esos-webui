@@ -193,6 +193,14 @@
     <template v-else-if="!isClustered">
     <LvmProvisioningChain :steps="provisioningChain" />
 
+    <UAlert
+      v-if="blockProvisioningComplete"
+      color="blue"
+      variant="soft"
+      :title="t('storage.workflow.lvm.blockio_banner_title')"
+      :description="t('storage.workflow.lvm.blockio_banner_body')"
+    />
+
     <LvmNextStepCard
       :action="activeNextAction"
       :can-mutate="canMutate"
@@ -302,6 +310,7 @@
               <th class="py-1.5 pr-3">{{ t('lvm.lv.col_backing_path') }}</th>
               <th class="py-1.5 pr-3">VG</th>
               <th class="py-1.5 pr-3">{{ t('lvm.col.size') }}</th>
+              <th class="py-1.5 pr-3">{{ t('storage.workflow.lv_usage.column') }}</th>
               <th class="py-1.5 pr-3">SCST</th>
               <th class="py-1.5" />
             </tr>
@@ -312,6 +321,14 @@
               <td class="py-1.5 font-mono text-gray-600 dark:text-gray-400 break-all">{{ row.path }}</td>
               <td class="py-1.5">{{ row.vgName }}</td>
               <td class="py-1.5">{{ formatBytes(row.sizeBytes) }}</td>
+              <td class="py-1.5">
+                <UBadge
+                  :color="lvUsageView(row).badgeColor"
+                  size="xs"
+                  variant="soft"
+                  :label="t(lvUsageView(row).labelKey)"
+                />
+              </td>
               <td class="py-1.5">
                 <template v-if="lvScstUiState(row) === 'linked'">
                   <span class="font-mono text-gray-700 dark:text-gray-300">{{ lvScstLabel(row) }}</span>
@@ -433,6 +450,8 @@ import {
   computeLvmNextAction,
   type LvmNextAction,
 } from '~/utils/lvm-provisioning-chain'
+import { classifyLvFileioUsage, isBlockProvisioningComplete } from '~/utils/lvm-lv-usage'
+import { fileioEligibleBackendPaths } from '~/utils/storage-workflow-guidance'
 
 const props = defineProps<{
   sanId: string
@@ -445,6 +464,8 @@ const emit = defineEmits<{ 'navigate-block-devices': [] }>()
 
 const { t, tLvmAlert } = useEsosI18n()
 const lvm = useLvmStore()
+const fs = useFsStore()
+const { pendingPrefill, consumeLvWizardPrefill } = useLvWizardPrefill()
 const { open: openModal } = useAppModal()
 
 const canMutate = computed(() => !props.readOnly)
@@ -454,6 +475,7 @@ const clusterId = computed(() => props.clusterId ?? '')
 watch(() => props.sanId, (id) => {
   if (id) {
     lvm.setSanId(id)
+    fs.setSanId(id)
     if (props.isClustered && props.clusterId) {
       lvm.setClusterContext(props.clusterId, id)
     }
@@ -596,6 +618,14 @@ const activeNextAction = computed(() =>
 const provisioningChain = computed(() => buildProvisioningChain(provisioningContext.value))
 const nextAction = computed(() => computeLvmNextAction(provisioningContext.value))
 
+const fileioEligiblePaths = computed(() => fileioEligibleBackendPaths(fs.backends))
+
+const blockProvisioningComplete = computed(() => isBlockProvisioningComplete(displayLvs.value))
+
+function lvUsageView(lv: LogicalVolume) {
+  return classifyLvFileioUsage(lv, { fileioEligiblePaths: fileioEligiblePaths.value })
+}
+
 const lvScstLabel = lvScstDeviceLabel
 
 const pvColumns = computed(() => [
@@ -655,7 +685,7 @@ function onNextStepAction(kind: NonNullable<LvmNextAction['action']>) {
       openVgWizard()
       break
     case 'lv':
-      openLvWizard()
+      void openLvWizard()
       break
     case 'scst': {
       const lv = activeNextAction.value.targetLv
@@ -703,7 +733,7 @@ async function openVgWizard() {
   } catch { /* dismissed */ }
 }
 
-async function openLvWizard() {
+async function openLvWizard(prefill?: { lvName?: string; vgName?: string }) {
   const Wizard = props.isClustered && clusterId.value
     ? (await import('~/components/lvm/LvmClusterLvWizard.vue')).default
     : (await import('~/components/lvm/LvmCreateLvWizard.vue')).default
@@ -713,12 +743,20 @@ async function openLvWizard() {
       props: {
         sanId: props.sanId,
         ...(props.isClustered && clusterId.value ? { clusterId: clusterId.value } : {}),
+        ...(!props.isClustered && prefill?.lvName ? { initialLvName: prefill.lvName } : {}),
+        ...(!props.isClustered && prefill?.vgName ? { initialVgName: prefill.vgName } : {}),
         persistent: true,
       },
     })
     await refreshAfterWizard()
   } catch { /* dismissed */ }
 }
+
+watch(pendingPrefill, async (prefill) => {
+  if (!prefill || props.isClustered || props.readOnly) return
+  const payload = consumeLvWizardPrefill()
+  if (payload) await openLvWizard(payload)
+})
 
 function symmetryIssueTitle(issue: LocalSymmetricLvmIssue) {
   if (issue.lvName) return `LV ${issue.vgName}/${issue.lvName}`

@@ -8,7 +8,7 @@ import type {
 import { lvCanBindScst, vgsWithFreeSpace } from '~/utils/lvm-action-availability'
 
 export type ProvisioningStepId = 'source' | 'pv' | 'vg' | 'lv' | 'scst'
-export type ProvisioningStepStatus = 'ready' | 'created' | 'missing' | 'blocked' | 'next'
+export type ProvisioningStepStatus = 'ready' | 'created' | 'missing' | 'blocked' | 'next' | 'optional'
 
 export type LvmNextActionKind =
   | 'need_source'
@@ -186,7 +186,7 @@ export function computeLvmNextAction(ctx: LvmProvisioningContext): LvmNextAction
 
   return {
     kind: 'complete',
-    messageKey: 'lvm.provisioning.next.complete',
+    messageKey: 'lvm.provisioning.next.blockio_complete',
     nextStepId: 'scst',
   }
 }
@@ -271,9 +271,13 @@ export function buildProvisioningChain(ctx: LvmProvisioningContext): Provisionin
     },
     {
       id: 'scst',
-      status: baseStepStatus(scstSatisfied, scstMissing, scstBlocked, nextId, 'scst'),
+      status: scstSatisfied
+        ? 'created'
+        : baseStepStatus(scstSatisfied, scstMissing, scstBlocked, nextId, 'scst'),
       detail: scstInfo.detail || '—',
-      hintKey: scstSatisfied ? undefined : 'lvm.provisioning.scst.unbound',
+      hintKey: scstSatisfied
+        ? 'lvm.provisioning.scst.blockio_complete_fileio_optional'
+        : 'lvm.provisioning.scst.unbound',
     },
   ]
 }

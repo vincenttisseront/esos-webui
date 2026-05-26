@@ -91,6 +91,19 @@ describe('fs-summary-status', () => {
       hasStaleData: true,
     })).toBe('attention')
   })
+
+  it('returns ok when block provisioning is complete but FILEIO is optional', () => {
+    const view = buildFsFileioViewModel(completeOverview())!
+    const optionalChain = view.chain.map(s => ({ ...s, status: 'optional' as const }))
+    expect(buildFsSummaryStatus({
+      fileioView: { ...view, chain: optionalChain },
+      fetchError: null,
+      actionableWarnings: [],
+      hasStaleData: false,
+      blockProvisioningComplete: true,
+      fileioTrackConfigured: false,
+    })).toBe('ok')
+  })
 })
 
 describe('fs-scan-warnings', () => {

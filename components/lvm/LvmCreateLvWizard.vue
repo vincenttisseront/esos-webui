@@ -32,7 +32,11 @@
 <script setup lang="ts">
 import { formatLvmBytes, validateLvCreateSizeGib } from '~/utils/lvm-lv-wizard-ui'
 
-const props = defineProps<{ sanId: string }>()
+const props = defineProps<{
+  sanId: string
+  initialLvName?: string
+  initialVgName?: string
+}>()
 const emit = defineEmits<{ cancel: []; close: [] }>()
 const { t } = useEsosI18n()
 const lvm = useLvmStore()
@@ -81,7 +85,12 @@ const canExecute = computed(() => formValid.value && preflight.value?.ok)
 
 onMounted(() => {
   lvm.setSanId(props.sanId)
-  if (vgOptions.value.length) vgName.value = vgOptions.value[0].value
+  if (props.initialVgName && vgOptions.value.some(o => o.value === props.initialVgName)) {
+    vgName.value = props.initialVgName
+  } else if (vgOptions.value.length) {
+    vgName.value = vgOptions.value[0].value
+  }
+  if (props.initialLvName) lvName.value = props.initialLvName
 })
 
 watch([vgName, lvName, sizeGib], async () => {
