@@ -421,6 +421,18 @@ function stepStatusIcon(status: LdapStepProgress['status']) {
           <dt class="text-gray-500">{{ t('admin.authProviders.ldap.diagnostics.lookupUser') }}</dt>
           <dd class="font-mono">{{ diagnostic.config.lookupUsername }}</dd>
         </div>
+        <div v-if="diagnostic.config.rawUsername && diagnostic.config.rawUsername !== diagnostic.config.accountName">
+          <dt class="text-gray-500">{{ t('admin.authProviders.ldap.diagnostics.rawUsername') }}</dt>
+          <dd class="font-mono">{{ diagnostic.config.rawUsername }}</dd>
+        </div>
+        <div v-if="diagnostic.config.accountName">
+          <dt class="text-gray-500">{{ t('admin.authProviders.ldap.diagnostics.accountName') }}</dt>
+          <dd class="font-mono">{{ diagnostic.config.accountName }}</dd>
+        </div>
+        <div v-if="diagnostic.config.userPrincipalName">
+          <dt class="text-gray-500">{{ t('admin.authProviders.ldap.diagnostics.userPrincipalName') }}</dt>
+          <dd class="font-mono">{{ diagnostic.config.userPrincipalName }}</dd>
+        </div>
       </dl>
     </div>
 

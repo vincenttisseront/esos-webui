@@ -2,7 +2,11 @@ import { createError } from 'h3'
 import ldap from 'ldapjs'
 import type { AdminAuthProvidersDto } from './auth-providers-config'
 import { domainRootDnFromDn, domainRootDnFromUrl } from './ldap-ad-defaults'
-import { escapeLdapFilterValue } from './ldap-filter-escape'
+import {
+  ldapDefaultUpnSuffix,
+  normalizeLdapLoginUsername,
+  renderUserSearchFilter,
+} from './ldap-username-normalize'
 import {
   buildInitialStepResults,
   buildLdapBindOnlySuccessDiagnostic,
@@ -217,10 +221,33 @@ export function buildUserSearchFilter(
   dto: AdminAuthProvidersDto['ldap'],
   lookupUser: string,
 ): string {
-  const esc = escapeLdapFilterValue(lookupUser)
-  return dto.userSearchFilter.includes('{{username}}')
-    ? dto.userSearchFilter.split('{{username}}').join(esc)
-    : `(&${dto.userSearchFilter}(${dto.usernameAttribute}=${esc}))`
+  const identity = normalizeLdapLoginUsername(lookupUser, {
+    defaultUpnSuffix: ldapDefaultUpnSuffix(dto.url ?? '', dto.baseDn ?? ''),
+  })
+  return renderUserSearchFilter(
+    dto.userSearchFilter,
+    dto.usernameAttribute?.trim() || 'sAMAccountName',
+    identity,
+  )
+}
+
+export { normalizeLdapLoginUsername, type NormalizedLdapLogin } from './ldap-username-normalize'
+
+/** Options for diagnostics / config summary when testing or logging a user lookup. */
+export function ldapLoginLookupSummaryOptions(
+  dto: AdminAuthProvidersDto['ldap'],
+  lookupUser: string,
+) {
+  const identity = normalizeLdapLoginUsername(lookupUser, {
+    defaultUpnSuffix: ldapDefaultUpnSuffix(dto.url ?? '', dto.baseDn ?? ''),
+  })
+  return {
+    username:            lookupUser.trim(),
+    userFilter:          buildUserSearchFilter(dto, lookupUser),
+    rawUsername:         identity.rawUsername,
+    accountName:         identity.accountName,
+    userPrincipalName:   identity.userPrincipalName,
+  }
 }
 
 function resolveDomainRootBaseDn(dto: AdminAuthProvidersDto['ldap']): string | null {
@@ -315,9 +342,7 @@ export async function testLdapSettings(
       ...dto,
       baseDn: searchBaseDn || dto.baseDn,
     },
-    lookupUser
-      ? { username: lookupUser, userFilter: buildUserSearchFilter(dto, lookupUser) }
-      : {},
+    lookupUser ? ldapLoginLookupSummaryOptions(dto, lookupUser) : {},
   )
   const includeBind   = action !== 'connect'
   const includeSearch = actionIncludesSearch(action)

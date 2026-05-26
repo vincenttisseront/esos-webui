@@ -55,9 +55,18 @@ describe('ldap-service buildUserSearchFilter', () => {
     const config = buildLdapTestConfigSummary(baseLdap, {
       username:   user,
       userFilter: buildUserSearchFilter(baseLdap, user),
+      accountName: 'alice',
     })
     expect(config.lookupUsername).toBe('alice')
     expect(config.userFilter).toBe('(&(objectClass=user)(sAMAccountName=alice))')
+  })
+
+  it('DOMAIN\\user search uses normalized account name in filter', () => {
+    const filter = buildUserSearchFilter(
+      { ...baseLdap, userSearchFilter: '(&(objectClass=user)(sAMAccountName={{accountName}}))' },
+      'CORP\\alice',
+    )
+    expect(filter).toBe('(&(objectClass=user)(sAMAccountName=alice))')
   })
 })
 
@@ -114,6 +123,7 @@ describe('ldap-ad-defaults', () => {
       baseDn: baseLdap.baseDn,
     })
     expect(d.recommendedFilter).toContain('objectCategory=person')
+    expect(d.recommendedFilter).toContain('{{accountName}}')
     expect(d.recommendedBaseDn).toBe('DC=ar-systems,DC=fr')
     expect(d.recommendedBindUpn).toBe('svc_harbor@ar-systems.fr')
   })

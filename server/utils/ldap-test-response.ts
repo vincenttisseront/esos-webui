@@ -259,7 +259,11 @@ export function buildStructuredLdapTestResponse(
       verifyTls:           d.config.verifyTls,
       bindPrincipalMasked: d.config.bindPrincipal,
       baseDn:              d.config.baseDn,
-      renderedFilter:      d.renderedFilter ?? (d.config.userFilter.includes('{{username}}') ? undefined : d.config.userFilter),
+      renderedFilter:      d.renderedFilter ?? (
+        /{{(?:username|accountName|userPrincipalName|domainPrefix)}}/.test(d.config.userFilter)
+          ? undefined
+          : d.config.userFilter
+      ),
       loginAttr:           d.config.loginAttribute,
       displayAttr:         d.config.loginAttribute,
       groupAttr:           d.config.groupAttribute,

@@ -22,7 +22,7 @@ export type LdapAdFullPreset = {
 }
 
 const AD_USER_FILTER
-  = '(&(objectCategory=person)(objectClass=user)(sAMAccountName={{username}}))'
+  = '(&(objectCategory=person)(objectClass=user)(|(sAMAccountName={{accountName}})(userPrincipalName={{userPrincipalName}})))'
 
 /** Extract DC=… components from a DN string. */
 export function domainRootDnFromDn(dn: string): string | null {

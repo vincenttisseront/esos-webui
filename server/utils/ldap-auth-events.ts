@@ -9,6 +9,7 @@ import {
   buildLdapTestConfigSummary,
 } from './ldap-diagnostics'
 import { insertLdapAuthEvent } from '../db/repositories/ldap-auth-event.repository'
+import { ldapDefaultUpnSuffix, normalizeLdapLoginUsername } from './ldap-username-normalize'
 
 export type LdapAuthEventType = 'test' | 'login' | 'provisioning'
 export type LdapAuthEventResult = 'success' | 'failure' | 'skipped'
@@ -229,9 +230,15 @@ export function recordLdapLoginFromLdapError(params: {
   requestIp?:  string
   userAgent?:  string
 }): void {
+  const identity = normalizeLdapLoginUsername(params.username, {
+    defaultUpnSuffix: ldapDefaultUpnSuffix(params.dto.url ?? '', params.dto.baseDn ?? ''),
+  })
   const config = buildLdapTestConfigSummary(params.dto, {
-    username:   params.username,
-    userFilter: params.filter,
+    username:            params.username,
+    userFilter:          params.filter,
+    rawUsername:         identity.rawUsername,
+    accountName:         identity.accountName,
+    userPrincipalName:   identity.userPrincipalName,
   })
   const d = buildLdapFailureDiagnostic(
     params.err,

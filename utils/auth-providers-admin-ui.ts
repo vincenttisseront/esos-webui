@@ -642,7 +642,13 @@ export function ldapFormValidationWarnings(params: {
   if (!params.ldapBaseDn.trim()) warnings.push('base_dn_empty')
   else if (!/(^|,)\s*(dc|ou|cn)=/i.test(params.ldapBaseDn)) warnings.push('base_dn_format')
   const filter = params.ldapUserSearchFilter.trim()
-  if (filter && !filter.includes('{{username}}') && !params.ldapUsernameAttribute.trim()) {
+  const hasLoginPlaceholder = filter && (
+    filter.includes('{{username}}')
+    || filter.includes('{{accountName}}')
+    || filter.includes('{{userPrincipalName}}')
+    || filter.includes('{{domainPrefix}}')
+  )
+  if (filter && !hasLoginPlaceholder && !params.ldapUsernameAttribute.trim()) {
     warnings.push('filter_no_username_placeholder')
   }
   if (params.ldapTimeoutSec <= 0) warnings.push('timeout_invalid')

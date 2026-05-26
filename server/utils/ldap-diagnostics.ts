@@ -2,6 +2,11 @@
  * Safe LDAP test diagnostics for admin UI (no passwords/secrets).
  */
 import type { AdminAuthProvidersDto } from './auth-providers-config'
+import {
+  filterTemplateHasLoginPlaceholder,
+  ldapDefaultUpnSuffix,
+  normalizeLdapLoginUsername,
+} from './ldap-username-normalize'
 
 export type LdapConnectionModeKind =
   | 'ldaps'
@@ -96,7 +101,10 @@ export type LdapTestConfigSummary = {
   loginAttribute: string
   groupAttribute: string
   timeoutSec:     number
-  lookupUsername?: string
+  lookupUsername?:      string
+  rawUsername?:         string
+  accountName?:         string
+  userPrincipalName?:   string | null
 }
 
 export type LdapCommandExamples = {
@@ -181,19 +189,31 @@ export function maskBindPrincipal(bindDn: string): string {
   return `${s.slice(0, 3)}***`
 }
 
-/** Filter template with {{username}} placeholder (never a synthetic probe value). */
+/** Filter template with login placeholders (never a synthetic probe value). */
 export function ldapUserSearchFilterTemplate(dto: AdminAuthProvidersDto['ldap']): string {
   const filter = dto.userSearchFilter.trim()
-  if (filter.includes('{{username}}')) return filter
+  if (filterTemplateHasLoginPlaceholder(filter)) return filter
   const attr = dto.usernameAttribute.trim() || 'username'
   return `(&${filter}(${attr}={{username}}))`
 }
 
 export function buildLdapTestConfigSummary(
   dto: AdminAuthProvidersDto['ldap'],
-  options?: { username?: string; userFilter?: string },
+  options?: {
+    username?:            string
+    userFilter?:          string
+    rawUsername?:         string
+    accountName?:         string
+    userPrincipalName?:   string | null
+  },
 ): LdapTestConfigSummary {
   const filterTemplate = ldapUserSearchFilterTemplate(dto)
+  const lookup = options?.username?.trim()
+  const identity = lookup
+    ? normalizeLdapLoginUsername(lookup, {
+        defaultUpnSuffix: ldapDefaultUpnSuffix(dto.url ?? '', dto.baseDn ?? ''),
+      })
+    : null
   return {
     serverUrl:      dto.url?.trim() || '—',
     tlsMode:        ldapTlsModeFromUrl(dto.url ?? '', dto.startTls),
@@ -204,7 +224,16 @@ export function buildLdapTestConfigSummary(
     loginAttribute: dto.usernameAttribute?.trim() || '—',
     groupAttribute: dto.groupAttribute?.trim() || '—',
     timeoutSec:     dto.timeoutSec,
-    ...(options?.username?.trim() ? { lookupUsername: options.username.trim() } : {}),
+    ...(lookup && identity
+      ? {
+          lookupUsername:    lookup,
+          rawUsername:       options?.rawUsername ?? identity.rawUsername,
+          accountName:       options?.accountName ?? identity.accountName,
+          userPrincipalName: options?.userPrincipalName !== undefined
+            ? options.userPrincipalName
+            : identity.userPrincipalName,
+        }
+      : {}),
   }
 }
 
@@ -242,9 +271,14 @@ export function buildLdapCommandExamples(
   const scheme = dto.url.trim().toLowerCase().startsWith('ldaps://') ? 'ldaps' : 'ldap'
   const uri    = `${scheme}://${host}:${port}`
 
-  const filter = config.userFilter.includes('{{username}}')
-    ? config.userFilter.replace(/\{\{username\}\}/g, 'USERNAME')
-    : config.userFilter
+  let filter = config.userFilter
+  if (filterTemplateHasLoginPlaceholder(filter)) {
+    filter = filter
+      .replace(/\{\{username\}\}/g, 'USERNAME')
+      .replace(/\{\{accountName\}\}/g, 'ACCOUNTNAME')
+      .replace(/\{\{userPrincipalName\}\}/g, 'user@example.com')
+      .replace(/\{\{domainPrefix\}\}/g, 'DOMAIN')
+  }
 
   const bindForCli = dto.bindDn.includes('"') ? dto.bindDn : `"${dto.bindDn}"`
 
@@ -598,7 +632,9 @@ export function buildLdapFailureDiagnostic(
     hints:         hintsForSafeCode(safeCode, config, step),
     commandExamples: buildLdapCommandExamples(dto, config),
     ...enrichDiagnosticFields(config, {
-      renderedFilter: config.userFilter.includes('{{username}}') ? undefined : config.userFilter,
+      renderedFilter: filterTemplateHasLoginPlaceholder(config.userFilter)
+        ? undefined
+        : config.userFilter,
     }),
   }
 }
@@ -798,6 +834,15 @@ export function formatLdapDiagnosticForCopy(d: LdapTestDiagnostic, lines: {
   out.push(`  Timeout: ${d.config.timeoutSec}s`)
   if (d.config.lookupUsername) {
     out.push(`  Lookup user: ${d.config.lookupUsername}`)
+  }
+  if (d.config.rawUsername) {
+    out.push(`  Raw username: ${d.config.rawUsername}`)
+  }
+  if (d.config.accountName) {
+    out.push(`  Account name: ${d.config.accountName}`)
+  }
+  if (d.config.userPrincipalName) {
+    out.push(`  UPN: ${d.config.userPrincipalName}`)
   }
   if (lines.hintLines?.length) {
     out.push('', lines.hintsTitle ?? 'Hints')
