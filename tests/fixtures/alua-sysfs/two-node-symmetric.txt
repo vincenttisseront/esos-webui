@@ -1,0 +1,14 @@
+/sys/kernel/scst_tgt/device_groups/esos/devices/linux_vol
+/sys/kernel/scst_tgt/device_groups/esos/devices/data_vol
+/sys/kernel/scst_tgt/device_groups/esos/target_groups/local/state=active
+/sys/kernel/scst_tgt/device_groups/esos/target_groups/local/group_id=1
+/sys/kernel/scst_tgt/device_groups/esos/target_groups/local/targets/iqn.2024-01.com.esos:node1
+/sys/kernel/scst_tgt/device_groups/esos/target_groups/local/targets/iqn.2024-01.com.esos:node1/rel_tgt_id=101
+/sys/kernel/scst_tgt/device_groups/esos/target_groups/remote/state=nonoptimized
+/sys/kernel/scst_tgt/device_groups/esos/target_groups/remote/group_id=2
+/sys/kernel/scst_tgt/device_groups/esos/target_groups/remote/targets/iqn.2024-01.com.esos:node2
+/sys/kernel/scst_tgt/device_groups/esos/target_groups/remote/targets/iqn.2024-01.com.esos:node2/rel_tgt_id=102
+/sys/kernel/scst_tgt/device_groups/shared/target_groups/local/state=standby
+/sys/kernel/scst_tgt/device_groups/shared/target_groups/local/group_id=10
+/sys/kernel/scst_tgt/device_groups/shared/target_groups/remote/state=active
+/sys/kernel/scst_tgt/device_groups/shared/target_groups/remote/group_id=20

@@ -86,6 +86,7 @@ export interface ClusterStorageConsistencyResult {
   scst: {
     checked: boolean
     symmetric: boolean | null
-    summary: string
+    summaryKey: string
+    summaryParams?: Record<string, string | number>
   }
 }

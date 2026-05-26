@@ -1,0 +1,3 @@
+DEVICE POOL/IMAGE SNAP
+/dev/rbd0 rbdpool/vol01 -
+/dev/rbd1 cephfs/dataimg -

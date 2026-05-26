@@ -4,9 +4,23 @@
  * Mirrors SDD v1.2 rev.1 §6.
  */
 
+/** ALUA device group stanza in scst.conf (implicit ALUA). */
+export interface AluaDeviceGroupConfig {
+  name:         string
+  devices:      string[]
+  targetGroups: AluaTargetGroupConfig[]
+}
+
+export interface AluaTargetGroupConfig {
+  name:    string
+  groupId: number
+  targets: string[]
+}
+
 export interface ScstConfig {
-  handlers: Handler[]
-  drivers: Driver[]
+  handlers:     Handler[]
+  drivers:      Driver[]
+  deviceGroups: AluaDeviceGroupConfig[]
 }
 
 export interface Handler {

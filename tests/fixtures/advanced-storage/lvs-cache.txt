@@ -1,0 +1,2 @@
+  cache_lv datavg cache,cache-pool cache writethrough origin_lv 12.50
+  data_lv  datavg linear   linear

@@ -321,6 +321,7 @@ export interface ClusterNodeStatus {
   quorate:            boolean
   resources:          ClusterResource[]
   aluaGroups:         ALUAGroup[]
+  aluaDeviceGroups:   import('../../types/alua').AluaDeviceGroup[]
   drbd:               import('./parsers/drbd.parser').DRBDStatus
   sshReady:           boolean
   lastChecked:        number

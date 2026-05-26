@@ -1,4 +1,5 @@
 import { getActiveSSHManager } from './ssh-runtime'
+import type { SSHSessionManager } from './ssh-session-manager'
 import { writeRemoteFileAtomicOrThrow } from './remote-file-writer'
 import { shellSingleQuoteForRemote } from './remote-config-paths'
 import { readScstConfig } from './scst-config-reader'
@@ -115,6 +116,23 @@ export function serializeScstConfig(config: ScstConfig): string {
     lines.push(``)
   }
 
+  for (const dg of config.deviceGroups ?? []) {
+    lines.push(`DEVICE_GROUP ${dg.name} {`)
+    for (const dev of dg.devices) {
+      lines.push(`\tDEVICE ${dev}`)
+    }
+    for (const tg of dg.targetGroups) {
+      lines.push(`\tTARGET_GROUP ${tg.name} {`)
+      if (tg.groupId > 0) lines.push(`\t\tgroup_id ${tg.groupId}`)
+      for (const tgt of tg.targets) {
+        lines.push(`\t\tTARGET ${tgt}`)
+      }
+      lines.push(`\t}`)
+    }
+    lines.push(`}`)
+    lines.push(``)
+  }
+
   return lines.join('\n')
 }
 
@@ -124,8 +142,11 @@ export function serializeScstConfig(config: ScstConfig): string {
  * Write `content` to scst.conf atomically (temp + mv) and reload SCST.
  * Payload is sent as base64 inside a quoted heredoc — never interpolated via printf.
  */
-export async function writeAndReloadScst(content: string): Promise<void> {
-  const ssh = getActiveSSHManager()
+export async function writeAndReloadScst(
+  content: string,
+  manager?: SSHSessionManager,
+): Promise<void> {
+  const ssh = manager ?? getActiveSSHManager()
   const path = scstConfPath()
   const qPath = shellSingleQuoteForRemote(path)
 

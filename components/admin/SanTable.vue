@@ -2,6 +2,7 @@
 import { useNetworkPendingRestart } from '~/composables/useNetworkPendingRestart'
 
 const { isPending } = useNetworkPendingRestart()
+const { t } = useEsosI18n()
 
 interface SanRow {
   id: string
@@ -196,6 +197,14 @@ function liveStatusTextColor(s: SSHStatus | undefined): string {
               variant="ghost"
               icon="i-heroicons-circle-stack"
               :to="`/admin/sans/${san.id}/raid`"
+            />
+          </UTooltip>
+          <UTooltip :text="t('nav.items.advanced_storage')">
+            <UButton
+              size="xs"
+              variant="ghost"
+              icon="i-heroicons-squares-plus"
+              :to="`/admin/sans/${san.id}/advanced-storage`"
             />
           </UTooltip>
           <UTooltip v-if="!isViewer" text="Agent de performance">

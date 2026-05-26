@@ -60,6 +60,14 @@ describe('api-rbac (mutations default deny)', () => {
     expectForbidden(() => enforceMutationAccess('/api/lvm/cluster/preflight', 'POST', 'viewer'))
   })
 
+  it('RB09c2 — viewer cannot POST /api/cluster/alua/execute', () => {
+    expectForbidden(() => enforceMutationAccess('/api/cluster/alua/execute', 'POST', 'viewer'))
+  })
+
+  it('RB09c3 — operator can POST /api/cluster/alua/execute', () => {
+    expect(() => enforceMutationAccess('/api/cluster/alua/execute', 'POST', 'operator')).not.toThrow()
+  })
+
   it('RB09d — admin can POST /api/lvm/pv/create/cluster', () => {
     expect(() => enforceMutationAccess('/api/lvm/pv/create/cluster', 'POST', 'admin')).not.toThrow()
   })
@@ -218,6 +226,10 @@ describe('api-rbac (reads)', () => {
 
   it('RB11 — viewer can GET /api/raid/overview', () => {
     expect(() => enforceReadAccess('/api/raid/overview', 'GET', 'viewer')).not.toThrow()
+  })
+
+  it('RB11d — viewer can GET /api/advanced-storage/overview', () => {
+    expect(() => enforceReadAccess('/api/advanced-storage/overview', 'GET', 'viewer')).not.toThrow()
   })
 
   it('RB11b — viewer can GET /api/lvm/overview', () => {

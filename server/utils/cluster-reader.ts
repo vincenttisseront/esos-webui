@@ -7,6 +7,7 @@ import { parseCrmMonXml }          from './parsers/crm-mon.parser'
 import { parseCorosyncQuorumtool } from './parsers/corosync.parser'
 import { parseClusterRcConf }      from './parsers/rcconf.parser'
 import { parseALUASysfs }          from './parsers/alua.parser'
+import { flattenAluaGroups }       from './alua-model'
 import { parseDRBDStatus, emptyDRBDStatus } from './parsers/drbd.parser'
 import type {
   ClusterNodeStatus,
@@ -30,7 +31,7 @@ const PROBE_LINES = [
   'if /etc/rc.d/rc.corosync status >/dev/null 2>&1; then echo "corosync=running"; else echo "corosync=stopped"; fi',
   'if /etc/rc.d/rc.pacemaker status >/dev/null 2>&1; then echo "pacemaker=running"; else echo "pacemaker=stopped"; fi',
   'echo "%%ALUA%%"',
-  'find /sys/kernel/scst_tgt/device_groups -name state 2>/dev/null | while read f; do echo "$f=$(cat "$f" 2>/dev/null)"; done',
+  'ROOT=/sys/kernel/scst_tgt/device_groups; if [ -d "$ROOT" ]; then find "$ROOT" -type f \\( -name state -o -name group_id -o -name tg_id -o -name rel_tgt_id \\) 2>/dev/null | while read f; do echo "$f=$(cat "$f" 2>/dev/null)"; done; find "$ROOT" -type d \\( -path "*/devices/*" -o -path "*/target_groups/*/targets/*" \\) 2>/dev/null; fi',
   'echo "%%DRBD_JSON%%"',
   'drbdadm status --json 2>/dev/null || echo "DRBD_UNAVAILABLE"',
   'echo "%%DRBD_PROC%%"',
@@ -87,7 +88,8 @@ export async function readClusterNodeStatus(
     const corosync = parseCorosyncQuorumtool(section(raw, 'COROSYNC'))
     const rcconf   = parseClusterRcConf(section(raw, 'RCCONF'))
     const svcRaw   = section(raw, 'SVCSTATUS')
-    const alua     = parseALUASysfs(section(raw, 'ALUA'))
+    const aluaDeviceGroups = parseALUASysfs(section(raw, 'ALUA'))
+    const aluaGroups       = flattenAluaGroups(aluaDeviceGroups)
     const drbd     = parseDRBDStatus(section(raw, 'DRBD_JSON'), section(raw, 'DRBD_PROC'), section(raw, 'DRBD_RCCONF'), section(raw, 'DRBD_SVC'))
     const hostname = section(raw, 'HOSTNAME').split('.')[0] || host
 
@@ -108,7 +110,8 @@ export async function readClusterNodeStatus(
       pacemakerNodeState: derivePacemakerState(corosyncRunning, pacemakerRunning),
       quorate,
       resources:          crm.resources,
-      aluaGroups:         alua,
+      aluaGroups,
+      aluaDeviceGroups,
       drbd,
       sshReady:           true,
       lastChecked:        Date.now(),
@@ -147,6 +150,7 @@ function buildOfflineStatus(
     quorate:            false,
     resources:          [],
     aluaGroups:         [],
+    aluaDeviceGroups:   [],
     drbd:               emptyDRBDStatus(),
     sshReady:           false,
     lastChecked:        Date.now(),

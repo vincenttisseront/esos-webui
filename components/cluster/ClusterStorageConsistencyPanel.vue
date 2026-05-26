@@ -25,7 +25,7 @@
         </UBadge>
       </li>
     </ul>
-    <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">{{ data.scst.summary }}</p>
+    <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">{{ scstSummary }}</p>
   </UCard>
 </template>
 
@@ -37,6 +37,11 @@ const props = defineProps<{
 }>()
 
 const { t } = useEsosI18n()
+
+const scstSummary = computed(() => {
+  if (!props.data?.scst.summaryKey) return ''
+  return t(props.data.scst.summaryKey, props.data.scst.summaryParams ?? {})
+})
 
 const overallColor = computed(() => {
   switch (props.data?.overall) {

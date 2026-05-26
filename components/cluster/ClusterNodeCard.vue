@@ -15,7 +15,7 @@
           <span class="text-gray-200">·</span>
           <span>
             <span class="font-semibold" :class="node.aluaGroups.length > 0 ? 'text-gray-600 dark:text-gray-400' : 'text-gray-300'">{{ node.aluaGroups.length }}</span>
-            groupe{{ node.aluaGroups.length !== 1 ? 's' : '' }} ALUA
+            {{ t('cluster.alua.node_card.alua_count', { count: node.aluaGroups.length }) }}
           </span>
         </div>
       </div>
@@ -84,24 +84,16 @@
         </div>
       </div>
 
-      <!-- Groupes ALUA : visible uniquement si > 0 -->
-      <div v-if="node.sshReady && node.aluaGroups.length > 0">
-        <p class="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">Groupes ALUA</p>
-        <div class="space-y-1">
-          <div
-            v-for="grp in node.aluaGroups"
-            :key="`${grp.deviceGroup}-${grp.targetGroup}`"
-            class="flex items-center justify-between text-xs py-1 border-b border-gray-50 last:border-0"
-          >
-            <div>
-              <span class="font-identifier text-gray-700 dark:text-gray-300">{{ grp.deviceGroup }}</span>
-              <span class="text-gray-400 mx-1">/</span>
-              <span class="font-identifier text-gray-600 dark:text-gray-400">{{ grp.targetGroup }}</span>
-              <span class="text-gray-300 ml-1">(ID {{ grp.groupId }})</span>
-            </div>
-            <ALUAStateBadge :state="grp.state" />
-          </div>
-        </div>
+      <div v-if="node.sshReady && node.aluaGroups.length > 0" class="flex items-center justify-between text-xs">
+        <span class="text-gray-500">{{ t('cluster.alua.node_card.alua_count', { count: node.aluaGroups.length }) }}</span>
+        <UButton
+          v-if="showAluaTabLink"
+          size="2xs"
+          color="gray"
+          variant="link"
+          :label="t('cluster.alua.node_card.view_tab')"
+          @click="emit('open-alua-tab')"
+        />
       </div>
 
       <!-- DRBD -->
@@ -155,8 +147,13 @@
 <script setup lang="ts">
 import type { ClusterNodeStatus, PacemakerNodeState } from '~/server/utils/types'
 
-defineProps<{ node: ClusterNodeStatus }>()
-const emit = defineEmits<{ (e: 'refresh'): void }>()
+defineProps<{
+  node: ClusterNodeStatus
+  showAluaTabLink?: boolean
+}>()
+const emit = defineEmits<{ (e: 'refresh'): void; (e: 'open-alua-tab'): void }>()
+
+const { t } = useEsosI18n()
 
 const pmStateColor: Record<PacemakerNodeState, string> = {
   Online:  'green',

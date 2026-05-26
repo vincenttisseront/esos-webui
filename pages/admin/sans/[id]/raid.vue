@@ -43,6 +43,15 @@
         >
           {{ t('raid.page.refresh') }}
         </UButton>
+        <UButton
+          size="sm"
+          color="gray"
+          variant="outline"
+          icon="i-heroicons-squares-plus"
+          :to="`/admin/sans/${sanId}/advanced-storage`"
+        >
+          {{ t('nav.items.advanced_storage') }}
+        </UButton>
       </div>
     </div>
 

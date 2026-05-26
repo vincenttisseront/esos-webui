@@ -88,7 +88,8 @@
       "esos_version": "ESOS Version",
       "esos_version_hint": "Installed build vs GitHub (read-only)",
       "dependencies": "Dependencies",
-      "webui_version": "WebUI Version"
+      "webui_version": "WebUI Version",
+      "advanced_storage": "Advanced Storage"
     },
     "page_titles": {
       "dashboard": "Dashboard",
@@ -302,6 +303,80 @@
       "inactive": "Account disabled.",
       "external_generic": "External sign-in error.",
       "login_failed": "Sign-in failed. Check your credentials or contact your administrator."
+    }
+  },
+  "advanced_storage": {
+    "page": {
+      "title": "Advanced Storage",
+      "subtitle": "Read-only inventory for DRBD, multipath, ZFS, caches, and related block backends on {label}.",
+      "refresh": "Refresh scan",
+      "last_scan": "Last scan: {time}",
+      "scan_in_progress": "Scanning advanced storage…",
+      "read_only_hint": "Inventory only — no configuration changes from this page.",
+      "cluster_link": "DRBD is also shown in HA Cluster when this SAN is clustered.",
+      "view_raid": "View in RAID management"
+    },
+    "presence": {
+      "not_installed": "Not installed",
+      "installed": "Installed",
+      "configured": "Configured",
+      "active": "Active"
+    },
+    "service": {
+      "enabled": "Enabled at boot",
+      "disabled": "Disabled at boot",
+      "running": "Running",
+      "stopped": "Stopped",
+      "unknown": "Unknown"
+    },
+    "summary": {
+      "drbd": "DRBD replication",
+      "multipath": "Multipath",
+      "zfs": "ZFS",
+      "mhvtl": "mhVTL",
+      "bcache": "bcache",
+      "dm_cache": "dm-cache",
+      "lvm_cache": "LVM cache",
+      "ceph_rbd": "Ceph RBD",
+      "deprecated": "Deprecated technologies"
+    },
+    "deprecated": {
+      "title": "Deprecated storage technologies detected",
+      "body": "lessfs, EnhanceIO, or BTIER were detected. Do not use for new deployments.",
+      "lessfs": "lessfs",
+      "enhanceio": "EnhanceIO",
+      "btier": "BTIER"
+    },
+    "block_backends": {
+      "title": "Advanced block backends",
+      "empty": "No advanced block devices detected on this scan.",
+      "path": "Path",
+      "kind": "Kind",
+      "size": "Size",
+      "hints": "Usage hints",
+      "source": "Source"
+    },
+    "panels": {
+      "service_status": "Service",
+      "resources": "Resources",
+      "no_resources": "No resources detected.",
+      "maps": "Multipath maps",
+      "pools": "ZFS pools",
+      "datasets": "ZFS datasets",
+      "devices": "Devices",
+      "targets": "Cache targets",
+      "volumes": "Cache volumes",
+      "mappings": "RBD mappings"
+    },
+    "tech": {
+      "drbd": "DRBD",
+      "multipath": "Multipath",
+      "zfs": "ZFS",
+      "mhvtl": "mhVTL",
+      "bcache": "bcache",
+      "dm_cache": "dm-cache",
+      "lvm_cache": "LVM cache",
+      "ceph_rbd": "Ceph RBD"
     }
   },
   "raid": {
@@ -1594,6 +1669,131 @@
         "warning": "Warning",
         "critical": "Critical",
         "unknown": "Unknown"
+      }
+    },
+    "alua": {
+      "tab": {
+        "overview": "Overview",
+        "alua": "ALUA",
+        "title": "ALUA",
+        "subtitle": "Read-only sysfs view · device groups, target groups, and cluster symmetry"
+      },
+      "health": {
+        "ok": "OK",
+        "missing": "Missing",
+        "asymmetric": "Asymmetric",
+        "invalid_refs": "Invalid references",
+        "unknown": "Unknown"
+      },
+      "role": {
+        "local": "Local",
+        "remote": "Remote",
+        "unknown": "Unknown"
+      },
+      "state": {
+        "active": "Active",
+        "nonoptimized": "Non-optimized",
+        "standby": "Standby",
+        "unavailable": "Unavailable",
+        "unknown": "Unknown"
+      },
+      "table": {
+        "headers": {
+          "deviceGroup": "Device group",
+          "targetGroup": "Target group",
+          "node": "Node",
+          "state": "State",
+          "groupId": "Group ID",
+          "targets": "Targets"
+        },
+        "empty": "No ALUA data for this cluster.",
+        "targetCount": "{count} target(s)"
+      },
+      "deviceGroup": {
+        "devices": "Devices",
+        "empty_devices": "No devices in this group"
+      },
+      "targetGroup": {
+        "empty": "No target groups",
+        "targets_title": "Targets",
+        "rel_tgt_id": "Rel. target ID"
+      },
+      "issues": {
+        "title": "Issues",
+        "missing_alua_config": "No ALUA device groups on node {nodeIds}",
+        "asymmetric_device_groups": "Device group names differ across nodes",
+        "asymmetric_target_groups": "Target group names differ for device group {deviceGroup}",
+        "missing_local_remote_pair": "Missing local/remote target group pair on a node ({deviceGroup})",
+        "group_id_not_reversed": "Local/remote group IDs are not reversed between peers ({deviceGroup})",
+        "target_assignment_mismatch": "Target assignment mismatch between peers ({deviceGroup})",
+        "invalid_target_reference": "ALUA target {targetName} not found in SCST config",
+        "state_divergence": "ALUA state differs between nodes",
+        "state_divergence_detail": "State differs for {deviceGroup}/{targetGroup}",
+        "node_unreachable": "Node {hostname} is not reachable via SSH",
+        "manual_review": "Non-standard target group names — review ALUA layout manually"
+      },
+      "summary": {
+        "ok": "ALUA layout is symmetric across reachable nodes.",
+        "missing": "{count} node(s) without ALUA configuration.",
+        "asymmetric": "ALUA asymmetry detected ({issueCount} error(s)).",
+        "invalid_refs": "ALUA references targets missing from SCST configuration.",
+        "single_node": "Single reachable node — cluster ALUA comparison not applicable."
+      },
+      "scst": {
+        "symmetric": "ALUA fingerprints match on reachable nodes.",
+        "asymmetric": "Different ALUA fingerprints across nodes ({profiles} profiles) — verify SCST and failover.",
+        "partial_exposure": "ALUA groups not exposed on all nodes — manual validation recommended in Active/Active.",
+        "single_node": "Single reachable node — inter-node SCST consistency not applicable.",
+        "not_applicable": "Single node — inter-node SCST consistency not applicable."
+      },
+      "node_card": {
+        "alua_count": "{count} ALUA group(s)",
+        "view_tab": "View ALUA tab"
+      },
+      "refresh": "Refresh ALUA",
+      "cross_check": "SCST target cross-check enabled",
+      "configure": "Configure ALUA",
+      "wizard": {
+        "title": "Configure implicit ALUA",
+        "steps": {
+          "preflight": "Preflight",
+          "devices": "Devices",
+          "device_group": "Device group",
+          "target_groups": "Target groups",
+          "assignments": "Targets",
+          "preview": "Plan preview",
+          "confirm": "Confirm"
+        },
+        "two_node_banner": "Apply is supported for two-node clusters only ({count} nodes detected).",
+        "device_group_name": "Device group name",
+        "mode_create": "Create new",
+        "mode_replace": "Replace existing",
+        "group_id_local": "Local group ID (primary node)",
+        "group_id_remote": "Remote group ID (primary node)",
+        "assignments_help": "Targets marked local belong to that node; the peer node lists them under its remote group.",
+        "plan_summary": "Per-node SCST changes",
+        "reload_ack": "I understand SCST will reload on all cluster nodes.",
+        "phrase_help": "Type {phrase} to confirm.",
+        "submit": "Apply ALUA configuration",
+        "success": "ALUA configuration applied",
+        "blockers": {
+          "min_nodes": "At least two cluster nodes are required.",
+          "two_node_only": "Apply is limited to two-node clusters in this release.",
+          "ssh_down": "SSH unavailable on {hostname}.",
+          "read_only": "SAN {hostname} is read-only.",
+          "missing_devices": "No SCST devices on {hostname}.",
+          "missing_targets": "No SCST targets on {hostname}.",
+          "device_not_on_all_nodes": "Device {device} missing on {hostname}.",
+          "invalid_target_reference": "Target {targetName} not in scst.conf on {hostname}.",
+          "conflicting_alua": "ALUA group {deviceGroup} already exists on {hostname}.",
+          "invalid_device_group": "Invalid device group name.",
+          "duplicate_group_id": "Local and remote group IDs must differ.",
+          "target_already_in_alua": "Target {targetName} already in device group {deviceGroup}.",
+          "plan_invalid": "Cannot build plan: {detail}"
+        },
+        "warnings": {
+          "existing_asymmetric": "Existing ALUA layout is asymmetric — use replace mode or fix manually first."
+        }
       }
     },
     "sync": {

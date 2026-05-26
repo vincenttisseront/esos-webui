@@ -1,0 +1,4 @@
+/sys/kernel/scst_tgt/device_groups/esos/target_groups/local/state=active
+/sys/kernel/scst_tgt/device_groups/esos/target_groups/local/group_id=5
+/sys/kernel/scst_tgt/device_groups/esos/target_groups/remote/state=nonoptimized
+/sys/kernel/scst_tgt/device_groups/esos/target_groups/remote/group_id=6

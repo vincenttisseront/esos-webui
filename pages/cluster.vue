@@ -142,9 +142,55 @@
           @action="handleAttentionAction"
         />
 
-        <ClusterStorageConsistencyPanel :data="storageConsistency" />
+        <nav class="flex gap-1 border-b border-gray-200 dark:border-gray-700">
+          <button
+            type="button"
+            class="px-3 py-2 text-sm font-medium border-b-2 -mb-px transition"
+            :class="detailTab === 'overview'
+              ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'"
+            @click="detailTab = 'overview'"
+          >
+            {{ t('cluster.alua.tab.overview') }}
+          </button>
+          <button
+            type="button"
+            class="px-3 py-2 text-sm font-medium border-b-2 -mb-px transition"
+            :class="detailTab === 'alua'
+              ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'"
+            @click="openAluaTab"
+          >
+            {{ t('cluster.alua.tab.alua') }}
+          </button>
+        </nav>
 
-        <details class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2">
+        <ClusterStorageConsistencyPanel v-if="detailTab === 'overview'" :data="storageConsistency" />
+
+        <div v-if="detailTab === 'alua'">
+          <div v-if="aluaLoading && !aluaReport" class="flex items-center justify-center py-12 text-gray-400">
+            <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin mr-2" />
+            {{ t('cluster.page.loading_status') }}
+          </div>
+          <ClusterAluaPanel
+            v-else-if="aluaReport"
+            :report="aluaReport"
+            :loading="aluaLoading"
+            :include-scst-cross-check="true"
+            :can-configure="canConfigureAlua"
+            @refresh="loadAluaReport"
+            @configure="showAluaWizard = true"
+          />
+          <ClusterAluaSetupWizard
+            v-if="selected && clusterIdFor(selected)"
+            v-model="showAluaWizard"
+            :cluster-id="clusterIdFor(selected)!"
+            @applied="onAluaApplied"
+          />
+          <p v-else-if="aluaError" class="text-sm text-red-600">{{ aluaError }}</p>
+        </div>
+
+        <details v-if="detailTab === 'overview'" class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2">
           <summary class="cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-300 select-none list-none">
             {{ t('cluster.sync.help_title') }}
           </summary>
@@ -153,16 +199,20 @@
           </ul>
         </details>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <ClusterNodeCard
-            v-for="node in overview.nodes"
-            :key="node.nodeId"
-            :node="node"
-            @refresh="loadDetail"
-          />
-        </div>
+        <template v-if="detailTab === 'overview'">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ClusterNodeCard
+              v-for="node in overview.nodes"
+              :key="node.nodeId"
+              :node="node"
+              show-alua-tab-link
+              @refresh="loadDetail"
+              @open-alua-tab="openAluaTab"
+            />
+          </div>
 
-        <ClusterModeInfo :mode="overview.mode" />
+          <ClusterModeInfo :mode="overview.mode" />
+        </template>
 
         <p class="text-xs text-gray-400 text-right">
           {{ t('cluster.page.last_read', { time: new Date(overview.scannedAt).toLocaleTimeString() }) }}
@@ -186,11 +236,14 @@ import type { ClusterWithNodes } from '~/server/api/admin/clusters/index.get'
 import type { ClusterSelectionDto } from '~/server/utils/selection-context'
 import type { ClusterAttentionResponse, ClusterStorageConsistencyResult } from '~/types/cluster-admin'
 import type { ClusterOverview } from '~/server/utils/types'
+import type { AluaClusterReport } from '~/types/alua'
 
 type ClusterListEntry = ClusterWithNodes | ClusterSelectionDto
 
 const auth = useAuthStore()
 const isViewer = computed(() => auth.user?.role === 'viewer')
+const canConfigureAlua = computed(() => !isViewer.value && Boolean(selected.value && clusterIdFor(selected.value)))
+const showAluaWizard = ref(false)
 const route = useRoute()
 const { t } = useEsosI18n()
 const { handleAttentionAction } = useClusterAttentionAction({
@@ -257,12 +310,43 @@ const selected     = ref<ClusterListEntry | null>(null)
 const overview     = ref<ClusterOverview | null>(null)
 const attention    = ref<ClusterAttentionResponse | null>(null)
 const storageConsistency = ref<ClusterStorageConsistencyResult | null>(null)
+const aluaReport = ref<AluaClusterReport | null>(null)
+const aluaLoading = ref(false)
+const aluaError = ref<string | null>(null)
+const detailTab = ref<'overview' | 'alua'>('overview')
 const detailLoading = ref(false)
 const detailError   = ref<string | null>(null)
 let   pollTimer: ReturnType<typeof setInterval> | null = null
 
 function clusterIdFor(entry: ClusterListEntry): string {
   return entry.id
+}
+
+async function onAluaApplied() {
+  await loadAluaReport()
+  await loadDetail()
+}
+
+async function loadAluaReport() {
+  if (!selected.value) return
+  const cid = clusterIdFor(selected.value)
+  if (!cid) return
+  aluaLoading.value = true
+  aluaError.value = null
+  try {
+    aluaReport.value = await $fetch<AluaClusterReport>('/api/cluster/alua', {
+      query: { clusterId: cid, includeScstCrossCheck: 'true' },
+    })
+  } catch (err: any) {
+    aluaError.value = err?.data?.message ?? t('cluster.toasts.fetch_status_error')
+  } finally {
+    aluaLoading.value = false
+  }
+}
+
+function openAluaTab() {
+  detailTab.value = 'alua'
+  if (!aluaReport.value && !aluaLoading.value) loadAluaReport()
 }
 
 async function loadDetail() {
@@ -280,6 +364,7 @@ async function loadDetail() {
       overview.value = statusRes
       attention.value = attentionRes
       storageConsistency.value = storageRes
+      if (detailTab.value === 'alua') await loadAluaReport()
     } else {
       const ids = selected.value.nodes.map(n => n.id).join(',')
       overview.value = await $fetch<ClusterOverview>('/api/cluster/status', { query: { nodeIds: ids } })
@@ -300,6 +385,9 @@ function select(c: ClusterListEntry) {
   overview.value = null
   attention.value = null
   storageConsistency.value = null
+  aluaReport.value = null
+  aluaError.value = null
+  detailTab.value = 'overview'
   loadDetail()
   if (pollTimer) clearInterval(pollTimer)
   pollTimer = setInterval(loadDetail, 30_000)
@@ -331,6 +419,8 @@ function back() {
   if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
   selected.value = null
   overview.value = null
+  aluaReport.value = null
+  detailTab.value = 'overview'
 }
 
 // ── Sync ─────────────────────────────────────────────────────────────────────

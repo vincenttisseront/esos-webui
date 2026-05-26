@@ -185,7 +185,7 @@ describe('parseScstConf — SDD v1.2 rev.1 (config réelle ESOS)', () => {
 
   it('T15 — fichier vide → config vide sans erreur', () => {
     const c = parseScstConf('')
-    expect(c).toEqual({ handlers: [], drivers: [] })
+    expect(c).toEqual({ handlers: [], drivers: [], deviceGroups: [] })
   })
 
   it('parseScstConfSafe accepte whitespace seul', () => {

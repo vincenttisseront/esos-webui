@@ -64,6 +64,7 @@ export const READ_ROUTE_PERMISSIONS: RoutePermission[] = [
   [/^\/api\/perf\//, ['GET'], ['admin', 'operator', 'viewer']],
   [/^\/api\/raid\//, ['POST', 'PATCH', 'PUT', 'DELETE'], ['admin', 'operator']],
   [/^\/api\/raid\//, ['GET'], ['admin', 'operator', 'viewer']],
+  [/^\/api\/advanced-storage\//, ['GET'], ['admin', 'operator', 'viewer']],
   [/^\/api\/lvm\//, ['POST', 'PATCH', 'PUT', 'DELETE'], ['admin', 'operator']],
   [/^\/api\/lvm\//, ['GET'], ['admin', 'operator', 'viewer']],
   [/^\/api\/fs\//, ['POST', 'PATCH', 'PUT', 'DELETE'], ['admin', 'operator']],

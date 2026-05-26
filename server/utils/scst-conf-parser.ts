@@ -6,6 +6,8 @@ import type {
   Target,
   Group,
   Lun,
+  AluaDeviceGroupConfig,
+  AluaTargetGroupConfig,
 } from '~/types/esos'
 
 /**
@@ -20,8 +22,10 @@ type ParserContext =
   | { level: 0 }
   | { level: 1; type: 'handler'; handler: Handler }
   | { level: 1; type: 'driver'; driver: Driver }
+  | { level: 1; type: 'device_group'; deviceGroup: AluaDeviceGroupConfig }
   | { level: 2; type: 'device'; handler: Handler; device: Device }
   | { level: 2; type: 'target'; driver: Driver; target: Target }
+  | { level: 2; type: 'alua_target_group'; deviceGroup: AluaDeviceGroupConfig; targetGroup: AluaTargetGroupConfig }
   | { level: 3; type: 'group'; driver: Driver; target: Target; group: Group }
   | { level: 3; type: 'lun_attrs'; lun: Lun }
 
@@ -37,7 +41,7 @@ export class ScstConfParseError extends Error {
 }
 
 export function parseScstConf(raw: string): ScstConfig {
-  const config: ScstConfig = { handlers: [], drivers: [] }
+  const config: ScstConfig = { handlers: [], drivers: [], deviceGroups: [] }
   const stack: ParserContext[] = [{ level: 0 }]
 
   const lines = raw.split('\n')
@@ -75,6 +79,19 @@ export function parseScstConf(raw: string): ScstConfig {
           config.drivers.push(driver)
           if (opensBlock) {
             stack.push({ level: 1, type: 'driver', driver })
+          }
+          break
+        }
+        const dgMatch = line.match(/^DEVICE_GROUP\s+(\S+)\s*\{?$/)
+        if (dgMatch) {
+          const deviceGroup: AluaDeviceGroupConfig = {
+            name:         dgMatch[1],
+            devices:      [],
+            targetGroups: [],
+          }
+          config.deviceGroups.push(deviceGroup)
+          if (opensBlock) {
+            stack.push({ level: 1, type: 'device_group', deviceGroup })
           }
           break
         }
@@ -128,6 +145,27 @@ export function parseScstConf(raw: string): ScstConfig {
             break
           }
         }
+
+        if (ctx.type === 'device_group') {
+          const deviceRef = line.match(/^DEVICE\s+(\S+)$/)
+          if (deviceRef) {
+            ctx.deviceGroup.devices.push(deviceRef[1])
+            break
+          }
+          const tgMatch = line.match(/^TARGET_GROUP\s+(\S+)\s*\{?$/)
+          if (tgMatch) {
+            const targetGroup: AluaTargetGroupConfig = {
+              name:    tgMatch[1],
+              groupId: 0,
+              targets: [],
+            }
+            ctx.deviceGroup.targetGroups.push(targetGroup)
+            if (opensBlock) {
+              stack.push({ level: 2, type: 'alua_target_group', deviceGroup: ctx.deviceGroup, targetGroup })
+            }
+            break
+          }
+        }
         break
       }
 
@@ -139,6 +177,20 @@ export function parseScstConf(raw: string): ScstConfig {
             const value = unquote(attrMatch[2].trim())
             if (key === 'filename') ctx.device.filename = value
             else ctx.device.attrs[key] = value
+          }
+          break
+        }
+
+        if (ctx.type === 'alua_target_group') {
+          const gidMatch = line.match(/^group_id\s+(\d+)$/)
+          if (gidMatch) {
+            ctx.targetGroup.groupId = Number.parseInt(gidMatch[1], 10)
+            break
+          }
+          const aluaTarget = line.match(/^TARGET\s+(\S+)$/)
+          if (aluaTarget) {
+            ctx.targetGroup.targets.push(aluaTarget[1])
+            break
           }
           break
         }
@@ -251,7 +303,7 @@ export function parseScstConf(raw: string): ScstConfig {
  */
 export function parseScstConfSafe(raw: string): ScstConfig {
   if (!raw || raw.trim().length === 0) {
-    return { handlers: [], drivers: [] }
+    return { handlers: [], drivers: [], deviceGroups: [] }
   }
   try {
     return parseScstConf(raw)

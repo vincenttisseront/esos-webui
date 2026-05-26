@@ -14,7 +14,7 @@ export type NavSwitchTarget =
   | null
 
 const ADMIN_SAN_SCOPED_RE =
-  /^\/admin\/sans\/([^/]+)\/(system-config|raid|performance)$/
+  /^\/admin\/sans\/([^/]+)\/(system-config|raid|performance|advanced-storage)$/
 
 const OPERATIONAL_STATIC_PREFIXES = [
   '/',

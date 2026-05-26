@@ -1,0 +1,20 @@
+{
+  "blockdevices": [
+    {
+      "name": "drbd0",
+      "path": "/dev/drbd0",
+      "size": "10737418240",
+      "type": "disk",
+      "fstype": null,
+      "mountpoint": null
+    },
+    {
+      "name": "mpatha",
+      "path": "/dev/mapper/mpatha",
+      "size": "10737418240",
+      "type": "disk",
+      "fstype": null,
+      "mountpoint": null
+    }
+  ]
+}

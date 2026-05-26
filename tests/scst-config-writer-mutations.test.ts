@@ -23,6 +23,7 @@ const TARGET = 'iqn.2000-01.com.example:t1'
 
 function baseConfig(): ScstConfig {
   return {
+    deviceGroups: [],
     handlers: [
       {
         name: 'vdisk_blockio',

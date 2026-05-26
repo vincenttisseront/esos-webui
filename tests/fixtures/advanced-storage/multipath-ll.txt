@@ -1,0 +1,10 @@
+mpatha (3600605b00bed0d0f00a001234567890ab) dm-3 ESOS,ESOS_VOL
+size=10G features='1 queue_if_no_path'
+`-+- policy='service-time 0' prio=1 status=active
+  |- 0:0:1:0 sdb 8:16 active ready running
+  `- 0:0:2:0 sdc 8:32 active ready running
+
+mpathb (3600605b00bed0d0f00a009876543210fed) dm-4 ESOS,ESOS_VOL2
+size=20G features='1 queue_if_no_path'
+`-+- policy='service-time 0' prio=1 status=active
+  `- 0:0:3:0 sdd 8:48 active ready running

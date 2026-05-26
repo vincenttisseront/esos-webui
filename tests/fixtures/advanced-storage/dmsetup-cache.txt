@@ -1,0 +1,2 @@
+cache_vol: 0 20971520 cache 512 20971520 /dev/sda1 /dev/sdb1 128 2 metadata2 writethrough smq 0
+data_vol: 0 41943040 linear 253:0 0
