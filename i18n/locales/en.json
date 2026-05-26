@@ -3781,7 +3781,12 @@
       "tab": { "title": "File Systems" },
       "help": {
         "title": "FILEIO vs BLOCKIO",
-        "body": "Create a filesystem on a block backend (MD, HW RAID LD, or LVM LV), place sparse vdisk files on the mount, register them as SCST vdisk_fileio devices, then expose to clients via access groups (Phase B).",
+        "intro": "FILEIO exposes sparse vdisk files to initiators; BLOCKIO exports a raw block device (LVM LV, multipath, etc.) directly.",
+        "fileio_label": "FILEIO (vdisk_fileio)",
+        "fileio_short": "Filesystem on a block backend → vdisk files → SCST FILEIO device → LUN in an access group.",
+        "blockio_label": "BLOCKIO",
+        "blockio_short": "SCST device points at a block path (e.g. LVM LV). No vdisk file on a FILEIO mount.",
+        "body": "Create a filesystem on an eligible backend, add vdisk files on the mount, register FILEIO in SCST, then map LUNs to access groups.",
         "wikiLink": "ESOS wiki — File Systems"
       },
       "overview": {
@@ -3798,6 +3803,7 @@
         "empty_fileio": "No FILEIO devices",
         "empty_luns": "No LUN mappings",
         "backends_all_title": "Block backends (all)",
+        "backends_fileio_title": "Backends for FILEIO",
         "no_eligible_summary": "No eligible backend ({total} detected, {eligible} eligible). See reasons below or open the Block Devices tab.",
         "show_system_mounts": "Show system mounts (/mnt/root, …)",
         "diagnostics_title": "Detection diagnostics",
@@ -3827,6 +3833,59 @@
       "hw_ld": {
         "tool_missing": "No storcli/perccli tool available to resolve the OS path for this logical volume.",
         "mapping_not_found": "perccli detected, but no reliable Linux path was found for this logical volume."
+      },
+      "backend": {
+        "group": {
+          "available": "Available",
+          "in_use": "Already in use",
+          "ineligible": "Not eligible",
+          "empty": "None"
+        },
+        "status": {
+          "available": "Available",
+          "in_use": "In use",
+          "ineligible": "Not eligible"
+        },
+        "kind": {
+          "lvm_lv": "LVM logical volume",
+          "md": "Software RAID (MD)",
+          "hw_raid_ld": "Hardware RAID logical drive",
+          "disk": "Disk"
+        },
+        "reason": {
+          "scst_blockio": "Used by SCST BLOCKIO",
+          "scst": "Used by SCST",
+          "mounted": "Mounted",
+          "mounted_at": "Mounted on {mount}",
+          "filesystem_signature": "Filesystem or partition signature detected",
+          "lvm_pv": "LVM physical volume",
+          "lvm_lv": "LVM logical volume on this path",
+          "md_member": "MD member or metadata",
+          "unknown": "{detail}"
+        },
+        "summary": {
+          "available": "Ready for a new FILEIO filesystem.",
+          "scst_blockio": "Already used by SCST BLOCKIO.",
+          "scst": "Already used by SCST.",
+          "in_use": "Already in use on this node.",
+          "md_lvm_base": "Not eligible: this RAID array is already used as an LVM physical volume.",
+          "ineligible": "Not eligible for a new FILEIO filesystem."
+        },
+        "recommendation": {
+          "scst_blockio": "Use another volume for FILEIO, or remove the BLOCKIO SCST device if you want to repurpose this volume.",
+          "scst": "Remove the SCST device or choose a different backend path.",
+          "in_use": "Unmount or stop using this device before creating a FILEIO filesystem.",
+          "md_lvm_base": "Create a dedicated LV in the LVM tab and use that LV as the FILEIO backend.",
+          "ineligible": "Pick another backend or free this device (see Block Devices for details)."
+        },
+        "empty": {
+          "title": "No backend available for FILEIO",
+          "body": "Create an LVM logical volume or free a block device, then refresh this page."
+        },
+        "actions": {
+          "open_lvm": "Open LVM",
+          "view_block_devices": "View block devices"
+        }
       },
       "next": {
         "title": "Recommended next step",

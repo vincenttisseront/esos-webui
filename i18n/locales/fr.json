@@ -3781,7 +3781,12 @@
       "tab": { "title": "Systèmes de fichiers" },
       "help": {
         "title": "FILEIO vs BLOCKIO",
-        "body": "Créez un système de fichiers sur un backend bloc (MD, LD RAID matériel ou LV LVM), placez des fichiers vdisk sur le montage, enregistrez-les en devices SCST vdisk_fileio, puis exposez aux clients via les groupes d'accès (phase B).",
+        "intro": "FILEIO expose des fichiers vdisk aux initiateurs ; BLOCKIO exporte un périphérique bloc brut (LV LVM, multipath, etc.) directement.",
+        "fileio_label": "FILEIO (vdisk_fileio)",
+        "fileio_short": "Filesystem sur un backend bloc → fichiers vdisk → device SCST FILEIO → LUN dans un groupe d'accès.",
+        "blockio_label": "BLOCKIO",
+        "blockio_short": "Le device SCST pointe vers un chemin bloc (ex. LV LVM). Pas de fichier vdisk sur un montage FILEIO.",
+        "body": "Créez un filesystem sur un backend éligible, ajoutez des vdisks sur le montage, enregistrez FILEIO dans SCST, puis mappez les LUN aux groupes d'accès.",
         "wikiLink": "Wiki ESOS — Systèmes de fichiers"
       },
       "overview": {
@@ -3798,6 +3803,7 @@
         "empty_fileio": "Aucun device FILEIO",
         "empty_luns": "Aucun mapping LUN",
         "backends_all_title": "Backends bloc (tous)",
+        "backends_fileio_title": "Backends pour FILEIO",
         "no_eligible_summary": "Aucun backend éligible ({total} détectés, {eligible} éligibles). Voir les raisons ci-dessous ou l'onglet Périphériques bloc.",
         "show_system_mounts": "Afficher les montages système (/mnt/root, …)",
         "diagnostics_title": "Diagnostics de détection",
@@ -3827,6 +3833,59 @@
       "hw_ld": {
         "tool_missing": "Aucun outil storcli/perccli disponible pour résoudre le chemin OS de ce volume logique.",
         "mapping_not_found": "perccli détecté, mais aucun chemin Linux fiable n'a été trouvé pour ce volume logique."
+      },
+      "backend": {
+        "group": {
+          "available": "Disponibles",
+          "in_use": "Déjà utilisés",
+          "ineligible": "Non éligibles",
+          "empty": "Aucun"
+        },
+        "status": {
+          "available": "Disponible",
+          "in_use": "Utilisé",
+          "ineligible": "Non éligible"
+        },
+        "kind": {
+          "lvm_lv": "Volume logique LVM",
+          "md": "RAID logiciel (MD)",
+          "hw_raid_ld": "Volume logique RAID matériel",
+          "disk": "Disque"
+        },
+        "reason": {
+          "scst_blockio": "Utilisé par SCST BLOCKIO",
+          "scst": "Utilisé par SCST",
+          "mounted": "Monté",
+          "mounted_at": "Monté sur {mount}",
+          "filesystem_signature": "Signature ou système de fichiers détecté",
+          "lvm_pv": "Volume physique LVM",
+          "lvm_lv": "Volume logique LVM sur ce chemin",
+          "md_member": "Membre ou métadonnées MD",
+          "unknown": "{detail}"
+        },
+        "summary": {
+          "available": "Prêt pour un nouveau filesystem FILEIO.",
+          "scst_blockio": "Déjà utilisé en SCST BLOCKIO.",
+          "scst": "Déjà utilisé par SCST.",
+          "in_use": "Déjà utilisé sur ce nœud.",
+          "md_lvm_base": "Non éligible : ce RAID sert déjà de base LVM.",
+          "ineligible": "Non éligible pour un nouveau filesystem FILEIO."
+        },
+        "recommendation": {
+          "scst_blockio": "Utilisez un autre volume pour FILEIO ou supprimez le device BLOCKIO si vous voulez convertir ce volume.",
+          "scst": "Retirez le device SCST ou choisissez un autre chemin backend.",
+          "in_use": "Démontez ou libérez ce périphérique avant de créer un filesystem FILEIO.",
+          "md_lvm_base": "Créez un LV dédié dans l'onglet LVM pour l'utiliser comme backend FILEIO.",
+          "ineligible": "Choisissez un autre backend ou libérez ce périphérique (voir Périphériques bloc)."
+        },
+        "empty": {
+          "title": "Aucun backend disponible pour FILEIO",
+          "body": "Créez un volume logique LVM ou libérez un périphérique bloc, puis actualisez cette page."
+        },
+        "actions": {
+          "open_lvm": "Ouvrir LVM",
+          "view_block_devices": "Voir les périphériques bloc"
+        }
       },
       "next": {
         "title": "Prochaine étape recommandée",

@@ -335,6 +335,7 @@
         :is-clustered="isClusteredSan"
         :read-only="isReadOnly"
         @navigate-block-devices="onFsNavigateBlockDevices"
+        @navigate-lvm="activeTab = 'lvm'"
       />
     </div>
 

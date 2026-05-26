@@ -1,5 +1,9 @@
 import type { RaidOverview, RaidBlockDevice, RaidToolsInfo } from './raid-types'
 import { hwLdUnmappedReasonKey } from './hw-raid-os-mapper'
+import {
+  FS_BACKEND_REASON,
+  mountedAtReason,
+} from './fs-backend-reasons'
 import type { LvmOverview } from './lvm-types'
 import type {
   FileSystemMount,
@@ -88,14 +92,14 @@ function usedByFromBlockDev(dev: RaidBlockDevice | undefined): string[] {
   if (!dev) return []
   const reasons: string[] = []
   if (dev.usedBy.includes('mounted') || dev.mountpoint) {
-    reasons.push(dev.mountpoint ? `Monté sur ${dev.mountpoint}` : 'Monté')
+    reasons.push(dev.mountpoint ? mountedAtReason(dev.mountpoint) : FS_BACKEND_REASON.MOUNTED)
   }
-  if (dev.usedBy.includes('scst')) reasons.push('Utilisé par SCST')
+  if (dev.usedBy.includes('scst')) reasons.push(FS_BACKEND_REASON.SCST)
   if (dev.usedBy.includes('filesystem') || dev.usedBy.includes('unknown_signature')) {
-    reasons.push('Signature ou système de fichiers détecté')
+    reasons.push(FS_BACKEND_REASON.FILESYSTEM_SIGNATURE)
   }
-  if (dev.usedBy.includes('lvm')) reasons.push('Volume physique LVM')
-  if (dev.usedBy.includes('md')) reasons.push('Membre ou métadonnées MD')
+  if (dev.usedBy.includes('lvm')) reasons.push(FS_BACKEND_REASON.LVM_PV)
+  if (dev.usedBy.includes('md')) reasons.push(FS_BACKEND_REASON.MD_MEMBER)
   return reasons
 }
 
@@ -175,11 +179,11 @@ export function buildFsBackendsAndLinks(input: BuildFsInventoryInput): FsInvento
   for (const lv of lvm.lvs) {
     const reasons: string[] = []
     if (lv.usedBy?.includes('scst') || (lv.scstDeviceNames?.length ?? 0) > 0) {
-      reasons.push('Utilisé par SCST (blockio)')
+      reasons.push(FS_BACKEND_REASON.SCST_BLOCKIO)
     }
-    if (lv.usedBy?.includes('mounted')) reasons.push('Monté')
+    if (lv.usedBy?.includes('mounted')) reasons.push(FS_BACKEND_REASON.MOUNTED)
     const mp = mountForDevicePath(lv.path, index, mounts)
-    if (mp) reasons.push(`Monté sur ${mp}`)
+    if (mp) reasons.push(mountedAtReason(mp))
     push({
       path: lv.path,
       kind: 'lvm_lv',
@@ -200,7 +204,9 @@ export function buildFsBackendsAndLinks(input: BuildFsInventoryInput): FsInvento
     const dev = raid.blockDevices.find(d => resolveCanonicalPath(d.path, index) === resolveCanonicalPath(path, index))
     const reasons = usedByFromBlockDev(dev)
     const mp = mountForDevicePath(path, index, mounts)
-    if (mp && !reasons.some(r => r.startsWith('Monté'))) reasons.push(`Monté sur ${mp}`)
+    if (mp && !reasons.some(r => r === FS_BACKEND_REASON.MOUNTED || r.startsWith(`${FS_BACKEND_REASON.MOUNTED_AT}:`))) {
+      reasons.push(mountedAtReason(mp))
+    }
     push({
       path,
       kind: 'md',
@@ -252,12 +258,14 @@ export function buildFsBackendsAndLinks(input: BuildFsInventoryInput): FsInvento
       const path = resolveCanonicalPath(rawPath, index)
       const dev = raid.blockDevices.find(d => resolveCanonicalPath(d.path, index) === path)
       const reasons = usedByFromBlockDev(dev)
-      if (pvPaths.has(path)) reasons.push('Volume physique LVM')
-      if (lvPaths.has(path)) reasons.push('Logical volume LVM')
+      if (pvPaths.has(path)) reasons.push(FS_BACKEND_REASON.LVM_PV)
+      if (lvPaths.has(path)) reasons.push(FS_BACKEND_REASON.LVM_LV)
       const mp = mountForDevicePath(path, index, mounts) ?? dev?.mountpoint ?? undefined
-      if (mp && !reasons.some(r => r.startsWith('Monté'))) reasons.push(`Monté sur ${mp}`)
+      if (mp && !reasons.some(r => r === FS_BACKEND_REASON.MOUNTED || r.startsWith(`${FS_BACKEND_REASON.MOUNTED_AT}:`))) {
+        reasons.push(mountedAtReason(mp))
+      }
       const scstNames = pathToDevices.get(path) ?? []
-      if (scstNames.length) reasons.push('Utilisé par SCST')
+      if (scstNames.length) reasons.push(FS_BACKEND_REASON.SCST)
       push({
         path,
         kind: 'hw_raid_ld',

@@ -288,49 +288,11 @@
       <p v-else class="text-sm text-gray-500 dark:text-gray-400">{{ t('storage.fs.overview.empty_mounts') }}</p>
     </UCard>
 
-    <UCard>
-      <template #header>
-        <div class="flex items-center justify-between gap-2 flex-wrap">
-          <span>{{ t('storage.fs.overview.backends_all_title') }}</span>
-          <UButton size="xs" variant="ghost" @click="emit('navigate-block-devices')">
-            Block Devices
-          </UButton>
-        </div>
-      </template>
-      <UTable v-if="backends.length" :data="backends" :columns="backendCols">
-        <template #path-cell="{ row }">
-          <button
-            type="button"
-            class="font-mono text-xs text-primary-600 hover:underline"
-            @click="emit('navigate-block-devices', row.original.path)"
-          >
-            {{ row.original.path }}
-          </button>
-        </template>
-        <template #eligible-cell="{ row }">
-          <UBadge :color="row.original.eligible ? 'green' : 'gray'" size="xs" :label="row.original.eligible ? 'OK' : '—'" />
-        </template>
-        <template #reasons-cell="{ row }">
-          <span v-if="row.original.eligible" class="text-green-600 text-xs">OK</span>
-          <span v-else class="text-red-600 text-xs">{{ formatBackendReasons(row.original.reasons) }}</span>
-        </template>
-        <template #hw-cell="{ row }">
-          <span v-if="row.original.controllerLabel" class="text-xs">{{ row.original.controllerLabel }} / {{ row.original.hwLdId ?? '—' }}</span>
-          <span v-else class="text-gray-400">—</span>
-        </template>
-      </UTable>
-      <p v-else class="text-sm text-gray-500 dark:text-gray-400">{{ t('storage.fs.overview.empty_candidates') }}</p>
-
-      <details
-        v-if="!eligibleCandidates.length && backends.length"
-        class="mt-3 rounded border border-amber-200 dark:border-amber-800/50 px-3 py-2"
-      >
-        <summary class="text-xs font-medium text-amber-800 dark:text-amber-200 cursor-pointer select-none">
-          {{ t('storage.fs.overview.candidates_title') }}
-        </summary>
-        <p class="text-xs text-amber-700 dark:text-amber-300 mt-2">{{ noEligibleSummary }}</p>
-      </details>
-    </UCard>
+    <FsFileioBackendsPanel
+      :backends="backends"
+      @navigate-block-devices="emit('navigate-block-devices', $event)"
+      @navigate-lvm="emit('navigate-lvm')"
+    />
 
     <details v-if="actionableScanWarnings.length" class="rounded-lg border border-amber-200 dark:border-amber-800/50 px-3 py-2">
       <summary class="text-sm font-medium cursor-pointer select-none text-amber-800 dark:text-amber-200">
@@ -341,11 +303,27 @@
       </ul>
     </details>
 
-    <details class="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
+    <details
+      class="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2"
+      :open="!hasFileioInventory"
+    >
       <summary class="text-sm font-medium cursor-pointer select-none">
         {{ t('storage.fs.help.title') }}
       </summary>
-      <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">{{ t('storage.fs.help.body') }}</p>
+      <div class="mt-3 space-y-2 text-sm text-gray-600 dark:text-gray-400">
+        <p>{{ t('storage.fs.help.intro') }}</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+          <div class="rounded border border-gray-100 dark:border-gray-800 p-2">
+            <p class="font-medium text-gray-800 dark:text-gray-200">{{ t('storage.fs.help.fileio_label') }}</p>
+            <p class="mt-1">{{ t('storage.fs.help.fileio_short') }}</p>
+          </div>
+          <div class="rounded border border-gray-100 dark:border-gray-800 p-2">
+            <p class="font-medium text-gray-800 dark:text-gray-200">{{ t('storage.fs.help.blockio_label') }}</p>
+            <p class="mt-1">{{ t('storage.fs.help.blockio_short') }}</p>
+          </div>
+        </div>
+        <p class="text-xs">{{ t('storage.fs.help.body') }}</p>
+      </div>
     </details>
 
     <details v-if="diagnostics" class="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
@@ -374,7 +352,7 @@ import { isDeviceMapped } from '~/utils/scst-unmapped-devices'
 import { filterActionableScanWarnings } from '~/utils/fs-scan-warnings'
 import { buildFsSummaryStatus, formatScannedAt } from '~/utils/fs-summary-status'
 import { fsTableColumn, fsTableColumnId } from '~/utils/fs-table-columns'
-import type { FileioDeviceRef, FileSystemMount, FsBackendRef, FsMountRole, MountHealth, ScstLunMappingRef, VDiskFile } from '~/types/filesystem'
+import type { FileioDeviceRef, FileSystemMount, FsMountRole, MountHealth, ScstLunMappingRef, VDiskFile } from '~/types/filesystem'
 
 const props = defineProps<{
   sanId: string
@@ -385,6 +363,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'navigate-block-devices': [path?: string]
+  'navigate-lvm': []
 }>()
 
 const { t } = useEsosI18n()
@@ -469,13 +448,12 @@ const displayedVdisks = computed(() => {
   return list.filter(v => v.mountPoint === vdiskFilterMount.value)
 })
 
-const noEligibleSummary = computed(() => {
-  const d = diagnostics.value?.candidates
-  return t('storage.fs.overview.no_eligible_summary', {
-    total: d?.total ?? backends.value.length,
-    eligible: d?.eligible ?? eligibleCandidates.value.length,
-  })
-})
+const hasFileioInventory = computed(() =>
+  summaryCounts.value.filesystems > 0
+  || summaryCounts.value.vdiskFiles > 0
+  || summaryCounts.value.fileioDevices > 0
+  || fileioDataMounts.value.length > 0,
+)
 
 const diagnosticsText = computed(() => {
   if (!diagnostics.value) return ''
@@ -518,13 +496,6 @@ const mountCols = [
   fsTableColumnId<FileSystemMount>('health', ''),
   fsTableColumnId<FileSystemMount>('size', t('storage.fs.table.size')),
   fsTableColumnId<FileSystemMount>('actions', ''),
-]
-const backendCols = [
-  fsTableColumn<FsBackendRef>('path', t('storage.fs.table.path')),
-  fsTableColumn<FsBackendRef>('kind', t('storage.fs.table.type')),
-  fsTableColumnId<FsBackendRef>('eligible', ''),
-  fsTableColumnId<FsBackendRef>('reasons', ''),
-  fsTableColumnId<FsBackendRef>('hw', 'HW RAID'),
 ]
 const vdiskCols = [
   fsTableColumn<VDiskFile>('path', t('storage.fs.table.path')),
@@ -570,13 +541,6 @@ function healthColor(h: MountHealth) {
   if (h === 'full') return 'red'
   if (h === 'degraded') return 'amber'
   return 'green'
-}
-
-function formatBackendReasons(reasons: string[]): string {
-  if (!reasons.length) return '—'
-  return reasons
-    .map((r) => (r.startsWith('storage.') ? (t(r) as string) : r))
-    .join(' · ')
 }
 
 function highlightLunsForDevice(name: string) {

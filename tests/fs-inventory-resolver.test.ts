@@ -76,7 +76,7 @@ describe('fs-inventory-resolver', () => {
     const hw = backends.find(b => b.kind === 'hw_raid_ld')
     expect(hw).toBeDefined()
     expect(hw?.eligible).toBe(false)
-    expect(hw?.reasons.some(r => r.includes('Monté'))).toBe(true)
+    expect(hw?.reasons.some(r => r.startsWith('storage.fs.backend.reason.mounted'))).toBe(true)
     expect(hw?.path).toBe('/dev/sdb')
   })
 })
