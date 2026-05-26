@@ -451,6 +451,14 @@ export async function createDevice(
     throw new Error(`Le device "${deviceName}" existe déjà`)
   }
 
+  const trimmedFile = filename.trim()
+  const fileConflict = handler.devices.find((d) => d.filename.trim() === trimmedFile)
+  if (fileConflict) {
+    throw new Error(
+      `Le fichier "${trimmedFile}" est déjà utilisé par le device FILEIO "${fileConflict.name}"`,
+    )
+  }
+
   handler.devices.push({
     name: deviceName,
     handler: handlerName,

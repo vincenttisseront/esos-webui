@@ -4016,7 +4016,24 @@
           "success": "SCST FILEIO device registered",
           "error_name_empty": "Device name is required",
           "error_name_invalid": "Invalid device name (letters, digits, _ - only)",
-          "error_name_too_long": "Device name too long (max 32)"
+          "error_name_too_long": "Device name too long (max 32)",
+          "actions": {
+            "view_mappings": "View LUN mappings",
+            "map_lun": "Map to a LUN"
+          },
+          "status": {
+            "registered": "Registered as SCST device {deviceName}"
+          },
+          "conflict": {
+            "device_name_exists": "SCST device name “{deviceName}” already exists.",
+            "vdisk_file_already_fileio": "This vdisk file is already registered as FILEIO device “{existingDeviceName}”.",
+            "vdisk_already_mapped": "This vdisk file is already registered with SCST.",
+            "vdisk_not_found": "VDisk file not found: {filePath}",
+            "invalid_device_name": "Invalid SCST device name.",
+            "scst_config_unavailable": "Cannot read or update SCST configuration.",
+            "san_read_only": "This SAN is read-only.",
+            "hint_rename_device": "Choose a different SCST device name and run preflight again."
+          }
         },
         "delete_vdisk": { "success": "VDisk file deleted" },
         "unmount": { "success": "Filesystem unmounted" }

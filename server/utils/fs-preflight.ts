@@ -12,7 +12,6 @@ import {
   validateVdiskFileName,
   validateVdiskSize,
 } from '~/utils/fs-preflight-validation'
-import { validateScstDeviceName } from '~/utils/lvm-scst-device-ui'
 import type {
   CreateFileioPayload,
   CreateFsPayload,
@@ -23,6 +22,7 @@ import type {
 } from '~/types/filesystem'
 import type { FsBackendCandidate } from '~/types/filesystem'
 import { collectFsBackendCandidates } from './fs-candidates'
+import { resolveFileioBindConflicts } from './fs-fileio-bind-conflicts'
 import type { SSHSessionManager } from './ssh-session-manager'
 
 export type FsPreflightAction =
@@ -52,7 +52,7 @@ export async function runFsPreflight(
   manager: SSHSessionManager,
   overview: FsOverview,
   req: FsPreflightRequest,
-  options?: { allowRawDisk?: boolean },
+  options?: { allowRawDisk?: boolean; sanId?: string },
 ): Promise<FsPreflightResult> {
   switch (req.action) {
     case 'create_fs':
@@ -60,7 +60,7 @@ export async function runFsPreflight(
     case 'create_vdisk':
       return preflightCreateVdisk(overview, req.payload as CreateVdiskPayload)
     case 'bind_fileio':
-      return preflightBindFileio(overview, req.payload as CreateFileioPayload)
+      return preflightBindFileio(manager, overview, req.payload as CreateFileioPayload, options?.sanId ?? '')
     case 'delete_vdisk':
       return preflightDeleteVdisk(overview, req.payload as { path: string })
     case 'unmount':
@@ -155,32 +155,38 @@ function preflightCreateVdisk(
   }
 }
 
-function preflightBindFileio(
+async function preflightBindFileio(
+  manager: SSHSessionManager,
   overview: FsOverview,
   payload: CreateFileioPayload,
-): FsPreflightResult {
-  const blockers: string[] = []
-  const nameErr = validateScstDeviceName(payload.deviceName)
-  if (nameErr) blockers.push(`Nom device SCST invalide (${nameErr})`)
-
-  const vdisk = overview.vdiskFiles.find(v => v.path === payload.vdiskPath)
-  if (!vdisk) blockers.push('Fichier vdisk introuvable')
-  else if (vdisk.mapped) blockers.push('Déjà mappé SCST')
+  sanId: string,
+): Promise<FsPreflightResult> {
+  const conflict = await resolveFileioBindConflicts(manager, overview, payload, sanId)
+  if (conflict) {
+    return {
+      ok: false,
+      configPreview: [],
+      commands: [],
+      warnings: [],
+      blockers: [conflict.message],
+      conflict,
+    }
+  }
 
   const preview = [
     `HANDLER vdisk_fileio`,
-    `DEVICE ${payload.deviceName}`,
-    `filename ${payload.vdiskPath}`,
+    `DEVICE ${payload.deviceName.trim()}`,
+    `filename ${payload.vdiskPath.trim()}`,
     payload.nvCache !== false ? 'nv_cache 1' : '',
   ].filter(Boolean)
 
   return {
-    ok: blockers.length === 0,
+    ok: true,
     configPreview: preview,
-    commands: [`scst: create vdisk_fileio ${payload.deviceName}`],
+    commands: [`scst: create vdisk_fileio ${payload.deviceName.trim()}`],
     warnings: [],
-    blockers,
-    requiredConfirmation: `BIND_FILEIO ${payload.deviceName}`,
+    blockers: [],
+    requiredConfirmation: `BIND_FILEIO ${payload.deviceName.trim()}`,
   }
 }
 

@@ -5,6 +5,7 @@ import { getSSHPool } from './ssh-pool'
 import { withSanContext } from './ssh-runtime'
 import { collectFsOverview } from './fs-overview.service'
 import { runFsPreflight, type FsPreflightRequest } from './fs-preflight'
+import { throwFileioBindConflict } from './fs-fileio-bind-conflicts'
 import { runCreateFilesystem, runCreateVdisk, runBindFileio } from './fs-actions'
 import { invalidateFsCaches } from './fs-api-helpers'
 import type { ClusterLvmNodeResult } from '~/types/lvm'
@@ -49,7 +50,7 @@ async function runPreflightOnNode(
       return { ok: false, blockers: ['SSH non connecté'] }
     }
     const overview = await collectFsOverview(manager)
-    const pre = await runFsPreflight(manager, overview, req)
+    const pre = await runFsPreflight(manager, overview, req, { sanId })
     return { ok: pre.ok, blockers: pre.blockers }
   })
 }
@@ -66,9 +67,10 @@ async function assertClusterPayloadPreflight(
   }
   const pre = await withSanContext(primarySanId, async () => {
     const overview = await collectFsOverview(manager)
-    return runFsPreflight(manager, overview, req)
+    return runFsPreflight(manager, overview, req, { sanId: primarySanId })
   })
   if (!pre.ok) {
+    if (pre.conflict) throwFileioBindConflict(pre.conflict)
     throw createError({
       statusCode: 422,
       statusMessage: pre.blockers.join(' · ') || 'Préflight échoué',
@@ -203,8 +205,11 @@ export async function executeClusterFileioBind(
         const manager = getSSHPool().get(node.id)
         if (!manager) throw new Error('SSH indisponible')
         const overview = await collectFsOverview(manager)
-        const pre = await runFsPreflight(manager, overview, { action: 'bind_fileio', payload })
-        if (!pre.ok) throw new Error(pre.blockers.join(', '))
+        const pre = await runFsPreflight(manager, overview, { action: 'bind_fileio', payload }, { sanId: node.id })
+        if (!pre.ok) {
+          if (pre.conflict) throwFileioBindConflict(pre.conflict)
+          throw new Error(pre.blockers.join(', '))
+        }
         await runBindFileio(payload)
         invalidateFsCaches(node.id)
       })

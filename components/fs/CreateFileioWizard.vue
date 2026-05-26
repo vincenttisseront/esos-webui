@@ -13,6 +13,46 @@
           variant="soft"
           :title="t('storage.fs.wizard.fileio.no_vdisk')"
         />
+        <UAlert
+          v-else-if="existingRegistration"
+          color="blue"
+          variant="soft"
+          :title="t('storage.fs.wizard.fileio.conflict.vdisk_file_already_fileio', {
+            existingDeviceName: existingRegistration.deviceName,
+          })"
+        >
+          <template #description>
+            <p class="text-xs mt-1 font-mono break-all">{{ existingRegistration.filename }}</p>
+            <p class="text-xs mt-2">
+              {{ t('storage.fs.wizard.fileio.status.registered', { deviceName: existingRegistration.deviceName }) }}
+              <UBadge
+                class="ml-1"
+                size="xs"
+                :color="existingRegistration.mapped ? 'green' : 'gray'"
+                variant="soft"
+                :label="existingRegistration.mapped
+                  ? t('storage.fs.table.mapped')
+                  : t('storage.fs.table.unmapped')"
+              />
+            </p>
+            <div v-if="registrationActions.viewMappingsUrl || registrationActions.exposeLunUrl" class="flex flex-wrap gap-2 mt-3">
+              <NuxtLink
+                v-if="registrationActions.viewMappingsUrl"
+                :to="registrationActions.viewMappingsUrl"
+                class="text-xs text-primary-600 hover:underline"
+              >
+                {{ t('storage.fs.wizard.fileio.actions.view_mappings') }}
+              </NuxtLink>
+              <NuxtLink
+                v-if="registrationActions.exposeLunUrl"
+                :to="registrationActions.exposeLunUrl"
+                class="text-xs text-primary-600 hover:underline"
+              >
+                {{ t('storage.fs.wizard.fileio.actions.map_lun') }}
+              </NuxtLink>
+            </div>
+          </template>
+        </UAlert>
         <UFormGroup :label="t('storage.fs.wizard.fileio.vdisk')">
           <USelect
             v-model="selectedPath"
@@ -21,14 +61,41 @@
           />
         </UFormGroup>
         <UFormGroup :label="t('storage.fs.wizard.fileio.device_name')">
-          <UInput v-model="deviceName" />
+          <UInput v-model="deviceName" :disabled="!!existingRegistration" />
           <p v-if="nameError" class="mt-1 text-xs text-red-600">{{ nameError }}</p>
         </UFormGroup>
-        <UCheckbox v-model="nvCache" :label="t('storage.fs.wizard.fileio.nv_cache')" />
+        <UCheckbox v-model="nvCache" :label="t('storage.fs.wizard.fileio.nv_cache')" :disabled="!!existingRegistration" />
       </template>
 
       <template v-else-if="step === 2">
         <UAlert v-if="preflightLoading" color="gray" variant="soft" :title="t('storage.fs.wizard.preflight_loading')" />
+        <div v-else-if="conflictDisplay" class="space-y-2">
+          <UAlert
+            color="amber"
+            variant="soft"
+            :title="t('storage.fs.wizard.preflight_blockers')"
+            :description="conflictDisplay"
+          />
+          <div v-if="conflictActionLinks.viewMappingsUrl || conflictActionLinks.exposeLunUrl" class="flex flex-wrap gap-3 px-1">
+            <NuxtLink
+              v-if="conflictActionLinks.viewMappingsUrl"
+              :to="conflictActionLinks.viewMappingsUrl"
+              class="text-xs text-primary-600 hover:underline"
+            >
+              {{ t('storage.fs.wizard.fileio.actions.view_mappings') }}
+            </NuxtLink>
+            <NuxtLink
+              v-if="conflictActionLinks.exposeLunUrl"
+              :to="conflictActionLinks.exposeLunUrl"
+              class="text-xs text-primary-600 hover:underline"
+            >
+              {{ t('storage.fs.wizard.fileio.actions.map_lun') }}
+            </NuxtLink>
+          </div>
+          <p v-if="fileioConflictAllowsNameRetry(conflict)" class="text-xs text-gray-600 dark:text-gray-400 px-1">
+            {{ t('storage.fs.wizard.fileio.conflict.hint_rename_device') }}
+          </p>
+        </div>
         <UAlert
           v-else-if="preflightBlockers"
           color="red"
@@ -57,7 +124,13 @@
           :description="t('storage.fs.cluster.partial_body')"
           class="mt-2"
         />
-        <UAlert v-if="executeError" color="red" variant="soft" :description="executeError" />
+        <UAlert
+          v-if="executeError"
+          color="red"
+          variant="soft"
+          :title="t('storage.fs.wizard.preflight_blockers')"
+          :description="executeError"
+        />
       </template>
     </div>
 
@@ -68,7 +141,7 @@
         <div class="flex gap-2">
           <UButton color="gray" variant="ghost" @click="emit('cancel')">{{ t('storage.fs.wizard.cancel') }}</UButton>
           <UButton
-            v-if="step < 3"
+            v-if="step < 3 && !registerBlocked"
             color="primary"
             :disabled="(step === 1 && !step1Valid) || (step === 2 && !preflight?.ok)"
             :loading="preflightLoading"
@@ -77,7 +150,7 @@
             {{ t('storage.fs.wizard.next') }}
           </UButton>
           <UButton
-            v-else
+            v-else-if="step >= 3 && !registerBlocked"
             color="primary"
             :loading="busy"
             :disabled="!canExecute"
@@ -93,9 +166,17 @@
 
 <script setup lang="ts">
 import ScstClusterNodeResults from '~/components/targets/ScstClusterNodeResults.vue'
-import type { VDiskFile } from '~/types/filesystem'
+import type { FileioBindConflict, VDiskFile } from '~/types/filesystem'
 import type { ClusterLvmNodeResult } from '~/types/lvm'
 import { suggestedScstDeviceName, validateScstDeviceName } from '~/utils/lvm-scst-device-ui'
+import {
+  fileioConflictActions,
+  fileioConflictAllowsNameRetry,
+  fileioConflictBlocksCreate,
+  findFileioRegistrationForPath,
+  formatFileioBindConflictMessage,
+  parseFileioBindConflictFromError,
+} from '~/utils/fs-fileio-bind-conflict'
 import { parseFsWizardExecuteFailure } from '~/utils/fs-wizard-execute'
 
 const props = defineProps<{
@@ -108,6 +189,7 @@ const props = defineProps<{
 const emit = defineEmits<{ cancel: []; close: [] }>()
 const { t } = useEsosI18n()
 const fs = useFsStore()
+const { overview } = useOverview()
 const toast = useAppToast()
 const router = useRouter()
 
@@ -121,12 +203,28 @@ const preflightLoading = ref(false)
 const busy = ref(false)
 const executeError = ref<string | null>(null)
 const clusterNodeResults = ref<ClusterLvmNodeResult[] | null>(null)
+const conflict = ref<FileioBindConflict | null>(null)
 
 const vdiskOptions = computed(() =>
   props.vdisks.map(v => ({ label: `${v.fileName} — ${v.path}`, value: v.path })),
 )
 
 const selectedVdisk = computed(() => props.vdisks.find(v => v.path === selectedPath.value))
+
+const existingRegistration = computed(() =>
+  findFileioRegistrationForPath(fs.overview, selectedPath.value),
+)
+
+const registrationActions = computed(() => {
+  const name = existingRegistration.value?.deviceName
+  if (!name) return { viewMappingsUrl: null, exposeLunUrl: null }
+  return fileioConflictActions(
+    name
+      ? { code: 'vdisk_file_already_fileio', message: '', existingDeviceName: name, mapped: existingRegistration.value?.mapped }
+      : null,
+    overview.value,
+  )
+})
 
 const nameError = computed(() => {
   const err = validateScstDeviceName(deviceName.value)
@@ -137,10 +235,25 @@ const nameError = computed(() => {
 const step1Valid = computed(() =>
   !!selectedPath.value
   && props.vdisks.some(v => v.path === selectedPath.value)
-  && !nameError.value,
+  && !nameError.value
+  && !existingRegistration.value,
 )
 
-const preflightBlockers = computed(() => preflight.value?.blockers?.join(' · ') || '')
+const registerBlocked = computed(() =>
+  !!existingRegistration.value || fileioConflictBlocksCreate(conflict.value),
+)
+
+const preflightBlockers = computed(() => {
+  if (conflict.value) return ''
+  return preflight.value?.blockers?.join(' · ') || ''
+})
+
+const conflictDisplay = computed(() =>
+  conflict.value ? formatFileioBindConflictMessage(conflict.value, t) : '',
+)
+
+const conflictActionLinks = computed(() => fileioConflictActions(conflict.value, overview.value))
+
 const configPreview = computed(() =>
   (preflight.value?.configPreview ?? []).join('\n') || '—',
 )
@@ -162,27 +275,60 @@ onMounted(() => {
   syncDeviceName()
 })
 
-watch(selectedPath, syncDeviceName)
+watch(selectedPath, () => {
+  syncDeviceName()
+  conflict.value = null
+})
+
+watch(deviceName, () => {
+  if (conflict.value?.code === 'device_name_exists') {
+    conflict.value = null
+  }
+})
 
 function syncDeviceName() {
   const v = selectedVdisk.value
-  if (!v) return
+  if (!v || existingRegistration.value) return
   const base = v.fileName.replace(/\.img$/i, '').replace(/[^A-Za-z0-9_-]/g, '_')
   deviceName.value = suggestedScstDeviceName('vdisk', base)
 }
 
+function applyPreflightError(e: unknown) {
+  const parsed = parseFileioBindConflictFromError(e)
+  if (parsed) {
+    conflict.value = parsed
+    preflight.value = {
+      ok: false,
+      blockers: [],
+      commands: [],
+      configPreview: [],
+      warnings: [],
+      conflict: parsed,
+    }
+    return
+  }
+  const msg = (e as { statusMessage?: string; message?: string }).statusMessage
+    ?? (e as Error).message
+    ?? t('common.error')
+  preflight.value = { ok: false, blockers: [msg], commands: [], configPreview: [], warnings: [] }
+}
+
 async function loadPreflight() {
-  if (!selectedVdisk.value) return
+  if (!selectedVdisk.value || existingRegistration.value) return
   preflightLoading.value = true
   preflight.value = null
+  conflict.value = null
   try {
     preflight.value = await fs.preflight('bind_fileio', {
       deviceName: deviceName.value.trim(),
       vdiskPath: selectedVdisk.value.path,
       nvCache: nvCache.value,
     })
+    if (preflight.value.conflict) {
+      conflict.value = preflight.value.conflict
+    }
   } catch (e: unknown) {
-    preflight.value = { ok: false, blockers: [(e as Error).message], commands: [], configPreview: [], warnings: [] }
+    applyPreflightError(e)
   } finally {
     preflightLoading.value = false
   }
@@ -190,11 +336,12 @@ async function loadPreflight() {
 
 async function onNext() {
   if (step.value === 1) {
+    if (existingRegistration.value) return
     await loadPreflight()
     step.value = 2
     return
   }
-  if (step.value === 2 && !preflight.value?.ok) return
+  if (step.value === 2 && (conflict.value || !preflight.value?.ok)) return
   if (step.value === 2) {
     step.value = 3
     confirmation.value = ''
@@ -202,10 +349,11 @@ async function onNext() {
 }
 
 async function execute() {
-  if (!canExecute.value || !selectedVdisk.value) return
+  if (!canExecute.value || !selectedVdisk.value || registerBlocked.value) return
   busy.value = true
   executeError.value = null
   clusterNodeResults.value = null
+  conflict.value = null
   try {
     const clusterExecution = props.isClustered && props.clusterId
       ? { clusterId: props.clusterId, primarySanId: props.sanId }
@@ -216,6 +364,7 @@ async function execute() {
       nvCache: nvCache.value,
       confirmation: confirmation.value.trim(),
     }, clusterExecution)
+    await fs.fetchOverview(true)
     toast.success(t('storage.fs.wizard.fileio.success'))
     emit('close')
     const next = res.nextAction ?? { route: '/targets', query: { exposeDevice: res.deviceName } }
@@ -223,11 +372,14 @@ async function execute() {
       await router.push({ path: next.route, query: next.query })
     }
   } catch (e: unknown) {
-    const failure = parseFsWizardExecuteFailure(e, t('common.error') as string)
+    const failure = parseFsWizardExecuteFailure(e, t('common.error') as string, t)
     executeError.value = failure.executeError
     clusterNodeResults.value = failure.clusterNodeResults
+    if (failure.conflict) conflict.value = failure.conflict
     if (failure.isPartialCluster) {
       toast.error(t('storage.fs.cluster.partial_title') as string, failure.executeError)
+    } else {
+      toast.error(failure.executeError)
     }
   } finally {
     busy.value = false

@@ -166,6 +166,32 @@ export interface FsOverview {
   candidates?: FsBackendCandidate[]
 }
 
+export type FileioBindConflictCode =
+  | 'device_name_exists'
+  | 'vdisk_file_already_fileio'
+  | 'vdisk_already_mapped'
+  | 'vdisk_not_found'
+  | 'invalid_device_name'
+  | 'scst_config_unavailable'
+  | 'san_read_only'
+
+export interface FileioBindExistingMapping {
+  targetName: string
+  groupName: string
+  lunId: number
+}
+
+/** Structured FILEIO registration conflict returned with HTTP 409. */
+export interface FileioBindConflict {
+  code: FileioBindConflictCode
+  message: string
+  deviceName?: string
+  filePath?: string
+  existingDeviceName?: string
+  existingMapping?: FileioBindExistingMapping | null
+  mapped?: boolean
+}
+
 export interface FsPreflightResult {
   ok: boolean
   configPreview: string[]
@@ -173,6 +199,7 @@ export interface FsPreflightResult {
   warnings: string[]
   blockers: string[]
   requiredConfirmation?: string
+  conflict?: FileioBindConflict
 }
 
 export interface CreateFsPayload {
