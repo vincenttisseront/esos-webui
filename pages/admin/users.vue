@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import type { UserPublic } from '../../utils/types'
+import {
+  canAdminResetUserPassword,
+  filterUsersByAuthSource,
+  type AuthSourceFilter,
+} from '../../utils/users-admin-ui'
 
 const { t, tError, locale } = useEsosI18n()
 
@@ -72,6 +77,7 @@ async function confirmDelete() {
 async function confirmReset() {
   if (!resetTarget.value) return
   const u = resetTarget.value
+  if (!canResetPassword(u)) return
   resetTarget.value = null
   try {
     const data = await $fetch<{ newPassword: string }>(`/api/admin/users/${u.id}/reset-password`, { method: 'POST' })
@@ -113,6 +119,23 @@ function fmtDate(iso: string | null | undefined) {
   if (!iso) return '—'
   const loc = locale.value === 'en' ? 'en-GB' : 'fr-FR'
   return new Date(iso).toLocaleDateString(loc, { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+const authSourceFilter = ref<AuthSourceFilter>('all')
+
+const authSourceFilterOptions = computed(() => [
+  { value: 'all' as const, label: t('admin.users.filters.all') },
+  { value: 'local' as const, label: t('admin.users.authSource.local') },
+  { value: 'ldap' as const, label: t('admin.users.authSource.ldap') },
+  { value: 'oidc' as const, label: t('admin.users.authSource.oidc') },
+])
+
+const filteredUsers = computed(() =>
+  filterUsersByAuthSource(users.value ?? [], authSourceFilter.value),
+)
+
+function canResetPassword(u: UserPublic) {
+  return canAdminResetUserPassword(u)
 }
 </script>
 
@@ -211,6 +234,22 @@ function fmtDate(iso: string | null | undefined) {
 
     <!-- Tableau utilisateurs -->
     <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center gap-2">
+        <span class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          {{ t('admin.users.filters.label') }}
+        </span>
+        <div class="flex flex-wrap gap-1.5">
+          <UButton
+            v-for="opt in authSourceFilterOptions"
+            :key="opt.value"
+            size="xs"
+            :variant="authSourceFilter === opt.value ? 'solid' : 'outline'"
+            :color="authSourceFilter === opt.value ? 'primary' : 'gray'"
+            :label="opt.label"
+            @click="authSourceFilter = opt.value"
+          />
+        </div>
+      </div>
       <div v-if="pending" class="flex items-center justify-center py-12 text-gray-400">
         <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin mr-2" />
         {{ t('admin.users.table.loading') }}
@@ -220,6 +259,7 @@ function fmtDate(iso: string | null | undefined) {
           <tr>
             <th class="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">{{ t('admin.users.table.headers.user') }}</th>
             <th class="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">{{ t('admin.users.table.headers.role') }}</th>
+            <th class="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">{{ t('admin.users.table.headers.source') }}</th>
             <th class="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">{{ t('admin.users.table.headers.status') }}</th>
             <th class="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">{{ t('admin.users.table.headers.lastLogin') }}</th>
             <th class="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">{{ t('admin.users.table.headers.created') }}</th>
@@ -228,10 +268,10 @@ function fmtDate(iso: string | null | undefined) {
         </thead>
         <tbody class="divide-y divide-gray-100">
           <tr v-if="!users?.length">
-            <td colspan="6" class="py-12 text-center text-gray-400">{{ t('admin.users.table.empty') }}</td>
+            <td colspan="7" class="py-12 text-center text-gray-400">{{ t('admin.users.table.empty') }}</td>
           </tr>
           <tr
-            v-for="u in users"
+            v-for="u in filteredUsers"
             :key="u.id"
             class="hover:bg-gray-50 dark:bg-gray-950 transition-colors"
           >
@@ -256,6 +296,11 @@ function fmtDate(iso: string | null | undefined) {
               <UserRoleBadge :role="u.role" />
             </td>
 
+            <!-- Source -->
+            <td class="px-4 py-3">
+              <UserAuthSourceBadge :auth-source="u.authSource" />
+            </td>
+
             <!-- Statut -->
             <td class="px-4 py-3">
               <div class="flex items-center gap-1.5">
@@ -266,7 +311,10 @@ function fmtDate(iso: string | null | undefined) {
                   <span class="w-1.5 h-1.5 rounded-full" :class="u.active ? 'bg-green-500' : 'bg-gray-400'" />
                   {{ u.active ? t('admin.users.table.status.active') : t('admin.users.table.status.inactive') }}
                 </span>
-                <UTooltip v-if="u.forcePasswordChange" :text="t('admin.users.table.forcePwTooltip')">
+                <UTooltip
+                  v-if="u.forcePasswordChange && canResetPassword(u)"
+                  :text="t('admin.users.table.forcePwTooltip')"
+                >
                   <UIcon name="i-heroicons-exclamation-triangle" class="w-3.5 h-3.5 text-orange-400" />
                 </UTooltip>
               </div>
@@ -301,12 +349,17 @@ function fmtDate(iso: string | null | undefined) {
                     @click="toggleActive(u)"
                   />
                 </UTooltip>
-                <UTooltip :text="t('admin.users.tooltips.resetPassword')">
+                <UTooltip
+                  :text="canResetPassword(u)
+                    ? t('admin.users.tooltips.resetPassword')
+                    : t('admin.users.tooltips.resetPasswordExternal')"
+                >
                   <UButton
                     size="xs"
                     variant="ghost"
                     color="orange"
                     icon="i-heroicons-key"
+                    :disabled="!canResetPassword(u)"
                     @click="resetTarget = u"
                   />
                 </UTooltip>

@@ -9,6 +9,30 @@
   >
     <form class="space-y-4" @submit.prevent="handleSubmit">
 
+      <!-- Authentification (lecture seule) -->
+      <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-950/80 px-3 py-3 space-y-2">
+        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          {{ t('admin.users.edit.authSectionTitle') }}
+        </p>
+        <div class="flex flex-wrap items-center gap-2">
+          <UserAuthSourceBadge :auth-source="user.authSource" />
+        </div>
+        <dl class="text-sm space-y-1.5">
+          <div v-if="externalIdentity" class="flex gap-2">
+            <dt class="text-gray-500 dark:text-gray-400 shrink-0">{{ t('admin.users.edit.externalId') }}</dt>
+            <dd class="font-mono text-xs text-gray-800 dark:text-gray-200 break-all">{{ externalIdentity }}</dd>
+          </div>
+          <div v-if="providerLabel" class="flex gap-2">
+            <dt class="text-gray-500 dark:text-gray-400 shrink-0">{{ t('admin.users.edit.provider') }}</dt>
+            <dd class="text-gray-800 dark:text-gray-200 break-all">{{ providerLabel }}</dd>
+          </div>
+          <div v-if="user.externalSubject && user.externalSubject !== externalIdentity" class="flex gap-2">
+            <dt class="text-gray-500 dark:text-gray-400 shrink-0">{{ t('admin.users.edit.externalDn') }}</dt>
+            <dd class="font-mono text-xs text-gray-600 dark:text-gray-400 break-all">{{ user.externalSubject }}</dd>
+          </div>
+        </dl>
+      </div>
+
       <!-- Nom affiché -->
       <UFormGroup :label="t('admin.users.edit.displayNameLabel')">
         <UInput
@@ -63,11 +87,18 @@
 
 <script setup lang="ts">
 import type { UserRole, UserPublic } from '../../utils/types'
+import {
+  externalIdentityDisplay,
+  externalProviderLabel,
+} from '../../utils/users-admin-ui'
 
 const props = defineProps<{ user: UserPublic }>()
 const emit  = defineEmits<{ cancel: []; updated: [] }>()
 
 const { t, tError } = useEsosI18n()
+
+const externalIdentity = computed(() => externalIdentityDisplay(props.user))
+const providerLabel = computed(() => externalProviderLabel(props.user))
 const { error: toastError } = useAppToast()
 
 const saving = ref(false)

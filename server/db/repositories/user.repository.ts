@@ -364,6 +364,10 @@ function toPublic(u: UserRow): UserPublic {
     lastLoginAt:         u.lastLoginAt ?? null,
     createdBy:           u.createdBy ?? null,
     authSource:          (u.authSource ?? 'local') as AuthSource,
+    externalIssuer:      u.externalIssuer ?? null,
+    externalSubject:     u.externalSubject ?? null,
+    externalLogin:       u.externalLogin ?? null,
+    externalEmail:       u.externalEmail ?? null,
   }
 }
 

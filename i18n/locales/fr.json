@@ -3034,7 +3034,17 @@
     "users": {
       "page": {
         "title": "Gestion des utilisateurs",
-        "subtitle": "Comptes locaux avec accès à l'interface ESOS"
+        "subtitle": "Comptes locaux, LDAP et SSO avec accès à l'interface ESOS"
+      },
+      "authSource": {
+        "local": "Local",
+        "ldap": "LDAP / AD",
+        "oidc": "SSO / OIDC",
+        "unknown": "Inconnu"
+      },
+      "filters": {
+        "label": "Source",
+        "all": "Tous"
       },
       "actions": {
         "newUser": "Nouvel utilisateur"
@@ -3067,6 +3077,7 @@
         "headers": {
           "user": "Utilisateur",
           "role": "Rôle",
+          "source": "Source",
           "status": "Statut",
           "lastLogin": "Dernière connexion",
           "created": "Créé le"
@@ -3084,6 +3095,7 @@
         "deactivate": "Désactiver",
         "activate": "Activer",
         "resetPassword": "Réinitialiser le mot de passe",
+        "resetPasswordExternal": "Mot de passe géré par le fournisseur externe",
         "delete": "Supprimer"
       },
       "modals": {
@@ -3145,6 +3157,10 @@
       },
       "edit": {
         "title": "Modifier l'utilisateur",
+        "authSectionTitle": "Authentification",
+        "externalId": "Identifiant externe",
+        "provider": "Fournisseur",
+        "externalDn": "DN annuaire",
         "displayNameLabel": "Nom affiché",
         "displayNamePlaceholder": "ex : Jean Dupont",
         "roleLabel": "Rôle",

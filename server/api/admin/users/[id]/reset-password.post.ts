@@ -24,6 +24,15 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, message: 'Utilisateur introuvable' })
   }
 
+  const authSource = target.authSource ?? 'local'
+  if (authSource !== 'local') {
+    throw createError({
+      statusCode: 400,
+      message:    'Mot de passe géré par le fournisseur externe',
+      data:       { code: 'admin.password_external_provider' },
+    })
+  }
+
   const newPassword = await resetPassword(id, parsed.data.forcePasswordChange)
   await invalidateSessions(id)
 

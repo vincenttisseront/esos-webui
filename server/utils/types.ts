@@ -18,6 +18,13 @@ export interface UserPublic {
   createdBy:           string | null
   /** `local` | `ldap` | `oidc` — défaut local si absent en BDD. */
   authSource?:         'local' | 'ldap' | 'oidc'
+  /** LDAP URL or OIDC issuer (federated accounts). */
+  externalIssuer?:     string | null
+  /** Directory DN or OIDC subject. */
+  externalSubject?:    string | null
+  /** Directory login (e.g. sAMAccountName) when provisioned from LDAP. */
+  externalLogin?:      string | null
+  externalEmail?:      string | null
   isCurrentUser?:      boolean
   isLastAdmin?:        boolean
 }

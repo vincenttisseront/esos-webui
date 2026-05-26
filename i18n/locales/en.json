@@ -3034,7 +3034,17 @@
     "users": {
       "page": {
         "title": "User management",
-        "subtitle": "Local accounts with access to the ESOS interface"
+        "subtitle": "Local, LDAP, and SSO accounts with access to the ESOS interface"
+      },
+      "authSource": {
+        "local": "Local",
+        "ldap": "LDAP / AD",
+        "oidc": "SSO / OIDC",
+        "unknown": "Unknown"
+      },
+      "filters": {
+        "label": "Source",
+        "all": "All"
       },
       "actions": {
         "newUser": "New user"
@@ -3067,6 +3077,7 @@
         "headers": {
           "user": "User",
           "role": "Role",
+          "source": "Source",
           "status": "Status",
           "lastLogin": "Last sign-in",
           "created": "Created"
@@ -3084,6 +3095,7 @@
         "deactivate": "Disable",
         "activate": "Enable",
         "resetPassword": "Reset password",
+        "resetPasswordExternal": "Password managed by the external provider",
         "delete": "Delete"
       },
       "modals": {
@@ -3145,6 +3157,10 @@
       },
       "edit": {
         "title": "Edit user",
+        "authSectionTitle": "Authentication",
+        "externalId": "External identifier",
+        "provider": "Provider",
+        "externalDn": "Directory DN",
         "displayNameLabel": "Display name",
         "displayNamePlaceholder": "e.g. Jane Doe",
         "roleLabel": "Role",
