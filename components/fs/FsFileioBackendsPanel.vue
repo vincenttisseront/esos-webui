@@ -19,11 +19,14 @@
     </div>
 
     <div
-      v-else-if="blockioOnlyGap"
+      v-else-if="blockioOperationalFileioOptional"
       class="rounded-lg border border-blue-200 dark:border-blue-800/60 bg-blue-50/50 dark:bg-blue-950/20 p-4 space-y-3"
     >
       <p class="text-sm font-medium text-blue-900 dark:text-blue-100">
-        {{ t('storage.fs.workflow.blockio_exposed.title') }}
+        {{ t('storage.fs.workflow.blockio_exposed.no_fileio_backend_title') }}
+      </p>
+      <p class="text-xs text-blue-800 dark:text-blue-200">
+        {{ t('storage.exposure.fileio_optional_operational') }}
       </p>
       <p class="text-xs text-blue-800 dark:text-blue-200">
         {{ t('storage.fs.workflow.blockio_exposed.body') }}
@@ -36,7 +39,7 @@
       <p class="text-xs text-blue-800 dark:text-blue-200">
         {{ t('storage.fs.workflow.blockio_exposed.fileio_separate') }}
       </p>
-      <div class="flex flex-wrap gap-2">
+      <div v-if="canCreateFileioLv" class="flex flex-wrap gap-2">
         <UButton
           size="sm"
           color="primary"
@@ -150,10 +153,11 @@ import { formatBlockioLvArrow } from '~/utils/storage-workflow-guidance'
 
 const props = defineProps<{
   backends: FsBackendRef[]
-  blockioOnlyGap?: boolean
+  blockioOperationalFileioOptional?: boolean
   blockioBoundLvs?: BlockioBoundLvRow[]
   suggestedLvName?: string
   suggestedVgName?: string | null
+  canCreateFileioLv?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -166,8 +170,9 @@ const { t } = useEsosI18n()
 
 const grouped = computed(() => groupFileioBackends(props.backends))
 const hasEligible = computed(() => hasEligibleFileioBackend(props.backends))
-const blockioOnlyGap = computed(() => props.blockioOnlyGap ?? false)
+const blockioOperationalFileioOptional = computed(() => props.blockioOperationalFileioOptional ?? false)
 const blockioBoundLvs = computed(() => props.blockioBoundLvs ?? [])
+const canCreateFileioLv = computed(() => props.canCreateFileioLv ?? false)
 const suggestedLvName = computed(() => props.suggestedLvName ?? 'fileio_store')
 const suggestedVgName = computed(() => props.suggestedVgName ?? null)
 

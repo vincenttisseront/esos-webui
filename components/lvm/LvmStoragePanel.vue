@@ -194,10 +194,10 @@
     <LvmProvisioningChain :steps="provisioningChain" />
 
     <UAlert
-      v-if="blockProvisioningComplete"
+      v-if="lvmExposure?.blockio.complete && lvmExposure.fileio.mode === 'optional'"
       color="blue"
       variant="soft"
-      :title="t('storage.workflow.lvm.blockio_banner_title')"
+      :title="t('storage.exposure.fileio_optional_operational')"
       :description="t('storage.workflow.lvm.blockio_banner_body')"
     />
 
@@ -450,8 +450,8 @@ import {
   computeLvmNextAction,
   type LvmNextAction,
 } from '~/utils/lvm-provisioning-chain'
-import { classifyLvFileioUsage, isBlockProvisioningComplete } from '~/utils/lvm-lv-usage'
-import { fileioEligibleBackendPaths } from '~/utils/storage-workflow-guidance'
+import { classifyLvFileioUsage } from '~/utils/lvm-lv-usage'
+import { buildExposureSummary, fileioEligibleBackendPaths } from '~/utils/storage-workflow-guidance'
 
 const props = defineProps<{
   sanId: string
@@ -620,7 +620,15 @@ const nextAction = computed(() => computeLvmNextAction(provisioningContext.value
 
 const fileioEligiblePaths = computed(() => fileioEligibleBackendPaths(fs.backends))
 
-const blockProvisioningComplete = computed(() => isBlockProvisioningComplete(displayLvs.value))
+const lvmExposure = computed(() =>
+  buildExposureSummary({
+    backends: fs.backends,
+    lvs: displayLvs.value,
+    vgs: lvm.vgs.map(v => ({ name: v.name, freeBytes: v.freeBytes, clustered: v.clustered })),
+    overview: fs.overview,
+    fileioChain: [],
+  }),
+)
 
 function lvUsageView(lv: LogicalVolume) {
   return classifyLvFileioUsage(lv, { fileioEligiblePaths: fileioEligiblePaths.value })

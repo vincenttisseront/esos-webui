@@ -1,4 +1,5 @@
 import type { FsFileioViewModel } from '~/utils/fs-fileio-view'
+import type { ExposureSummary } from '~/utils/storage-exposure-status'
 import type { ProvisioningStepStatus } from '~/utils/lvm-provisioning-chain'
 
 export type FsSummaryStatus = 'ok' | 'attention'
@@ -8,8 +9,7 @@ export interface FsSummaryStatusInput {
   fetchError: string | null
   actionableWarnings: string[]
   hasStaleData: boolean
-  blockProvisioningComplete?: boolean
-  fileioTrackConfigured?: boolean
+  exposure?: ExposureSummary | null
 }
 
 function chainIsComplete(steps: FsFileioViewModel['chain']): boolean {
@@ -18,18 +18,11 @@ function chainIsComplete(steps: FsFileioViewModel['chain']): boolean {
 }
 
 export function buildFsSummaryStatus(input: FsSummaryStatusInput): FsSummaryStatus {
-  const { fileioView, fetchError, actionableWarnings, hasStaleData } = input
+  const { fileioView, fetchError, actionableWarnings, hasStaleData, exposure } = input
   if (fetchError || hasStaleData || actionableWarnings.length > 0) return 'attention'
   if (!fileioView) return 'attention'
 
-  const blockComplete = input.blockProvisioningComplete ?? false
-  const fileioConfigured = input.fileioTrackConfigured ?? false
-  if (blockComplete && !fileioConfigured) {
-    const hasBlockingStep = fileioView.chain.some(s =>
-      s.status === 'next' || s.status === 'blocked' || s.status === 'missing',
-    )
-    if (!hasBlockingStep) return 'ok'
-  }
+  if (exposure) return exposure.health
 
   if (!chainIsComplete(fileioView.chain)) return 'attention'
   const hasNext = fileioView.chain.some(s => s.status === 'next' || s.status === 'missing')

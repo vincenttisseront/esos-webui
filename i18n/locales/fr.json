@@ -3899,6 +3899,7 @@
       "workflow": {
         "blockio_exposed": {
           "title": "Votre stockage actuel est déjà exposé en BLOCKIO.",
+          "no_fileio_backend_title": "Aucun backend FILEIO disponible. Le stockage actuel est déjà exposé en BLOCKIO.",
           "body": "Les volumes logiques ci-dessous sont liés à des devices SCST blockio. Ils ne peuvent pas servir de backend pour un filesystem FILEIO.",
           "fileio_separate": "FILEIO nécessite un backend bloc séparé et inutilisé (par exemple un volume logique dédié).",
           "cta_create_lv": "Créer un LV dédié pour FILEIO",
@@ -4030,6 +4031,32 @@
         "vdisk_name_invalid": "Nom de fichier vdisk invalide",
         "vdisk_size_min": "Taille vdisk trop petite (min 1 Mio)",
         "vdisk_size_free": "Taille supérieure à l'espace libre"
+      }
+    },
+    "exposure": {
+      "summary": {
+        "blockio": "BLOCKIO",
+        "fileio": "FILEIO"
+      },
+      "blockio": {
+        "none": "non configuré",
+        "in_progress": "en cours",
+        "operational": "opérationnel"
+      },
+      "fileio": {
+        "none": "non configuré",
+        "optional": "optionnel — non configuré",
+        "in_progress": "en cours",
+        "operational": "opérationnel"
+      },
+      "fileio_optional_operational": "FILEIO est optionnel. Votre stockage BLOCKIO est déjà opérationnel.",
+      "issue": {
+        "blockio_incomplete": "La piste BLOCKIO est entamée mais incomplète (liez SCST sur tous les volumes logiques).",
+        "fileio_incomplete": "La piste FILEIO est entamée mais une étape manque encore.",
+        "backend_double_use": "Un même périphérique bloc ne peut pas servir à la fois pour BLOCKIO et FILEIO : {paths}.",
+        "fileio_unmapped": "Des devices FILEIO ou fichiers vdisk ne sont pas mappés dans SCST.",
+        "blockio_unmapped": "{count} device(s) SCST BLOCKIO sans mapping LUN pour l’instant.",
+        "cluster_symmetry": "Problème de symétrie LVM cluster — consultez l’onglet LVM."
       }
     },
     "workflow": {

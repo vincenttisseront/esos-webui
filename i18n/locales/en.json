@@ -3899,6 +3899,7 @@
       "workflow": {
         "blockio_exposed": {
           "title": "Your current storage is already exposed as BLOCKIO.",
+          "no_fileio_backend_title": "No FILEIO backend available. Current storage is already exposed as BLOCKIO.",
           "body": "The logical volumes below are bound to SCST block devices. They cannot be reused as a FILEIO filesystem backend.",
           "fileio_separate": "FILEIO requires a separate, unused block backend (for example a dedicated logical volume).",
           "cta_create_lv": "Create a dedicated LV for FILEIO",
@@ -4030,6 +4031,32 @@
         "vdisk_name_invalid": "Invalid vdisk file name",
         "vdisk_size_min": "VDisk size too small (min 1 MiB)",
         "vdisk_size_free": "Size exceeds available free space"
+      }
+    },
+    "exposure": {
+      "summary": {
+        "blockio": "BLOCKIO",
+        "fileio": "FILEIO"
+      },
+      "blockio": {
+        "none": "not configured",
+        "in_progress": "in progress",
+        "operational": "operational"
+      },
+      "fileio": {
+        "none": "not configured",
+        "optional": "optional — not configured",
+        "in_progress": "in progress",
+        "operational": "operational"
+      },
+      "fileio_optional_operational": "FILEIO is optional. Your BLOCKIO storage is already operational.",
+      "issue": {
+        "blockio_incomplete": "BLOCKIO path is started but not complete (bind SCST on all logical volumes).",
+        "fileio_incomplete": "FILEIO path is started but a step is still missing.",
+        "backend_double_use": "The same block device cannot be used for BLOCKIO and FILEIO: {paths}.",
+        "fileio_unmapped": "FILEIO devices or vdisk files are not mapped to SCST.",
+        "blockio_unmapped": "{count} BLOCKIO SCST device(s) have no LUN mapping yet.",
+        "cluster_symmetry": "Cluster LVM symmetry issue — review the LVM tab."
       }
     },
     "workflow": {

@@ -38,20 +38,16 @@
     </div>
 
     <div
-      v-if="showProvisioningTracks"
+      v-if="exposure"
       class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-400 px-1"
     >
       <span>
-        <span class="font-medium text-gray-800 dark:text-gray-200">{{ t('storage.fs.summary.block_provisioning') }}:</span>
-        {{ blockProvisioningComplete ? t('storage.fs.summary.block_complete') : t('storage.fs.summary.block_incomplete') }}
+        <span class="font-medium text-gray-800 dark:text-gray-200">{{ t('storage.exposure.summary.blockio') }}:</span>
+        {{ t(exposure.blockio.labelKey) }}
       </span>
       <span>
-        <span class="font-medium text-gray-800 dark:text-gray-200">{{ t('storage.fs.summary.fileio_track') }}:</span>
-        {{
-          fileioTrackConfigured
-            ? t('storage.fs.summary.fileio_configured')
-            : t('storage.fs.summary.fileio_optional_not_configured')
-        }}
+        <span class="font-medium text-gray-800 dark:text-gray-200">{{ t('storage.exposure.summary.fileio') }}:</span>
+        {{ t(exposure.fileio.labelKey) }}
       </span>
     </div>
 
@@ -64,22 +60,17 @@
 <script setup lang="ts">
 import type { FsFileioDetectionCounts } from '~/utils/fs-fileio-view'
 import type { FsSummaryStatus } from '~/utils/fs-summary-status'
+import type { ExposureSummary } from '~/utils/storage-exposure-status'
 
-const props = defineProps<{
+defineProps<{
   counts: FsFileioDetectionCounts
   status: FsSummaryStatus
   scannedAtLabel?: string
   nextActionHint?: string
   refreshing?: boolean
-  blockProvisioningComplete?: boolean
-  fileioTrackConfigured?: boolean
+  exposure?: ExposureSummary | null
 }>()
 
 const emit = defineEmits<{ refresh: [] }>()
 const { t } = useEsosI18n()
-
-const showProvisioningTracks = computed(() =>
-  props.blockProvisioningComplete !== undefined
-  || props.fileioTrackConfigured !== undefined,
-)
 </script>

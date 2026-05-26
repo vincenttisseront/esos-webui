@@ -37,6 +37,7 @@ describe('storage-workflow-guidance', () => {
       fileioTrackConfigured: false,
     })
     expect(situation.blockioOnlyGap).toBe(true)
+    expect(situation.exposure.health).toBe('ok')
     expect(situation.blockProvisioningComplete).toBe(true)
     expect(situation.blockioBoundLvs).toHaveLength(1)
     expect(situation.suggestedLvName).toBe('fileio_store')

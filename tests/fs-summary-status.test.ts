@@ -92,7 +92,7 @@ describe('fs-summary-status', () => {
     })).toBe('attention')
   })
 
-  it('returns ok when block provisioning is complete but FILEIO is optional', () => {
+  it('returns ok when exposure reports blockio operational and fileio optional', () => {
     const view = buildFsFileioViewModel(completeOverview())!
     const optionalChain = view.chain.map(s => ({ ...s, status: 'optional' as const }))
     expect(buildFsSummaryStatus({
@@ -100,8 +100,15 @@ describe('fs-summary-status', () => {
       fetchError: null,
       actionableWarnings: [],
       hasStaleData: false,
-      blockProvisioningComplete: true,
-      fileioTrackConfigured: false,
+      exposure: {
+        blockio: { mode: 'operational', labelKey: 'x', complete: true, started: true, boundLvs: [], unmappedDeviceCount: 0 },
+        fileio: { mode: 'optional', labelKey: 'y', complete: false, started: false, hasEligibleBackend: false, chainIncomplete: false },
+        health: 'ok',
+        issues: [],
+        blockioOperationalFileioOptional: true,
+        suggestedFileioLvName: 'fileio_store',
+        suggestedFileioVgName: null,
+      },
     })).toBe('ok')
   })
 })

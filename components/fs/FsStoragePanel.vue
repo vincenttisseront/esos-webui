@@ -2,13 +2,28 @@
   <div class="space-y-4">
     <StorageReadOnlyBanner :read-only="readOnly" compact />
 
+    <UAlert
+      v-if="exposure?.blockioOperationalFileioOptional"
+      color="blue"
+      variant="soft"
+      :title="t('storage.exposure.fileio_optional_operational')"
+      :description="t('storage.fs.workflow.blockio_exposed.no_fileio_backend_title')"
+    />
+
+    <UAlert
+      v-for="(issue, idx) in exposure?.issues ?? []"
+      :key="idx"
+      color="amber"
+      variant="soft"
+      :title="t(issue.messageKey, issue.messageParams ?? {})"
+    />
+
     <FsSummaryBar
       :counts="summaryCounts"
       :status="summaryStatus"
       :scanned-at-label="scannedAtLabel"
       :next-action-hint="workflowNextHint || undefined"
-      :block-provisioning-complete="workflowSituation.blockProvisioningComplete"
-      :fileio-track-configured="workflowSituation.fileioTrackConfigured"
+      :exposure="exposure"
       :refreshing="refreshing"
       @refresh="refreshAll"
     />
@@ -292,10 +307,11 @@
 
     <FsFileioBackendsPanel
       :backends="backends"
-      :blockio-only-gap="workflowSituation.blockioOnlyGap"
-      :blockio-bound-lvs="workflowSituation.blockioBoundLvs"
-      :suggested-lv-name="workflowSituation.suggestedLvName"
-      :suggested-vg-name="workflowSituation.suggestedVgName"
+      :blockio-operational-fileio-optional="exposure?.blockioOperationalFileioOptional"
+      :blockio-bound-lvs="exposure?.blockio.boundLvs"
+      :suggested-lv-name="exposure?.suggestedFileioLvName"
+      :suggested-vg-name="exposure?.suggestedFileioVgName"
+      :can-create-fileio-lv="canCreateFileioLv"
       @navigate-block-devices="emit('navigate-block-devices', $event)"
       @navigate-lvm="emit('navigate-lvm')"
       @create-fileio-lv="emit('create-fileio-lv', $event)"
@@ -440,7 +456,17 @@ const workflowSituation = computed(() =>
     lvs: lvm.lvs,
     vgs: lvm.vgs.map(v => ({ name: v.name, freeBytes: v.freeBytes, clustered: v.clustered })),
     fileioTrackConfigured: fileioTrackConfigured.value,
+    overview: fs.overview,
+    fileioChain: fileioView.value?.chain ?? [],
   }),
+)
+
+const exposure = computed(() => workflowSituation.value.exposure)
+
+const canCreateFileioLv = computed(() =>
+  !props.readOnly
+  && Boolean(exposure.value?.blockioOperationalFileioOptional)
+  && lvm.vgs.some(v => !v.clustered && v.freeBytes > 0),
 )
 
 const summaryStatus = computed(() =>
@@ -449,8 +475,7 @@ const summaryStatus = computed(() =>
     fetchError: fs.error,
     actionableWarnings: actionableScanWarnings.value,
     hasStaleData: fs.hasStaleData || fs.partialRefresh,
-    blockProvisioningComplete: workflowSituation.value.blockProvisioningComplete,
-    fileioTrackConfigured: workflowSituation.value.fileioTrackConfigured,
+    exposure: exposure.value,
   }),
 )
 
@@ -499,27 +524,26 @@ const nextActionText = computed(() => {
 })
 
 const workflowNextHint = computed(() => {
-  if (workflowSituation.value.blockioOnlyGap) {
-    return t('storage.fs.workflow.blockio_exposed.next_hint') as string
+  if (exposure.value?.blockioOperationalFileioOptional) {
+    return t('storage.exposure.fileio_optional_operational') as string
+  }
+  if (exposure.value?.fileio.mode === 'optional') {
+    return t('storage.fs.workflow.fileio_optional_hint') as string
   }
   if (
-    workflowSituation.value.blockProvisioningComplete
-    && !workflowSituation.value.fileioTrackConfigured
+    exposure.value?.blockio.complete
+    && !exposure.value?.fileio.started
     && nextAction.value?.kind === 'create_fs'
   ) {
-    return t('storage.fs.workflow.fileio_optional_hint') as string
+    return ''
   }
   return nextActionText.value
 })
 
 const showNextStepButton = computed(() => {
-  if (workflowSituation.value.blockioOnlyGap) return false
+  if (exposure.value?.blockioOperationalFileioOptional) return false
   const kind = nextAction.value?.kind
-  if (
-    kind === 'create_fs'
-    && workflowSituation.value.blockProvisioningComplete
-    && !workflowSituation.value.fileioTrackConfigured
-  ) {
+  if (kind === 'create_fs' && exposure.value?.blockio.complete && !exposure.value?.fileio.started) {
     return false
   }
   return kind === 'create_fs' || kind === 'create_vdisk' || kind === 'bind_fileio'
