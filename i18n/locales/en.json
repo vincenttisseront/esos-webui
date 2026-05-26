@@ -2794,6 +2794,30 @@
           "followHelp": "Not enabled in this version. If referrals appear, bind directly to a domain controller.",
           "notFollowed": "Referrals were returned but are not followed automatically. Bind directly to a domain controller."
         },
+        "eventLog": {
+          "title": "LDAP logs",
+          "desc": "Recent LDAP connectivity tests, sign-in attempts, and provisioning actions (sanitized — no passwords).",
+          "retention": "Retention: {days} days, max {max} events.",
+          "refresh": "Refresh",
+          "copyAll": "Copy all",
+          "copyTitle": "Copied",
+          "copyBody": "Event copied to clipboard.",
+          "copyAllBody": "Events copied to clipboard.",
+          "empty": "No LDAP events recorded yet. Run a test or attempt sign-in.",
+          "filterTypeAll": "All types",
+          "filterTypeTest": "Tests",
+          "filterTypeLogin": "Sign-in",
+          "filterTypeProvisioning": "Provisioning",
+          "filterResultAll": "All results",
+          "filterResultSuccess": "Success",
+          "filterResultFailure": "Failure",
+          "colTime": "Time",
+          "colType": "Type / action",
+          "colStep": "Step",
+          "colResult": "Result",
+          "colUser": "User",
+          "colError": "Error"
+        },
         "adAssistant": {
           "title": "Active Directory assistant",
           "desc": "Recommended defaults for Active Directory. Apply fills form fields only — save explicitly to persist.",
@@ -2872,6 +2896,24 @@
             "rootProbeOk": "Use domain root base DN (probe succeeded)",
             "rootProbeFailed": "Domain root probe also failed"
           },
+          "suggestionActions": {
+            "applyRootBaseDn": "Use domain root base DN",
+            "applyAdFilter": "Apply AD user filter",
+            "applyUpnBind": "Use UPN bind format",
+            "applyBindNetbios": "Use NetBIOS bind format",
+            "applyAdPreset": "Apply AD recommendations",
+            "testRootBaseDn": "Test with domain root base DN"
+          },
+          "groupReadFailed": "User found but group attribute (memberOf) was not returned — check group attribute name and read permissions.",
+          "operationsError": {
+            "title": "Active Directory Operations Error — likely causes",
+            "advice1": "Try base DN DC=ar-systems,DC=fr instead of a nested OU (OU=AR-Users,…).",
+            "advice2": "Confirm the service account can search users under the chosen base DN.",
+            "advice3": "{'Use UPN bind (svc@domain) or DOMAIN\\\\user — bind may succeed while search still fails with another format.'}",
+            "advice4": "{'Verify filter syntax: (&(objectCategory=person)(objectClass=user)(sAMAccountName={{username}})).'}",
+            "advice5": "Check LDAP signing / channel binding policies on the domain controller (often required on plain ldap://).",
+            "advice6": "If referrals appear below, bind directly to a domain controller (referrals are not followed automatically)."
+          },
           "copyTitle": "Copied",
           "copyBody": "LDAP diagnostic copied to clipboard.",
           "steps": {
@@ -2922,7 +2964,9 @@
             "check_ad_referrals": "Active Directory may return referrals to another partition — bind directly to a domain controller.",
             "check_filter_syntax": "{'Check LDAP filter syntax; for AD use (&(objectCategory=person)(objectClass=user)(sAMAccountName={{username}})).'}",
             "verify_memberof_read": "Verify the service account can read memberOf on user objects for role mapping.",
-            "referrals_not_followed": "Referrals are reported in diagnostics but not automatically followed by the test client."
+            "referrals_not_followed": "Referrals are reported in diagnostics but not automatically followed by the test client.",
+            "check_ldap_signing": "On Active Directory, LDAP signing may be required — use LDAPS or ldap:// with StartTLS and a DC that accepts your client.",
+            "check_channel_binding": "Channel binding may be required for simple bind — prefer LDAPS to the domain controller or adjust GPO signing settings."
           }
         }
       },

@@ -2794,6 +2794,30 @@
           "followHelp": "Non activé dans cette version. Si des références apparaissent, liez-vous directement à un contrôleur de domaine.",
           "notFollowed": "Des références LDAP ont été renvoyées mais ne sont pas suivies automatiquement. Liez-vous directement à un contrôleur de domaine."
         },
+        "eventLog": {
+          "title": "Journaux LDAP",
+          "desc": "Tests de connectivité, tentatives de connexion et provisionnement récents (données assainies — aucun mot de passe).",
+          "retention": "Rétention : {days} jours, max. {max} événements.",
+          "refresh": "Actualiser",
+          "copyAll": "Tout copier",
+          "copyTitle": "Copié",
+          "copyBody": "Événement copié dans le presse-papiers.",
+          "copyAllBody": "Événements copiés dans le presse-papiers.",
+          "empty": "Aucun événement LDAP enregistré. Lancez un test ou une connexion.",
+          "filterTypeAll": "Tous les types",
+          "filterTypeTest": "Tests",
+          "filterTypeLogin": "Connexion",
+          "filterTypeProvisioning": "Provisionnement",
+          "filterResultAll": "Tous les résultats",
+          "filterResultSuccess": "Succès",
+          "filterResultFailure": "Échec",
+          "colTime": "Heure",
+          "colType": "Type / action",
+          "colStep": "Étape",
+          "colResult": "Résultat",
+          "colUser": "Utilisateur",
+          "colError": "Erreur"
+        },
         "adAssistant": {
           "title": "Assistant Active Directory",
           "desc": "Valeurs recommandées pour Active Directory. Appliquer remplit les champs uniquement — enregistrez explicitement pour persister.",
@@ -2872,6 +2896,24 @@
             "rootProbeOk": "Utiliser le DN racine du domaine (sonde OK)",
             "rootProbeFailed": "La sonde avec le DN racine a aussi échoué"
           },
+          "suggestionActions": {
+            "applyRootBaseDn": "Utiliser le DN racine du domaine",
+            "applyAdFilter": "Appliquer le filtre utilisateur AD",
+            "applyUpnBind": "Utiliser le bind UPN",
+            "applyBindNetbios": "Utiliser le bind NetBIOS",
+            "applyAdPreset": "Appliquer les recommandations AD",
+            "testRootBaseDn": "Tester avec le DN racine du domaine"
+          },
+          "groupReadFailed": "Utilisateur trouvé mais l’attribut de groupe (memberOf) n’a pas été renvoyé — vérifiez le nom d’attribut et les droits de lecture.",
+          "operationsError": {
+            "title": "Operations Error Active Directory — causes probables",
+            "advice1": "Essayez le base DN DC=ar-systems,DC=fr plutôt qu’une OU imbriquée (OU=AR-Users,…).",
+            "advice2": "Vérifiez que le compte de service peut rechercher les utilisateurs sous le base DN choisi.",
+            "advice3": "{'Utilisez un bind UPN (svc@domaine) ou DOMAINE\\\\svc — le bind peut réussir alors que la recherche échoue avec un autre format.'}",
+            "advice4": "{'Vérifiez le filtre : (&(objectCategory=person)(objectClass=user)(sAMAccountName={{username}})).'}",
+            "advice5": "Vérifiez les stratégies de signature LDAP / channel binding sur le contrôleur de domaine (souvent requis en ldap:// simple).",
+            "advice6": "Si des références apparaissent ci-dessous, liez-vous directement à un contrôleur de domaine (les referrals ne sont pas suivis automatiquement)."
+          },
           "copyTitle": "Copié",
           "copyBody": "Diagnostic LDAP copié dans le presse-papiers.",
           "steps": {
@@ -2922,7 +2964,9 @@
             "check_ad_referrals": "Active Directory peut renvoyer des références vers une autre partition — liez-vous directement à un contrôleur de domaine.",
             "check_filter_syntax": "{'Vérifiez la syntaxe du filtre LDAP ; pour AD utilisez (&(objectCategory=person)(objectClass=user)(sAMAccountName={{username}})).'}",
             "verify_memberof_read": "Vérifiez que le compte de service peut lire memberOf sur les objets utilisateur pour la cartographie des rôles.",
-            "referrals_not_followed": "Les références sont affichées dans le diagnostic mais ne sont pas suivies automatiquement par le client de test."
+            "referrals_not_followed": "Les références sont affichées dans le diagnostic mais ne sont pas suivies automatiquement par le client de test.",
+            "check_ldap_signing": "Sur Active Directory, la signature LDAP peut être exigée — utilisez LDAPS ou ldap:// avec StartTLS vers un DC qui accepte votre client.",
+            "check_channel_binding": "Le channel binding peut être requis pour le bind simple — préférez LDAPS vers le contrôleur de domaine ou ajustez les GPO de signature."
           }
         }
       },

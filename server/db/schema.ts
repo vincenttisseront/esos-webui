@@ -183,6 +183,34 @@ export const loginEvents = sqliteTable('login_events', {
 })
 
 /**
+ * LDAP test / login / provisioning audit (sanitized; no passwords).
+ * Retention: 30 days and max 5000 rows (enforced on insert).
+ */
+export const ldapAuthEvents = sqliteTable('ldap_auth_events', {
+  id:                 text('id').primaryKey(),
+  at:                 text('at').notNull(),
+  eventType:          text('event_type').notNull(),
+  action:             text('action').notNull(),
+  step:               text('step').notNull(),
+  result:             text('result').notNull(),
+  safeCode:           text('safe_code'),
+  username:           text('username'),
+  provider:           text('provider').notNull().default('ldap'),
+  urlHost:            text('url_host'),
+  baseDn:             text('base_dn'),
+  renderedFilter:     text('rendered_filter'),
+  ldapErrorName:      text('ldap_error_name'),
+  ldapErrorCode:      text('ldap_error_code'),
+  diagnosticMessage:  text('diagnostic_message'),
+  matchedDn:          text('matched_dn'),
+  referralsJson:      text('referrals_json'),
+  durationMs:         integer('duration_ms'),
+  requestIp:          text('request_ip'),
+  userAgent:          text('user_agent'),
+  stepResultsJson:    text('step_results_json'),
+})
+
+/**
  * Opérations RAID persistées (SDD v3.12 §15 — Phase 5+).
  * En Phase 1 l'in-memory store est utilisé; cette table est prête pour migration.
  */

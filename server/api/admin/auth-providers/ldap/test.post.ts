@@ -3,6 +3,7 @@ import { assertSafeLdapLoginUsername } from '../../../../utils/ldap-filter-escap
 import { domainRootDnFromDn, domainRootDnFromUrl } from '../../../../utils/ldap-ad-defaults'
 import { testLdapSettings, type LdapTestAction } from '../../../../utils/ldap-service'
 import { buildStructuredLdapTestResponse } from '../../../../utils/ldap-test-response'
+import { recordLdapAuthEventFromTest } from '../../../../utils/ldap-auth-events'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody<{
@@ -31,12 +32,25 @@ export default defineEventHandler(async (event) => {
       ?? undefined
   }
 
+  const startedAt = Date.now()
+  const testAction = action ?? (body.username?.trim() ? 'search' : 'bind')
   const result = await testLdapSettings(dto.ldap, {
     bindPasswordOverride: body.bindPassword,
     username:             body.username,
     action,
     baseDnOverride,
     probeRootBaseDn:      action !== 'connect' && action !== 'bind',
+  })
+
+  recordLdapAuthEventFromTest({
+    action:      testAction,
+    diagnostic:  result.diagnostic,
+    dto:         dto.ldap,
+    lookupUser:  body.username?.trim(),
+    httpOk:      result.ok,
+    durationMs:  Date.now() - startedAt,
+    requestIp:   getRequestIP(event) ?? undefined,
+    userAgent:   getRequestHeader(event, 'user-agent') ?? undefined,
   })
 
   const row = result.ok ? result.diagnostic.searchResultPreview ?? null : null

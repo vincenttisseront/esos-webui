@@ -76,6 +76,8 @@ export type LdapDiagnosticHintId =
   | 'check_filter_syntax'
   | 'verify_memberof_read'
   | 'referrals_not_followed'
+  | 'check_ldap_signing'
+  | 'check_channel_binding'
 
 export type LdapStepStatus = 'ok' | 'failed' | 'skipped' | 'pending'
 
@@ -401,17 +403,19 @@ function hintsForSafeCode(
     hints.push(
       'try_domain_root_base_dn',
       'try_upn_bind_format',
-      'use_ldaps_or_starttls',
-      'verify_bind_format',
       'verify_base_dn',
       'verify_search_filter',
       'check_filter_syntax',
       'verify_service_account_read',
-      'verify_memberof_read',
+      'verify_bind_format',
+      'check_ldap_signing',
+      'check_channel_binding',
+      'use_ldaps_or_starttls',
       'check_tls_certificate',
       'check_hostname_sni',
       'check_ad_referrals',
       'referrals_not_followed',
+      'verify_memberof_read',
     )
     return hints
   }
@@ -711,17 +715,25 @@ export function buildLdapSuccessDiagnostic(
   return buildLdapBindOnlySuccessDiagnostic(dto, config, stepResults)
 }
 
-/** Safe server log line (no passwords). */
+/** Safe server log line (no passwords). DB audit is recorded separately via `recordLdapAuthEventFromTest`. */
 export function logLdapTestSafe(
   action: string,
   dto: AdminAuthProvidersDto['ldap'],
   diagnostic: LdapTestDiagnostic,
 ): void {
-  console.warn('[ldap-test]', JSON.stringify({
+  console.info('[ldap-test]', JSON.stringify({
     action,
     step:      diagnostic.step,
     safeCode:  diagnostic.safeCode,
-    url:       dto.url?.trim() || '',
+    host:      (() => {
+      try {
+        const u = dto.url?.trim()
+        if (!u) return ''
+        return new URL(u.includes('://') ? u : `ldap://${u}`).host
+      } catch {
+        return ''
+      }
+    })(),
     baseDn:    dto.baseDn?.trim() || '',
     errorName: diagnostic.ldapErrorName ?? null,
     errorCode: diagnostic.ldapErrorCode ?? null,

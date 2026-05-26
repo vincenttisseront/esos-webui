@@ -1,6 +1,14 @@
 <script setup lang="ts">
-import type { LdapStepProgress, LdapTestDiagnostic } from '~/server/utils/ldap-diagnostics'
-import type { LdapTestSuggestion } from '~/server/utils/ldap-test-response'
+import type {
+  LdapStepProgress,
+  LdapStepStatus,
+  LdapTestDiagnostic,
+} from '~/server/utils/ldap-diagnostics'
+import type {
+  LdapErrorCategory,
+  LdapProgressStep,
+  LdapTestSuggestion,
+} from '~/server/utils/ldap-test-response'
 import { formatLdapDiagnosticForCopy } from '~/server/utils/ldap-diagnostics'
 
 const props = defineProps<{
@@ -11,6 +19,8 @@ const props = defineProps<{
   searchSampleCount?: number
   userLookup?: boolean
   groupReadOk?: boolean
+  errorCategory?: LdapErrorCategory
+  progress?: Partial<Record<LdapProgressStep, LdapStepStatus>>
   suggestions?: LdapTestSuggestion[]
   readOnly?: boolean
 }>()
@@ -19,6 +29,8 @@ const emit = defineEmits<{
   'apply-root-base-dn': [baseDn: string]
   'apply-ad-filter': [filter: string]
   'apply-upn-bind': [bindDn: string]
+  'apply-bind-netbios': [bindDn: string]
+  'apply-ad-preset': []
   'test-root-base-dn': []
 }>()
 
@@ -73,12 +85,30 @@ const renderedFilterText = computed(() =>
   props.diagnostic.renderedFilter ?? props.diagnostic.config.userFilter,
 )
 
+const progressRows = computed((): Array<{ step: string; status: LdapStepStatus }> => {
+  if (props.progress) {
+    const order: LdapProgressStep[] = ['connection', 'tls', 'bind', 'userSearch', 'groupRead']
+    return order.map((step) => ({
+      step,
+      status: props.progress![step] ?? 'skipped',
+    }))
+  }
+  return (props.diagnostic.stepResults ?? []).map((row: LdapStepProgress) => ({
+    step: row.step === 'starttls' ? 'tls' : row.step,
+    status: row.status,
+  }))
+})
+
 const stepProgressLines = computed(() =>
-  (props.diagnostic.stepResults ?? []).map((row: LdapStepProgress) => {
+  progressRows.value.map((row) => {
     const label = t(`admin.authProviders.ldap.diagnostics.steps.${row.step}`)
     const status = t(`admin.authProviders.ldap.diagnostics.stepStatus.${row.status}`)
     return `${label}: ${status}`
   }),
+)
+
+const showOperationsAdvice = computed(
+  () => !props.ok && props.errorCategory === 'operationsError',
 )
 
 const succeededBeforeFailure = computed(() => {
@@ -127,10 +157,14 @@ function stepStatusClass(status: LdapStepProgress['status']) {
   }
 }
 
-function suggestionLabel(key: string): string {
-  if (key === 'root_base_dn_probe_ok') return t('admin.authProviders.ldap.diagnostics.suggestions.rootProbeOk')
-  if (key === 'root_base_dn_probe_failed') return t('admin.authProviders.ldap.diagnostics.suggestions.rootProbeFailed')
-  return t(`admin.authProviders.ldap.diagnostics.hints.${key}`)
+function suggestionLabel(s: LdapTestSuggestion): string {
+  if (s.actionType) {
+    const actionLabel = t(`admin.authProviders.ldap.diagnostics.suggestionActions.${s.actionType}`)
+    if (actionLabel && !actionLabel.includes('suggestionActions')) return actionLabel
+  }
+  if (s.key === 'root_base_dn_probe_ok') return t('admin.authProviders.ldap.diagnostics.suggestions.rootProbeOk')
+  if (s.key === 'root_base_dn_probe_failed') return t('admin.authProviders.ldap.diagnostics.suggestions.rootProbeFailed')
+  return t(`admin.authProviders.ldap.diagnostics.hints.${s.key}`)
 }
 
 function runSuggestion(s: LdapTestSuggestion) {
@@ -144,6 +178,12 @@ function runSuggestion(s: LdapTestSuggestion) {
       break
     case 'applyUpnBind':
       if (s.payload?.bindDn) emit('apply-upn-bind', s.payload.bindDn)
+      break
+    case 'applyBindNetbios':
+      if (s.payload?.bindDn) emit('apply-bind-netbios', s.payload.bindDn)
+      break
+    case 'applyAdPreset':
+      emit('apply-ad-preset')
       break
     case 'testRootBaseDn':
       emit('test-root-base-dn')
@@ -204,6 +244,9 @@ function stepStatusIcon(status: LdapStepProgress['status']) {
         <p v-if="ok && !bindOnly && !connectOnly && userLookup === false" class="text-amber-700 dark:text-amber-400">
           {{ t('admin.authProviders.ldap.testLookupNotFound') }}
         </p>
+        <p v-if="ok && groupReadOk === false" class="text-amber-700 dark:text-amber-400">
+          {{ t('admin.authProviders.ldap.diagnostics.groupReadFailed') }}
+        </p>
         <p
           v-if="renderedFilterText && !bindOnly && !connectOnly"
           class="text-xs font-mono text-gray-600 dark:text-gray-400 break-all"
@@ -234,13 +277,26 @@ function stepStatusIcon(status: LdapStepProgress['status']) {
       />
     </div>
 
-    <div v-if="diagnostic.stepResults?.length" class="space-y-2">
+    <UAlert
+      v-if="showOperationsAdvice"
+      color="amber"
+      icon="i-heroicons-light-bulb"
+      :title="t('admin.authProviders.ldap.diagnostics.operationsError.title')"
+    >
+      <ul class="list-disc pl-5 space-y-1 text-sm mt-2">
+        <li v-for="i in 6" :key="i">
+          {{ t(`admin.authProviders.ldap.diagnostics.operationsError.advice${i}`) }}
+        </li>
+      </ul>
+    </UAlert>
+
+    <div v-if="progressRows.length" class="space-y-2">
       <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
         {{ t('admin.authProviders.ldap.diagnostics.stepProgressTitle') }}
       </p>
       <ul class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
         <li
-          v-for="row in diagnostic.stepResults"
+          v-for="row in progressRows"
           :key="row.step"
           class="flex items-center gap-2 text-xs"
           :class="stepStatusClass(row.status)"
@@ -280,7 +336,7 @@ function stepStatusIcon(status: LdapStepProgress['status']) {
           color="primary"
           variant="soft"
           :disabled="!s.actionType"
-          :label="suggestionLabel(s.key)"
+          :label="suggestionLabel(s)"
           @click="runSuggestion(s)"
         />
       </div>

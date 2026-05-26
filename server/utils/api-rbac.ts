@@ -55,7 +55,7 @@ export const MUTATION_ROUTE_PERMISSIONS: RoutePermission[] = [
  */
 export const READ_ROUTE_PERMISSIONS: RoutePermission[] = [
   [/^\/api\/admin\/users/, ['*'], ['admin']],
-  [/^\/api\/admin\/auth-providers\/ldap\/(status|provisioned)/, ['GET', 'HEAD'], ['admin']],
+  [/^\/api\/admin\/auth-providers\/ldap\/(status|provisioned|events)/, ['GET', 'HEAD'], ['admin']],
   [/^\/api\/admin\/auth-providers/, ['GET', 'HEAD'], ['admin', 'operator', 'viewer']],
   [/^\/api\/san\/[^/]+\/system-config/, ['POST', 'PATCH', 'DELETE'], ['admin']],
   [/^\/api\/admin\/sans\/[^/]+$/, ['DELETE'], ['admin']],

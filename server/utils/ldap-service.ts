@@ -560,12 +560,21 @@ export async function runLdapDirectorySearch(
   }
 }
 
+export type LdapLoginAuditContext = {
+  requestIp?:  string
+  userAgent?:  string
+}
+
 export async function authenticateLdapUser(
   dto: AdminAuthProvidersDto['ldap'],
   bindPassword: string | null,
   username: string,
   password: string,
+  audit?: LdapLoginAuditContext,
 ): Promise<SearchRow> {
+  const { recordLdapLoginEvent, recordLdapLoginFromLdapError } = await import('./ldap-auth-events')
+  const startedAt = Date.now()
+
   assertLdapTlsPolicyForProduction(dto.url, dto.startTls)
   if (!dto.enabled) {
     throw createError({ statusCode: 403, message: 'LDAP désactivé' })
@@ -576,11 +585,13 @@ export async function authenticateLdapUser(
   const filter = buildUserSearchFilter(dto, username)
 
   const client = createLdapClient(dto.url, dto.timeoutSec, dto.tlsVerify)
+  let step: 'bind' | 'userSearch' | 'userBind' = 'bind'
   try {
     if (dto.url.startsWith('ldap:') && dto.startTls) {
       await startTlsAsync(client, dto.tlsVerify)
     }
     await bindAsync(client, dto.bindDn, bindPassword)
+    step = 'userSearch'
     const rows = await searchUserEntries(
       client,
       dto.baseDn,
@@ -590,17 +601,77 @@ export async function authenticateLdapUser(
     )
     if (rows.length === 0) {
       await unbindAsync(client)
+      recordLdapLoginEvent({
+        step:           'userSearch',
+        result:         'failure',
+        safeCode:       'user_not_found',
+        username,
+        dto,
+        renderedFilter: filter,
+        durationMs:     Date.now() - startedAt,
+        ...audit,
+      })
       throw createError({ statusCode: 401, message: 'Identifiants incorrects' })
     }
     const row = rows[0]!
+    step = 'userBind'
     await bindAsync(client, row.dn, password)
     await unbindAsync(client)
+    recordLdapLoginEvent({
+      step:           'userBind',
+      result:         'success',
+      safeCode:       'bind_ok',
+      username,
+      dto,
+      renderedFilter: filter,
+      matchedDn:      row.dn,
+      durationMs:     Date.now() - startedAt,
+      ...audit,
+    })
     return row
   } catch (e) {
     try {
       await unbindAsync(client)
     } catch { /* ignore */ }
-    if ((e as { statusCode?: number }).statusCode) throw e
+    const sc = (e as { statusCode?: number }).statusCode
+    if (sc === 401 && step === 'userBind') {
+      recordLdapLoginEvent({
+        step:           'userBind',
+        result:         'failure',
+        safeCode:       'invalid_credentials',
+        username,
+        dto,
+        renderedFilter: filter,
+        durationMs:     Date.now() - startedAt,
+        ...audit,
+      })
+      throw e
+    }
+    if (sc) {
+      if (sc === 401) {
+        recordLdapLoginEvent({
+          step:           step === 'userSearch' ? 'userSearch' : 'userBind',
+          result:         'failure',
+          safeCode:       'invalid_credentials',
+          username,
+          dto,
+          renderedFilter: filter,
+          durationMs:     Date.now() - startedAt,
+          ...audit,
+        })
+      }
+      throw e
+    }
+    recordLdapLoginFromLdapError({
+      err:        e,
+      step:       step === 'bind' ? 'bind' : 'userSearch',
+      username,
+      dto,
+      filter,
+      durationMs: Date.now() - startedAt,
+      requestIp:  audit?.requestIp,
+      userAgent:  audit?.userAgent,
+    })
     throw createError({ statusCode: 401, message: 'Identifiants incorrects' })
   }
 }

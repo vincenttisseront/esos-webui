@@ -40,9 +40,25 @@ export default defineEventHandler(async (event) => {
   const { ldapBindPassword } = await loadAuthProviderSecretsForServer()
 
   try {
-    const row = await authenticateLdapUser(dto.ldap, ldapBindPassword, body.username, body.password)
+    const row = await authenticateLdapUser(
+      dto.ldap,
+      ldapBindPassword,
+      body.username,
+      body.password,
+      { requestIp: ip, userAgent },
+    )
     const user = await resolveLdapLoginUser({ ldapRow: row, loginName: body.username, dto })
     if (!user.active) {
+      const { recordLdapLoginEvent } = await import('../../../utils/ldap-auth-events')
+      recordLdapLoginEvent({
+        step:       'roleMapping',
+        result:     'failure',
+        safeCode:   'insufficient_access',
+        username:   body.username,
+        dto:        dto.ldap,
+        requestIp:  ip,
+        userAgent,
+      })
       await recordLoginEvent(user.id, false, ip, userAgent).catch(() => {/* ignore */})
       await new Promise((r) => setTimeout(r, 500))
       throw createError({
@@ -66,6 +82,17 @@ export default defineEventHandler(async (event) => {
     }
   } catch (e) {
     if (isSanitizedFederatedLoginFailure(e)) {
+      const { recordLdapLoginEvent } = await import('../../../utils/ldap-auth-events')
+      recordLdapLoginEvent({
+        step:       'roleMapping',
+        result:     'failure',
+        safeCode:   'insufficient_access',
+        username:   body.username,
+        dto:        dto.ldap,
+        durationMs: 0,
+        requestIp:  ip,
+        userAgent,
+      })
       await delayThenThrowInvalidCredentials()
     }
     if ((e as { statusCode?: number }).statusCode) throw e

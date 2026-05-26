@@ -2,6 +2,7 @@ import { buildAdminAuthProvidersDto } from '../../../../utils/auth-providers-con
 import { parseUserRole } from '../../../../utils/auth-providers-role-map'
 import { provisionLdapUsers, type ProvisionLdapUserInput } from '../../../../utils/ldap-provision'
 import type { UserRole } from '../../../../utils/types'
+import { recordLdapProvisioningEvent } from '../../../../utils/ldap-auth-events'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody<{
@@ -45,11 +46,26 @@ export default defineEventHandler(async (event) => {
 
   const dto       = await buildAdminAuthProvidersDto()
   const createdBy = event.context.user?.id ?? null
+  const startedAt = Date.now()
+  const requestIp = getRequestIP(event) ?? undefined
+  const userAgent = getRequestHeader(event, 'user-agent') ?? undefined
 
   const { imported, updated, results } = await provisionLdapUsers(dto, users, createdBy)
   const failed = results
     .filter((r): r is Extract<typeof r, { status: 'failed' }> => r.status === 'failed')
     .map((r) => ({ dn: r.dn, code: r.code, message: r.message }))
+
+  recordLdapProvisioningEvent({
+    action:     'provision',
+    result:     failed.length > 0 && imported + updated === 0 ? 'failure' : 'success',
+    safeCode:   failed.length ? 'operations_error' : 'bind_ok',
+    username:   users.map((u) => u.login).join(', ').slice(0, 128),
+    dto:        dto.ldap,
+    message:    `imported=${imported} updated=${updated} failed=${failed.length}`,
+    durationMs: Date.now() - startedAt,
+    requestIp,
+    userAgent,
+  })
 
   return { imported, updated, failed, results }
 })

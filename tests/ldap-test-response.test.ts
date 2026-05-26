@@ -98,6 +98,34 @@ describe('ldap-test-response', () => {
     expect(suggestions[0]?.payload?.baseDn).toBe('DC=ar-systems,DC=fr')
   })
 
+  it('suggests applyAdPreset on operations error', () => {
+    const config = buildLdapTestConfigSummary(baseLdap)
+    const diagnostic = buildLdapFailureDiagnostic(
+      { name: 'OperationsError', lde_errno: 1, message: 'Operations Error' },
+      'userSearch',
+      baseLdap,
+      config,
+      buildInitialStepResults(baseLdap.url, baseLdap.startTls, true, true),
+    )
+    const suggestions = buildLdapTestSuggestions(diagnostic, baseLdap)
+    expect(suggestions.some((s) => s.actionType === 'applyAdPreset')).toBe(true)
+  })
+
+  it('includes NetBIOS bind suggestion on operations error when derivable', () => {
+    const diagnostic = buildLdapFailureDiagnostic(
+      { name: 'OperationsError', lde_errno: 1, message: 'Operations Error' },
+      'userSearch',
+      { ...baseLdap, bindDn: 'CN=svc_harbor,OU=Services,DC=ar-systems,DC=fr' },
+      buildLdapTestConfigSummary(baseLdap),
+      buildInitialStepResults(baseLdap.url, baseLdap.startTls, true, true),
+    )
+    const suggestions = buildLdapTestSuggestions(diagnostic, {
+      ...baseLdap,
+      bindDn: 'CN=svc_harbor,OU=Services,DC=ar-systems,DC=fr',
+    })
+    expect(suggestions.some((s) => s.actionType === 'applyBindNetbios')).toBe(true)
+  })
+
   it('includes UPN bind payload in suggestions when derivable', () => {
     const config = buildLdapTestConfigSummary({
       ...baseLdap,

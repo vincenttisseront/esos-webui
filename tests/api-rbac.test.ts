@@ -197,6 +197,18 @@ describe('api-rbac (auth-providers admin)', () => {
       enforceMutationAccess('/api/admin/auth-providers/ldap/search', 'POST', 'operator'),
     )
   })
+
+  it('RB49 — operator cannot GET ldap event log', () => {
+    expectForbidden(() =>
+      enforceReadAccess('/api/admin/auth-providers/ldap/events', 'GET', 'operator'),
+    )
+  })
+
+  it('RB50 — admin can GET ldap event log', () => {
+    expect(() =>
+      enforceReadAccess('/api/admin/auth-providers/ldap/events', 'GET', 'admin'),
+    ).not.toThrow()
+  })
 })
 
 describe('api-rbac (reads)', () => {

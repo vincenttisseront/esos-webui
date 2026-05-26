@@ -173,6 +173,11 @@ function applyUpnBind(bindDn: string) {
   if (props.readOnly) return
   form.value.ldapBindDn = bindDn
 }
+
+function applyNetbiosBind(bindDn: string) {
+  if (props.readOnly) return
+  form.value.ldapBindDn = bindDn
+}
 </script>
 
 <template>
@@ -324,6 +329,7 @@ function applyUpnBind(bindDn: string) {
         @apply-filter="applyAdFilter"
         @apply-base-dn="applyRootBaseDn"
         @apply-bind-upn="applyUpnBind"
+        @apply-bind-netbios="applyNetbiosBind"
       />
       <AppFormField :label="t('admin.authProviders.ldap.baseDnLabel')" :help="t('admin.authProviders.ldap.baseDnDesc')">
         <div class="space-y-2">
@@ -468,6 +474,8 @@ function applyUpnBind(bindDn: string) {
           />
         </div>
       </AppFormField>
+      <AuthProvidersLdapEventLog :read-only="readOnly" />
+
       <AuthProvidersLdapDiagnosticsPanel
         v-if="lastLdapTest?.diagnostic"
         :diagnostic="lastLdapTest.diagnostic"
@@ -477,11 +485,15 @@ function applyUpnBind(bindDn: string) {
         :search-sample-count="lastLdapTest.ok ? lastLdapTest.searchSampleCount : undefined"
         :user-lookup="lastLdapTest.ok ? lastLdapTest.userLookup : undefined"
         :group-read-ok="lastLdapTest.ok ? lastLdapTest.groupReadOk : undefined"
+        :error-category="lastLdapTest.structured?.error?.category"
+        :progress="lastLdapTest.structured?.progress"
         :suggestions="ldapSuggestions"
         :read-only="readOnly"
         @apply-root-base-dn="applyRootBaseDn"
         @apply-ad-filter="applyAdFilter"
         @apply-upn-bind="applyUpnBind"
+        @apply-bind-netbios="applyNetbiosBind"
+        @apply-ad-preset="applyAdPresetAll"
         @test-root-base-dn="emit('test-root-base-dn')"
       />
     </section>

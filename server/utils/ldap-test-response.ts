@@ -2,7 +2,12 @@
  * Structured LDAP test API response (sanitized, no secrets).
  */
 import type { AdminAuthProvidersDto } from './auth-providers-config'
-import { domainRootDnFromDn, domainRootDnFromUrl, suggestUpnBindFromDn } from './ldap-ad-defaults'
+import {
+  domainRootDnFromDn,
+  domainRootDnFromUrl,
+  suggestNetbiosBindFromDn,
+  suggestUpnBindFromDn,
+} from './ldap-ad-defaults'
 import type {
   LdapDiagnosticSafeCode,
   LdapDiagnosticHintId,
@@ -33,6 +38,7 @@ export type LdapSuggestionActionType =
   | 'applyRootBaseDn'
   | 'applyAdFilter'
   | 'applyUpnBind'
+  | 'applyBindNetbios'
   | 'applyAdPreset'
   | 'testRootBaseDn'
   | 'copyDiagnostic'
@@ -196,6 +202,29 @@ export function buildLdapTestSuggestions(
       key:        'try_domain_root_base_dn',
       actionType: 'testRootBaseDn',
       payload:    { baseDn: rootDn },
+    })
+  }
+
+  if (
+    diagnostic.safeCode === 'operations_error'
+    && !suggestions.some((s) => s.actionType === 'applyAdPreset')
+  ) {
+    suggestions.splice(1, 0, {
+      key:        'verify_search_filter',
+      actionType: 'applyAdPreset',
+    })
+  }
+
+  const netbios = suggestNetbiosBindFromDn(dto.bindDn ?? '', rootDn)
+  if (
+    netbios
+    && diagnostic.safeCode === 'operations_error'
+    && !suggestions.some((s) => s.actionType === 'applyBindNetbios')
+  ) {
+    suggestions.push({
+      key:        'verify_bind_format',
+      actionType: 'applyBindNetbios',
+      payload:    { bindDn: netbios },
     })
   }
 
