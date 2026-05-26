@@ -351,7 +351,7 @@ function applyNetbiosBind(bindDn: string) {
       </AppFormField>
       <AppFormField
         :label="t('admin.authProviders.ldap.userFilterLabel')"
-        :help="t('admin.authProviders.ldap.userFilterDesc', { usernameMark: '{{username}}' })"
+        :help="t('admin.authProviders.ldap.userFilterDesc')"
       >
         <AppTextInput
           v-model="form.ldapUserSearchFilter"
