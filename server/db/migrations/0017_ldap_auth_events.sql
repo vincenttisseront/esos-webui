@@ -1,4 +1,3 @@
--- LDAP test / login / provisioning audit trail (no secrets).
 CREATE TABLE IF NOT EXISTS ldap_auth_events (
   id                  TEXT PRIMARY KEY NOT NULL,
   at                  TEXT NOT NULL,
@@ -22,6 +21,7 @@ CREATE TABLE IF NOT EXISTS ldap_auth_events (
   user_agent          TEXT,
   step_results_json   TEXT
 );
-
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS idx_ldap_auth_events_at ON ldap_auth_events(at DESC);
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS idx_ldap_auth_events_type ON ldap_auth_events(event_type);
