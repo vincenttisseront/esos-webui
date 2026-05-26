@@ -3,9 +3,10 @@ import ldap from 'ldapjs'
 import type { AdminAuthProvidersDto } from './auth-providers-config'
 import { domainRootDnFromDn, domainRootDnFromUrl } from './ldap-ad-defaults'
 import {
-  ldapDefaultUpnSuffix,
-  normalizeLdapLoginUsername,
-  renderUserSearchFilter,
+  buildLdapUserSearchFilter,
+  ldapLoginIdentityDiagnosticMessage,
+  normalizeLdapLoginIdentifier,
+  resolveLdapLoginIdentity,
 } from './ldap-username-normalize'
 import {
   buildInitialStepResults,
@@ -216,34 +217,33 @@ function searchUserEntries(
   })
 }
 
-/** Build LDAP filter for a real sign-in identifier (RFC 4515 escaped). */
+/** Build LDAP filter for sign-in / exact user lookup (RFC 4515 escaped, normalized). */
 export function buildUserSearchFilter(
   dto: AdminAuthProvidersDto['ldap'],
   lookupUser: string,
 ): string {
-  const identity = normalizeLdapLoginUsername(lookupUser, {
-    defaultUpnSuffix: ldapDefaultUpnSuffix(dto.url ?? '', dto.baseDn ?? ''),
-  })
-  return renderUserSearchFilter(
-    dto.userSearchFilter,
-    dto.usernameAttribute?.trim() || 'sAMAccountName',
-    identity,
-  )
+  return buildLdapUserSearchFilter(dto, lookupUser)
 }
 
-export { normalizeLdapLoginUsername, type NormalizedLdapLogin } from './ldap-username-normalize'
+export {
+  buildLdapUserSearchFilter,
+  normalizeLdapLoginIdentifier,
+  normalizeLdapLoginUsername,
+  renderLdapUserFilter,
+  resolveLdapLoginIdentity,
+  type NormalizedLdapLogin,
+  type NormalizedLdapLoginIdentity,
+} from './ldap-username-normalize'
 
 /** Options for diagnostics / config summary when testing or logging a user lookup. */
 export function ldapLoginLookupSummaryOptions(
   dto: AdminAuthProvidersDto['ldap'],
   lookupUser: string,
 ) {
-  const identity = normalizeLdapLoginUsername(lookupUser, {
-    defaultUpnSuffix: ldapDefaultUpnSuffix(dto.url ?? '', dto.baseDn ?? ''),
-  })
+  const identity = resolveLdapLoginIdentity(lookupUser, dto)
   return {
     username:            lookupUser.trim(),
-    userFilter:          buildUserSearchFilter(dto, lookupUser),
+    userFilter:          buildLdapUserSearchFilter(dto, lookupUser),
     rawUsername:         identity.rawUsername,
     accountName:         identity.accountName,
     userPrincipalName:   identity.userPrincipalName,
@@ -607,7 +607,9 @@ export async function authenticateLdapUser(
   if (!dto.url || !dto.baseDn || !dto.bindDn || !bindPassword) {
     throw createError({ statusCode: 503, message: 'LDAP non configuré' })
   }
-  const filter = buildUserSearchFilter(dto, username)
+  const identity = resolveLdapLoginIdentity(username, dto)
+  const filter   = buildLdapUserSearchFilter(dto, username)
+  const identityLog = ldapLoginIdentityDiagnosticMessage(identity)
 
   const client = createLdapClient(dto.url, dto.timeoutSec, dto.tlsVerify)
   let step: 'bind' | 'userSearch' | 'userBind' = 'bind'
@@ -627,13 +629,14 @@ export async function authenticateLdapUser(
     if (rows.length === 0) {
       await unbindAsync(client)
       recordLdapLoginEvent({
-        step:           'userSearch',
-        result:         'failure',
-        safeCode:       'user_not_found',
+        step:              'userSearch',
+        result:            'failure',
+        safeCode:          'user_not_found',
         username,
         dto,
-        renderedFilter: filter,
-        durationMs:     Date.now() - startedAt,
+        renderedFilter:    filter,
+        diagnosticMessage: identityLog,
+        durationMs:        Date.now() - startedAt,
         ...audit,
       })
       throw createError({ statusCode: 401, message: 'Identifiants incorrects' })
@@ -643,14 +646,15 @@ export async function authenticateLdapUser(
     await bindAsync(client, row.dn, password)
     await unbindAsync(client)
     recordLdapLoginEvent({
-      step:           'userBind',
-      result:         'success',
-      safeCode:       'bind_ok',
+      step:              'userBind',
+      result:            'success',
+      safeCode:          'bind_ok',
       username,
       dto,
-      renderedFilter: filter,
-      matchedDn:      row.dn,
-      durationMs:     Date.now() - startedAt,
+      renderedFilter:    filter,
+      diagnosticMessage: identityLog,
+      matchedDn:         row.dn,
+      durationMs:        Date.now() - startedAt,
       ...audit,
     })
     return row
@@ -661,13 +665,15 @@ export async function authenticateLdapUser(
     const sc = (e as { statusCode?: number }).statusCode
     if (sc === 401 && step === 'userBind') {
       recordLdapLoginEvent({
-        step:           'userBind',
-        result:         'failure',
-        safeCode:       'invalid_credentials',
+        step:              'userBind',
+        result:            'failure',
+        safeCode:          'password_bind_failed',
         username,
         dto,
-        renderedFilter: filter,
-        durationMs:     Date.now() - startedAt,
+        renderedFilter:    filter,
+        diagnosticMessage: identityLog,
+        matchedDn:         undefined,
+        durationMs:        Date.now() - startedAt,
         ...audit,
       })
       throw e
@@ -675,13 +681,14 @@ export async function authenticateLdapUser(
     if (sc) {
       if (sc === 401) {
         recordLdapLoginEvent({
-          step:           step === 'userSearch' ? 'userSearch' : 'userBind',
-          result:         'failure',
-          safeCode:       'invalid_credentials',
+          step:              step === 'userSearch' ? 'userSearch' : 'userBind',
+          result:            'failure',
+          safeCode:          'invalid_credentials',
           username,
           dto,
-          renderedFilter: filter,
-          durationMs:     Date.now() - startedAt,
+          renderedFilter:    filter,
+          diagnosticMessage: identityLog,
+          durationMs:        Date.now() - startedAt,
           ...audit,
         })
       }

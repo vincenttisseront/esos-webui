@@ -34,6 +34,23 @@ export async function getUserByExternalIdentity(
   })
 }
 
+/** Imported LDAP user matched by directory login (sAMAccountName / external_login). */
+export async function getLdapUserByExternalLogin(
+  issuer: string,
+  externalLogin: string,
+): Promise<UserRow | undefined> {
+  const login = externalLogin.trim()
+  if (!login) return undefined
+  const db = getDB()
+  return db.query.users.findFirst({
+    where: and(
+      eq(users.authSource, 'ldap'),
+      eq(users.externalIssuer, issuer),
+      eq(users.externalLogin, login),
+    ),
+  })
+}
+
 export async function listUsers(): Promise<UserPublic[]> {
   const db  = getDB()
   const all = db.select().from(users).orderBy(users.createdAt).all()

@@ -9,7 +9,10 @@ import {
   buildLdapTestConfigSummary,
 } from './ldap-diagnostics'
 import { insertLdapAuthEvent } from '../db/repositories/ldap-auth-event.repository'
-import { ldapDefaultUpnSuffix, normalizeLdapLoginUsername } from './ldap-username-normalize'
+import {
+  ldapLoginIdentityDiagnosticMessage,
+  resolveLdapLoginIdentity,
+} from './ldap-username-normalize'
 
 export type LdapAuthEventType = 'test' | 'login' | 'provisioning'
 export type LdapAuthEventResult = 'success' | 'failure' | 'skipped'
@@ -230,9 +233,8 @@ export function recordLdapLoginFromLdapError(params: {
   requestIp?:  string
   userAgent?:  string
 }): void {
-  const identity = normalizeLdapLoginUsername(params.username, {
-    defaultUpnSuffix: ldapDefaultUpnSuffix(params.dto.url ?? '', params.dto.baseDn ?? ''),
-  })
+  const identity = resolveLdapLoginIdentity(params.username, params.dto)
+  const identityLog = ldapLoginIdentityDiagnosticMessage(identity)
   const config = buildLdapTestConfigSummary(params.dto, {
     username:            params.username,
     userFilter:          params.filter,
@@ -256,7 +258,7 @@ export function recordLdapLoginFromLdapError(params: {
     renderedFilter:    params.filter,
     ldapErrorName:     d.ldapErrorName ?? null,
     ldapErrorCode:     d.ldapErrorCode ?? null,
-    diagnosticMessage: d.diagnosticMessage ?? d.safeMessage,
+    diagnosticMessage: d.diagnosticMessage ?? identityLog,
     matchedDn:         d.matchedDN ?? null,
     referrals:         d.referrals,
     durationMs:        params.durationMs,

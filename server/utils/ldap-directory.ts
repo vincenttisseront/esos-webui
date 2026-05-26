@@ -3,6 +3,7 @@
  */
 import type { AdminAuthProvidersDto } from './auth-providers-config'
 import { escapeLdapFilterValue } from './ldap-filter-escape'
+import { resolveLdapLoginIdentity } from './ldap-username-normalize'
 import { runLdapDirectorySearch, type SearchRow } from './ldap-service'
 import type { UserRole } from './types'
 import {
@@ -29,14 +30,19 @@ export function buildDirectorySearchFilter(
   dto: AdminAuthProvidersDto['ldap'],
   query: string,
 ): string {
-  const esc = escapeLdapFilterValue(query.trim())
-  const loginAttr   = dto.usernameAttribute?.trim() || 'sAMAccountName'
-  const displayAttr = dto.displayNameAttribute?.trim() || 'displayName'
+  const identity = resolveLdapLoginIdentity(query, dto)
+  const escAccount = escapeLdapFilterValue(identity.accountName)
+  const loginAttr    = dto.usernameAttribute?.trim() || 'sAMAccountName'
+  const displayAttr  = dto.displayNameAttribute?.trim() || 'displayName'
   const clauses = [
-    `(${loginAttr}=*${esc}*)`,
-    `(${displayAttr}=*${esc}*)`,
-    `(mail=*${esc}*)`,
+    `(${loginAttr}=*${escAccount}*)`,
+    `(${displayAttr}=*${escAccount}*)`,
+    `(mail=*${escAccount}*)`,
   ]
+  if (identity.userPrincipalName && identity.userPrincipalName !== identity.accountName) {
+    const escUpn = escapeLdapFilterValue(identity.userPrincipalName)
+    clauses.push(`(userPrincipalName=*${escUpn}*)`)
+  }
   return `(&(objectCategory=person)(objectClass=user)(|${clauses.join('')}))`
 }
 

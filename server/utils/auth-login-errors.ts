@@ -26,13 +26,21 @@ function messageOf(err: unknown): string {
 
 /** 403 from resolve that must look like invalid credentials on the login API. */
 export function isSanitizedFederatedLoginFailure(err: unknown): boolean {
-  const e = err as { statusCode?: number }
+  const e = err as { statusCode?: number; data?: { code?: string; safeCode?: string } }
+  if (e?.data?.code === 'ldap.user_not_imported' || e?.data?.safeCode === 'user_not_imported') {
+    return true
+  }
   if (e?.statusCode !== 403) return false
   const msg = messageOf(err).toLowerCase()
   return (
     PROVISIONING_HINTS.some((h) => msg.includes(h.toLowerCase()))
     || LINKAGE_HINTS.some((h) => msg.includes(h.toLowerCase()))
   )
+}
+
+export function ldapLoginSafeCodeFromError(err: unknown): string | null {
+  const data = (err as { data?: { safeCode?: string } })?.data
+  return data?.safeCode ?? null
 }
 
 export function throwInvalidCredentials(delayMs = 500): never {

@@ -2,11 +2,14 @@ import { describe, it, expect } from 'vitest'
 import {
   normalizeLdapLoginUsername,
   pruneEmptyLdapFilterClauses,
+  renderLdapUserFilter,
   renderUserSearchFilter,
+  buildLdapUserSearchFilter,
   ldapDefaultUpnSuffix,
 } from '../server/utils/ldap-username-normalize'
 import { escapeLdapFilterValue } from '../server/utils/ldap-filter-escape'
 import { buildUserSearchFilter } from '../server/utils/ldap-service'
+import { buildDirectorySearchFilter } from '../server/utils/ldap-directory'
 import { ldapAdFullPreset } from '../server/utils/ldap-ad-defaults'
 
 const adFilter
@@ -88,25 +91,51 @@ describe('renderUserSearchFilter', () => {
     expect(filter).not.toMatch(/\(test\)/)
   })
 
-  it('escapes backslash in legacy {{username}} placeholder', () => {
+  it('legacy {{username}} uses normalized accountName for login search', () => {
     const identity = normalizeLdapLoginUsername('ar-systems\\vincent.tisseront')
-    const filter = renderUserSearchFilter(
+    const filter = renderLdapUserFilter(
       '(&(objectClass=user)(sAMAccountName={{username}}))',
       'sAMAccountName',
       identity,
+      { normalizeLegacyUsernamePlaceholder: true },
     )
-    expect(filter).toContain('ar-systems\\5cvincent.tisseront')
+    expect(filter).toBe('(&(objectClass=user)(sAMAccountName=vincent.tisseront))')
+    expect(filter).not.toContain('\\5c')
   })
 
-  it('keeps backward compatibility for {{username}} as raw input', () => {
+  it('legacy {{username}} can keep raw input for template preview', () => {
     const identity = normalizeLdapLoginUsername('corp\\alice')
-    const filter = renderUserSearchFilter(
+    const filter = renderLdapUserFilter(
       '(sAMAccountName={{username}})',
       'sAMAccountName',
       identity,
+      { normalizeLegacyUsernamePlaceholder: false },
     )
     expect(filter).toBe('(sAMAccountName=corp\\5calice)')
-    expect(filter).not.toBe('(sAMAccountName=alice)')
+  })
+})
+
+describe('provisioning vs login filter alignment', () => {
+  const legacyFilter = '(&(objectClass=user)(sAMAccountName={{username}}))'
+
+  it('login and legacy filter share normalized sAMAccountName for DOMAIN\\user', () => {
+    const input = 'ar-systems\\vincent.tisseront'
+    const loginFilter = buildLdapUserSearchFilter(
+      { ...baseLdap, userSearchFilter: legacyFilter },
+      input,
+    )
+    const dirFilter = buildDirectorySearchFilter(
+      { ...baseLdap, userSearchFilter: legacyFilter },
+      input,
+    )
+    expect(loginFilter).toContain('(sAMAccountName=vincent.tisseront)')
+    expect(dirFilter).toContain('(sAMAccountName=*vincent.tisseront*)')
+    expect(loginFilter).not.toContain('ar-systems')
+  })
+
+  it('buildUserSearchFilter matches buildLdapUserSearchFilter', () => {
+    const input = 'vincent.tisseront@ar-systems.fr'
+    expect(buildUserSearchFilter(baseLdap, input)).toBe(buildLdapUserSearchFilter(baseLdap, input))
   })
 })
 
