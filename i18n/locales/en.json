@@ -495,6 +495,14 @@
       "delete_hw_ld_title": "Delete hardware logical volume",
       "delete_hw_ld_description": "Delete volume {id}. ALL DATA WILL BE ERASED."
     },
+    "system_volume": {
+      "badge": "ESOS system",
+      "badge_short": "Protected",
+      "col_status": "Protection",
+      "tooltip_title": "ESOS system volume",
+      "tooltip_body": "This logical volume maps to the running ESOS system disk. Destructive actions are blocked.",
+      "delete_blocked_tooltip": "Cannot delete: ESOS system volume (boot/root/config)."
+    },
     "cluster_preflight": {
       "ok_title": "Cluster storage preflight passed",
       "ok_description": "Cluster nodes were compared successfully. Destructive execution will use the multi-node flow and validated mappings.",

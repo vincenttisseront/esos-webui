@@ -495,6 +495,14 @@
       "delete_hw_ld_title": "Supprimer le volume logique matériel",
       "delete_hw_ld_description": "Suppression du volume {id}. TOUTES LES DONNÉES SERONT EFFACÉES."
     },
+    "system_volume": {
+      "badge": "Volume système ESOS",
+      "badge_short": "Protégé",
+      "col_status": "Protection",
+      "tooltip_title": "Volume système ESOS",
+      "tooltip_body": "Ce volume logique correspond au disque système ESOS en cours d'exécution. Les actions destructives sont bloquées.",
+      "delete_blocked_tooltip": "Suppression impossible : volume système ESOS (boot/root/config)."
+    },
     "cluster_preflight": {
       "ok_title": "Préflight stockage cluster validé",
       "ok_description": "Les nœuds du cluster ont été comparés avec succès. L'exécution destructive utilisera le flux multi-nœud et les mappings validés.",

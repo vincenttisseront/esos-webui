@@ -314,7 +314,7 @@ export function expectedMdZeroSuperblocksConfirmation(_name: string): string {
 
 export function validateZeroSuperblockMembers(
   members: string[],
-  blockDevices: Array<{ path: string; hasMdSuperblock?: boolean; mdExamine?: unknown; usedBy: string[] }>,
+  blockDevices: Array<{ path: string; hasMdSuperblock?: boolean; mdExamine?: unknown; usedBy: string[]; esosSystemProtected?: boolean; esosProtection?: { protectedDevice: string; reasons: Array<{ message: string }> } }>,
   mdArrays: Array<{ path: string; name: string; members: Array<{ path?: string }> }>,
 ): string[] {
   const blockers: string[] = []
@@ -343,6 +343,10 @@ export function validateZeroSuperblockMembers(
       const owner = mdArrays.find(arr => arr.members.some(m => m.path === memberPath))
       blockers.push(`${memberPath} est membre actif de ${owner?.path ?? 'un tableau MD actif'}`)
     }
+    if (dev.esosSystemProtected) {
+      const label = dev.esosProtection?.protectedDevice ?? memberPath
+      blockers.push(`${memberPath} : volume système ESOS protégé (${label})`)
+    }
   }
 
   return blockers
@@ -350,7 +354,7 @@ export function validateZeroSuperblockMembers(
 
 export function validateWipeSignatureMembers(
   members: string[],
-  blockDevices: Array<{ path: string; usedBy: string[] }>,
+  blockDevices: Array<{ path: string; usedBy: string[]; esosSystemProtected?: boolean; esosProtection?: { protectedDevice: string } }>,
   mdArrays: Array<{ path: string; name: string; members: Array<{ path?: string }> }>,
 ): string[] {
   const blockers: string[] = []
@@ -375,6 +379,10 @@ export function validateWipeSignatureMembers(
     if (activeMemberPaths.has(memberPath)) {
       const owner = mdArrays.find(arr => arr.members.some(m => m.path === memberPath))
       blockers.push(`${memberPath} est membre actif de ${owner?.path ?? 'un tableau MD actif'}`)
+    }
+    if (dev.esosSystemProtected) {
+      const label = dev.esosProtection?.protectedDevice ?? memberPath
+      blockers.push(`${memberPath} : volume système ESOS protégé (${label})`)
     }
   }
 

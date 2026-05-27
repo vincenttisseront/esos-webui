@@ -58,6 +58,23 @@ export interface RaidBlockDevice {
   eligibleForMd: boolean
   eligibleForHardwareRaid: boolean
   warnings: string[]
+  esosSystemProtected?: boolean
+  esosProtection?: EsosDeviceProtectionInfo
+}
+
+export interface EsosProtectionReason {
+  code: string
+  message: string
+}
+
+export interface EsosDeviceProtectionInfo {
+  protected: boolean
+  protectedDevice: string
+  reasons: EsosProtectionReason[]
+  labelsFound: string[]
+  mountedPaths: string[]
+  relatedBlockPaths: string[]
+  hardwareLogicalDriveIds?: string[]
 }
 
 export interface MdExamineInfo {
@@ -131,6 +148,8 @@ export interface HardwareRaidLogicalDrive {
   serial?: string
   inquiry?: string
   osMappingStatus?: 'mapped' | 'unmapped'
+  esosSystemProtected?: boolean
+  esosProtection?: EsosDeviceProtectionInfo
 }
 
 export type StoppedMdMemberStatus =
@@ -929,6 +948,20 @@ export interface RaidOverviewResponse {
   mdArrays: MdArray[]
   stoppedMdArrays: StoppedMdArray[]
   blockDevices: RaidBlockDevice[]
+  systemProtection?: {
+    entries: Array<{
+      protectedDevice: string
+      reasons: EsosProtectionReason[]
+      labelsFound: string[]
+      mountedPaths: string[]
+      relatedBlockPaths: string[]
+      hardwareLogicalDriveIds: string[]
+    }>
+    protectedBlockPaths: string[]
+    protectedDiskPaths: string[]
+    protectedHardwareLdIds: string[]
+    duplicateEsosLabels: boolean
+  }
   alerts: Array<{
     severity: 'info' | 'warning' | 'critical'
     message: string

@@ -17,6 +17,7 @@ import { collectKernelRaidInfo } from './raid-pci-detection'
 import { buildMdDetectionSummary, getMdEligibilityReasons } from './raid-md-detection'
 import { detectStoppedMdArrays } from './stopped-md-arrays'
 import { extractRaidCliFromToolsOutput, toolsOutputHasRaidCli } from '../../utils/raid-cli-path'
+import { applyEsosProtectionToOverview, ESOS_SYSTEM_LABELS } from './esos-system-protection'
 
 // ─── Commande bulk ───────────────────────────────────────────────────────────
 
@@ -56,6 +57,10 @@ const RAID_OVERVIEW_CMD = [
   // SCST devices blockio
   'echo "===SCST_DEV==="',
   'grep -r "filename" /sys/kernel/scst_tgt/devices/*/blockio_configured 2>/dev/null | awk -F= \'{print $2}\' | tr -d " " || echo ""',
+  'echo "===FINDMNT==="',
+  'findmnt -n -o SOURCE,TARGET / /mnt/root 2>/dev/null || true',
+  'echo "===ROOT_DEV==="',
+  'readlink -f / 2>/dev/null || true',
   'echo "===END==="',
 ].join('\n')
 
@@ -114,6 +119,7 @@ export async function collectRaidOverview(manager: SSHSessionManager): Promise<R
     mdArrays,
     stoppedMdArrays,
     blockDevices,
+    systemProtection,
     alerts,
     mdDetection,
   }
@@ -545,10 +551,7 @@ function detailStateToArray(arr: MdArray, detailState: string): void {
 
 // ─── Alertes ──────────────────────────────────────────────────────────────────
 
-const ESOS_LABELS = new Set([
-  'ESOS_BOOT', 'esos_root', 'esos_conf', 'esos_logs',
-  'esos_boot', 'ESOS_ROOT', 'ESOS_CONF', 'ESOS_LOGS',
-])
+const ESOS_LABELS = ESOS_SYSTEM_LABELS
 
 function buildAlerts(
   mdArrays: MdArray[],

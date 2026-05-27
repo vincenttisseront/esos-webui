@@ -5,6 +5,7 @@
         <tr class="border-b border-gray-200 dark:border-gray-700 text-gray-500 uppercase tracking-wide text-[10px]">
           <th class="text-left py-1.5 pr-3">ID / SCSI</th>
           <th class="text-left py-1.5 pr-3">RAID</th>
+          <th class="text-left py-1.5 pr-3">{{ t('raid.system_volume.col_status') }}</th>
           <th class="text-left py-1.5 pr-3">État</th>
           <th class="text-left py-1.5 pr-3">Taille</th>
           <th class="text-left py-1.5 pr-3">Cache</th>
@@ -27,13 +28,52 @@
             <span v-else>RAID{{ drive.raidLevel }}</span>
           </td>
           <td class="py-1.5 pr-3">
+            <UPopover v-if="drive.esosSystemProtected">
+              <UBadge
+                color="blue"
+                variant="soft"
+                size="xs"
+                :label="t('raid.system_volume.badge')"
+                class="cursor-help"
+              />
+              <template #panel>
+                <div class="p-3 max-w-sm text-xs space-y-2">
+                  <p class="font-medium text-gray-900 dark:text-gray-100">{{ t('raid.system_volume.tooltip_title') }}</p>
+                  <p class="text-gray-600 dark:text-gray-400">{{ t('raid.system_volume.tooltip_body') }}</p>
+                  <ul v-if="protectionReasons(drive).length" class="list-disc list-inside text-gray-600 dark:text-gray-400 space-y-0.5">
+                    <li v-for="(r, i) in protectionReasons(drive)" :key="i">{{ r }}</li>
+                  </ul>
+                  <p v-if="drive.esosProtection?.protectedDevice" class="font-mono text-[10px] text-gray-500">
+                    {{ drive.esosProtection.protectedDevice }}
+                  </p>
+                </div>
+              </template>
+            </UPopover>
+            <span v-else class="text-gray-400">—</span>
+          </td>
+          <td class="py-1.5 pr-3">
             <UBadge :color="ldStateColor(drive.state)" :label="drive.state" size="xs" variant="soft" />
           </td>
           <td class="py-1.5 pr-3 tabular-nums">{{ drive.sizeBytes ? formatSize(drive.sizeBytes) : '—' }}</td>
           <td class="py-1.5 pr-3 text-gray-500 dark:text-gray-400">{{ drive.cachePolicy ?? '—' }}</td>
           <td class="py-1.5 pr-3 font-mono text-gray-500 dark:text-gray-400 text-[10px]">{{ drive.devicePath ?? '—' }}</td>
           <td v-if="supportsDelete && !readOnly" class="py-1.5 text-right">
+            <UTooltip
+              v-if="drive.esosSystemProtected"
+              :text="t('raid.system_volume.delete_blocked_tooltip')"
+            >
+              <span class="inline-block">
+                <UButton
+                  size="xs"
+                  color="red"
+                  variant="ghost"
+                  icon="i-heroicons-trash"
+                  disabled
+                />
+              </span>
+            </UTooltip>
             <UButton
+              v-else
               size="xs"
               color="red"
               variant="ghost"
@@ -59,6 +99,12 @@ defineProps<{
   readOnly?: boolean
 }>()
 defineEmits<{ 'delete-ld': [drive: HardwareRaidLogicalDrive] }>()
+
+const { t } = useI18n()
+
+function protectionReasons(drive: HardwareRaidLogicalDrive): string[] {
+  return drive.esosProtection?.reasons?.map(r => r.message) ?? []
+}
 
 function ldStateColor(state: string) {
   if (state === 'optimal') return 'green'

@@ -56,6 +56,8 @@ export interface RaidBlockDevice {
   eligibleForMd: boolean
   eligibleForHardwareRaid: boolean
   warnings: string[]
+  esosSystemProtected?: boolean
+  esosProtection?: import('./esos-system-protection').EsosDeviceProtectionInfo
 }
 
 export interface MdExamineInfo {
@@ -132,6 +134,8 @@ export interface HardwareRaidLogicalDrive {
   inquiry?: string
   osMappingStatus?: 'mapped' | 'unmapped'
   osMappingDiagnostic?: import('./hw-raid-os-mapper').HwLdOsMappingDiagnostic
+  esosSystemProtected?: boolean
+  esosProtection?: import('./esos-system-protection').EsosDeviceProtectionInfo
 }
 
 // ─── Software RAID MD ────────────────────────────────────────────────────────
@@ -668,6 +672,7 @@ export interface RaidOverviewResponse {
   mdArrays: MdArray[]
   stoppedMdArrays: StoppedMdArray[]
   blockDevices: RaidBlockDevice[]
+  systemProtection?: import('./esos-system-protection').EsosSystemProtectionSnapshot
   alerts: Array<{
     severity: 'info' | 'warning' | 'critical'
     message: string

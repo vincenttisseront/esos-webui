@@ -39,7 +39,11 @@ export default defineEventHandler(async (event) => {
       overview.mdArrays,
       overview.tools,
       overview.stoppedMdArrays ?? [],
-      { sanId },
+      {
+        sanId,
+        systemProtection: overview.systemProtection,
+        hardwareControllers: overview.hardwareControllers,
+      },
     )
   }
 

@@ -25,6 +25,12 @@ import {
 } from './raid-md-actions'
 import { buildAdvancedCleanupCommands } from './raid-md-metadata-diagnostics'
 import { isValidMdArrayName } from './stopped-md-arrays'
+import {
+  esosProtectionBlockerMessage,
+  findProtectionForHardwareLd,
+  type EsosSystemProtectionSnapshot,
+} from './esos-system-protection'
+import type { HardwareRaidController } from './raid-types'
 
 const RISK_MAP: Record<RaidPreflightRequest['action'], RaidRiskLevel> = {
   create_hw_ld:    'risky',
@@ -52,7 +58,11 @@ export async function runPreflight(
   mdArrays: MdArray[],
   tools?: RaidToolsInfo,
   stoppedMdArrays: StoppedMdArray[] = [],
-  options?: { sanId?: string },
+  options?: {
+    sanId?: string
+    systemProtection?: EsosSystemProtectionSnapshot
+    hardwareControllers?: HardwareRaidController[]
+  },
 ): Promise<RaidPreflightResult> {
   const riskLevel = RISK_MAP[req.action]
   const blockers: string[] = []
@@ -244,9 +254,21 @@ export async function runPreflight(
       break
     }
     case 'delete_hw_ld': {
-      const ldId = String(payload.id ?? '')
+      const ldId = String(payload.ldId ?? payload.id ?? '')
       impactedDevices.push(ldId)
-      blockers.push('Vérifiez manuellement que ce volume logique n\'est pas utilisé par SCST/LVM/FS avant de continuer')
+      if (options?.systemProtection && options.hardwareControllers) {
+        const protectedInfo = findProtectionForHardwareLd(
+          ldId,
+          options.systemProtection,
+          options.hardwareControllers,
+        )
+        if (protectedInfo) {
+          blockers.push(esosProtectionBlockerMessage(protectedInfo))
+        }
+      }
+      if (!blockers.some(b => b.includes('système ESOS'))) {
+        warnings.push('Vérifiez que ce volume logique n\'est pas utilisé par SCST/LVM/FS avant de continuer')
+      }
       warnings.push('Cette action détruira définitivement les données sur ce volume logique')
       break
     }
@@ -306,7 +328,7 @@ function buildConfirmationPhrase(req: RaidPreflightRequest): string {
     case 'create_hw_ld':
       return `CREATE LD ${String(payload.raidLevel ?? '1')}`
     case 'delete_hw_ld':
-      return `DELETE LD ${String(payload.id ?? '0')}`
+      return `DELETE LD ${String(payload.ldId ?? payload.id ?? '0')}`
     case 'md_remove_device':
       return `REMOVE ${String(payload.device ?? '')}`
     case 'md_set_faulty':

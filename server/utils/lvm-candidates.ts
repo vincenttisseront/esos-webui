@@ -92,6 +92,11 @@ function evaluateBlockDevice(
     reasons.push('Signature ou système de fichiers détecté — wipefs requis avant pvcreate')
   }
   if (kind === 'unknown') reasons.push('Type de périphérique non pris en charge')
+  if (dev.esosSystemProtected) {
+    reasons.push(dev.esosProtection?.protectedDevice
+      ? `Volume système ESOS protégé (${dev.esosProtection.protectedDevice})`
+      : 'Volume système ESOS protégé')
+  }
 
   return candidateFromPath({
     path: dev.path,

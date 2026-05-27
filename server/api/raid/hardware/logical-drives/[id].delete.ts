@@ -5,6 +5,7 @@ import { getActiveSSHManager, withSanContext } from '../../../../utils/ssh-runti
 import { collectRaidOverview } from '../../../../utils/raid-overview.service'
 import { withCache, invalidateCacheKey } from '../../../../utils/cache'
 import { requireSanIdQuery } from '../../../../utils/san-query'
+import { assertHardwareLdNotEsosProtected } from '../../../../utils/esos-system-protection'
 
 const WRITE_ENABLED = process.env.RAID_HARDWARE_WRITE_ENABLED !== 'false'
   && process.env.RAID_WRITE_ACTIONS_ENABLED !== 'false'
@@ -34,6 +35,11 @@ export default defineEventHandler(async (event) => {
     const cacheKey = `raid-overview-${sanId}`
     const overview = await withCache(cacheKey, 60_000, () => collectRaidOverview(manager))
 
+    const protection = overview.systemProtection
+    if (protection) {
+      assertHardwareLdNotEsosProtected(ldId, protection, overview.hardwareControllers)
+    }
+
     // Trouver le LD et son contrôleur
     let command: string | null = null
     for (const ctrl of overview.hardwareControllers) {
@@ -42,7 +48,8 @@ export default defineEventHandler(async (event) => {
 
       if (ctrl.cliTool === 'storcli' || ctrl.cliTool === 'perccli') {
         const ldNum = ldId.split('/vd')[1] ?? '0'
-        command = `${ctrl.cliTool} /c${ctrl.id}/v${ldNum} del force`
+        const cliBin = ctrl.cliPath ?? ctrl.cliTool
+        command = `${cliBin.replace(/'/g, `'\\''`)} /c${ctrl.id}/v${ldNum} del force`
       } else if (ctrl.cliTool === 'MegaCli64') {
         const ldNum = ldId.split('/ld')[1] ?? '0'
         command = `MegaCli64 -CfgLdDel -L${ldNum} -a${ctrl.id}`
