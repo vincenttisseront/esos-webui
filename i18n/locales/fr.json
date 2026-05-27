@@ -3946,6 +3946,7 @@
         "create_fs": "Créer filesystem",
         "create_vdisk": "Créer vdisk",
         "bind_fileio": "Enregistrer FILEIO",
+        "bind_fileio_no_eligible": "Aucun fichier vdisk éligible pour l'enregistrement FILEIO",
         "delete_vdisk": "Supprimer vdisk",
         "unmount": "Démonter"
       },
@@ -4009,6 +4010,14 @@
           "title": "Enregistrer SCST FILEIO",
           "vdisk": "Fichier vdisk",
           "no_vdisk": "Aucun fichier vdisk non mappé.",
+          "empty": {
+            "title": "Aucun fichier vdisk disponible",
+            "description": "Tous les fichiers vdisk sont déjà enregistrés dans SCST FILEIO ou mappés."
+          },
+          "all_registered": {
+            "title": "Tous les fichiers vdisk sont déjà enregistrés",
+            "description": "Mappez ces devices FILEIO vers un LUN pour les exposer aux initiateurs."
+          },
           "device_name": "Nom device SCST",
           "nv_cache": "Activer nv_cache",
           "execute": "Créer le device",
@@ -4019,7 +4028,9 @@
           "error_name_too_long": "Nom trop long (max 32)",
           "actions": {
             "view_mappings": "Voir les mappings LUN",
-            "map_lun": "Mapper à un LUN"
+            "map_lun": "Mapper à un LUN",
+            "create_vdisk": "Créer un fichier vdisk",
+            "close": "Fermer"
           },
           "status": {
             "registered": "Enregistré comme device SCST {deviceName}"

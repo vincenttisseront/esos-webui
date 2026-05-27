@@ -2,19 +2,60 @@
   <LvmWizardModalShell
     :title="t('storage.fs.wizard.fileio.title')"
     :step="step"
-    :total-steps="3"
+    :total-steps="wizardTotalSteps"
     icon="i-heroicons-circle-stack"
   >
     <div class="space-y-4">
-      <template v-if="step === 1">
+      <template v-if="step === 1 && !hasEligibleVdisks">
         <UAlert
-          v-if="!vdiskOptions.length"
           color="amber"
           variant="soft"
-          :title="t('storage.fs.wizard.fileio.no_vdisk')"
+          :title="emptyStateTitle"
+          :description="emptyStateDescription"
         />
+        <div v-if="registeredDeviceRows.length" class="space-y-2">
+          <ul class="space-y-2 rounded-md border border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700">
+            <li
+              v-for="row in registeredDeviceRows"
+              :key="row.device.name"
+              class="px-3 py-2 text-xs space-y-1"
+            >
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="font-mono font-semibold text-primary-700 dark:text-primary-300">{{ row.device.name }}</span>
+                <UBadge
+                  size="xs"
+                  :color="row.device.mapped ? 'green' : 'gray'"
+                  variant="soft"
+                  :label="row.device.mapped
+                    ? t('storage.fs.table.mapped')
+                    : t('storage.fs.table.unmapped')"
+                />
+              </div>
+              <p class="font-mono break-all text-gray-600 dark:text-gray-400">{{ row.device.filename }}</p>
+              <div v-if="row.viewMappingsUrl || row.exposeLunUrl" class="flex flex-wrap gap-2 pt-1">
+                <NuxtLink
+                  v-if="row.viewMappingsUrl"
+                  :to="row.viewMappingsUrl"
+                  class="text-primary-600 hover:underline"
+                >
+                  {{ t('storage.fs.wizard.fileio.actions.view_mappings') }}
+                </NuxtLink>
+                <NuxtLink
+                  v-if="row.exposeLunUrl"
+                  :to="row.exposeLunUrl"
+                  class="text-primary-600 hover:underline"
+                >
+                  {{ t('storage.fs.wizard.fileio.actions.map_lun') }}
+                </NuxtLink>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </template>
+
+      <template v-else-if="step === 1">
         <UAlert
-          v-else-if="existingRegistration"
+          v-if="existingRegistration"
           color="blue"
           variant="soft"
           :title="t('storage.fs.wizard.fileio.conflict.vdisk_file_already_fileio', {
@@ -57,12 +98,11 @@
           <USelect
             v-model="selectedPath"
             :options="vdiskOptions"
-            :disabled="!vdiskOptions.length"
           />
         </UFormGroup>
         <UFormGroup :label="t('storage.fs.wizard.fileio.device_name')">
           <UInput v-model="deviceName" :disabled="!!existingRegistration" />
-          <p v-if="nameError" class="mt-1 text-xs text-red-600">{{ nameError }}</p>
+          <p v-if="showNameError" class="mt-1 text-xs text-red-600">{{ nameError }}</p>
         </UFormGroup>
         <UCheckbox v-model="nvCache" :label="t('storage.fs.wizard.fileio.nv_cache')" :disabled="!!existingRegistration" />
       </template>
@@ -139,25 +179,40 @@
         <UButton v-if="step > 1" color="gray" variant="ghost" @click="step--">{{ t('storage.fs.wizard.back') }}</UButton>
         <span v-else />
         <div class="flex gap-2">
-          <UButton color="gray" variant="ghost" @click="emit('cancel')">{{ t('storage.fs.wizard.cancel') }}</UButton>
-          <UButton
-            v-if="step < 3 && !registerBlocked"
-            color="primary"
-            :disabled="(step === 1 && !step1Valid) || (step === 2 && !preflight?.ok)"
-            :loading="preflightLoading"
-            @click="onNext"
-          >
-            {{ t('storage.fs.wizard.next') }}
-          </UButton>
-          <UButton
-            v-else-if="step >= 3 && !registerBlocked"
-            color="primary"
-            :loading="busy"
-            :disabled="!canExecute"
-            @click="execute"
-          >
-            {{ t('storage.fs.wizard.fileio.execute') }}
-          </UButton>
+          <template v-if="!hasEligibleVdisks">
+            <UButton color="gray" variant="ghost" @click="emit('cancel')">
+              {{ t('storage.fs.wizard.fileio.actions.close') }}
+            </UButton>
+            <UButton
+              v-if="onCreateVdisk"
+              color="primary"
+              icon="i-heroicons-document-plus"
+              @click="handleCreateVdisk"
+            >
+              {{ t('storage.fs.wizard.fileio.actions.create_vdisk') }}
+            </UButton>
+          </template>
+          <template v-else>
+            <UButton color="gray" variant="ghost" @click="emit('cancel')">{{ t('storage.fs.wizard.cancel') }}</UButton>
+            <UButton
+              v-if="step < 3 && !registerBlocked"
+              color="primary"
+              :disabled="(step === 1 && !step1Valid) || (step === 2 && !preflight?.ok)"
+              :loading="preflightLoading"
+              @click="onNext"
+            >
+              {{ t('storage.fs.wizard.next') }}
+            </UButton>
+            <UButton
+              v-else-if="step >= 3 && !registerBlocked"
+              color="primary"
+              :loading="busy"
+              :disabled="!canExecute"
+              @click="execute"
+            >
+              {{ t('storage.fs.wizard.fileio.execute') }}
+            </UButton>
+          </template>
         </div>
       </div>
     </template>
@@ -178,6 +233,7 @@ import {
   parseFileioBindConflictFromError,
 } from '~/utils/fs-fileio-bind-conflict'
 import { parseFsWizardExecuteFailure } from '~/utils/fs-wizard-execute'
+import { eligibleVdisksForFileioBind } from '~/utils/fs-fileio-eligible-vdisks'
 
 const props = defineProps<{
   sanId: string
@@ -185,6 +241,7 @@ const props = defineProps<{
   isClustered?: boolean
   vdisks: VDiskFile[]
   initialVdiskPath?: string
+  onCreateVdisk?: () => void | Promise<void>
 }>()
 const emit = defineEmits<{ cancel: []; close: [] }>()
 const { t } = useEsosI18n()
@@ -205,11 +262,52 @@ const executeError = ref<string | null>(null)
 const clusterNodeResults = ref<ClusterLvmNodeResult[] | null>(null)
 const conflict = ref<FileioBindConflict | null>(null)
 
-const vdiskOptions = computed(() =>
-  props.vdisks.map(v => ({ label: `${v.fileName} — ${v.path}`, value: v.path })),
+const eligibleVdisks = computed(() =>
+  eligibleVdisksForFileioBind(props.vdisks, fs.overview),
 )
 
-const selectedVdisk = computed(() => props.vdisks.find(v => v.path === selectedPath.value))
+const hasEligibleVdisks = computed(() => eligibleVdisks.value.length > 0)
+
+const wizardTotalSteps = computed(() => (hasEligibleVdisks.value ? 3 : 1))
+
+const registeredFileioDevices = computed(() => fs.overview?.fileioDevices ?? [])
+
+const emptyStateTitle = computed(() =>
+  registeredFileioDevices.value.length > 0
+    ? t('storage.fs.wizard.fileio.all_registered.title')
+    : t('storage.fs.wizard.fileio.empty.title'),
+)
+
+const emptyStateDescription = computed(() =>
+  registeredFileioDevices.value.length > 0
+    ? t('storage.fs.wizard.fileio.all_registered.description')
+    : t('storage.fs.wizard.fileio.empty.description'),
+)
+
+const registeredDeviceRows = computed(() =>
+  registeredFileioDevices.value.map(device => {
+    const actions = fileioConflictActions(
+      {
+        code: 'vdisk_file_already_fileio',
+        message: '',
+        existingDeviceName: device.name,
+        mapped: device.mapped,
+      },
+      overview.value,
+    )
+    return {
+      device,
+      viewMappingsUrl: actions.viewMappingsUrl,
+      exposeLunUrl: actions.exposeLunUrl,
+    }
+  }),
+)
+
+const vdiskOptions = computed(() =>
+  eligibleVdisks.value.map(v => ({ label: `${v.fileName} — ${v.path}`, value: v.path })),
+)
+
+const selectedVdisk = computed(() => eligibleVdisks.value.find(v => v.path === selectedPath.value))
 
 const existingRegistration = computed(() =>
   findFileioRegistrationForPath(fs.overview, selectedPath.value),
@@ -227,14 +325,18 @@ const registrationActions = computed(() => {
 })
 
 const nameError = computed(() => {
+  if (!hasEligibleVdisks.value) return null
   const err = validateScstDeviceName(deviceName.value)
   if (!err) return null
   return t(`storage.fs.wizard.fileio.error_name_${err}`)
 })
 
+const showNameError = computed(() => !!nameError.value && hasEligibleVdisks.value)
+
 const step1Valid = computed(() =>
-  !!selectedPath.value
-  && props.vdisks.some(v => v.path === selectedPath.value)
+  hasEligibleVdisks.value
+  && !!selectedPath.value
+  && eligibleVdisks.value.some(v => v.path === selectedPath.value)
   && !nameError.value
   && !existingRegistration.value,
 )
@@ -263,11 +365,17 @@ const canExecute = computed(() =>
   && confirmation.value.trim() === preflight.value.requiredConfirmation,
 )
 
+function handleCreateVdisk() {
+  emit('close')
+  void props.onCreateVdisk?.()
+}
+
 onMounted(() => {
   fs.setSanId(props.sanId)
   if (props.clusterId) fs.setClusterContext(props.clusterId, props.sanId)
+  if (!hasEligibleVdisks.value) return
   const preferred = props.initialVdiskPath
-  if (preferred && props.vdisks.some(v => v.path === preferred)) {
+  if (preferred && eligibleVdisks.value.some(v => v.path === preferred)) {
     selectedPath.value = preferred
   } else if (vdiskOptions.value[0]) {
     selectedPath.value = vdiskOptions.value[0].value
@@ -335,6 +443,7 @@ async function loadPreflight() {
 }
 
 async function onNext() {
+  if (!hasEligibleVdisks.value) return
   if (step.value === 1) {
     if (existingRegistration.value) return
     await loadPreflight()

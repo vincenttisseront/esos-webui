@@ -3946,6 +3946,7 @@
         "create_fs": "Create filesystem",
         "create_vdisk": "Create vdisk",
         "bind_fileio": "Register FILEIO",
+        "bind_fileio_no_eligible": "No vdisk file eligible for FILEIO registration",
         "delete_vdisk": "Delete vdisk",
         "unmount": "Unmount"
       },
@@ -4009,6 +4010,14 @@
           "title": "Register SCST FILEIO",
           "vdisk": "VDisk file",
           "no_vdisk": "No unmapped vdisk files.",
+          "empty": {
+            "title": "No vdisk file available",
+            "description": "All vdisk files are already registered as SCST FILEIO devices or mapped in SCST."
+          },
+          "all_registered": {
+            "title": "All vdisk files are already registered",
+            "description": "Map these FILEIO devices to a LUN to expose them to initiators."
+          },
           "device_name": "SCST device name",
           "nv_cache": "Enable nv_cache",
           "execute": "Create device",
@@ -4019,7 +4028,9 @@
           "error_name_too_long": "Device name too long (max 32)",
           "actions": {
             "view_mappings": "View LUN mappings",
-            "map_lun": "Map to a LUN"
+            "map_lun": "Map to a LUN",
+            "create_vdisk": "Create a vdisk file",
+            "close": "Close"
           },
           "status": {
             "registered": "Registered as SCST device {deviceName}"

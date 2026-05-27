@@ -98,12 +98,28 @@
       >
         {{ t('storage.fs.actions.create_vdisk') }}
       </UButton>
+      <UTooltip
+        v-if="!eligibleFileioVdisks.length"
+        :text="t('storage.fs.actions.bind_fileio_no_eligible')"
+      >
+        <span class="inline-flex">
+          <UButton
+            size="sm"
+            color="primary"
+            variant="soft"
+            icon="i-heroicons-circle-stack"
+            disabled
+          >
+            {{ t('storage.fs.actions.bind_fileio') }}
+          </UButton>
+        </span>
+      </UTooltip>
       <UButton
+        v-else
         size="sm"
         color="primary"
         variant="soft"
         icon="i-heroicons-circle-stack"
-        :disabled="!unmappedVdisks.length"
         @click="openFileioWizard"
       >
         {{ t('storage.fs.actions.bind_fileio') }}
@@ -228,7 +244,7 @@
         <template #actions-cell="{ row }">
           <div v-if="!readOnly" class="flex gap-1">
             <UButton
-              v-if="!row.original.mapped"
+              v-if="isVdiskEligibleForFileioBindRow(row.original)"
               size="xs"
               color="primary"
               variant="ghost"
@@ -377,6 +393,10 @@ import { filterActionableScanWarnings } from '~/utils/fs-scan-warnings'
 import { buildFsSummaryStatus, formatScannedAt } from '~/utils/fs-summary-status'
 import { analyzeFileioBackendSituation } from '~/utils/storage-workflow-guidance'
 import { fsTableColumn, fsTableColumnId } from '~/utils/fs-table-columns'
+import {
+  eligibleVdisksForFileioBind,
+  isVdiskEligibleForFileioBind,
+} from '~/utils/fs-fileio-eligible-vdisks'
 import type { FileioDeviceRef, FileSystemMount, FsMountRole, MountHealth, ScstLunMappingRef, VDiskFile } from '~/types/filesystem'
 
 const props = defineProps<{
@@ -415,6 +435,13 @@ const chainSteps = computed(() => fileioView.value?.chain ?? [])
 const backends = computed(() => fs.backends)
 const eligibleCandidates = computed(() => backends.value.filter(c => c.eligible))
 const unmappedVdisks = computed(() => fileioView.value?.vdiskFiles.filter(v => !v.mapped) ?? [])
+const eligibleFileioVdisks = computed(() =>
+  eligibleVdisksForFileioBind(fileioView.value?.vdiskFiles ?? [], fs.overview),
+)
+
+function isVdiskEligibleForFileioBindRow(vdisk: VDiskFile) {
+  return isVdiskEligibleForFileioBind(vdisk, fs.overview)
+}
 const fileioDevices = computed(() => fileioView.value?.fileioDevices ?? [])
 const lunMappings = computed(() => fileioView.value?.lunMappings ?? [])
 const summaryCounts = computed(() =>
@@ -559,9 +586,9 @@ function runNextStep() {
   } else if (action.kind === 'bind_fileio') {
     const path = action.messageParams?.path
     const list = path
-      ? unmappedVdisks.value.filter(v => v.path === path)
-      : unmappedVdisks.value
-    void openFileioWizard(list.length ? list : unmappedVdisks.value, path)
+      ? eligibleFileioVdisks.value.filter(v => v.path === path)
+      : eligibleFileioVdisks.value
+    void openFileioWizard(list.length ? list : eligibleFileioVdisks.value, path)
   }
 }
 
@@ -676,19 +703,24 @@ async function openCreateVdiskWizard(initialMountPoint?: string) {
   } catch { /* dismissed */ }
 }
 
-async function openFileioWizard(vdisks = unmappedVdisks.value, initialVdiskPath?: string) {
+async function openFileioWizard(vdisks = eligibleFileioVdisks.value, initialVdiskPath?: string) {
   const { default: Wizard } = await import('~/components/fs/CreateFileioWizard.vue')
   try {
     await openModal({
       component: Wizard,
-      props: wizardProps({ vdisks, initialVdiskPath }),
+      props: wizardProps({
+        vdisks: fileioView.value?.vdiskFiles ?? vdisks,
+        initialVdiskPath,
+        onCreateVdisk: () => openCreateVdiskWizard(),
+      }),
     })
     await refreshAll()
   } catch { /* dismissed */ }
 }
 
 function openFileioWizardFor(row: VDiskFile) {
-  openFileioWizard([row])
+  if (!isVdiskEligibleForFileioBindRow(row)) return
+  openFileioWizard([row], row.path)
 }
 
 async function confirmDeleteVdisk(path: string) {
