@@ -96,13 +96,45 @@
       </div>
 
       <!-- Étape 1 : Niveau RAID -->
-      <div v-else-if="step === 1" class="space-y-4">
-        <UFormGroup :label="t('raid.hw_create_wizard.raid_level')" required>
-          <USelect v-model="form.raidLevel" :items="hwLevelOptions" value-key="value" class="w-full" />
-        </UFormGroup>
+      <div v-else-if="step === 1" class="space-y-3">
+        <p class="text-sm text-gray-600 dark:text-gray-400">{{ t('raid.hw_create_wizard.raid_level_intro') }}</p>
         <p class="text-xs text-gray-500 dark:text-gray-400">
-          {{ t('raid.hw_create_wizard.min_drives', { min: minDrives, level: form.raidLevel }) }}
+          {{ t('raid.hw_create_wizard.free_disks_hint', { count: freeDiskCount }) }}
         </p>
+        <div class="space-y-2" role="radiogroup" :aria-label="t('raid.hw_create_wizard.raid_level')">
+          <button
+            v-for="card in raidLevelCards"
+            :key="card.level"
+            type="button"
+            class="w-full text-left rounded-lg border px-4 py-3 transition-colors"
+            :class="raidLevelCardClass(card)"
+            :disabled="!card.enabled"
+            :aria-pressed="form.raidLevel === card.level"
+            @click="selectRaidLevel(card.level)"
+          >
+            <div class="flex items-start justify-between gap-2">
+              <div class="min-w-0">
+                <p class="font-medium" :class="card.enabled ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400'">
+                  {{ card.title }}
+                </p>
+                <p class="text-xs mt-1" :class="card.enabled ? 'text-gray-600 dark:text-gray-400' : 'text-gray-400'">
+                  {{ card.description }}
+                </p>
+                <p class="text-xs mt-1 font-medium" :class="card.enabled ? 'text-purple-700 dark:text-purple-300' : 'text-gray-400'">
+                  {{ card.minLabel }}
+                </p>
+                <p v-if="!card.enabled && card.disabledReason" class="text-xs mt-1 text-amber-600 dark:text-amber-400">
+                  {{ card.disabledReason }}
+                </p>
+              </div>
+              <UIcon
+                v-if="form.raidLevel === card.level && card.enabled"
+                name="i-heroicons-check-circle"
+                class="w-5 h-5 text-purple-500 shrink-0"
+              />
+            </div>
+          </button>
+        </div>
       </div>
 
       <!-- Étape 2 : Sélection disques -->
@@ -136,16 +168,44 @@
       </div>
 
       <!-- Étape 3 : Politiques cache -->
-      <div v-else-if="step === 3" class="space-y-4">
-        <UFormGroup :label="t('raid.hw_create_wizard.read_policy')">
-          <USelect v-model="form.readPolicy" :items="readPolicyOptions" value-key="value" class="w-full" />
-        </UFormGroup>
-        <UFormGroup :label="t('raid.hw_create_wizard.write_policy')">
-          <USelect v-model="form.writePolicy" :items="writePolicyOptions" value-key="value" class="w-full" />
-          <template #hint>
-            <span class="text-amber-600 text-xs">{{ t('raid.hw_create_wizard.write_policy_hint') }}</span>
-          </template>
-        </UFormGroup>
+      <div v-else-if="step === 3" class="space-y-5">
+        <div class="space-y-2">
+          <p class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('raid.hw_create_wizard.read_policy') }}</p>
+          <div class="space-y-2" role="radiogroup" :aria-label="t('raid.hw_create_wizard.read_policy')">
+            <button
+              v-for="card in readPolicyCards"
+              :key="card.value"
+              type="button"
+              class="w-full text-left rounded-lg border px-4 py-3 transition-colors"
+              :class="optionCardClass(form.readPolicy === card.value)"
+              :aria-pressed="form.readPolicy === card.value"
+              @click="form.readPolicy = card.value"
+            >
+              <p class="font-medium text-gray-900 dark:text-gray-100">{{ card.title }}</p>
+              <p class="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{{ card.description }}</p>
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <p class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('raid.hw_create_wizard.write_policy') }}</p>
+          <div class="space-y-2" role="radiogroup" :aria-label="t('raid.hw_create_wizard.write_policy')">
+            <button
+              v-for="card in writePolicyCards"
+              :key="card.value"
+              type="button"
+              class="w-full text-left rounded-lg border px-4 py-3 transition-colors"
+              :class="optionCardClass(form.writePolicy === card.value)"
+              :aria-pressed="form.writePolicy === card.value"
+              @click="form.writePolicy = card.value"
+            >
+              <p class="font-medium text-gray-900 dark:text-gray-100">{{ card.title }}</p>
+              <p class="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{{ card.description }}</p>
+            </button>
+          </div>
+          <p class="text-xs text-amber-600 dark:text-amber-400">{{ t('raid.hw_create_wizard.write_policy_hint') }}</p>
+        </div>
+
         <UFormGroup :label="t('raid.hw_create_wizard.volume_name')">
           <UInput v-model="form.name" :placeholder="t('raid.hw_create_wizard.volume_name_placeholder')" />
         </UFormGroup>
@@ -252,9 +312,12 @@ const submitError = ref<string | null>(null)
 const preflightResult = ref<RaidPreflightResult | null>(null)
 const preflightLoading = ref(false)
 
+const HW_RAID_LEVELS = ['1', '5', '6', '10'] as const
+type HwRaidLevel = typeof HW_RAID_LEVELS[number]
+
 const form = reactive({
   controllerId: '',
-  raidLevel: '1' as '0' | '1' | '5' | '6' | '10',
+  raidLevel: '1' as HwRaidLevel,
   drives: [] as Array<{ enclosure?: string; slot: string }>,
   readPolicy: 'ADRA' as 'NORA' | 'RA' | 'ADRA',
   writePolicy: 'WT' as 'WT' | 'WB',
@@ -287,32 +350,50 @@ const availableDrives = computed((): HardwareRaidPhysicalDrive[] =>
   (selectedController.value?.physicalDrives ?? []).filter(d => d.eligible),
 )
 
-const hwLevelOptions = computed(() => [
-  { label: 'RAID 0', value: '0' },
-  { label: 'RAID 1', value: '1' },
-  { label: 'RAID 5', value: '5' },
-  { label: 'RAID 6', value: '6' },
-  { label: 'RAID 10', value: '10' },
-])
+const freeDiskCount = computed(() => availableDrives.value.length)
 
-const readPolicyOptions = computed(() => [
-  { label: t('raid.hw_create_wizard.policy.nora'), value: 'NORA' },
-  { label: t('raid.hw_create_wizard.policy.ra'), value: 'RA' },
-  { label: t('raid.hw_create_wizard.policy.adra'), value: 'ADRA' },
-])
+function minDrivesForLevel(level: string): number {
+  const map: Record<string, number> = { '1': 2, '5': 3, '6': 4, '10': 4 }
+  return map[level] ?? 2
+}
 
-const writePolicyOptions = computed(() => [
-  { label: t('raid.hw_create_wizard.policy.wt'), value: 'WT' },
-  { label: t('raid.hw_create_wizard.policy.wb'), value: 'WB' },
-])
+const minDrives = computed(() => minDrivesForLevel(form.raidLevel))
 
-const minDrives = computed(() => {
-  const map: Record<string, number> = { '0': 2, '1': 2, '5': 3, '6': 4, '10': 4 }
-  return map[form.raidLevel] ?? 2
-})
+const raidLevelCards = computed(() =>
+  HW_RAID_LEVELS.map(level => {
+    const min = minDrivesForLevel(level)
+    const enabled = freeDiskCount.value >= min
+    return {
+      level,
+      minDisks: min,
+      enabled,
+      title: t(`raid.hw_create_wizard.levels.${level}.title`),
+      description: t(`raid.hw_create_wizard.levels.${level}.description`),
+      minLabel: t('raid.hw_create_wizard.levels.min_disks', { count: min }),
+      disabledReason: enabled
+        ? undefined
+        : t('raid.hw_create_wizard.levels.unavailable', { available: freeDiskCount.value, min }),
+    }
+  }),
+)
+
+const readPolicyCards = computed(() => ([
+  { value: 'NORA' as const, title: t('raid.hw_create_wizard.policy.nora_title'), description: t('raid.hw_create_wizard.policy.nora_desc') },
+  { value: 'RA' as const, title: t('raid.hw_create_wizard.policy.ra_title'), description: t('raid.hw_create_wizard.policy.ra_desc') },
+  { value: 'ADRA' as const, title: t('raid.hw_create_wizard.policy.adra_title'), description: t('raid.hw_create_wizard.policy.adra_desc') },
+]))
+
+const writePolicyCards = computed(() => ([
+  { value: 'WT' as const, title: t('raid.hw_create_wizard.policy.wt_title'), description: t('raid.hw_create_wizard.policy.wt_desc') },
+  { value: 'WB' as const, title: t('raid.hw_create_wizard.policy.wb_title'), description: t('raid.hw_create_wizard.policy.wb_desc') },
+]))
 
 const canNext = computed(() => {
   if (step.value === 0) return !!form.controllerId && eligibleEntries.value.some(e => e.controller.id === form.controllerId)
+  if (step.value === 1) {
+    const card = raidLevelCards.value.find(c => c.level === form.raidLevel)
+    return !!card?.enabled
+  }
   if (step.value === 2) return form.drives.length >= minDrives.value
   if (step.value === 4) return !!preflightResult.value?.ok
   return true
@@ -324,9 +405,39 @@ const canSubmit = computed(() =>
   && (!preflightResult.value.requiredConfirmation || form.confirmation === preflightResult.value.requiredConfirmation),
 )
 
+function optionCardClass(selected: boolean): string {
+  return selected
+    ? 'border-purple-500 bg-purple-50 dark:bg-purple-500/10 ring-1 ring-purple-500'
+    : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-600'
+}
+
+function raidLevelCardClass(card: { level: string; enabled: boolean }): string {
+  if (!card.enabled) {
+    return 'border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 opacity-60 cursor-not-allowed'
+  }
+  return optionCardClass(form.raidLevel === card.level)
+}
+
 function selectController(id: string) {
   form.controllerId = id
   form.drives = []
+  ensureValidRaidLevel()
+}
+
+function selectRaidLevel(level: HwRaidLevel) {
+  const card = raidLevelCards.value.find(c => c.level === level)
+  if (!card?.enabled) return
+  form.raidLevel = level
+  if (form.drives.length > 0 && form.drives.length < minDrivesForLevel(level)) {
+    form.drives = []
+  }
+}
+
+function ensureValidRaidLevel() {
+  const current = raidLevelCards.value.find(c => c.level === form.raidLevel)
+  if (current?.enabled) return
+  const first = raidLevelCards.value.find(c => c.enabled)
+  if (first) form.raidLevel = first.level
 }
 
 function modeLabel(ctrl: HardwareRaidController): string {
@@ -344,7 +455,10 @@ onMounted(() => {
   } else if (eligibleEntries.value.length === 1) {
     form.controllerId = eligibleEntries.value[0].controller.id
   }
+  ensureValidRaidLevel()
 })
+
+watch(freeDiskCount, () => ensureValidRaidLevel())
 
 async function handleNext() {
   step.value++

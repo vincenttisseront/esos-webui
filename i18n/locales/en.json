@@ -1274,7 +1274,29 @@
       "field_vd": "Virtual drives",
       "available_drives": "Available physical disks for this volume: {count}",
       "raid_level": "RAID level",
+      "raid_level_intro": "Choose a RAID level supported by this controller. Options depend on how many free physical disks are available.",
+      "free_disks_hint": "{count} free physical disk(s) on the selected controller.",
       "min_drives": "Minimum {min} drives required for RAID{level}.",
+      "levels": {
+        "min_disks": "{count} disks minimum",
+        "unavailable": "Not enough free disks ({available} available, {min} required)",
+        "1": {
+          "title": "RAID 1",
+          "description": "Mirroring — tolerates one disk failure with two copies of data."
+        },
+        "5": {
+          "title": "RAID 5",
+          "description": "Striping with parity — good capacity and redundancy for mixed workloads."
+        },
+        "6": {
+          "title": "RAID 6",
+          "description": "Dual parity — tolerates two simultaneous disk failures."
+        },
+        "10": {
+          "title": "RAID 10",
+          "description": "Mirrored stripes — high performance and redundancy (nested mirror)."
+        }
+      },
       "select_drives": "Select physical disks ({min} minimum):",
       "drives_selected": "Selected: {selected} / {min} required",
       "read_policy": "Read policy",
@@ -1303,7 +1325,17 @@
         "ra": "RA — Read ahead",
         "adra": "ADRA — Adaptive read ahead (recommended)",
         "wt": "WT — Write-Through (safe without BBU)",
-        "wb": "WB — Write-Back (fast, requires BBU)"
+        "wb": "WB — Write-Back (fast, requires BBU)",
+        "nora_title": "NORA",
+        "nora_desc": "No read ahead — lower read-ahead overhead on random I/O.",
+        "ra_title": "RA",
+        "ra_desc": "Read ahead — may help sequential read workloads.",
+        "adra_title": "ADRA",
+        "adra_desc": "Adaptive read ahead — recommended default for most workloads.",
+        "wt_title": "WT (Write-Through)",
+        "wt_desc": "Safe without battery backup (BBU); writes go directly to disks.",
+        "wb_title": "WB (Write-Back)",
+        "wb_desc": "Higher performance; requires BBU or risk of data loss on power loss."
       },
       "reason": {
         "cli_missing": "perccli/storcli CLI not found on this node",

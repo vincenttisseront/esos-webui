@@ -1274,7 +1274,29 @@
       "field_vd": "Volumes virtuels",
       "available_drives": "Disques physiques disponibles pour ce volume : {count}",
       "raid_level": "Niveau RAID",
+      "raid_level_intro": "Choisissez un niveau RAID supporté par ce contrôleur. Les options dépendent du nombre de disques physiques libres.",
+      "free_disks_hint": "{count} disque(s) physique(s) libre(s) sur le contrôleur sélectionné.",
       "min_drives": "Minimum {min} disques requis pour RAID{level}.",
+      "levels": {
+        "min_disks": "{count} disques minimum",
+        "unavailable": "Pas assez de disques libres ({available} disponible(s), {min} requis)",
+        "1": {
+          "title": "RAID 1",
+          "description": "Miroir — tolère la panne d'un disque avec deux copies des données."
+        },
+        "5": {
+          "title": "RAID 5",
+          "description": "Entrelacement avec parité — bon compromis capacité / redondance."
+        },
+        "6": {
+          "title": "RAID 6",
+          "description": "Double parité — tolère deux pannes simultanées."
+        },
+        "10": {
+          "title": "RAID 10",
+          "description": "Bandes miroirées — performances et redondance élevées."
+        }
+      },
       "select_drives": "Sélectionnez les disques physiques ({min} minimum) :",
       "drives_selected": "Sélectionnés : {selected} / {min} requis",
       "read_policy": "Politique de lecture",
@@ -1303,7 +1325,17 @@
         "ra": "RA — Lecture anticipée",
         "adra": "ADRA — Lecture anticipée adaptative (recommandé)",
         "wt": "WT — Write-Through (sûr sans BBU)",
-        "wb": "WB — Write-Back (performant, nécessite BBU)"
+        "wb": "WB — Write-Back (performant, nécessite BBU)",
+        "nora_title": "NORA",
+        "nora_desc": "Pas de lecture anticipée — moins de prélecture sur I/O aléatoires.",
+        "ra_title": "RA",
+        "ra_desc": "Lecture anticipée — peut aider les lectures séquentielles.",
+        "adra_title": "ADRA",
+        "adra_desc": "Lecture anticipée adaptative — valeur par défaut recommandée.",
+        "wt_title": "WT (Write-Through)",
+        "wt_desc": "Sûr sans batterie de secours (BBU) ; les écritures vont directement sur les disques.",
+        "wb_title": "WB (Write-Back)",
+        "wb_desc": "Meilleures performances ; nécessite une BBU (risque en cas de coupure)."
       },
       "reason": {
         "cli_missing": "CLI perccli/storcli introuvable sur ce nœud",
