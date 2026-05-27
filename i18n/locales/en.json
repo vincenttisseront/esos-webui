@@ -295,6 +295,14 @@
     "FILE_EXISTS": "A file with this name already exists in the container.",
     "DUPLICATE_SHA256": "A binary with this checksum is already registered in the catalog.",
     "BINARY_MISSING": "The binary file is missing from the container.",
+    "BINARIES_DIR_NOT_WRITABLE": "The binaries directory is not writable (check the Docker volume mount).",
+    "BINARIES_DIR_UNAVAILABLE": "The binaries directory is unavailable.",
+    "BINARIES_DIR_PROBE_FAILED": "Could not verify write access to the binaries directory.",
+    "BINARIES_DIR_FULL": "Insufficient disk space to store the binary.",
+    "INVALID_FILE_TYPE": "File type not allowed (.rpm, .tar.gz, .tgz, .tar).",
+    "FILE_TOO_LARGE": "File exceeds the configured upload size limit.",
+    "UPLOAD_FILE_REQUIRED": "No file was uploaded.",
+    "UPLOAD_PARSE_FAILED": "Failed to parse the upload form.",
     "oidc": {
       "denied": "SSO sign-in denied or cancelled.",
       "missing": "Incomplete SSO response.",
@@ -2147,7 +2155,17 @@
         "file_label": "Binary file",
         "button": "Upload to container",
         "success": "Binary uploaded successfully.",
-        "error": "Unable to upload the binary."
+        "error": "Unable to upload the binary.",
+        "storage_blocked": "Upload disabled — directory is not writable",
+        "storage_unknown": "Could not verify the binaries directory"
+      },
+      "status": {
+        "title": "Catalog status",
+        "path": "Directory",
+        "exists": "Exists",
+        "writable": "Writable",
+        "file_count": "Files in container",
+        "max_size": "Max upload size"
       },
       "container": {
         "title": "Container binaries",

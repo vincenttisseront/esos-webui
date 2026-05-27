@@ -295,6 +295,14 @@
     "FILE_EXISTS": "Un fichier portant ce nom existe déjà dans le conteneur.",
     "DUPLICATE_SHA256": "Un binaire avec ce checksum est déjà enregistré dans le catalogue.",
     "BINARY_MISSING": "Le fichier binaire est absent du conteneur.",
+    "BINARIES_DIR_NOT_WRITABLE": "Le répertoire des binaires n’est pas accessible en écriture (vérifiez le volume Docker).",
+    "BINARIES_DIR_UNAVAILABLE": "Le répertoire des binaires est indisponible.",
+    "BINARIES_DIR_PROBE_FAILED": "Impossible de vérifier l’écriture dans le répertoire des binaires.",
+    "BINARIES_DIR_FULL": "Espace disque insuffisant pour enregistrer le binaire.",
+    "INVALID_FILE_TYPE": "Type de fichier non autorisé (.rpm, .tar.gz, .tgz, .tar).",
+    "FILE_TOO_LARGE": "Fichier trop volumineux pour la limite configurée.",
+    "UPLOAD_FILE_REQUIRED": "Aucun fichier n’a été envoyé.",
+    "UPLOAD_PARSE_FAILED": "Échec de lecture du formulaire d’upload.",
     "oidc": {
       "denied": "Connexion SSO refusée ou annulée.",
       "missing": "Réponse SSO incomplète.",
@@ -2147,7 +2155,17 @@
         "file_label": "Fichier binaire",
         "button": "Uploader dans le conteneur",
         "success": "Binaire uploadé avec succès.",
-        "error": "Impossible d'uploader le binaire."
+        "error": "Impossible d'uploader le binaire.",
+        "storage_blocked": "Upload désactivé — répertoire non inscriptible",
+        "storage_unknown": "Impossible de vérifier le répertoire des binaires"
+      },
+      "status": {
+        "title": "État du catalogue",
+        "path": "Répertoire",
+        "exists": "Existe",
+        "writable": "Inscriptible",
+        "file_count": "Fichiers dans le conteneur",
+        "max_size": "Taille max. upload"
       },
       "container": {
         "title": "Binaires dans le conteneur",

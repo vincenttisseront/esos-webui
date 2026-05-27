@@ -72,6 +72,16 @@ export type DeploymentJobDto = {
   targets: DeploymentJobTargetDto[]
 }
 
+export type BinariesStorageStatusDto = {
+  path: string
+  exists: boolean
+  writable: boolean
+  fileCount: number
+  maxBytes: number
+  errorCode?: string
+  errorMessage?: string
+}
+
 /** Latest deployment for one SAN (system config card). */
 export type SanLatestDeploymentDto = {
   job: DeploymentJobDto

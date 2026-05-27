@@ -25,7 +25,8 @@ services:
     volumes:
       - ./keys/esos_rsa:/app/keys/esos_rsa:ro
       - db-data:/app/data
-      - ./binaries:/opt/esos-webui/binaries:ro
+      # Read-write: uploads via /admin/binary-deployment write into this directory.
+      - ./binaries:/opt/esos-webui/binaries:rw
 
     networks:
       - esos-internal

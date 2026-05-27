@@ -24,7 +24,8 @@
       </UButton>
     </header>
 
-    <BinaryUploadCard @uploaded="reload" />
+    <BinaryCatalogStatusPanel ref="statusPanel" />
+    <BinaryUploadCard @uploaded="onUploaded" />
 
     <ContainerBinaryList
       :files="containerFiles"
@@ -130,6 +131,7 @@
 <script setup lang="ts">
 import type { ContainerBinaryListItem, DeploymentBinaryDto, DeploymentJobDto } from '~/types/deployment'
 import { isBinaryDeployable } from '~/utils/deployment-ui'
+import BinaryCatalogStatusPanel from '~/components/deployment/BinaryCatalogStatusPanel.vue'
 import BinaryUploadCard from '~/components/deployment/BinaryUploadCard.vue'
 import ContainerBinaryList from '~/components/deployment/ContainerBinaryList.vue'
 import RegisteredBinaryCatalog from '~/components/deployment/RegisteredBinaryCatalog.vue'
@@ -140,6 +142,7 @@ const { t } = useEsosI18n()
 const toast = useAppToast()
 const { activeSans } = useSelectedSan()
 
+const statusPanel = ref<{ reload: () => Promise<void> } | null>(null)
 const loading = ref(false)
 const containerDir = ref('')
 const containerFiles = ref<ContainerBinaryListItem[]>([])
@@ -171,6 +174,11 @@ const confirmMessage = computed(() => {
   const name = catalog.value.find(b => b.id === bulkBinaryId.value)?.name ?? '—'
   return t('admin.deployment.deploy.confirm_msg', { name, count: selectedSanIds.value.length }) as string
 })
+
+async function onUploaded() {
+  await reload()
+  await statusPanel.value?.reload()
+}
 
 async function reload() {
   loading.value = true

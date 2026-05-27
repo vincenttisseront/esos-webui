@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { writeFile, stat } from 'node:fs/promises'
-import { join } from 'node:path'
+import { unlink, stat } from 'node:fs/promises'
 import type { ContainerBinaryEntry, DeploymentBinaryDto } from '~/types/deployment'
 import { computeFileSha256 } from './deployment-binaries-catalog'
 import {
@@ -10,11 +9,14 @@ import {
 } from './deployment-binaries-scan'
 import {
   deleteContainerFileByRelative,
-  ensureBinariesDir,
   relativePathFromBinary,
   resolveContainerFilePath,
-  sanitizeBinaryFilename,
 } from './deployment-binaries-fs'
+import {
+  assertBinariesDirWritable,
+  validateUploadFilename,
+  writeBinaryFileAtomic,
+} from './deployment-binaries-storage'
 import { loadInstallSpecForFile } from './deployment-binaries-register'
 import {
   deleteDeploymentBinary,
@@ -149,17 +151,18 @@ export async function uploadBinaryToContainer(
   filename: string,
   data: Buffer,
 ): Promise<DeploymentBinaryDto> {
-  const safe = sanitizeBinaryFilename(filename)
-  if (!safe) {
-    throw createError({ statusCode: 400, message: 'Nom de fichier invalide', data: { code: 'INVALID_FILENAME' } })
-  }
+  const safe = validateUploadFilename(filename)
 
   const { maxBytes } = getDeploymentConfig()
   if (data.length > maxBytes) {
-    throw createError({ statusCode: 413, message: `Fichier trop volumineux (max ${Math.floor(maxBytes / (1024 ** 2))} MiB)` })
+    throw createError({
+      statusCode: 413,
+      message: `Fichier trop volumineux (max ${Math.floor(maxBytes / (1024 ** 2))} MiB)`,
+      data: { code: 'FILE_TOO_LARGE', maxBytes },
+    })
   }
 
-  const binariesDir = await ensureBinariesDir()
+  const binariesDir = await assertBinariesDirWritable()
   const existing = await resolveContainerFilePath(safe)
   if (existing) {
     throw createError({
@@ -169,14 +172,18 @@ export async function uploadBinaryToContainer(
     })
   }
 
-  const absolutePath = join(binariesDir, safe)
-  await writeFile(absolutePath, data, { flag: 'wx' })
+  const absolutePath = await writeBinaryFileAtomic(binariesDir, safe, data)
 
-  return registerFileAtPath({
-    absolutePath,
-    relativePath: safe,
-    filename: safe,
-  })
+  try {
+    return await registerFileAtPath({
+      absolutePath,
+      relativePath: safe,
+      filename: safe,
+    })
+  } catch (err) {
+    await unlink(absolutePath).catch(() => {})
+    throw err
+  }
 }
 
 export async function registerContainerBinary(filename: string, allowDuplicate?: boolean): Promise<DeploymentBinaryDto> {

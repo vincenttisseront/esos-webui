@@ -6,7 +6,7 @@ import { getDeploymentConfig } from './deployment-config'
 
 const ALLOWED_EXTENSIONS = new Set(['.rpm', '.gz', '.tgz', '.tar'])
 
-function isAllowedFilename(name: string): boolean {
+export function isAllowedBinaryFilename(name: string): boolean {
   const lower = name.toLowerCase()
   if (lower.endsWith('.tar.gz')) return true
   if (lower.endsWith('.rpm')) return true
@@ -68,7 +68,7 @@ export async function scanContainerBinariesDir(): Promise<ContainerBinaryEntry[]
         continue
       }
       if (!st.isFile()) continue
-      if (!isAllowedFilename(name)) continue
+      if (!isAllowedBinaryFilename(name)) continue
 
       const rel = relative(rootReal, full).replace(/\\/g, '/')
       entries.push({
