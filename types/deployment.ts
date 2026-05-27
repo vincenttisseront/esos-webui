@@ -78,6 +78,10 @@ export type BinariesStorageStatusDto = {
   writable: boolean
   fileCount: number
   maxBytes: number
+  runtimeUser: string
+  runtimeUid: number | null
+  runtimeGid: number | null
+  suggestedFix?: string
   errorCode?: string
   errorMessage?: string
 }

@@ -41,12 +41,14 @@ describe('deployment-binaries-upload', () => {
     expect(isAllowedBinaryFilename(name)).toBe(true)
   })
 
-  it('getBinariesStorageStatus reports writable dir', async () => {
+  it('getBinariesStorageStatus reports writable dir and runtime fields', async () => {
     const status = await getBinariesStorageStatus()
     expect(status.path).toBe(tempRoot)
     expect(status.exists).toBe(true)
     expect(status.writable).toBe(true)
     expect(status.errorCode).toBeUndefined()
+    expect(status.runtimeUser).toBeTruthy()
+    expect(status.suggestedFix).toBeUndefined()
   })
 
   it('writeBinaryFileAtomic creates file under directory', async () => {

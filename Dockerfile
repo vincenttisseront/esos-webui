@@ -31,8 +31,8 @@ FROM node:22-alpine AS runner
 
 WORKDIR /app
 
-# Non-root user
-RUN addgroup -S esos && adduser -S esos -G esos
+# Non-root runtime user — fixed UID/GID 1000 for volume permissions (see docs/deploy-binary-catalog.md)
+RUN addgroup -g 1000 -S esos && adduser -u 1000 -S -G esos esos
 
 # Copy only the Nuxt build output
 COPY --from=builder --chown=esos:esos /app/.output ./
@@ -49,13 +49,24 @@ RUN mkdir -p /app/keys && chown esos:esos /app/keys
 # Mount point for the SQLite database (filled by docker-compose volume db-data)
 RUN mkdir -p /app/data && chown esos:esos /app/data
 
-USER esos
+# Global binary catalog (filled by docker-compose volume binaries-data)
+RUN mkdir -p /opt/esos-webui/binaries && chown esos:esos /opt/esos-webui/binaries
+
+RUN apk add --no-cache su-exec
+
+COPY docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Entrypoint runs as root to chown volumes, then exec su-exec esos
+USER root
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 EXPOSE 3000
 
 ENV NODE_ENV=production
 ENV NITRO_PORT=3000
 ENV NITRO_HOST=0.0.0.0
+ENV ESOS_RUNTIME_USER=esos
 
 # Re-declare per stage (ARG does not carry across FROM) — must match builder defaults
 ARG APP_VERSION=

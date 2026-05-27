@@ -25,8 +25,10 @@ services:
     volumes:
       - ./keys/esos_rsa:/app/keys/esos_rsa:ro
       - db-data:/app/data
-      # Read-write: uploads via /admin/binary-deployment write into this directory.
-      - ./binaries:/opt/esos-webui/binaries:rw
+      # Persistent binary catalog (chown 1000:1000 at container start via docker-entrypoint.sh).
+      - binaries-data:/opt/esos-webui/binaries
+      # Optional host seed (requires: chown -R 1000:1000 ./binaries on Linux) — see docs/deploy-binary-catalog.md
+      # - ./binaries:/opt/esos-webui/binaries:rw
 
     networks:
       - esos-internal
@@ -74,4 +76,6 @@ networks:
 
 volumes:
   db-data:
+    driver: local
+  binaries-data:
     driver: local

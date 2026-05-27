@@ -7,6 +7,7 @@ import { scanContainerBinariesDir, isAllowedBinaryFilename } from './deployment-
 import { sanitizeBinaryFilename } from './deployment-binaries-fs'
 
 import type { BinariesStorageStatusDto } from '~/types/deployment'
+import { BINARIES_VOLUME_HINT, getRuntimeIdentity } from './deployment-runtime'
 
 export type BinariesStorageStatus = BinariesStorageStatusDto
 
@@ -61,6 +62,19 @@ async function probeWritable(dir: string): Promise<{ writable: boolean; errorCod
   }
 }
 
+function withRuntimeFields(
+  partial: Omit<BinariesStorageStatus, 'runtimeUser' | 'runtimeUid' | 'runtimeGid' | 'suggestedFix'>,
+): BinariesStorageStatus {
+  const runtime = getRuntimeIdentity()
+  return {
+    ...partial,
+    runtimeUser: runtime.user,
+    runtimeUid: runtime.uid,
+    runtimeGid: runtime.gid,
+    suggestedFix: partial.writable ? undefined : BINARIES_VOLUME_HINT,
+  }
+}
+
 export async function getBinariesStorageStatus(): Promise<BinariesStorageStatus> {
   const { binariesDir, maxBytes } = getDeploymentConfig()
   let exists = false
@@ -76,7 +90,7 @@ export async function getBinariesStorageStatus(): Promise<BinariesStorageStatus>
     exists = true
   } catch (err: unknown) {
     const code = (err as NodeJS.ErrnoException).code
-    return {
+    return withRuntimeFields({
       path: binariesDir,
       exists: false,
       writable: false,
@@ -84,7 +98,7 @@ export async function getBinariesStorageStatus(): Promise<BinariesStorageStatus>
       maxBytes,
       errorCode: code === 'EACCES' ? 'BINARIES_DIR_NOT_WRITABLE' : 'BINARIES_DIR_UNAVAILABLE',
       errorMessage: (err as Error).message ?? 'Impossible de créer le répertoire des binaires',
-    }
+    })
   }
 
   const probe = await probeWritable(binariesDir)
@@ -96,7 +110,7 @@ export async function getBinariesStorageStatus(): Promise<BinariesStorageStatus>
     fileCount = 0
   }
 
-  return {
+  return withRuntimeFields({
     path: binariesDir,
     exists,
     writable: probe.writable,
@@ -104,7 +118,26 @@ export async function getBinariesStorageStatus(): Promise<BinariesStorageStatus>
     maxBytes,
     errorCode: probe.errorCode,
     errorMessage: probe.errorMessage,
+  })
+}
+
+/** Logged at Nitro startup — see server/plugins/2.binaries-storage.ts */
+export async function logBinariesStorageStartupCheck(): Promise<BinariesStorageStatus> {
+  const status = await getBinariesStorageStatus()
+  const runtime = getRuntimeIdentity()
+  if (!status.writable) {
+    console.warn(
+      `[binaries] Répertoire non inscriptible: ${status.path} `
+      + `(utilisateur=${runtime.user}, uid=${runtime.uid ?? 'n/a'}). `
+      + `${BINARIES_VOLUME_HINT}`,
+    )
+  } else {
+    console.log(
+      `[binaries] Stockage OK: ${status.path} `
+      + `(${status.fileCount} fichier(s), uid=${runtime.uid ?? 'n/a'})`,
+    )
   }
+  return status
 }
 
 export async function assertBinariesDirWritable(): Promise<string> {

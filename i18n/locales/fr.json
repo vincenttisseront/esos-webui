@@ -2165,7 +2165,9 @@
         "exists": "Existe",
         "writable": "Inscriptible",
         "file_count": "Fichiers dans le conteneur",
-        "max_size": "Taille max. upload"
+        "runtime_user": "Utilisateur runtime",
+        "max_size": "Taille max. upload",
+        "suggested_fix_title": "Correctif suggéré"
       },
       "container": {
         "title": "Binaires dans le conteneur",

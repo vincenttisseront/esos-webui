@@ -40,9 +40,26 @@
         <dt class="text-gray-500">{{ t('admin.deployment.status.file_count') }}</dt>
         <dd>{{ status.fileCount }}</dd>
       </div>
+      <div>
+        <dt class="text-gray-500">{{ t('admin.deployment.status.runtime_user') }}</dt>
+        <dd class="font-mono text-xs">
+          {{ status.runtimeUser }}
+          <span v-if="status.runtimeUid != null" class="text-gray-400">
+            (uid {{ status.runtimeUid }}<span v-if="status.runtimeGid != null"> / gid {{ status.runtimeGid }}</span>)
+          </span>
+        </dd>
+      </div>
       <div class="sm:col-span-2">
         <dt class="text-gray-500">{{ t('admin.deployment.status.max_size') }}</dt>
         <dd>{{ formatDeploymentBytes(status.maxBytes) }}</dd>
+      </div>
+      <div v-if="!status.writable && status.suggestedFix" class="sm:col-span-2">
+        <UAlert
+          color="amber"
+          variant="subtle"
+          :title="t('admin.deployment.status.suggested_fix_title') as string"
+          :description="status.suggestedFix"
+        />
       </div>
       <div v-if="status.errorMessage" class="sm:col-span-2">
         <UAlert color="red" variant="subtle" :title="status.errorMessage" />

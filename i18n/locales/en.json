@@ -2165,7 +2165,9 @@
         "exists": "Exists",
         "writable": "Writable",
         "file_count": "Files in container",
-        "max_size": "Max upload size"
+        "runtime_user": "Runtime user",
+        "max_size": "Max upload size",
+        "suggested_fix_title": "Suggested fix"
       },
       "container": {
         "title": "Container binaries",
