@@ -30,6 +30,7 @@ export const MUTATION_ROUTE_PERMISSIONS: RoutePermission[] = [
 
   [/^\/api\/admin\/users/, ['*'], ['admin']],
   [/^\/api\/san\/[^/]+\/missing-tools\//, ['POST', 'PUT', 'PATCH', 'DELETE'], ['admin']],
+  [/^\/api\/san\/[^/]+\/binary-deployments/, ['POST', 'PUT', 'PATCH', 'DELETE'], ['admin']],
   [/^\/api\/san\/[^/]+\/system-config/, ['POST', 'PATCH', 'DELETE'], ['admin']],
   [/^\/api\/admin\/sans\/[^/]+$/, ['DELETE'], ['admin']],
   [/^\/api\/admin\/sans\/[^/]+\/reconnect$/, ['POST'], ['admin', 'operator']],
@@ -68,6 +69,7 @@ export const READ_ROUTE_PERMISSIONS: RoutePermission[] = [
   [/^\/api\/raid\//, ['GET'], ['admin', 'operator', 'viewer']],
   [/^\/api\/advanced-storage\//, ['GET'], ['admin', 'operator', 'viewer']],
   [/^\/api\/san\/[^/]+\/missing-tools\//, ['GET', 'HEAD'], ['admin', 'operator']],
+  [/^\/api\/san\/[^/]+\/binary-deployments/, ['GET', 'HEAD'], ['admin', 'operator']],
   [/^\/api\/lvm\//, ['POST', 'PATCH', 'PUT', 'DELETE'], ['admin', 'operator']],
   [/^\/api\/lvm\//, ['GET'], ['admin', 'operator', 'viewer']],
   [/^\/api\/fs\//, ['POST', 'PATCH', 'PUT', 'DELETE'], ['admin', 'operator']],

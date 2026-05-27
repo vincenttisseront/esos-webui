@@ -11,8 +11,10 @@ import type {
   DeploymentBinaryKind,
   DeploymentInstallSpec,
   DeploymentJobDto,
+  DeploymentJobScope,
   DeploymentJobStatus,
   DeploymentTargetStatus,
+  SanLatestDeploymentDto,
 } from '~/types/deployment'
 
 function parseInstallSpec(json: string): DeploymentInstallSpec {
@@ -95,14 +97,17 @@ export function createDeploymentJob(params: {
   binaryId: string
   requestedBy: string
   sanIds: string[]
+  scope?: DeploymentJobScope
 }): DeploymentJobDto {
   const db = getDB()
   const jobId = randomUUID()
   const now = new Date().toISOString()
+  const scope = params.scope ?? (params.sanIds.length === 1 ? 'single_san' : 'multi_san')
 
   db.insert(deploymentJobs).values({
     id: jobId,
     binaryId: params.binaryId,
+    scope,
     requestedBy: params.requestedBy,
     status: 'pending',
     createdAt: now,
@@ -168,6 +173,7 @@ export function getDeploymentJobById(jobId: string): DeploymentJobDto | null {
   return {
     id: job.id,
     binaryId: job.binaryId,
+    scope: (job.scope ?? 'multi_san') as DeploymentJobScope,
     requestedBy: job.requestedBy,
     status: job.status as DeploymentJobStatus,
     createdAt: job.createdAt,
@@ -199,4 +205,45 @@ export function getFailedTargetsForJob(jobId: string) {
   const job = getDeploymentJobById(jobId)
   if (!job) return []
   return job.targets.filter(t => t.status === 'failed')
+}
+
+export function getLatestDeploymentForSan(sanId: string): SanLatestDeploymentDto {
+  const db = getDB()
+  const targets = db.select().from(deploymentJobTargets)
+    .where(eq(deploymentJobTargets.sanId, sanId))
+    .all()
+  if (!targets.length) return null
+
+  const jobs = db.select().from(deploymentJobs).all()
+  const jobIdsForSan = new Set(targets.map(t => t.jobId))
+  const sorted = jobs
+    .filter(j => jobIdsForSan.has(j.id))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  const latestJob = sorted[0]
+  if (!latestJob) return null
+
+  const job = getDeploymentJobById(latestJob.id)
+  if (!job) return null
+  const target = job.targets.find(t => t.sanId === sanId)
+  if (!target) return null
+  const binary = getDeploymentBinaryById(job.binaryId)
+  return { job, target, binary }
+}
+
+export function listGlobalDeploymentHistory(limit = 25): DeploymentJobDto[] {
+  const db = getDB()
+  const jobs = db.select().from(deploymentJobs).all()
+  return jobs
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, limit)
+    .map(j => getDeploymentJobById(j.id)!)
+    .filter(Boolean)
+}
+
+export function getJobTargetForSan(jobId: string, sanId: string) {
+  const job = getDeploymentJobById(jobId)
+  if (!job) return null
+  const target = job.targets.find(t => t.sanId === sanId)
+  if (!target) return null
+  return { job, target }
 }

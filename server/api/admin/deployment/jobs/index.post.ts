@@ -29,7 +29,12 @@ export default defineEventHandler(async (event) => {
 
   const requestedBy = event.context.user?.username ?? event.context.user?.id ?? 'unknown'
 
-  const job = createDeploymentJob({ binaryId, requestedBy, sanIds })
+  const job = createDeploymentJob({
+    binaryId,
+    requestedBy,
+    sanIds,
+    scope: sanIds.length === 1 ? 'single_san' : 'multi_san',
+  })
   startDeploymentJobAsync(job.id)
   return { ok: true, job }
 })

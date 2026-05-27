@@ -281,6 +281,7 @@ export const deploymentBinaries = sqliteTable('deployment_binaries', {
 export const deploymentJobs = sqliteTable('deployment_jobs', {
   id:          text('id').primaryKey(),
   binaryId:    text('binary_id').notNull().references(() => deploymentBinaries.id),
+  scope:       text('scope').notNull().default('multi_san'),
   requestedBy: text('requested_by').notNull(),
   status:      text('status').notNull(),
   createdAt:   text('created_at').notNull(),

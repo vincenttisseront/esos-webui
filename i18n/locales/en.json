@@ -90,7 +90,7 @@
       "dependencies": "Dependencies",
       "webui_version": "WebUI Version",
       "advanced_storage": "Advanced Storage",
-      "binary_deployment": "Binary deployment"
+      "binary_deployment": "Binary catalog"
     },
     "page_titles": {
       "dashboard": "Dashboard",
@@ -2132,8 +2132,8 @@
     },
     "deployment": {
       "page": {
-        "title": "Binary deployment",
-        "subtitle": "Import binaries from the WebUI container and deploy them to one or more SANs.",
+        "title": "Binary catalog",
+        "subtitle": "Import binaries from the WebUI container, then deploy them from each SAN's system configuration.",
         "refresh": "Refresh"
       },
       "container": {
@@ -2146,11 +2146,19 @@
       },
       "catalog": {
         "title": "Registered catalog",
-        "empty": "No registered binaries. Import from the container above.",
+        "empty": "No registered binaries. Import a binary from the container.",
         "name": "Name",
         "version": "Version",
         "sha256": "SHA256",
         "imported": "Imported"
+      },
+      "bulk": {
+        "title": "Optional multi-SAN deployment",
+        "hint": "Bulk deployment is for global administration only. For a single SAN, use that SAN's system configuration.",
+        "run": "Deploy to selected SANs"
+      },
+      "history": {
+        "title": "Deployment history"
       },
       "deploy": {
         "title": "Deploy",
@@ -2162,9 +2170,26 @@
         "no_binary": "Select a binary.",
         "no_sans": "Select at least one SAN."
       },
+      "san": {
+        "title": "Binary deployment",
+        "help": "Select a binary from the global catalog and apply it to this SAN only.",
+        "select_binary": "Binary to deploy",
+        "select_placeholder": "Select a binary…",
+        "deploy": "Deploy to this SAN",
+        "deploy_started": "Deployment started",
+        "last_deployment": "Last deployment",
+        "empty_catalog": "No binaries available. Import one from the",
+        "catalog_link": "global catalog",
+        "no_san": "Select a SAN to deploy a binary.",
+        "status_pending": "Pending",
+        "status_uploading": "Uploading",
+        "status_applying": "Applying",
+        "status_success": "Deployed",
+        "status_failed": "Failed"
+      },
       "job": {
         "title": "Progress",
-        "retry": "Retry failed",
+        "retry": "Retry",
         "status_pending": "Pending",
         "status_uploading": "Uploading",
         "status_applying": "Applying",

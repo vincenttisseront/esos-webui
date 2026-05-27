@@ -10,6 +10,8 @@ export type DeploymentInstallSpec = {
 
 export type DeploymentBinaryStatus = 'registered' | 'archived'
 
+export type DeploymentJobScope = 'single_san' | 'multi_san'
+
 export type DeploymentJobStatus = 'pending' | 'running' | 'partial' | 'success' | 'failed'
 
 export type DeploymentTargetStatus =
@@ -56,9 +58,17 @@ export type DeploymentJobTargetDto = {
 export type DeploymentJobDto = {
   id: string
   binaryId: string
+  scope: DeploymentJobScope
   requestedBy: string
   status: DeploymentJobStatus
   createdAt: string
   updatedAt: string
   targets: DeploymentJobTargetDto[]
 }
+
+/** Latest deployment for one SAN (system config card). */
+export type SanLatestDeploymentDto = {
+  job: DeploymentJobDto
+  target: DeploymentJobTargetDto
+  binary: DeploymentBinaryDto | null
+} | null

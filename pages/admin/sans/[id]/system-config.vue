@@ -330,6 +330,11 @@
               :disabled="isReadOnly || isSshDown || isSshConnecting"
             />
             <UDivider />
+            <SanBinaryDeploymentCard
+              :san-id="sanId"
+              :disabled="isReadOnly || isSshDown || isSshConnecting"
+            />
+            <UDivider />
             <!-- Power toujours disponible -->
             <SystemPanel
               :san-id="sanId"
@@ -365,6 +370,7 @@ import {
   useSysconfigClusterScope,
 } from '~/composables/useSysconfigClusterScope'
 import ConsoleKeymapPanel from '~/components/sysconfig/ConsoleKeymapPanel.vue'
+import SanBinaryDeploymentCard from '~/components/deployment/SanBinaryDeploymentCard.vue'
 
 const SYS_CONFIG_TAB_KEYS = new Set<SysConfigTabKey>([
   'network',

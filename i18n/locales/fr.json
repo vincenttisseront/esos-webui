@@ -90,7 +90,7 @@
       "dependencies": "Dépendances",
       "webui_version": "Version WebUI",
       "advanced_storage": "Stockage avancé",
-      "binary_deployment": "Déploiement binaires"
+      "binary_deployment": "Catalogue des binaires"
     },
     "page_titles": {
       "dashboard": "Dashboard",
@@ -2132,8 +2132,8 @@
     },
     "deployment": {
       "page": {
-        "title": "Déploiement de binaires",
-        "subtitle": "Importez des binaires depuis le conteneur WebUI et déployez-les sur un ou plusieurs SAN.",
+        "title": "Catalogue des binaires",
+        "subtitle": "Importez depuis le conteneur WebUI les binaires disponibles pour les déployer ensuite depuis la configuration système de chaque SAN.",
         "refresh": "Rafraîchir"
       },
       "container": {
@@ -2146,11 +2146,19 @@
       },
       "catalog": {
         "title": "Catalogue enregistré",
-        "empty": "Aucun binaire enregistré. Importez depuis le conteneur ci-dessus.",
+        "empty": "Aucun binaire enregistré. Importez un binaire depuis le conteneur.",
         "name": "Nom",
         "version": "Version",
         "sha256": "SHA256",
         "imported": "Importé le"
+      },
+      "bulk": {
+        "title": "Déploiement multi-SAN optionnel",
+        "hint": "Déploiement groupé réservé à l'administration globale. Pour un seul SAN, utilisez la configuration système du SAN concerné.",
+        "run": "Déployer sur les SAN sélectionnés"
+      },
+      "history": {
+        "title": "Historique des déploiements"
       },
       "deploy": {
         "title": "Déployer",
@@ -2162,9 +2170,26 @@
         "no_binary": "Sélectionnez un binaire.",
         "no_sans": "Sélectionnez au moins un SAN."
       },
+      "san": {
+        "title": "Déploiement de binaire",
+        "help": "Sélectionnez un binaire du catalogue global et appliquez-le uniquement à ce SAN.",
+        "select_binary": "Binaire à déployer",
+        "select_placeholder": "Sélectionner un binaire…",
+        "deploy": "Déployer sur ce SAN",
+        "deploy_started": "Déploiement démarré",
+        "last_deployment": "Dernier déploiement",
+        "empty_catalog": "Aucun binaire disponible. Importez d'abord un binaire depuis le",
+        "catalog_link": "catalogue global",
+        "no_san": "Sélectionnez un SAN pour déployer un binaire.",
+        "status_pending": "En attente",
+        "status_uploading": "Upload en cours",
+        "status_applying": "Application en cours",
+        "status_success": "Déployé",
+        "status_failed": "Échec"
+      },
       "job": {
         "title": "Progression",
-        "retry": "Relancer les échecs",
+        "retry": "Relancer",
         "status_pending": "En attente",
         "status_uploading": "Transfert",
         "status_applying": "Application",

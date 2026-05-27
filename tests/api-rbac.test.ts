@@ -220,6 +220,14 @@ describe('api-rbac (auth-providers admin)', () => {
 })
 
 describe('api-rbac (deployment)', () => {
+  it('RB53 — operator cannot POST /api/san/x/binary-deployments', () => {
+    expectForbidden(() => enforceMutationAccess('/api/san/x/binary-deployments', 'POST', 'operator'))
+  })
+
+  it('RB54 — operator can GET /api/san/x/binary-deployments/latest', () => {
+    expect(() => enforceReadAccess('/api/san/x/binary-deployments/latest', 'GET', 'operator')).not.toThrow()
+  })
+
   it('RB50 — operator cannot POST /api/admin/deployment/jobs', () => {
     expectForbidden(() => enforceMutationAccess('/api/admin/deployment/jobs', 'POST', 'operator'))
   })

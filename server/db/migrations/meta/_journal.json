@@ -127,6 +127,13 @@
       "when": 1747612800000,
       "tag": "0018_deployment_binaries",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1747699200000,
+      "tag": "0019_deployment_job_scope",
+      "breakpoints": true
     }
   ]
 }

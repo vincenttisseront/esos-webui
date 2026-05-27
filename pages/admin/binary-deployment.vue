@@ -24,94 +24,32 @@
       </UButton>
     </header>
 
-    <UCard>
-      <template #header>
-        <span class="font-semibold">{{ t('admin.deployment.container.title') }}</span>
-      </template>
-      <p v-if="!containerFiles.length" class="text-sm text-gray-500">
-        {{ t('admin.deployment.container.empty') }}
-      </p>
-      <div v-else class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="text-left text-xs text-gray-500 border-b border-gray-200 dark:border-gray-700">
-              <th class="py-2 pr-4">{{ t('admin.deployment.container.path') }}</th>
-              <th class="py-2 pr-4">{{ t('admin.deployment.container.size') }}</th>
-              <th class="py-2 pr-4">{{ t('admin.deployment.container.mtime') }}</th>
-              <th class="py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="f in containerFiles"
-              :key="f.relativePath"
-              class="border-b border-gray-100 dark:border-gray-800"
-            >
-              <td class="py-2 pr-4 font-mono text-xs">{{ f.relativePath }}</td>
-              <td class="py-2 pr-4">{{ formatBytes(f.sizeBytes) }}</td>
-              <td class="py-2 pr-4 text-xs text-gray-500">{{ formatMtime(f.mtimeMs) }}</td>
-              <td class="py-2">
-                <UButton
-                  size="xs"
-                  color="primary"
-                  variant="soft"
-                  :loading="importingPath === f.relativePath"
-                  @click="importFromContainer(f.relativePath)"
-                >
-                  {{ t('admin.deployment.container.import') }}
-                </UButton>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </UCard>
+    <BinaryCatalogContainerList
+      :files="containerFiles"
+      :importing-path="importingPath"
+      @import="importFromContainer"
+    />
+
+    <BinaryCatalogRegisteredList :binaries="catalog" />
 
     <UCard>
       <template #header>
-        <span class="font-semibold">{{ t('admin.deployment.catalog.title') }}</span>
+        <span class="font-semibold text-gray-600">{{ t('admin.deployment.bulk.title') }}</span>
       </template>
-      <p v-if="!catalog.length" class="text-sm text-gray-500">
-        {{ t('admin.deployment.catalog.empty') }}
+      <p class="text-sm text-gray-500 mb-4">
+        {{ t('admin.deployment.bulk.hint') }}
       </p>
-      <div v-else class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="text-left text-xs text-gray-500 border-b border-gray-200 dark:border-gray-700">
-              <th class="py-2 pr-4">{{ t('admin.deployment.catalog.name') }}</th>
-              <th class="py-2 pr-4">{{ t('admin.deployment.catalog.version') }}</th>
-              <th class="py-2 pr-4">{{ t('admin.deployment.container.size') }}</th>
-              <th class="py-2 pr-4">{{ t('admin.deployment.catalog.sha256') }}</th>
-              <th class="py-2">{{ t('admin.deployment.catalog.imported') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="b in catalog"
-              :key="b.id"
-              class="border-b border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
-              :class="{ 'bg-primary-50 dark:bg-primary-950/30': selectedBinaryId === b.id }"
-              @click="selectedBinaryId = b.id"
-            >
-              <td class="py-2 pr-4">{{ b.name }}</td>
-              <td class="py-2 pr-4">{{ b.version ?? '—' }}</td>
-              <td class="py-2 pr-4">{{ formatBytes(b.sizeBytes) }}</td>
-              <td class="py-2 pr-4 font-mono text-xs">{{ b.sha256.slice(0, 16) }}…</td>
-              <td class="py-2 text-xs text-gray-500">{{ b.createdAt }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </UCard>
-
-    <UCard>
-      <template #header>
-        <span class="font-semibold">{{ t('admin.deployment.deploy.title') }}</span>
-      </template>
       <div class="space-y-4">
-        <p v-if="!selectedBinaryId" class="text-xs text-amber-600">
-          {{ t('admin.deployment.deploy.no_binary') }}
-        </p>
+        <AppFormField :label="t('admin.deployment.deploy.select_binary') as string">
+          <USelectMenu
+            v-model="bulkBinaryId"
+            :items="bulkBinaryItems"
+            value-key="value"
+            label-key="label"
+            :placeholder="t('admin.deployment.san.select_placeholder') as string"
+            class="w-full max-w-md"
+          />
+        </AppFormField>
         <div class="space-y-2">
           <p class="text-xs font-medium text-gray-500 uppercase">
             {{ t('admin.deployment.deploy.select_sans') }}
@@ -131,19 +69,35 @@
               <span :class="san.readOnly ? 'text-gray-400 line-through' : ''">{{ san.label }}</span>
             </label>
           </div>
-          <p v-if="!selectedSanIds.length" class="text-xs text-amber-600">
-            {{ t('admin.deployment.deploy.no_sans') }}
-          </p>
         </div>
         <UButton
-          color="primary"
+          color="gray"
+          variant="outline"
           icon="i-heroicons-rocket-launch"
-          :disabled="!canDeploy"
+          :disabled="!canBulkDeploy"
           :loading="deploying"
-          @click="confirmDeployOpen = true"
+          @click="confirmBulkOpen = true"
         >
-          {{ t('admin.deployment.deploy.run') }}
+          {{ t('admin.deployment.bulk.run') }}
         </UButton>
+      </div>
+    </UCard>
+
+    <UCard v-if="history.length">
+      <template #header>
+        <span class="font-semibold">{{ t('admin.deployment.history.title') }}</span>
+      </template>
+      <div class="space-y-2 text-sm">
+        <div
+          v-for="job in history"
+          :key="job.id"
+          class="flex flex-wrap items-center gap-2 border-b border-gray-100 dark:border-gray-800 py-2"
+        >
+          <span class="font-mono text-xs text-gray-400">{{ job.createdAt }}</span>
+          <UBadge size="xs" color="neutral">{{ job.scope }}</UBadge>
+          <span>{{ job.status }}</span>
+          <span class="text-gray-500">→ {{ job.targets.map(t => t.sanId).join(', ') }}</span>
+        </div>
       </div>
     </UCard>
 
@@ -156,7 +110,7 @@
             size="xs"
             color="amber"
             variant="outline"
-            @click="retryJob"
+            @click="retryBulkJob"
           >
             {{ t('admin.deployment.job.retry') }}
           </UButton>
@@ -170,32 +124,24 @@
         >
           <div class="flex items-center justify-between gap-2">
             <span class="font-mono text-sm">{{ target.sanId }}</span>
-            <UBadge :color="targetBadgeColor(target.status)" size="xs">
-              {{ targetStatusLabel(target.status) }}
-            </UBadge>
+            <DeploymentStatusBadge :status="target.status" />
           </div>
-          <p v-if="target.errorMessage" class="text-xs text-red-600 mt-1">{{ target.errorMessage }}</p>
-          <details v-if="target.logs" class="mt-2">
-            <summary class="text-xs text-gray-500 cursor-pointer">{{ t('admin.deployment.job.logs') }}</summary>
-            <pre class="text-xs mt-1 whitespace-pre-wrap text-gray-600 dark:text-gray-300 max-h-40 overflow-auto">{{ target.logs }}</pre>
-          </details>
+          <DeploymentLogsPanel :logs="target.logs" :error-message="target.errorMessage" />
         </div>
       </div>
     </UCard>
 
-    <UModal v-model:open="confirmDeployOpen">
+    <UModal v-model:open="confirmBulkOpen">
       <template #content>
         <div class="p-6 space-y-4">
           <h3 class="text-lg font-semibold">{{ t('admin.deployment.deploy.confirm_title') }}</h3>
-          <p class="text-sm text-gray-600">
-            {{ confirmMessage }}
-          </p>
+          <p class="text-sm text-gray-600">{{ confirmMessage }}</p>
           <div class="flex justify-end gap-2">
-            <UButton color="gray" variant="outline" @click="confirmDeployOpen = false">
+            <UButton color="gray" variant="outline" @click="confirmBulkOpen = false">
               {{ t('common.actions.cancel') }}
             </UButton>
-            <UButton color="primary" :loading="deploying" @click="runDeploy">
-              {{ t('admin.deployment.deploy.run') }}
+            <UButton color="primary" :loading="deploying" @click="runBulkDeploy">
+              {{ t('admin.deployment.bulk.run') }}
             </UButton>
           </div>
         </div>
@@ -206,6 +152,11 @@
 
 <script setup lang="ts">
 import type { ContainerBinaryEntry, DeploymentBinaryDto, DeploymentJobDto } from '~/types/deployment'
+import { isDeploymentJobRunning } from '~/utils/deployment-ui'
+import BinaryCatalogContainerList from '~/components/deployment/BinaryCatalogContainerList.vue'
+import BinaryCatalogRegisteredList from '~/components/deployment/BinaryCatalogRegisteredList.vue'
+import DeploymentStatusBadge from '~/components/deployment/DeploymentStatusBadge.vue'
+import DeploymentLogsPanel from '~/components/deployment/DeploymentLogsPanel.vue'
 
 definePageMeta({ layout: 'default' })
 
@@ -217,70 +168,49 @@ const loading = ref(false)
 const containerDir = ref('')
 const containerFiles = ref<ContainerBinaryEntry[]>([])
 const catalog = ref<DeploymentBinaryDto[]>([])
+const history = ref<DeploymentJobDto[]>([])
 const importingPath = ref<string | null>(null)
 
-const selectedBinaryId = ref<string | null>(null)
+const bulkBinaryId = ref<string | null>(null)
 const selectedSanIds = ref<string[]>([])
 const deploying = ref(false)
-const confirmDeployOpen = ref(false)
+const confirmBulkOpen = ref(false)
 const activeJobId = ref<string | null>(null)
 const activeJob = ref<DeploymentJobDto | null>(null)
 let pollTimer: ReturnType<typeof setInterval> | null = null
 
-const selectedBinary = computed(() =>
-  catalog.value.find(b => b.id === selectedBinaryId.value) ?? null,
+const bulkBinaryItems = computed(() =>
+  catalog.value.map(b => ({ value: b.id, label: b.name })),
 )
 
-const canDeploy = computed(() =>
-  Boolean(selectedBinaryId.value) && selectedSanIds.value.length > 0 && !deploying.value,
+const canBulkDeploy = computed(() =>
+  Boolean(bulkBinaryId.value) && selectedSanIds.value.length > 0 && !deploying.value,
 )
 
 const confirmMessage = computed(() => {
-  const name = selectedBinary.value?.name ?? '—'
-  return t('admin.deployment.deploy.confirm_msg', {
-    name,
-    count: selectedSanIds.value.length,
-  }) as string
+  const name = catalog.value.find(b => b.id === bulkBinaryId.value)?.name ?? '—'
+  return t('admin.deployment.deploy.confirm_msg', { name, count: selectedSanIds.value.length }) as string
 })
 
-function formatBytes(n: number): string {
-  if (n < 1024) return `${n} B`
-  if (n < 1024 ** 2) return `${(n / 1024).toFixed(1)} KiB`
-  return `${(n / (1024 ** 2)).toFixed(1)} MiB`
-}
-
-function formatMtime(ms: number): string {
-  return new Date(ms).toLocaleString()
-}
-
-function targetBadgeColor(status: string): 'gray' | 'blue' | 'amber' | 'green' | 'red' {
-  switch (status) {
-    case 'success': return 'green'
-    case 'failed': return 'red'
-    case 'uploading':
-    case 'applying': return 'blue'
-    default: return 'gray'
+function stopPolling() {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
   }
-}
-
-function targetStatusLabel(status: string): string {
-  const key = `admin.deployment.job.status_${status}` as const
-  return t(key) as string
 }
 
 async function reload() {
   loading.value = true
   try {
-    const [containerRes, catalogRes] = await Promise.all([
+    const [containerRes, catalogRes, historyRes] = await Promise.all([
       $fetch<{ binariesDir: string; files: ContainerBinaryEntry[] }>('/api/admin/deployment/container'),
       $fetch<{ binaries: DeploymentBinaryDto[] }>('/api/admin/deployment/catalog'),
+      $fetch<{ jobs: DeploymentJobDto[] }>('/api/admin/deployment/history'),
     ])
     containerDir.value = containerRes.binariesDir
     containerFiles.value = containerRes.files
     catalog.value = catalogRes.binaries
-    if (!selectedBinaryId.value && catalog.value.length) {
-      selectedBinaryId.value = catalog.value[0]!.id
-    }
+    history.value = historyRes.jobs
   } catch (err: unknown) {
     toast.error(t('common.failure') as string, String(err))
   } finally {
@@ -291,24 +221,16 @@ async function reload() {
 async function importFromContainer(relativePath: string) {
   importingPath.value = relativePath
   try {
-    const res = await $fetch<{ binary: DeploymentBinaryDto }>('/api/admin/deployment/catalog/import', {
+    await $fetch('/api/admin/deployment/catalog/import', {
       method: 'POST',
       body: { sourcePath: relativePath },
     })
-    toast.success(t('admin.deployment.container.import') as string, res.binary.name)
+    toast.success(t('admin.deployment.container.import') as string)
     await reload()
-    selectedBinaryId.value = res.binary.id
   } catch (err: unknown) {
     toast.error(t('common.failure') as string, String(err))
   } finally {
     importingPath.value = null
-  }
-}
-
-function stopPolling() {
-  if (pollTimer) {
-    clearInterval(pollTimer)
-    pollTimer = null
   }
 }
 
@@ -317,22 +239,23 @@ async function pollJob() {
   try {
     const res = await $fetch<{ job: DeploymentJobDto }>(`/api/admin/deployment/jobs/${activeJobId.value}`)
     activeJob.value = res.job
-    if (['success', 'failed', 'partial'].includes(res.job.status)) {
+    if (!isDeploymentJobRunning(res.job.status)) {
       stopPolling()
+      await reload()
     }
   } catch {
     stopPolling()
   }
 }
 
-async function runDeploy() {
-  if (!selectedBinaryId.value || !selectedSanIds.value.length) return
+async function runBulkDeploy() {
+  if (!bulkBinaryId.value || !selectedSanIds.value.length) return
   deploying.value = true
-  confirmDeployOpen.value = false
+  confirmBulkOpen.value = false
   try {
     const res = await $fetch<{ job: DeploymentJobDto }>('/api/admin/deployment/jobs', {
       method: 'POST',
-      body: { binaryId: selectedBinaryId.value, sanIds: selectedSanIds.value },
+      body: { binaryId: bulkBinaryId.value, sanIds: selectedSanIds.value },
     })
     activeJobId.value = res.job.id
     activeJob.value = res.job
@@ -346,7 +269,7 @@ async function runDeploy() {
   }
 }
 
-async function retryJob() {
+async function retryBulkJob() {
   if (!activeJobId.value) return
   try {
     await $fetch(`/api/admin/deployment/jobs/${activeJobId.value}/retry`, { method: 'POST' })
