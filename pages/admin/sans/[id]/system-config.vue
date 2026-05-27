@@ -321,7 +321,13 @@
               v-if="config?.hostname.status === 'ok' || forceShow.hostname"
               :san-id="sanId"
               :config="config?.hostname.data ?? emptyHostname"
+              :disabled="isReadOnly || isSshDown"
               @saved="(v) => { if (config) config.hostname = { data: v, status: 'ok' } }"
+            />
+            <UDivider />
+            <ConsoleKeymapPanel
+              :san-id="sanId"
+              :disabled="isReadOnly || isSshDown"
             />
             <UDivider />
             <!-- Power toujours disponible -->
@@ -358,6 +364,7 @@ import {
   getSysconfigTabScope,
   useSysconfigClusterScope,
 } from '~/composables/useSysconfigClusterScope'
+import ConsoleKeymapPanel from '~/components/sysconfig/ConsoleKeymapPanel.vue'
 
 const SYS_CONFIG_TAB_KEYS = new Set<SysConfigTabKey>([
   'network',

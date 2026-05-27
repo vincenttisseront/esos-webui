@@ -21,7 +21,7 @@ interface SanRow {
 }
 
 type SSHStatus = 'connecting' | 'connected' | 'reconnecting' | 'error'
-type StorageRoute = 'raid' | 'system-config' | 'performance'
+type StorageRoute = 'raid' | 'system-config' | 'performance' | 'advanced-storage'
 
 const props = defineProps<{
   clusterId: string
@@ -113,6 +113,12 @@ const storageMenuItems = computed(() => [[
     icon: 'i-heroicons-bolt',
     disabled: !hasPrimaryNode.value,
     onSelect: () => emitStorage('performance'),
+  },
+  {
+    label: t('admin.sans.cluster_card.storage_advanced'),
+    icon: 'i-heroicons-squares-plus',
+    disabled: !hasPrimaryNode.value,
+    onSelect: () => emitStorage('advanced-storage'),
   },
 ]])
 

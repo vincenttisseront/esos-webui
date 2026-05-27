@@ -35,6 +35,16 @@
           Diagnostic
         </UButton>
         <UButton
+          v-if="showMissingToolsAction"
+          size="xs"
+          color="amber"
+          variant="soft"
+          icon="i-heroicons-wrench-screwdriver"
+          @click="$emit('install-perccli')"
+        >
+          {{ t('raid.missing_tools.install_cta') }}
+        </UButton>
+        <UButton
           v-if="controller.supportsCreate && !readOnly"
           size="xs"
           color="blue"
@@ -123,12 +133,15 @@
 <script setup lang="ts">
 import type { HardwareRaidController, HardwareRaidLogicalDrive } from '~/types/raid'
 
-const props = defineProps<{ controller: HardwareRaidController; readOnly?: boolean }>()
+const props = defineProps<{ controller: HardwareRaidController; readOnly?: boolean; showMissingToolsAction?: boolean }>()
 defineEmits<{
   'create-ld': [ctrl: HardwareRaidController]
   'delete-ld': [ctrl: HardwareRaidController, ld: HardwareRaidLogicalDrive]
   'diagnostic': [ctrl: HardwareRaidController]
+  'install-perccli': []
 }>()
+
+const { t } = useEsosI18n()
 
 const vendorLabel = computed(() => ({
   lsi_megaraid: 'LSI MegaRAID',

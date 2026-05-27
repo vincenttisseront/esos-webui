@@ -48,7 +48,7 @@
           color="gray"
           variant="outline"
           icon="i-heroicons-squares-plus"
-          :to="`/admin/sans/${sanId}/advanced-storage`"
+          :to="advancedStorageLink"
         >
           {{ t('nav.items.advanced_storage') }}
         </UButton>
@@ -264,6 +264,8 @@
         <RaidControllerCard
           :controller="ctrl"
           :read-only="isReadOnly"
+          :show-missing-tools-action="ctrl.managementMode === 'read_only_limited' && !isReadOnly"
+          @install-perccli="openMissingPerccliWizard"
           @create-ld="(c) => openHwWizard(c)"
           @delete-ld="(c, ld) => handleDeleteHwLd(c, ld)"
           @diagnostic="openDiagnostic"
@@ -481,6 +483,22 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal: Missing perccli installer -->
+    <div
+      v-if="missingPerccliOpen"
+      class="fixed inset-0 z-[70] flex items-start justify-center bg-black/50 overflow-y-auto p-4"
+      @click.self="missingPerccliOpen = false"
+    >
+      <div class="mt-8 mb-8 w-full max-w-2xl">
+        <MissingPerccliWizard
+          :san-id="sanId"
+          :read-only="isReadOnly"
+          @close="missingPerccliOpen = false"
+          @completed="() => { missingPerccliOpen = false; manualRefreshRaid() }"
+        />
+      </div>
+    </div>
   </div>
 </template>
 
@@ -522,6 +540,8 @@ import {
   buildPerSanRaidPageHealth,
   clusterAttentionPointsForOverview,
 } from '~/utils/cluster-raid-page-health'
+import { clusterStorageQuery, isClusterStorageScope } from '~/utils/cluster-storage-navigation'
+import MissingPerccliWizard from '~/components/raid/MissingPerccliWizard.vue'
 
 definePageMeta({ layout: 'default', ssr: false })
 
@@ -532,6 +552,20 @@ const { data: san } = await useFetch<SanSummary>(`/api/admin/sans/${sanId}`)
 
 const isReadOnly = computed(() => san.value?.readOnly ?? false)
 const isClusteredSan = computed(() => Boolean(san.value?.clusterId))
+
+const missingPerccliOpen = ref(false)
+function openMissingPerccliWizard() {
+  missingPerccliOpen.value = true
+}
+
+const advancedStorageLink = computed(() => {
+  const fromRoute = isClusterStorageScope(route.query as Record<string, unknown>)
+  const clusterId = fromRoute?.clusterId ?? san.value?.clusterId
+  return {
+    path: `/admin/sans/${sanId}/advanced-storage`,
+    query: clusterId ? clusterStorageQuery(clusterId) : {},
+  }
+})
 
 const clusterAttention = ref<ClusterAttentionResponse | null>(null)
 

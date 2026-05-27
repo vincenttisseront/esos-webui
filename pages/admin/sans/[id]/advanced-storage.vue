@@ -28,8 +28,8 @@
           color="gray"
           variant="ghost"
           icon="i-heroicons-arrow-path"
-          :loading="loading"
-          @click="refresh(true)"
+          :loading="loading || clusterOverviewLoading"
+          @click="refreshAll(true)"
         >
           {{ t('advanced_storage.page.refresh') }}
         </UButton>
@@ -46,16 +46,23 @@
     />
 
     <UAlert
-      v-if="overview?.clusterId"
-      color="gray"
-      icon="i-heroicons-link"
+      v-if="clusterScopeId && !isClusterMember"
+      color="amber"
       variant="soft"
-      :description="t('advanced_storage.page.cluster_link')"
-    >
-      <template #actions>
-        <UButton size="xs" variant="soft" to="/cluster">{{ t('nav.items.cluster_ha') }}</UButton>
-      </template>
-    </UAlert>
+      icon="i-heroicons-exclamation-triangle"
+      :title="t('advanced_storage.cluster.node_mismatch_title')"
+      :description="t('advanced_storage.cluster.node_mismatch_desc')"
+    />
+
+    <AdvancedStorageClusterPanel
+      v-if="clusterScopeId"
+      :cluster-name="clusterName"
+      :current-san-id="sanId"
+      :overview="clusterOverview"
+      :loading="clusterOverviewLoading"
+      :cluster-role-label="clusterRoleLabel"
+      @select-node="navigateToClusterNode"
+    />
 
     <div v-if="loading && !overview" class="text-center py-16 text-gray-500 dark:text-gray-400">
       <UIcon name="i-heroicons-arrow-path" class="animate-spin w-8 h-8 mb-2 mx-auto" />
@@ -207,11 +214,24 @@
 </template>
 
 <script setup lang="ts">
+import AdvancedStorageClusterPanel from '~/components/advanced-storage/AdvancedStorageClusterPanel.vue'
 import type { AdvancedStorageOverview, AdvancedTechId, TechPresence } from '~/types/advanced-storage'
+import { useAdvancedStorageClusterScope } from '~/composables/useAdvancedStorageClusterScope'
 
 const route = useRoute()
 const sanId = computed(() => route.params.id as string)
 const { t } = useEsosI18n()
+
+const {
+  clusterScopeId,
+  clusterName,
+  isClusterMember,
+  navigateToClusterNode,
+  clusterOverview,
+  clusterOverviewLoading,
+  fetchClusterOverview,
+  clusterRoleLabel,
+} = useAdvancedStorageClusterScope(sanId)
 
 const { data: san } = await useFetch<{ label: string; readOnly?: boolean }>(
   () => `/api/admin/sans/${sanId.value}`,
@@ -243,6 +263,7 @@ function techPresence(id: AdvancedTechId): TechPresence {
 }
 
 async function refresh(force = false) {
+  if (clusterScopeId.value && !isClusterMember.value) return
   loading.value = true
   error.value = null
   try {
@@ -260,10 +281,19 @@ async function refresh(force = false) {
   }
 }
 
+async function refreshAll(force = false) {
+  await Promise.all([
+    refresh(force),
+    clusterScopeId.value ? fetchClusterOverview(force) : Promise.resolve(),
+  ])
+}
+
 function scrollToTech(id: AdvancedTechId) {
   const el = document.getElementById(`panel-${id}`)
   el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-onMounted(() => refresh())
+watch(sanId, () => refresh())
+
+onMounted(() => refreshAll())
 </script>

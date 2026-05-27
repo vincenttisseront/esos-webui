@@ -123,6 +123,27 @@ export interface DeprecatedTechStatus {
   reason?:  string
 }
 
+export interface AdvancedStorageClusterNodeSnapshot {
+  sanId: string
+  label: string
+  clusterRole: string | null
+  readOnly: boolean
+  sshReady: boolean
+  error?: string
+  overview?: AdvancedStorageOverview
+  drbdResourceCount: number
+  techHealth: AdvancedTechHealth
+}
+
+export interface AdvancedStorageClusterOverview {
+  clusterId: string
+  clusterName: string
+  scannedAt: number
+  nodes: AdvancedStorageClusterNodeSnapshot[]
+  symmetry: 'ok' | 'warning' | 'unknown'
+  symmetryNotes: string[]
+}
+
 export interface AdvancedStorageOverview {
   sanId:                 string
   scannedAt:             number

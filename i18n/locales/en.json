@@ -316,6 +316,32 @@
       "cluster_link": "DRBD is also shown in HA Cluster when this SAN is clustered.",
       "view_raid": "View in RAID management"
     },
+    "cluster": {
+      "panel_title": "Cluster — {name}",
+      "panel_subtitle": "Per-node advanced storage inventory (read-only). Select a node to view details.",
+      "loading": "Scanning cluster nodes…",
+      "unavailable_title": "Could not load cluster overview",
+      "node_mismatch_title": "Node not in cluster",
+      "node_mismatch_desc": "This SAN is not a member of the cluster in the URL. Return to Administration → SANs.",
+      "col_node": "Node",
+      "col_role": "Role",
+      "col_ssh": "SSH",
+      "col_health": "Health",
+      "col_action": "Action",
+      "ssh_ok": "Connected",
+      "ssh_down": "Unavailable",
+      "view_node": "View inventory",
+      "current": "Current view",
+      "symmetry": {
+        "ok": "Symmetric",
+        "warning": "Asymmetry detected",
+        "unknown": "Unknown"
+      },
+      "symmetry_note": {
+        "drbd_resource_count_mismatch": "DRBD resource counts differ between nodes.",
+        "active_technologies_mismatch": "Active advanced technologies differ between nodes."
+      }
+    },
     "presence": {
       "not_installed": "Not installed",
       "installed": "Installed",
@@ -1220,6 +1246,47 @@
         "modal_title": "Remove RAID metadata",
         "modal_description": "This action runs mdadm --zero-superblock on the selected partitions. It removes MD metadata and can prevent array recovery."
       }
+    },
+    "missing_tools": {
+      "install_cta": "Install perccli64",
+      "wizard": { "title": "Install missing RAID tools" },
+      "need_title": "Missing RAID management tools",
+      "need_desc": "This wizard deploys perccli64 on ESOS. It affects the local system, not the browser.",
+      "package_title": "Package (RPM)",
+      "package_desc": "Upload a Dell perccli RPM (perccli-*.rpm). The WebUI will not download anything automatically.",
+      "preflight_title": "Preflight checks",
+      "preflight_desc": "Checks required binaries, /tmp space, and identifies the esos_root partition to modify.",
+      "temp_title": "Temporary install and test",
+      "temp_desc": "Installs perccli64 into the live filesystem and runs read-only commands to validate.",
+      "persist_plan_title": "Persistence plan",
+      "persist_plan_desc": "Next step modifies PRIMARY-root.sqsh. A backup is created first.",
+      "persist_title": "Execute persistence",
+      "persist_desc": "This rebuilds the ESOS root SquashFS image and requires a reboot.",
+      "reboot_title": "Reboot required",
+      "reboot_desc": "Reboot the node to validate that perccli64 persists and hardware RAID switches to full mode.",
+      "san": "SAN",
+      "controller": "Controller",
+      "refresh": "Refresh",
+      "upload": "Upload RPM",
+      "staging_id": "Staging ID:",
+      "run_preflight": "Run preflight",
+      "run_temp": "Run temporary install",
+      "run_persist": "Persist into PRIMARY-root.sqsh",
+      "postcheck": "Re-check readiness",
+      "tools_now": "Resolved CLI:",
+      "blockers": "Blockers",
+      "warnings": "Warnings",
+      "select_root": "Select esos_root partition",
+      "plan_token": "Plan token:",
+      "confirm_phrase": "Confirmation phrase:",
+      "confirm_input": "Type the confirmation phrase",
+      "op_status": "Operation status",
+      "reboot_item_1": "Reboot the ESOS node (local or iDRAC/iLO).",
+      "reboot_item_2": "Open the RAID page again and refresh.",
+      "reboot_item_3": "Verify the controller is no longer limited (full mode).",
+      "err_file_required": "Please select an RPM file.",
+      "err_upload_first": "Upload the RPM first.",
+      "err_preflight_first": "Run preflight first."
     }
   },
   "lvm": {
@@ -2404,6 +2471,7 @@
         "system_config": "System configuration",
         "system_config_hint": "Opens system configuration on the primary node (cluster context).",
         "storage_performance": "Performance agent",
+        "storage_advanced": "Advanced Storage",
         "no_primary_storage": "No primary node detected for this cluster",
         "no_primary": "Missing primary",
         "health_unknown": "Health unknown",
@@ -2540,6 +2608,21 @@
         "err_domain": "Invalid domain",
         "toast_ok": "Hostname updated",
         "toast_fail": "Update failed"
+      },
+      "keymap": {
+        "title": "Console keyboard layout",
+        "subtitle": "This setting affects the ESOS local console / TTY keyboard only. It does not change your browser keyboard.",
+        "current": "Current keymap",
+        "current_unknown": "Unknown",
+        "select_label": "Select a keymap",
+        "select_placeholder": "Select (e.g. fr, fr-latin9, us)",
+        "test": "Test (temporary)",
+        "test_hint": "“Test” applies the keymap immediately but does not persist it across reboots. Use “Save and apply” to persist.",
+        "test_success": "Keymap applied (temporary)",
+        "save": "Save and apply",
+        "save_success": "Keymap saved and applied",
+        "loadkeys_missing": "The “loadkeys” command is not available on this system.",
+        "no_keymaps": "No keymaps were detected on this system."
       },
       "system": {
         "title": "System",

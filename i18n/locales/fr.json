@@ -316,6 +316,32 @@
       "cluster_link": "Le DRBD est aussi visible dans Cluster HA si ce SAN est en cluster.",
       "view_raid": "Voir dans la gestion RAID"
     },
+    "cluster": {
+      "panel_title": "Cluster — {name}",
+      "panel_subtitle": "Inventaire stockage avancé par nœud (lecture seule). Sélectionnez un nœud pour le détail.",
+      "loading": "Scan des nœuds du cluster…",
+      "unavailable_title": "Impossible de charger la vue cluster",
+      "node_mismatch_title": "Nœud hors cluster",
+      "node_mismatch_desc": "Ce SAN n'appartient pas au cluster indiqué dans l'URL. Retournez à Administration → SANs.",
+      "col_node": "Nœud",
+      "col_role": "Rôle",
+      "col_ssh": "SSH",
+      "col_health": "Santé",
+      "col_action": "Action",
+      "ssh_ok": "Connecté",
+      "ssh_down": "Indisponible",
+      "view_node": "Voir l'inventaire",
+      "current": "Vue actuelle",
+      "symmetry": {
+        "ok": "Symétrique",
+        "warning": "Asymétrie détectée",
+        "unknown": "Inconnu"
+      },
+      "symmetry_note": {
+        "drbd_resource_count_mismatch": "Le nombre de ressources DRBD diffère entre les nœuds.",
+        "active_technologies_mismatch": "Les technologies avancées actives diffèrent entre les nœuds."
+      }
+    },
     "presence": {
       "not_installed": "Non installé",
       "installed": "Installé",
@@ -1220,6 +1246,47 @@
         "modal_title": "Supprimer les métadonnées RAID",
         "modal_description": "Cette action exécute mdadm --zero-superblock sur les partitions sélectionnées. Elle supprime les métadonnées MD et peut empêcher la récupération du tableau."
       }
+    },
+    "missing_tools": {
+      "install_cta": "Installer perccli64",
+      "wizard": { "title": "Installer des outils RAID manquants" },
+      "need_title": "Outils de gestion RAID manquants",
+      "need_desc": "Cet assistant déploie perccli64 sur ESOS. Il affecte le système local, pas le navigateur.",
+      "package_title": "Paquet (RPM)",
+      "package_desc": "Téléversez un RPM Dell perccli (perccli-*.rpm). Le WebUI ne télécharge rien automatiquement.",
+      "preflight_title": "Vérifications preflight",
+      "preflight_desc": "Vérifie les binaires requis, l'espace /tmp, et identifie la partition esos_root à modifier.",
+      "temp_title": "Installation temporaire et test",
+      "temp_desc": "Installe perccli64 dans le système en cours et exécute des commandes en lecture seule.",
+      "persist_plan_title": "Plan de persistance",
+      "persist_plan_desc": "L'étape suivante modifie PRIMARY-root.sqsh. Une sauvegarde est créée avant.",
+      "persist_title": "Exécuter la persistance",
+      "persist_desc": "Reconstruit l'image SquashFS ESOS et nécessite un redémarrage.",
+      "reboot_title": "Redémarrage requis",
+      "reboot_desc": "Redémarrez le nœud pour valider la persistance de perccli64 et le mode RAID complet.",
+      "san": "SAN",
+      "controller": "Contrôleur",
+      "refresh": "Rafraîchir",
+      "upload": "Téléverser le RPM",
+      "staging_id": "Staging ID :",
+      "run_preflight": "Lancer le preflight",
+      "run_temp": "Lancer l'installation temporaire",
+      "run_persist": "Persister dans PRIMARY-root.sqsh",
+      "postcheck": "Revérifier la readiness",
+      "tools_now": "CLI résolu :",
+      "blockers": "Blocages",
+      "warnings": "Avertissements",
+      "select_root": "Sélectionner la partition esos_root",
+      "plan_token": "Plan token :",
+      "confirm_phrase": "Phrase de confirmation :",
+      "confirm_input": "Saisissez la phrase de confirmation",
+      "op_status": "Statut opération",
+      "reboot_item_1": "Redémarrez le nœud ESOS (local ou iDRAC/iLO).",
+      "reboot_item_2": "Rouvrez la page RAID et rafraîchissez.",
+      "reboot_item_3": "Vérifiez que le contrôleur n'est plus limité (mode complet).",
+      "err_file_required": "Veuillez sélectionner un fichier RPM.",
+      "err_upload_first": "Téléversez le RPM d'abord.",
+      "err_preflight_first": "Lancez le preflight d'abord."
     }
   },
   "lvm": {
@@ -2404,6 +2471,7 @@
         "system_config": "Configuration système",
         "system_config_hint": "Ouvre la configuration système sur le nœud primaire (contexte cluster).",
         "storage_performance": "Agent de performance",
+        "storage_advanced": "Stockage avancé",
         "no_primary_storage": "Aucun nœud primaire détecté pour ce cluster",
         "no_primary": "Primaire manquant",
         "health_unknown": "Santé inconnue",
@@ -2540,6 +2608,21 @@
         "err_domain": "Domaine invalide",
         "toast_ok": "Nom d'hôte mis à jour",
         "toast_fail": "Échec de la mise à jour"
+      },
+      "keymap": {
+        "title": "Disposition clavier console",
+        "subtitle": "Ce paramètre affecte uniquement le clavier de la console locale / TTY ESOS. Il ne modifie pas votre clavier navigateur.",
+        "current": "Keymap actuel",
+        "current_unknown": "Inconnu",
+        "select_label": "Sélectionner un keymap",
+        "select_placeholder": "Sélectionner (ex. fr, fr-latin9, us)",
+        "test": "Tester (temporaire)",
+        "test_hint": "« Tester » applique immédiatement le keymap mais ne le rend pas persistant. Utilisez « Enregistrer et appliquer » pour le rendre durable.",
+        "test_success": "Keymap appliqué (temporaire)",
+        "save": "Enregistrer et appliquer",
+        "save_success": "Keymap enregistré et appliqué",
+        "loadkeys_missing": "La commande « loadkeys » n'est pas disponible sur ce système.",
+        "no_keymaps": "Aucun keymap n'a été détecté sur ce système."
       },
       "system": {
         "title": "Système",

@@ -344,7 +344,7 @@ interface SanRow {
 }
 
 type SSHStatus = 'connecting' | 'connected' | 'reconnecting' | 'error'
-type StorageRoute = 'raid' | 'system-config' | 'performance'
+type StorageRoute = 'raid' | 'system-config' | 'performance' | 'advanced-storage'
 
 interface ClusterGroup {
   clusterId: string
@@ -741,6 +741,10 @@ function systemConfigClusterQuery(clusterId: string): Record<string, string> {
   return { scope: 'cluster', clusterId }
 }
 
+function clusterStorageQuery(clusterId: string): Record<string, string> {
+  return { scope: 'cluster', clusterId }
+}
+
 function onClusterSystemConfig(payload: { clusterId: string; nodeId: string }) {
   if (isViewer.value) return
   router.push({
@@ -751,10 +755,10 @@ function onClusterSystemConfig(payload: { clusterId: string; nodeId: string }) {
 
 function onClusterStorage(payload: { clusterId: string; nodeId: string; route: StorageRoute }) {
   if (isViewer.value) return
-  const query =
-    payload.route === 'system-config'
-      ? systemConfigClusterQuery(payload.clusterId)
-      : undefined
+  const useClusterQuery = payload.route === 'system-config'
+    || payload.route === 'advanced-storage'
+    || payload.route === 'raid'
+  const query = useClusterQuery ? clusterStorageQuery(payload.clusterId) : undefined
   router.push({
     path: `/admin/sans/${payload.nodeId}/${payload.route}`,
     ...(query ? { query } : {}),
