@@ -11,6 +11,7 @@ import {
   updateJobTarget,
 } from '../db/repositories/deployment.repository'
 import { getDeploymentBinaryById } from '../db/repositories/deployment.repository'
+import { resolveBinaryLocalPath } from './deployment-binaries-service'
 
 function remoteStagingPath(binary: DeploymentBinaryDto): string {
   return `/tmp/esos-deploy-${randomUUID().slice(0, 8)}-${binary.filename.replace(/[^\w.-]/g, '_')}`
@@ -84,8 +85,11 @@ async function runTarget(
     const remotePath = remoteStagingPath(binary)
     updateJobTarget(targetId, { remotePath })
 
+    const localPath = await resolveBinaryLocalPath(binary)
+    if (!localPath) throw new Error('Fichier binaire introuvable sur le conteneur WebUI')
+
     log(`Transfert vers ${remotePath}…`)
-    await transferLocalFileViaSsh(manager, binary.storedPath, remotePath, {
+    await transferLocalFileViaSsh(manager, localPath, remotePath, {
       onProgress: (done, total) => {
         if (total > 0 && done % (512 * 1024) < 384 * 1024) {
           log(`Transfert ${Math.round((done / total) * 100)}%`)

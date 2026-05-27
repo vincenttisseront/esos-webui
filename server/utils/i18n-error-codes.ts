@@ -14,6 +14,11 @@ export const KNOWN_API_ERROR_CODES = [
   'CLUSTER_MEMBER',
   'lvm.scst_device_conflict',
   'scst.group_has_luns',
+  'INVALID_PATH',
+  'INVALID_FILENAME',
+  'FILE_EXISTS',
+  'DUPLICATE_SHA256',
+  'BINARY_MISSING',
 ] as const
 
 export type KnownApiErrorCode = (typeof KNOWN_API_ERROR_CODES)[number]

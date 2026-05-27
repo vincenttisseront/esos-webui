@@ -1,4 +1,4 @@
-import type { DeploymentTargetStatus } from '~/types/deployment'
+import type { DeploymentBinaryDto, DeploymentTargetStatus } from '~/types/deployment'
 
 export function formatDeploymentBytes(n: number): string {
   if (n < 1024) return `${n} B`
@@ -20,4 +20,9 @@ export function deploymentTargetBadgeColor(
 
 export function isDeploymentJobRunning(status: string): boolean {
   return status === 'pending' || status === 'running'
+}
+
+export function isBinaryDeployable(binary: DeploymentBinaryDto): boolean {
+  if (binary.status === 'missing' || binary.status === 'disabled') return false
+  return binary.status === 'available' || binary.status === 'registered'
 }

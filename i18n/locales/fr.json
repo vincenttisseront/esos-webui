@@ -290,6 +290,11 @@
     "targets": {
       "missing_name": "Nom de target manquant."
     },
+    "INVALID_PATH": "Chemin de fichier invalide.",
+    "INVALID_FILENAME": "Nom de fichier invalide.",
+    "FILE_EXISTS": "Un fichier portant ce nom existe déjà dans le conteneur.",
+    "DUPLICATE_SHA256": "Un binaire avec ce checksum est déjà enregistré dans le catalogue.",
+    "BINARY_MISSING": "Le fichier binaire est absent du conteneur.",
     "oidc": {
       "denied": "Connexion SSO refusée ou annulée.",
       "missing": "Réponse SSO incomplète.",
@@ -2136,21 +2141,52 @@
         "subtitle": "Importez depuis le conteneur WebUI les binaires disponibles pour les déployer ensuite depuis la configuration système de chaque SAN.",
         "refresh": "Rafraîchir"
       },
+      "upload": {
+        "title": "Importer un binaire",
+        "help": "Ajoutez un binaire dans le conteneur WebUI afin de le rendre disponible dans le catalogue global.",
+        "file_label": "Fichier binaire",
+        "button": "Uploader dans le conteneur",
+        "success": "Binaire uploadé avec succès.",
+        "error": "Impossible d'uploader le binaire."
+      },
       "container": {
         "title": "Binaires dans le conteneur",
         "empty": "Aucun fichier dans le répertoire configuré.",
         "import": "Importer",
         "path": "Chemin",
         "size": "Taille",
-        "mtime": "Modifié"
+        "mtime": "Modifié",
+        "registered_col": "Catalogue",
+        "yes": "Oui",
+        "no": "Non",
+        "register_action": "Enregistrer dans le catalogue"
       },
       "catalog": {
         "title": "Catalogue enregistré",
         "empty": "Aucun binaire enregistré. Importez un binaire depuis le conteneur.",
         "name": "Nom",
+        "filename": "Fichier",
         "version": "Version",
         "sha256": "SHA256",
-        "imported": "Importé le"
+        "imported": "Importé le",
+        "status": "Statut",
+        "actions": "Actions",
+        "status_available": "Disponible",
+        "status_missing": "Fichier absent",
+        "status_disabled": "Désactivé",
+        "status_registered": "Enregistré",
+        "delete_catalog": "Supprimer du catalogue",
+        "delete_file": "Supprimer le fichier",
+        "delete_full": "Catalogue + fichier",
+        "delete_catalog_confirm_title": "Supprimer du catalogue ?",
+        "delete_catalog_confirm": "Retirer « {name} » du catalogue uniquement. Le fichier reste dans le conteneur.",
+        "delete_file_confirm_title": "Supprimer le fichier ?",
+        "delete_file_confirm": "Supprimer le fichier physique de « {name} ». L'entrée catalogue sera marquée absente.",
+        "delete_full_confirm_title": "Supprimer catalogue et fichier ?",
+        "delete_full_confirm": "Supprimer l'entrée catalogue et le fichier physique pour « {name} ».",
+        "deleted_catalog": "Entrée catalogue supprimée",
+        "deleted_file": "Fichier supprimé",
+        "deleted_full": "Catalogue et fichier supprimés"
       },
       "bulk": {
         "title": "Déploiement multi-SAN optionnel",
@@ -2177,6 +2213,8 @@
         "select_placeholder": "Sélectionner un binaire…",
         "deploy": "Déployer sur ce SAN",
         "deploy_started": "Déploiement démarré",
+        "confirm_title": "Confirmer le déploiement",
+        "confirm_message": "Confirmer le déploiement de « {name} » sur le SAN actuel ?",
         "last_deployment": "Dernier déploiement",
         "empty_catalog": "Aucun binaire disponible. Importez d'abord un binaire depuis le",
         "catalog_link": "catalogue global",

@@ -25,6 +25,7 @@ export const MUTATION_ROUTE_PERMISSIONS: RoutePermission[] = [
 
   [/^\/api\/admin\/upgrade\//, ['POST', 'PUT', 'PATCH', 'DELETE'], ['admin']],
   [/^\/api\/admin\/deployment\//, ['POST', 'PUT', 'PATCH', 'DELETE'], ['admin']],
+  [/^\/api\/admin\/binaries/, ['POST', 'PUT', 'PATCH', 'DELETE'], ['admin']],
 
   [/^\/api\/admin\/auth-providers/, ['POST', 'PATCH', 'PUT', 'DELETE'], ['admin']],
 
@@ -91,6 +92,7 @@ export const READ_ROUTE_PERMISSIONS: RoutePermission[] = [
   [/^\/api\/admin\/esos-version(\/|$)/, ['GET', 'HEAD'], ['admin', 'operator']],
   [/^\/api\/admin\/upgrade\//, ['GET', 'HEAD'], ['admin', 'operator']],
   [/^\/api\/admin\/deployment\//, ['GET', 'HEAD'], ['admin', 'operator']],
+  [/^\/api\/admin\/binaries/, ['GET', 'HEAD'], ['admin', 'operator']],
   // Tout autre GET/HEAD sous /api/admin/ : admin seul (p.ex. settings, system-info, cluster/probe)
   [/^\/api\/admin\//, ['GET', 'HEAD'], ['admin']],
 ]

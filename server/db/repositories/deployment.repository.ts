@@ -72,9 +72,11 @@ export function insertDeploymentBinary(params: {
   sha256: string
   kind: DeploymentBinaryKind
   installSpec: DeploymentInstallSpec
+  status?: DeploymentBinaryDto['status']
 }): DeploymentBinaryDto {
   const db = getDB()
   const now = new Date().toISOString()
+  const status = params.status ?? 'available'
   db.insert(deploymentBinaries).values({
     id: params.id,
     name: params.name,
@@ -86,11 +88,27 @@ export function insertDeploymentBinary(params: {
     sha256: params.sha256,
     kind: params.kind,
     installSpecJson: JSON.stringify(params.installSpec),
-    status: 'registered',
+    status: status === 'registered' ? 'available' : status,
     createdAt: now,
     updatedAt: now,
   }).run()
   return getDeploymentBinaryById(params.id)!
+}
+
+export function updateDeploymentBinary(
+  id: string,
+  patch: Partial<{ status: DeploymentBinaryDto['status']; storedPath: string }>,
+): void {
+  const db = getDB()
+  const values: Record<string, unknown> = { updatedAt: new Date().toISOString() }
+  if (patch.status !== undefined) values.status = patch.status
+  if (patch.storedPath !== undefined) values.storedPath = patch.storedPath
+  db.update(deploymentBinaries).set(values).where(eq(deploymentBinaries.id, id)).run()
+}
+
+export function deleteDeploymentBinary(id: string): void {
+  const db = getDB()
+  db.delete(deploymentBinaries).where(eq(deploymentBinaries.id, id)).run()
 }
 
 export function createDeploymentJob(params: {

@@ -27,7 +27,7 @@
           {{ t('common.loading') }}
         </p>
 
-        <p v-else-if="!catalog.length" class="text-sm text-amber-700 dark:text-amber-300">
+        <p v-else-if="!deployableBinaries.length" class="text-sm text-amber-700 dark:text-amber-300">
           {{ t('admin.deployment.san.empty_catalog') }}
           <NuxtLink to="/admin/binary-deployment" class="text-primary-600 hover:underline ml-1">
             {{ t('admin.deployment.san.catalog_link') }}
@@ -65,7 +65,7 @@
               color="primary"
               :loading="deploying"
               :disabled="!canDeploy"
-              @click="deploy"
+              @click="confirmDeployOpen = true"
             >
               {{ t('admin.deployment.san.deploy') }}
             </UButton>
@@ -75,6 +75,7 @@
               variant="outline"
               size="sm"
               :loading="loading"
+              :disabled="deploymentInProgress"
               @click="reload"
             >
               {{ t('admin.deployment.page.refresh') }}
@@ -92,6 +93,9 @@
           <p v-if="latest.binary" class="text-sm text-gray-700 dark:text-gray-300">
             {{ latest.binary.name }}
             <span v-if="latest.binary.version" class="text-gray-400">({{ latest.binary.version }})</span>
+          </p>
+          <p v-if="latest.target.finishedAt || latest.target.startedAt" class="text-xs text-gray-400">
+            {{ latest.target.finishedAt ?? latest.target.startedAt }}
           </p>
           <DeploymentLogsPanel
             :logs="latest.target.logs"
@@ -111,12 +115,31 @@
         </div>
       </template>
     </div>
+
+    <UModal v-model:open="confirmDeployOpen">
+      <template #content>
+        <div class="p-6 space-y-4">
+          <h3 class="text-lg font-semibold">{{ t('admin.deployment.san.confirm_title') }}</h3>
+          <p class="text-sm text-gray-600">
+            {{ t('admin.deployment.san.confirm_message', { name: selectedBinary?.name ?? '—' }) }}
+          </p>
+          <div class="flex justify-end gap-2">
+            <UButton color="gray" variant="outline" @click="confirmDeployOpen = false">
+              {{ t('common.actions.cancel') }}
+            </UButton>
+            <UButton color="primary" :loading="deploying" @click="deploy">
+              {{ t('admin.deployment.san.deploy') }}
+            </UButton>
+          </div>
+        </div>
+      </template>
+    </UModal>
   </UCard>
 </template>
 
 <script setup lang="ts">
 import type { DeploymentBinaryDto, SanLatestDeploymentDto } from '~/types/deployment'
-import { formatDeploymentBytes, isDeploymentJobRunning } from '~/utils/deployment-ui'
+import { formatDeploymentBytes, isBinaryDeployable, isDeploymentJobRunning } from '~/utils/deployment-ui'
 import DeploymentStatusBadge from '~/components/deployment/DeploymentStatusBadge.vue'
 import DeploymentLogsPanel from '~/components/deployment/DeploymentLogsPanel.vue'
 
@@ -131,27 +154,42 @@ const toast = useAppToast()
 const loading = ref(false)
 const deploying = ref(false)
 const retrying = ref(false)
+const confirmDeployOpen = ref(false)
 const catalog = ref<DeploymentBinaryDto[]>([])
 const selectedBinaryId = ref<string | null>(null)
 const latest = ref<SanLatestDeploymentDto>(null)
 const activeJobId = ref<string | null>(null)
 let pollTimer: ReturnType<typeof setInterval> | null = null
 
-const isDisabled = computed(() => Boolean(props.disabled) || !props.sanId || deploying.value || retrying.value)
+const deployableBinaries = computed(() => catalog.value.filter(isBinaryDeployable))
+
+const deploymentInProgress = computed(() => {
+  if (deploying.value || retrying.value) return true
+  if (latest.value?.job && isDeploymentJobRunning(latest.value.job.status)) return true
+  return false
+})
+
+const isDisabled = computed(() =>
+  Boolean(props.disabled) || !props.sanId || deploymentInProgress.value,
+)
 
 const binaryItems = computed(() =>
-  catalog.value.map(b => ({
+  deployableBinaries.value.map(b => ({
     value: b.id,
     label: b.version ? `${b.name} (${b.version})` : b.name,
   })),
 )
 
 const selectedBinary = computed(() =>
-  catalog.value.find(b => b.id === selectedBinaryId.value) ?? null,
+  deployableBinaries.value.find(b => b.id === selectedBinaryId.value) ?? null,
 )
 
 const canDeploy = computed(() =>
-  Boolean(props.sanId) && Boolean(selectedBinaryId.value) && !isDisabled.value && !deploying.value,
+  Boolean(props.sanId)
+  && Boolean(selectedBinaryId.value)
+  && Boolean(selectedBinary.value)
+  && !props.disabled
+  && !deploymentInProgress.value,
 )
 
 function stopPolling() {
@@ -200,7 +238,7 @@ async function loadLatest() {
 }
 
 async function loadCatalog() {
-  const res = await $fetch<{ binaries: DeploymentBinaryDto[] }>('/api/admin/deployment/catalog')
+  const res = await $fetch<{ binaries: DeploymentBinaryDto[] }>('/api/admin/binaries')
   catalog.value = res.binaries
 }
 
@@ -219,6 +257,7 @@ async function reload() {
 async function deploy() {
   if (!props.sanId || !selectedBinaryId.value) return
   deploying.value = true
+  confirmDeployOpen.value = false
   stopPolling()
   try {
     const res = await $fetch<{ job: { id: string } }>(
@@ -260,6 +299,7 @@ function resetForSanChange() {
   selectedBinaryId.value = null
   latest.value = null
   activeJobId.value = null
+  catalog.value = []
 }
 
 watch(() => props.sanId, (id, prev) => {

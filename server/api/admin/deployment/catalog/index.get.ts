@@ -1,5 +1,1 @@
-import { listDeploymentBinaries } from '~~/server/db/repositories/deployment.repository'
-
-export default defineEventHandler(() => {
-  return { binaries: listDeploymentBinaries() }
-})
+export { default } from '../../binaries/index.get'

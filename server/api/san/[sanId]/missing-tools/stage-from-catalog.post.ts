@@ -5,6 +5,7 @@ import { assertSanWritable } from '~~/server/utils/san-request-context'
 import { transferLocalFileViaSsh } from '~~/server/utils/upgrade-package-transfer'
 import { setMissingToolsPackageStatus } from '~~/server/utils/missing-tools-package-store'
 import { getDeploymentBinaryById } from '~~/server/db/repositories/deployment.repository'
+import { assertBinaryDeployable, resolveBinaryLocalPath } from '~~/server/utils/deployment-binaries-service'
 
 const bodySchema = z.object({
   binaryId: z.string().min(1),
@@ -52,7 +53,7 @@ export default defineEventHandler(async (event) => {
   try {
     const pool = getSSHPool()
     const manager = await pool.getOrCreate(sanId)
-    await transferLocalFileViaSsh(manager, binary.storedPath, remotePath, {
+    await transferLocalFileViaSsh(manager, localPath, remotePath, {
       onProgress: (done) => {
         setMissingToolsPackageStatus({
           stagingId,

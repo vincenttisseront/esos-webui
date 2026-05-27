@@ -9,6 +9,6 @@ export default defineEventHandler(async (event) => {
   }
 
   const requestedBy = event.context.user?.username ?? event.context.user?.id ?? 'unknown'
-  const job = createSanBinaryDeployment(sanId, parsed.data.binaryId, requestedBy)
+  const job = await createSanBinaryDeployment(sanId, parsed.data.binaryId, requestedBy)
   return { ok: true, job }
 })

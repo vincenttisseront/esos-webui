@@ -3,17 +3,17 @@ import { assertSanWritable } from './san-request-context'
 import { getSanSummary } from '../db/repositories/san.repository'
 import {
   createDeploymentJob,
-  getDeploymentBinaryById,
   getDeploymentJobById,
   getJobTargetForSan,
 } from '../db/repositories/deployment.repository'
+import { assertBinaryDeployable } from './deployment-binaries-service'
 import { startDeploymentJobAsync, retryFailedTargets } from './deployment-job-runner'
 
 export const sanDeployBodySchema = z.object({
   binaryId: z.string().min(1),
 })
 
-export function createSanBinaryDeployment(
+export async function createSanBinaryDeployment(
   sanId: string,
   binaryId: string,
   requestedBy: string,
@@ -24,10 +24,7 @@ export function createSanBinaryDeployment(
   }
   assertSanWritable(sanId)
 
-  const binary = getDeploymentBinaryById(binaryId)
-  if (!binary) {
-    throw createError({ statusCode: 404, message: 'Binaire catalogue introuvable' })
-  }
+  await assertBinaryDeployable(binaryId)
 
   const job = createDeploymentJob({
     binaryId,

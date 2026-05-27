@@ -8,7 +8,7 @@ export type DeploymentInstallSpec = {
   version?: string
 }
 
-export type DeploymentBinaryStatus = 'registered' | 'archived'
+export type DeploymentBinaryStatus = 'available' | 'missing' | 'disabled' | 'registered' | 'archived'
 
 export type DeploymentJobScope = 'single_san' | 'multi_san'
 
@@ -42,6 +42,12 @@ export type ContainerBinaryEntry = {
   filename: string
   sizeBytes: number
   mtimeMs: number
+}
+
+export type ContainerBinaryListItem = ContainerBinaryEntry & {
+  sha256: string | null
+  registered: boolean
+  catalogId: string | null
 }
 
 export type DeploymentJobTargetDto = {

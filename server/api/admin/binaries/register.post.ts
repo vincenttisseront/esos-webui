@@ -2,11 +2,10 @@ import { z } from 'zod'
 import { registerContainerBinary } from '~~/server/utils/deployment-binaries-service'
 
 const bodySchema = z.object({
-  sourcePath: z.string().min(1),
+  filename: z.string().min(1),
   allowDuplicate: z.boolean().optional(),
 })
 
-/** @deprecated Prefer POST /api/admin/binaries/register */
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
   const parsed = bodySchema.safeParse(body)
@@ -14,7 +13,6 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: parsed.error.issues[0]?.message ?? 'Corps invalide' })
   }
 
-  const filename = parsed.data.sourcePath.split('/').pop() ?? parsed.data.sourcePath
-  const binary = await registerContainerBinary(filename, parsed.data.allowDuplicate)
+  const binary = await registerContainerBinary(parsed.data.filename, parsed.data.allowDuplicate)
   return { ok: true, binary }
 })

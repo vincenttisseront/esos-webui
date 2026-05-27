@@ -239,6 +239,18 @@ describe('api-rbac (deployment)', () => {
   it('RB52 — operator can GET /api/admin/deployment/catalog', () => {
     expect(() => enforceReadAccess('/api/admin/deployment/catalog', 'GET', 'operator')).not.toThrow()
   })
+
+  it('RB55 — operator cannot POST /api/admin/binaries/upload', () => {
+    expectForbidden(() => enforceMutationAccess('/api/admin/binaries/upload', 'POST', 'operator'))
+  })
+
+  it('RB56 — admin can POST /api/admin/binaries/upload', () => {
+    expect(() => enforceMutationAccess('/api/admin/binaries/upload', 'POST', 'admin')).not.toThrow()
+  })
+
+  it('RB57 — operator can GET /api/admin/binaries/container', () => {
+    expect(() => enforceReadAccess('/api/admin/binaries/container', 'GET', 'operator')).not.toThrow()
+  })
 })
 
 describe('api-rbac (reads)', () => {

@@ -24,13 +24,21 @@
       </UButton>
     </header>
 
-    <BinaryCatalogContainerList
+    <BinaryUploadCard @uploaded="reload" />
+
+    <ContainerBinaryList
       :files="containerFiles"
-      :importing-path="importingPath"
-      @import="importFromContainer"
+      :registering-path="registeringPath"
+      @register="registerFromContainer"
     />
 
-    <BinaryCatalogRegisteredList :binaries="catalog" />
+    <RegisteredBinaryCatalog
+      :binaries="catalog"
+      :deleting-id="deletingId"
+      @delete-catalog="confirmDeleteCatalog"
+      @delete-file="confirmDeleteFile"
+      @delete-full="confirmDeleteFull"
+    />
 
     <UCard>
       <template #header>
@@ -83,54 +91,6 @@
       </div>
     </UCard>
 
-    <UCard v-if="history.length">
-      <template #header>
-        <span class="font-semibold">{{ t('admin.deployment.history.title') }}</span>
-      </template>
-      <div class="space-y-2 text-sm">
-        <div
-          v-for="job in history"
-          :key="job.id"
-          class="flex flex-wrap items-center gap-2 border-b border-gray-100 dark:border-gray-800 py-2"
-        >
-          <span class="font-mono text-xs text-gray-400">{{ job.createdAt }}</span>
-          <UBadge size="xs" color="neutral">{{ job.scope }}</UBadge>
-          <span>{{ job.status }}</span>
-          <span class="text-gray-500">→ {{ job.targets.map(t => t.sanId).join(', ') }}</span>
-        </div>
-      </div>
-    </UCard>
-
-    <UCard v-if="activeJob">
-      <template #header>
-        <div class="flex items-center justify-between gap-2 w-full">
-          <span class="font-semibold">{{ t('admin.deployment.job.title') }} — {{ activeJob.status }}</span>
-          <UButton
-            v-if="activeJob.targets.some(t => t.status === 'failed')"
-            size="xs"
-            color="amber"
-            variant="outline"
-            @click="retryBulkJob"
-          >
-            {{ t('admin.deployment.job.retry') }}
-          </UButton>
-        </div>
-      </template>
-      <div class="space-y-3">
-        <div
-          v-for="target in activeJob.targets"
-          :key="target.id"
-          class="rounded border border-gray-200 dark:border-gray-700 p-3"
-        >
-          <div class="flex items-center justify-between gap-2">
-            <span class="font-mono text-sm">{{ target.sanId }}</span>
-            <DeploymentStatusBadge :status="target.status" />
-          </div>
-          <DeploymentLogsPanel :logs="target.logs" :error-message="target.errorMessage" />
-        </div>
-      </div>
-    </UCard>
-
     <UModal v-model:open="confirmBulkOpen">
       <template #content>
         <div class="p-6 space-y-4">
@@ -147,16 +107,32 @@
         </div>
       </template>
     </UModal>
+
+    <UModal v-model:open="deleteModal.open">
+      <template #content>
+        <div class="p-6 space-y-4">
+          <h3 class="text-lg font-semibold">{{ deleteModal.title }}</h3>
+          <p class="text-sm text-gray-600">{{ deleteModal.message }}</p>
+          <div class="flex justify-end gap-2">
+            <UButton color="gray" variant="outline" @click="deleteModal.open = false">
+              {{ t('common.actions.cancel') }}
+            </UButton>
+            <UButton color="red" :loading="!!deletingId" @click="runDelete">
+              {{ t('common.actions.confirm') }}
+            </UButton>
+          </div>
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { ContainerBinaryEntry, DeploymentBinaryDto, DeploymentJobDto } from '~/types/deployment'
-import { isDeploymentJobRunning } from '~/utils/deployment-ui'
-import BinaryCatalogContainerList from '~/components/deployment/BinaryCatalogContainerList.vue'
-import BinaryCatalogRegisteredList from '~/components/deployment/BinaryCatalogRegisteredList.vue'
-import DeploymentStatusBadge from '~/components/deployment/DeploymentStatusBadge.vue'
-import DeploymentLogsPanel from '~/components/deployment/DeploymentLogsPanel.vue'
+import type { ContainerBinaryListItem, DeploymentBinaryDto, DeploymentJobDto } from '~/types/deployment'
+import { isBinaryDeployable } from '~/utils/deployment-ui'
+import BinaryUploadCard from '~/components/deployment/BinaryUploadCard.vue'
+import ContainerBinaryList from '~/components/deployment/ContainerBinaryList.vue'
+import RegisteredBinaryCatalog from '~/components/deployment/RegisteredBinaryCatalog.vue'
 
 definePageMeta({ layout: 'default' })
 
@@ -166,21 +142,25 @@ const { activeSans } = useSelectedSan()
 
 const loading = ref(false)
 const containerDir = ref('')
-const containerFiles = ref<ContainerBinaryEntry[]>([])
+const containerFiles = ref<ContainerBinaryListItem[]>([])
 const catalog = ref<DeploymentBinaryDto[]>([])
-const history = ref<DeploymentJobDto[]>([])
-const importingPath = ref<string | null>(null)
+const registeringPath = ref<string | null>(null)
+const deletingId = ref<string | null>(null)
 
 const bulkBinaryId = ref<string | null>(null)
 const selectedSanIds = ref<string[]>([])
 const deploying = ref(false)
 const confirmBulkOpen = ref(false)
-const activeJobId = ref<string | null>(null)
-const activeJob = ref<DeploymentJobDto | null>(null)
-let pollTimer: ReturnType<typeof setInterval> | null = null
+
+const deleteModal = reactive({
+  open: false,
+  title: '',
+  message: '',
+  action: null as (() => Promise<void>) | null,
+})
 
 const bulkBinaryItems = computed(() =>
-  catalog.value.map(b => ({ value: b.id, label: b.name })),
+  catalog.value.filter(isBinaryDeployable).map(b => ({ value: b.id, label: b.name })),
 )
 
 const canBulkDeploy = computed(() =>
@@ -192,25 +172,16 @@ const confirmMessage = computed(() => {
   return t('admin.deployment.deploy.confirm_msg', { name, count: selectedSanIds.value.length }) as string
 })
 
-function stopPolling() {
-  if (pollTimer) {
-    clearInterval(pollTimer)
-    pollTimer = null
-  }
-}
-
 async function reload() {
   loading.value = true
   try {
-    const [containerRes, catalogRes, historyRes] = await Promise.all([
-      $fetch<{ binariesDir: string; files: ContainerBinaryEntry[] }>('/api/admin/deployment/container'),
-      $fetch<{ binaries: DeploymentBinaryDto[] }>('/api/admin/deployment/catalog'),
-      $fetch<{ jobs: DeploymentJobDto[] }>('/api/admin/deployment/history'),
+    const [containerRes, catalogRes] = await Promise.all([
+      $fetch<{ binariesDir: string; files: ContainerBinaryListItem[] }>('/api/admin/binaries/container'),
+      $fetch<{ binaries: DeploymentBinaryDto[] }>('/api/admin/binaries'),
     ])
     containerDir.value = containerRes.binariesDir
     containerFiles.value = containerRes.files
     catalog.value = catalogRes.binaries
-    history.value = historyRes.jobs
   } catch (err: unknown) {
     toast.error(t('common.failure') as string, String(err))
   } finally {
@@ -218,33 +189,62 @@ async function reload() {
   }
 }
 
-async function importFromContainer(relativePath: string) {
-  importingPath.value = relativePath
+async function registerFromContainer(relativePath: string) {
+  const filename = relativePath.split('/').pop() ?? relativePath
+  registeringPath.value = relativePath
   try {
-    await $fetch('/api/admin/deployment/catalog/import', {
-      method: 'POST',
-      body: { sourcePath: relativePath },
-    })
-    toast.success(t('admin.deployment.container.import') as string)
+    await $fetch('/api/admin/binaries/register', { method: 'POST', body: { filename } })
+    toast.success(t('admin.deployment.container.register_action') as string)
     await reload()
   } catch (err: unknown) {
     toast.error(t('common.failure') as string, String(err))
   } finally {
-    importingPath.value = null
+    registeringPath.value = null
   }
 }
 
-async function pollJob() {
-  if (!activeJobId.value) return
+function confirmDeleteCatalog(binary: DeploymentBinaryDto) {
+  deleteModal.title = t('admin.deployment.catalog.delete_catalog_confirm_title') as string
+  deleteModal.message = t('admin.deployment.catalog.delete_catalog_confirm', { name: binary.name }) as string
+  deleteModal.action = async () => {
+    deletingId.value = `${binary.id}:catalog`
+    await $fetch(`/api/admin/binaries/${binary.id}`, { method: 'DELETE' })
+    toast.success(t('admin.deployment.catalog.deleted_catalog') as string)
+  }
+  deleteModal.open = true
+}
+
+function confirmDeleteFile(binary: DeploymentBinaryDto) {
+  deleteModal.title = t('admin.deployment.catalog.delete_file_confirm_title') as string
+  deleteModal.message = t('admin.deployment.catalog.delete_file_confirm', { name: binary.name }) as string
+  deleteModal.action = async () => {
+    deletingId.value = `${binary.id}:file`
+    await $fetch(`/api/admin/binaries/${binary.id}/file`, { method: 'DELETE' })
+    toast.success(t('admin.deployment.catalog.deleted_file') as string)
+  }
+  deleteModal.open = true
+}
+
+function confirmDeleteFull(binary: DeploymentBinaryDto) {
+  deleteModal.title = t('admin.deployment.catalog.delete_full_confirm_title') as string
+  deleteModal.message = t('admin.deployment.catalog.delete_full_confirm', { name: binary.name }) as string
+  deleteModal.action = async () => {
+    deletingId.value = `${binary.id}:full`
+    await $fetch(`/api/admin/binaries/${binary.id}/full`, { method: 'DELETE' })
+    toast.success(t('admin.deployment.catalog.deleted_full') as string)
+  }
+  deleteModal.open = true
+}
+
+async function runDelete() {
   try {
-    const res = await $fetch<{ job: DeploymentJobDto }>(`/api/admin/deployment/jobs/${activeJobId.value}`)
-    activeJob.value = res.job
-    if (!isDeploymentJobRunning(res.job.status)) {
-      stopPolling()
-      await reload()
-    }
-  } catch {
-    stopPolling()
+    await deleteModal.action?.()
+    deleteModal.open = false
+    await reload()
+  } catch (err: unknown) {
+    toast.error(t('common.failure') as string, String(err))
+  } finally {
+    deletingId.value = null
   }
 }
 
@@ -253,15 +253,11 @@ async function runBulkDeploy() {
   deploying.value = true
   confirmBulkOpen.value = false
   try {
-    const res = await $fetch<{ job: DeploymentJobDto }>('/api/admin/deployment/jobs', {
+    await $fetch<{ job: DeploymentJobDto }>('/api/admin/deployment/jobs', {
       method: 'POST',
       body: { binaryId: bulkBinaryId.value, sanIds: selectedSanIds.value },
     })
-    activeJobId.value = res.job.id
-    activeJob.value = res.job
-    stopPolling()
-    pollTimer = setInterval(() => { void pollJob() }, 2000)
-    void pollJob()
+    toast.success(t('admin.deployment.san.deploy_started') as string)
   } catch (err: unknown) {
     toast.error(t('common.failure') as string, String(err))
   } finally {
@@ -269,18 +265,5 @@ async function runBulkDeploy() {
   }
 }
 
-async function retryBulkJob() {
-  if (!activeJobId.value) return
-  try {
-    await $fetch(`/api/admin/deployment/jobs/${activeJobId.value}/retry`, { method: 'POST' })
-    stopPolling()
-    pollTimer = setInterval(() => { void pollJob() }, 2000)
-    void pollJob()
-  } catch (err: unknown) {
-    toast.error(t('common.failure') as string, String(err))
-  }
-}
-
 onMounted(() => { void reload() })
-onUnmounted(() => stopPolling())
 </script>

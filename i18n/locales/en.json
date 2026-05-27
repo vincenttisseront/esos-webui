@@ -290,6 +290,11 @@
     "targets": {
       "missing_name": "Missing target name."
     },
+    "INVALID_PATH": "Invalid file path.",
+    "INVALID_FILENAME": "Invalid file name.",
+    "FILE_EXISTS": "A file with this name already exists in the container.",
+    "DUPLICATE_SHA256": "A binary with this checksum is already registered in the catalog.",
+    "BINARY_MISSING": "The binary file is missing from the container.",
     "oidc": {
       "denied": "SSO sign-in denied or cancelled.",
       "missing": "Incomplete SSO response.",
@@ -2136,21 +2141,52 @@
         "subtitle": "Import binaries from the WebUI container, then deploy them from each SAN's system configuration.",
         "refresh": "Refresh"
       },
+      "upload": {
+        "title": "Import a binary",
+        "help": "Add a binary to the WebUI container so it becomes available in the global catalog.",
+        "file_label": "Binary file",
+        "button": "Upload to container",
+        "success": "Binary uploaded successfully.",
+        "error": "Unable to upload the binary."
+      },
       "container": {
         "title": "Container binaries",
         "empty": "No files in the configured directory.",
         "import": "Import",
         "path": "Path",
         "size": "Size",
-        "mtime": "Modified"
+        "mtime": "Modified",
+        "registered_col": "Catalog",
+        "yes": "Yes",
+        "no": "No",
+        "register_action": "Register in catalog"
       },
       "catalog": {
         "title": "Registered catalog",
         "empty": "No registered binaries. Import a binary from the container.",
         "name": "Name",
+        "filename": "File",
         "version": "Version",
         "sha256": "SHA256",
-        "imported": "Imported"
+        "imported": "Imported",
+        "status": "Status",
+        "actions": "Actions",
+        "status_available": "Available",
+        "status_missing": "File missing",
+        "status_disabled": "Disabled",
+        "status_registered": "Registered",
+        "delete_catalog": "Remove from catalog",
+        "delete_file": "Delete file",
+        "delete_full": "Catalog + file",
+        "delete_catalog_confirm_title": "Remove from catalog?",
+        "delete_catalog_confirm": "Remove “{name}” from the catalog only. The file stays in the container.",
+        "delete_file_confirm_title": "Delete file?",
+        "delete_file_confirm": "Delete the physical file for “{name}”. The catalog entry will be marked missing.",
+        "delete_full_confirm_title": "Delete catalog and file?",
+        "delete_full_confirm": "Delete both the catalog entry and physical file for “{name}”.",
+        "deleted_catalog": "Catalog entry removed",
+        "deleted_file": "File deleted",
+        "deleted_full": "Catalog and file deleted"
       },
       "bulk": {
         "title": "Optional multi-SAN deployment",
@@ -2177,6 +2213,8 @@
         "select_placeholder": "Select a binary…",
         "deploy": "Deploy to this SAN",
         "deploy_started": "Deployment started",
+        "confirm_title": "Confirm deployment",
+        "confirm_message": "Deploy “{name}” to the current SAN?",
         "last_deployment": "Last deployment",
         "empty_catalog": "No binaries available. Import one from the",
         "catalog_link": "global catalog",
