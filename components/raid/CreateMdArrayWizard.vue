@@ -31,6 +31,14 @@
             <li>{{ t('raid.workflow.step_use') }}</li>
           </ol>
         </div>
+        <UAlert
+          v-if="hasHardwareRaidVolumes"
+          color="blue"
+          variant="soft"
+          icon="i-heroicons-cpu-chip"
+          :title="t('raid.create_md.hardware_raid_notice_title')"
+          :description="t('raid.create_md.hardware_raid_notice_body')"
+        />
         <p class="text-sm text-gray-600 dark:text-gray-400">
           {{ t('raid.create_md.member_selection_help') }}
         </p>
@@ -518,6 +526,10 @@ const minDevices = computed(() => {
   const map: Record<string, number> = { '0': 2, '1': 2, '5': 3, '6': 4, '10': 4 }
   return map[form.level] ?? 2
 })
+
+const hasHardwareRaidVolumes = computed(() =>
+  props.blockDevices.some(d => d.usedBy.includes('hardware_raid')),
+)
 
 const eligibleDevices = computed(() => props.blockDevices.filter(d => d.eligibleForMd))
 const isClustered = computed(() => Boolean(props.clusterId && props.sourceSanId))

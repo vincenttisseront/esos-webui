@@ -472,6 +472,14 @@
       "diagnostic_empty": "(vide)",
       "filter_placeholder": "Filtrer…",
       "eligible_only": "Éligibles seulement",
+      "devices": {
+        "col_hw_raid": "RAID mat.",
+        "col_controller": "Contrôleur",
+        "col_lvm": "LVM PV",
+        "col_fileio": "FILEIO",
+        "badge_hw_vd": "VD matériel",
+        "used_by_hardware_raid": "hardware_raid"
+      },
       "ctrl_mode": {
         "raid": "Mode RAID",
         "hba": "Mode HBA / IT",
@@ -745,6 +753,8 @@
       }
     },
     "software": {
+      "hw_vd_guidance_title": "Volumes RAID matériel",
+      "hw_vd_guidance_body": "Les volumes virtuels PERC/StorCLI sont déjà redondants. Pour les exposer, utilisez LVM, FILEIO ou SCST BLOCKIO — ne les préparez pas pour un tableau MD sauf cas avancé explicite.",
       "cockpit": {
         "refresh": "Rafraîchir",
         "toggle_show": "Développer",
@@ -876,6 +886,8 @@
       "submit": "Créer le tableau MD",
       "member_selection_help": "Sélectionnez des partitions membres RAID existantes, par exemple /dev/sdb1. Ne sélectionnez pas de disques physiques bruts comme /dev/sdb.",
       "no_eligible_members": "Aucune partition membre RAID éligible détectée. Préparez d'abord des partitions Linux RAID Autodetect sur ESOS.",
+      "hardware_raid_notice_title": "RAID matériel détecté",
+      "hardware_raid_notice_body": "Ce volume est déjà un RAID matériel. Utilisez plutôt LVM, FILEIO ou SCST BLOCKIO.",
       "cluster_execution": {
         "title": "Création MD cluster multi-nœud",
         "description": "Ce SAN appartient à un cluster. Le tableau MD sera créé directement sur chaque nœud avec les mappings validés ; Sync config n'est pas utilisé pour créer les superblocks MD sur les pairs.",
@@ -1373,6 +1385,14 @@
       "result_requested_name": "Nom demandé",
       "result_name_command": "Commande d'application du nom",
       "result_name_not_applied_title": "Nom non appliqué",
+      "result_os_path": "Périphérique OS",
+      "result_os_unmapped": "Chemin OS non détecté — rafraîchissez l'inventaire ou vérifiez le scan SCSI.",
+      "next_steps_title": "Étapes suivantes recommandées",
+      "next_steps_body": "Ce volume est déjà redondant (RAID matériel). Utilisez-le comme backend pour LVM, un filesystem FILEIO ou SCST BLOCKIO — pas comme membre d'un tableau MD.",
+      "next_open_lvm": "Ouvrir LVM",
+      "next_create_fileio": "Créer filesystem FILEIO",
+      "next_view_devices": "Voir Block Devices",
+      "backend_diagnostics_title": "Éligibilité backend",
       "result_close": "Terminer",
       "step": {
         "controller": "Contrôleur",

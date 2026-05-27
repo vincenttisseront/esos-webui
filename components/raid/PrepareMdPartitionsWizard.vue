@@ -26,6 +26,14 @@
           </ol>
         </div>
         <UAlert
+          v-if="hasHardwareRaidVolumes"
+          color="blue"
+          variant="soft"
+          icon="i-heroicons-cpu-chip"
+          :title="t('raid.create_md.hardware_raid_notice_title')"
+          :description="t('raid.create_md.hardware_raid_notice_body')"
+        />
+        <UAlert
           :title="t('raid.prepare_partitions.destructive_title')"
           :description="t('raid.prepare_partitions.destructive_description')"
           color="amber"
@@ -456,6 +464,10 @@ function partitionTableLabel(value: 'auto' | 'gpt' | 'dos'): string {
   const option = partitionTableOptions.value.find(item => item.value === value)
   return option?.label ?? value
 }
+
+const hasHardwareRaidVolumes = computed(() =>
+  props.blockDevices.some(d => d.usedBy.includes('hardware_raid')),
+)
 
 const eligibleDisks = computed(() =>
   props.blockDevices.filter(d => d.eligibleForMdPartitionPrep),

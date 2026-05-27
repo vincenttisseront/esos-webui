@@ -289,6 +289,7 @@
       :orphan-or-incomplete="partitionedStopped.orphanOrIncomplete"
       :stopped-md-action-key="stoppedMdActionKey"
       :md-blocker-items="mdBlockerItems"
+      :has-hardware-raid-volumes="hasHardwareRaidBlockDevices"
       :needs-advanced-cleanup="arrayNeedsAdvancedCleanup"
       :advanced-cleanup-members-for="advancedCleanupMembersForStopped"
       :peer-raid-link="peerRaidLink"
@@ -356,7 +357,11 @@
         </label>
       </div>
       <UCard>
-        <RaidBlockDevicesTable :devices="filteredDevices" />
+        <RaidBlockDevicesTable
+          :devices="filteredDevices"
+          :controllers="raid.controllers"
+          :highlight-path="highlightedDevicePath"
+        />
       </UCard>
     </div>
 
@@ -853,7 +858,7 @@ async function openPrepareMdPartitionsWizard() {
 async function openHwWizard(ctrl?: HardwareRaidController) {
   const { default: Wizard } = await import('~/components/raid/CreateHardwareRaidWizard.vue')
   try {
-    await openModal({
+    const result = await openModal({
       component: Wizard,
       props: {
         controllers: raid.controllers,
@@ -862,7 +867,24 @@ async function openHwWizard(ctrl?: HardwareRaidController) {
         persistent: true,
       },
     })
-    await raid.fetchOverview(true)
+    if (!result || typeof result !== 'object') return
+    await Promise.all([
+      raid.fetchOverview(true),
+      lvm.fetchOverview(true),
+    ])
+    const fs = useFsStore()
+    fs.setSanId(sanId)
+    await fs.fetchOverview(true).catch(() => undefined)
+    if (!result.ok) return
+    const path = result.osDevicePath
+    if (result.navigateTo === 'lvm') {
+      activeTab.value = 'lvm'
+    } else if (result.navigateTo === 'fs') {
+      activeTab.value = 'fs'
+    } else if (result.navigateTo === 'devices') {
+      if (path) goToDevicesForPath(path)
+      else activeTab.value = 'devices'
+    }
   } catch { /* annulé */ }
 }
 
@@ -906,9 +928,19 @@ const filteredDevices = computed(() => {
     const mdPaths = mdDetectionPathSet(raid.overview)
     list = list.filter(d => mdPaths.has(d.path) || d.hasMdSuperblock || d.usedBy.includes('md'))
   }
-  if (showOnlyEligible.value) list = list.filter(d => d.eligibleForMd || d.eligibleForHardwareRaid)
+  if (showOnlyEligible.value) {
+    list = list.filter(d =>
+      d.eligibleForMd
+      || d.eligibleForHardwareRaid
+      || d.usedBy.includes('hardware_raid'),
+    )
+  }
   return list
 })
+
+const hasHardwareRaidBlockDevices = computed(() =>
+  raid.blockDevices.some(d => d.usedBy.includes('hardware_raid')),
+)
 
 const diagnosticSections = computed(() => {
   if (!diagnosticData.value) return {}

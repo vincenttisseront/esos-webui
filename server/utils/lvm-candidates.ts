@@ -1,5 +1,6 @@
 import type { HardwareRaidController, HardwareRaidLogicalDrive, MdArray, RaidBlockDevice, RaidToolsInfo } from './raid-types'
 import { hwLdUnmappedReasonKey } from './hw-raid-os-mapper'
+import { evaluateHwBackendEligibility } from '../../utils/hw-raid-backend-eligibility'
 import type { LvmCandidateDevice, LvmCandidateKind, LvmUsedBy, PhysicalVolume } from './lvm-types'
 
 const MD_PATH_RE = /^\/dev\/md[a-z0-9_-]{0,15}$/i
@@ -62,6 +63,28 @@ function mapUsedBy(dev: RaidBlockDevice): LvmUsedBy[] {
   }
   if (dev.type === 'lvm') out.push('lvm')
   return [...new Set(out)]
+}
+
+function evaluateHwRaidLdFromBlockDevice(
+  dev: RaidBlockDevice,
+  ld: HardwareRaidLogicalDrive | undefined,
+  pvPaths: Set<string>,
+  lvPaths: Set<string>,
+): LvmCandidateDevice | null {
+  if (lvPaths.has(dev.path) || pvPaths.has(dev.path)) return null
+  const backend = evaluateHwBackendEligibility(dev, ld)
+  const usedBy = mapUsedBy(dev)
+  return candidateFromPath({
+    path: dev.path,
+    kind: 'hw_raid_ld',
+    sizeBytes: dev.sizeBytes,
+    usedBy,
+    reasons: backend.lvmEligible ? [] : backend.reasons,
+    stableId: dev.idSerial ?? dev.wwn ?? dev.byIdPaths?.[0],
+    model: dev.model ?? ld?.scsiModel,
+    serial: dev.serial,
+    signatures: dev.diskSignatures ?? dev.wipefsSignatures ?? [],
+  })
 }
 
 function evaluateBlockDevice(
@@ -184,7 +207,9 @@ export function buildLvmCandidatesFromInventory(input: LvmCandidateInventoryInpu
       if (pvPaths.has(path)) continue
       const dev = input.blockDevices.find(d => d.path === path)
       if (dev) {
-        push(evaluateBlockDevice(dev, pvPaths, input.lvPaths))
+        push(dev.usedBy.includes('hardware_raid')
+          ? evaluateHwRaidLdFromBlockDevice(dev, ld, pvPaths, input.lvPaths)
+          : evaluateBlockDevice(dev, pvPaths, input.lvPaths))
         continue
       }
       push(candidateFromPath({

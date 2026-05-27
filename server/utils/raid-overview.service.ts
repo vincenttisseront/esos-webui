@@ -13,6 +13,7 @@ import { parseMdadmDetail } from './parsers/mdadm-detail.parser'
 import { parseMdadmExamineBulk } from './parsers/mdadm-examine.parser'
 import { discoverHardwareControllers } from './raid-hardware'
 import { enrichHardwareLdOsPaths } from './hw-raid-os-mapper'
+import { applyHardwareRaidMdRestrictions } from '../../utils/hw-raid-backend-eligibility'
 import { collectKernelRaidInfo } from './raid-pci-detection'
 import { buildMdDetectionSummary, getMdEligibilityReasons } from './raid-md-detection'
 import { detectStoppedMdArrays } from './stopped-md-arrays'
@@ -98,6 +99,8 @@ export async function collectRaidOverview(manager: SSHSessionManager): Promise<R
     kernelLogicalDrives: kernelInfo.kernelLogicalDrives,
     tools,
   })
+
+  applyHardwareRaidMdRestrictions(hardwareControllers, blockDevices)
 
   // Marquer les block devices utilisés par MD
   markMdUsage(blockDevices, mdArrays)

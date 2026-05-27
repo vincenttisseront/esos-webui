@@ -55,6 +55,9 @@ export interface RaidBlockDevice {
   usedBy: Array<'filesystem' | 'md' | 'lvm' | 'scst' | 'hardware_raid' | 'mounted' | 'unknown_signature'>
   eligibleForMd: boolean
   eligibleForHardwareRaid: boolean
+  hwRaidControllerId?: string
+  hwRaidControllerLabel?: string
+  hwRaidLdId?: string
   warnings: string[]
   esosSystemProtected?: boolean
   esosProtection?: import('./esos-system-protection').EsosDeviceProtectionInfo
@@ -878,6 +881,11 @@ export interface CreateHardwareLogicalDriveResponse {
   nameApplyCommand?: string
   nameApplied?: boolean
   nameWarning?: string
+  osDevicePath?: string
+  osMappingStatus?: 'mapped' | 'unmapped'
+  lvmEligible?: boolean
+  fileioEligible?: boolean
+  backendDiagnostics?: string[]
 }
 
 export interface CreateMdArrayRequest {

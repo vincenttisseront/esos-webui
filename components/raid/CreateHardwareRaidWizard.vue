@@ -275,6 +275,11 @@
             <dt class="font-medium text-gray-500 dark:text-gray-400">{{ t('raid.hw_create_wizard.result_vd_id') }}</dt>
             <dd class="font-mono">{{ createResult.createdVirtualDriveId }}</dd>
           </div>
+          <div v-if="createResult.ok">
+            <dt class="font-medium text-gray-500 dark:text-gray-400">{{ t('raid.hw_create_wizard.result_os_path') }}</dt>
+            <dd v-if="postCreateContext?.osPath" class="font-mono">{{ postCreateContext.osPath }}</dd>
+            <dd v-else class="text-amber-700 dark:text-amber-300 text-xs">{{ t('raid.hw_create_wizard.result_os_unmapped') }}</dd>
+          </div>
           <div>
             <dt class="font-medium text-gray-500 dark:text-gray-400">{{ t('raid.hw_create_wizard.result_command') }}</dt>
             <dd class="font-mono text-xs break-all bg-gray-50 dark:bg-gray-950 rounded p-2 mt-1">{{ createResult.command }}</dd>
@@ -305,6 +310,34 @@
           :title="t('raid.hw_create_wizard.result_name_not_applied_title')"
           :description="createResult.nameWarning"
         />
+
+        <div v-if="createResult?.ok" class="rounded-lg border border-blue-100 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-950/40 px-3 py-3 space-y-3">
+          <p class="text-xs font-semibold text-blue-900 dark:text-blue-100 uppercase tracking-wide">{{ t('raid.hw_create_wizard.next_steps_title') }}</p>
+          <p class="text-xs text-blue-800 dark:text-blue-200">{{ t('raid.hw_create_wizard.next_steps_body') }}</p>
+          <div class="flex flex-wrap gap-2">
+            <UButton size="xs" color="primary" variant="soft" icon="i-heroicons-circle-stack" @click="finishWizard('lvm')">
+              {{ t('raid.hw_create_wizard.next_open_lvm') }}
+            </UButton>
+            <UButton size="xs" color="emerald" variant="soft" icon="i-heroicons-folder" @click="finishWizard('fs')">
+              {{ t('raid.hw_create_wizard.next_create_fileio') }}
+            </UButton>
+            <UButton size="xs" color="gray" variant="soft" icon="i-heroicons-server" @click="finishWizard('devices')">
+              {{ t('raid.hw_create_wizard.next_view_devices') }}
+            </UButton>
+          </div>
+        </div>
+
+        <UAlert
+          v-if="createResult?.ok && postCreateContext && !postCreateContext.eligibility.lvmEligible && !postCreateContext.eligibility.fileioEligible"
+          color="amber"
+          variant="soft"
+          icon="i-heroicons-information-circle"
+          :title="t('raid.hw_create_wizard.backend_diagnostics_title')"
+        >
+          <ul class="list-disc pl-4 text-xs mt-1 space-y-0.5">
+            <li v-for="(reason, i) in postCreateContext.eligibility.reasons" :key="i">{{ reason }}</li>
+          </ul>
+        </UAlert>
 
         <details v-if="createResult" class="text-xs">
           <summary class="cursor-pointer text-gray-600 dark:text-gray-400">{{ t('raid.hw_create_wizard.result_details') }}</summary>
@@ -409,6 +442,7 @@ import {
   validateHwVdName,
   type RaidCliCreateFlavor,
 } from '~/utils/raid-hw-cli-create'
+import { resolveHwLdBackendContext } from '~/utils/hw-raid-backend-eligibility'
 
 const props = defineProps<{
   controllers: HardwareRaidController[]
@@ -442,6 +476,24 @@ const submitError = ref<string | null>(null)
 const preflightResult = ref<RaidPreflightResult | null>(null)
 const preflightLoading = ref(false)
 const createResult = ref<CreateHardwareLogicalDriveResponse | null>(null)
+
+const postCreateContext = computed(() => {
+  const r = createResult.value
+  if (!r?.ok || !r.createdVirtualDriveId) return null
+  if (r.osMappingStatus) {
+    return {
+      osPath: r.osDevicePath ?? null,
+      eligibility: {
+        lvmEligible: r.lvmEligible ?? false,
+        fileioEligible: r.fileioEligible ?? false,
+        reasons: r.backendDiagnostics ?? [],
+      },
+    }
+  }
+  const ctx = resolveHwLdBackendContext(raid.controllers, raid.blockDevices, r.createdVirtualDriveId)
+  if (!ctx) return null
+  return { osPath: ctx.osPath, eligibility: ctx.eligibility }
+})
 
 const HW_RAID_LEVELS = ['1', '5', '6', '10'] as const
 type HwRaidLevel = typeof HW_RAID_LEVELS[number]
@@ -632,8 +684,16 @@ function handleBack() {
   step.value--
 }
 
-function finishWizard() {
-  emit('confirm', createResult.value ?? undefined)
+function finishWizard(navigateTo?: 'lvm' | 'fs' | 'devices') {
+  if (!createResult.value) {
+    emit('confirm', undefined)
+    return
+  }
+  emit('confirm', {
+    ...createResult.value,
+    navigateTo,
+    osDevicePath: postCreateContext.value?.osPath ?? createResult.value.osDevicePath,
+  })
 }
 
 function selectController(id: string) {

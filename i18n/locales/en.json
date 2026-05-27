@@ -472,6 +472,14 @@
       "diagnostic_empty": "(empty)",
       "filter_placeholder": "Filter…",
       "eligible_only": "Eligible only",
+      "devices": {
+        "col_hw_raid": "HW RAID",
+        "col_controller": "Controller",
+        "col_lvm": "LVM PV",
+        "col_fileio": "FILEIO",
+        "badge_hw_vd": "HW VD",
+        "used_by_hardware_raid": "hardware_raid"
+      },
       "ctrl_mode": {
         "raid": "RAID mode",
         "hba": "HBA / IT mode",
@@ -745,6 +753,8 @@
       }
     },
     "software": {
+      "hw_vd_guidance_title": "Hardware RAID volumes",
+      "hw_vd_guidance_body": "PERC/StorCLI virtual drives are already redundant. Expose them via LVM, FILEIO, or SCST BLOCKIO — do not prepare them for MD unless you have an explicit advanced need.",
       "cockpit": {
         "refresh": "Refresh",
         "toggle_show": "Expand",
@@ -876,6 +886,8 @@
       "submit": "Create MD array",
       "member_selection_help": "Select existing RAID member partitions, for example /dev/sdb1. Do not select raw physical disks such as /dev/sdb.",
       "no_eligible_members": "No eligible RAID member partitions detected. Prepare Linux RAID Autodetect partitions on ESOS first.",
+      "hardware_raid_notice_title": "Hardware RAID detected",
+      "hardware_raid_notice_body": "This volume is already a hardware RAID virtual drive. Use LVM, FILEIO, or SCST BLOCKIO instead.",
       "cluster_execution": {
         "title": "Multi-node cluster MD creation",
         "description": "This SAN belongs to a cluster. The MD array will be created directly on each node with the validated mappings; Sync config is not used to create MD superblocks on peers.",
@@ -1373,6 +1385,14 @@
       "result_requested_name": "Requested name",
       "result_name_command": "Name apply command",
       "result_name_not_applied_title": "Name not applied",
+      "result_os_path": "OS device",
+      "result_os_unmapped": "OS path not detected — refresh inventory or check the SCSI scan.",
+      "next_steps_title": "Recommended next steps",
+      "next_steps_body": "This volume is already redundant (hardware RAID). Use it as a backend for LVM, a FILEIO filesystem, or SCST BLOCKIO — not as an MD array member.",
+      "next_open_lvm": "Open LVM",
+      "next_create_fileio": "Create FILEIO filesystem",
+      "next_view_devices": "View block devices",
+      "backend_diagnostics_title": "Backend eligibility",
       "result_close": "Done",
       "step": {
         "controller": "Controller",

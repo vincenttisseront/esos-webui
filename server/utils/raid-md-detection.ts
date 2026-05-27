@@ -88,6 +88,9 @@ export function getMdEligibilityReasons(input: {
     reasons.push(input.hasMdSuperblock ? 'Superblock MD existant détecté' : 'Déjà membre MD')
   }
   if (input.usedBy.includes('unknown_signature')) reasons.push('Signature existante non autorisée')
+  if (input.usedBy.includes('hardware_raid')) {
+    reasons.push('Volume déjà en RAID matériel — utilisez LVM, FILEIO ou SCST BLOCKIO')
+  }
   return [...new Set(reasons)]
 }
 

@@ -26,6 +26,7 @@ import {
   buildMegaCliCreateLd,
 } from './raid-hardware'
 import { collectRaidOverview } from './raid-overview.service'
+import { resolveHwLdBackendContext } from '../../utils/hw-raid-backend-eligibility'
 import { extractStorCliJsonPayload } from '../../utils/raid-cli-path'
 import { invalidateCacheKey } from './cache'
 
@@ -59,6 +60,33 @@ export interface HwLogicalDriveCreateResult {
   nameApplyCommand?: string
   nameApplied?: boolean
   nameWarning?: string
+  osDevicePath?: string
+  osMappingStatus?: 'mapped' | 'unmapped'
+  lvmEligible?: boolean
+  fileioEligible?: boolean
+  backendDiagnostics?: string[]
+}
+
+function withBackendContext(
+  result: HwLogicalDriveCreateResult,
+  overview: Awaited<ReturnType<typeof collectRaidOverview>>,
+  createdVirtualDriveId: string | undefined,
+): HwLogicalDriveCreateResult {
+  if (!createdVirtualDriveId) return result
+  const ctx = resolveHwLdBackendContext(
+    overview.hardwareControllers,
+    overview.blockDevices,
+    createdVirtualDriveId,
+  )
+  if (!ctx) return result
+  return {
+    ...result,
+    osDevicePath: ctx.osPath ?? undefined,
+    osMappingStatus: ctx.osMappingStatus,
+    lvmEligible: ctx.eligibility.lvmEligible,
+    fileioEligible: ctx.eligibility.fileioEligible,
+    backendDiagnostics: ctx.eligibility.reasons.length ? ctx.eligibility.reasons : undefined,
+  }
 }
 
 export function hwLdDriveSlotKey(d: HwLdDriveSlot): string {
@@ -442,13 +470,13 @@ export async function executeHwLogicalDriveCreate(
   )
 
   if (canVerify && !verification.verified) {
-    return {
+    return withBackendContext({
       ok: false,
       warning: true,
       ...base,
       createdVirtualDriveId,
       verificationMessage: verification.message,
-    }
+    }, overview, createdVirtualDriveId)
   }
 
   const nameOutcome = await applyOptionalVolumeName(
@@ -458,7 +486,7 @@ export async function executeHwLogicalDriveCreate(
     requestedVolumeName,
   )
 
-  return {
+  return withBackendContext({
     ok: true,
     warning: nameOutcome.warning ?? false,
     ...base,
@@ -467,5 +495,5 @@ export async function executeHwLogicalDriveCreate(
     nameApplyCommand: nameOutcome.nameApplyCommand,
     nameApplied: nameOutcome.nameApplied,
     nameWarning: nameOutcome.nameWarning,
-  }
+  }, overview, createdVirtualDriveId)
 }

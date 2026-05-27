@@ -32,6 +32,15 @@
       </UButton>
     </div>
 
+    <UAlert
+      v-if="hasHardwareRaidVolumes"
+      color="blue"
+      variant="soft"
+      icon="i-heroicons-cpu-chip"
+      :title="t('raid.software.hw_vd_guidance_title')"
+      :description="t('raid.software.hw_vd_guidance_body')"
+    />
+
     <!-- Statut compact (répond à « le RAID est-il OK ? ») -->
     <RaidSoftwareStatusStrip
       :view-model="cockpit.status"
@@ -181,6 +190,7 @@ defineProps<{
   orphanOrIncomplete: StoppedMdArray[]
   stoppedMdActionKey: string | null
   mdBlockerItems: MdDetectionItem[]
+  hasHardwareRaidVolumes?: boolean
   needsAdvancedCleanup: (arr: StoppedMdArray) => boolean
   advancedCleanupMembersFor: (paths: string[]) => string[]
   peerRaidLink: (peerSanId: string) => string
