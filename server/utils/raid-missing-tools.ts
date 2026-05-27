@@ -50,9 +50,14 @@ export function parseWhichAndPaths(out: string): Record<ToolName, boolean> & { r
   return has
 }
 
-export function inferControllerVendorFromPciEvidence(pciRaw: string): 'dell_perc' | 'lsi_megaraid' | 'unknown' | null {
+export function inferControllerVendorFromPciEvidence(
+  pciRaw: string,
+): 'dell_perc' | 'lsi_megaraid' | 'adaptec_aacraid' | 'unknown' | null {
   const lower = pciRaw.toLowerCase()
   if (!lower.trim()) return null
+  if (lower.includes('adaptec') || lower.includes('aacraid') || lower.includes('microsemi') || lower.includes('pmc-sierra')) {
+    return 'adaptec_aacraid'
+  }
   if (lower.includes('perc') || lower.includes('dell')) return 'dell_perc'
   if (lower.includes('megaraid') || lower.includes('lsi') || lower.includes('avago') || lower.includes('broadcom')) return 'lsi_megaraid'
   return 'unknown'
@@ -79,7 +84,7 @@ export async function readMissingToolsReadiness(manager: SSHSessionManager, sanI
     const [kernel, cliScan] = await Promise.all([
       collectKernelRaidInfo(manager),
       manager.exec([
-        'which perccli perccli64 storcli storcli64 2>/dev/null || true',
+        'which perccli perccli64 storcli storcli64 arcconf MegaCli64 megacli 2>/dev/null || true',
         `for _p in ${RAID_CLI_PATHS.map(p => `"${p}"`).join(' ')}; do [ -x "$_p" ] && echo "$_p"; done 2>/dev/null || true`,
       ].join('\n'), 15_000),
     ])
@@ -91,6 +96,8 @@ export async function readMissingToolsReadiness(manager: SSHSessionManager, sanI
     const resolvedPath = parsed.resolvedPath
     const version = await readCliVersion(manager, resolvedPath)
 
+    const arcconf = cliScan.stdout?.includes('arcconf') ?? false
+    const megacli64 = cliScan.stdout?.includes('MegaCli64') || cliScan.stdout?.includes('megacli') || false
     const cliPresent = parsed.perccli64 || parsed.storcli64 || parsed.perccli || parsed.storcli
 
     const recommendation = (!cliPresent && detected && (vendor === 'dell_perc' || vendor === 'lsi_megaraid'))
@@ -114,6 +121,8 @@ export async function readMissingToolsReadiness(manager: SSHSessionManager, sanI
           perccli64: parsed.perccli64,
           storcli: parsed.storcli,
           storcli64: parsed.storcli64,
+          arcconf,
+          megacli64,
           resolvedPath,
           version,
         },

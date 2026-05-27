@@ -1,4 +1,4 @@
-export type MissingToolsControllerVendor = 'dell_perc' | 'lsi_megaraid' | 'unknown'
+export type MissingToolsControllerVendor = 'dell_perc' | 'lsi_megaraid' | 'adaptec_aacraid' | 'unknown'
 
 export type MissingToolsReadinessOk = {
   status: 'ok'
@@ -29,6 +29,8 @@ export type MissingToolsReadiness = {
     perccli64: boolean
     storcli: boolean
     storcli64: boolean
+    arcconf: boolean
+    megacli64: boolean
     resolvedPath: string | null
     version: string | null
   }
