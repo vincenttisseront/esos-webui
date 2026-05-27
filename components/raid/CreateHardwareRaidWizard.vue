@@ -143,14 +143,14 @@
         <div class="max-h-72 overflow-y-auto space-y-1">
           <label
             v-for="drive in availableDrives"
-            :key="`${drive.enclosure}-${drive.slot}`"
+            :key="driveKey(drive)"
             class="flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-50 dark:bg-gray-950 cursor-pointer"
           >
             <input
               type="checkbox"
-              :value="{ enclosure: drive.enclosure, slot: drive.slot }"
-              v-model="form.drives"
+              :checked="isDriveSelected(drive)"
               class="accent-purple-500"
+              @change="toggleDrive(drive)"
             />
             <div class="flex-1">
               <div class="flex items-center gap-2 text-sm">
@@ -402,7 +402,7 @@ const canNext = computed(() => {
 const canSubmit = computed(() =>
   understood.value
   && preflightResult.value?.ok
-  && (!preflightResult.value.requiredConfirmation || form.confirmation === preflightResult.value.requiredConfirmation),
+  && (!preflightResult.value.requiredConfirmation || form.confirmation.trim() === preflightResult.value.requiredConfirmation),
 )
 
 function optionCardClass(selected: boolean): string {
@@ -416,6 +416,23 @@ function raidLevelCardClass(card: { level: string; enabled: boolean }): string {
     return 'border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 opacity-60 cursor-not-allowed'
   }
   return optionCardClass(form.raidLevel === card.level)
+}
+
+function driveKey(drive: HardwareRaidPhysicalDrive): string {
+  return `${drive.enclosure ?? '252'}:${drive.slot}`
+}
+
+function isDriveSelected(drive: HardwareRaidPhysicalDrive): boolean {
+  return form.drives.some(d => driveKey(d) === driveKey(drive))
+}
+
+function toggleDrive(drive: HardwareRaidPhysicalDrive) {
+  const key = driveKey(drive)
+  if (isDriveSelected(drive)) {
+    form.drives = form.drives.filter(d => driveKey(d) !== key)
+  } else {
+    form.drives.push({ enclosure: drive.enclosure, slot: drive.slot })
+  }
 }
 
 function selectController(id: string) {
@@ -491,7 +508,7 @@ async function submit() {
       sizeMode: 'max',
       readPolicy: form.readPolicy,
       writePolicy: form.writePolicy,
-      confirmation: form.confirmation,
+      confirmation: form.confirmation.trim(),
     })
     emit('confirm')
   } catch (err: any) {

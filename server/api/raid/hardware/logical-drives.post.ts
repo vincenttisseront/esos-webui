@@ -32,11 +32,12 @@ export default defineEventHandler(async (event) => {
   if (!VALID_LEVELS.includes(body.raidLevel)) {
     throw createError({ statusCode: 400, statusMessage: `Niveau RAID invalide : ${body.raidLevel}` })
   }
-  if (!body.confirmation) {
+  const confirmation = body.confirmation?.trim()
+  if (!confirmation) {
     throw createError({ statusCode: 400, statusMessage: 'confirmation requise' })
   }
   const expectedConfirm = `CREATE LD ${body.raidLevel}`
-  if (body.confirmation !== expectedConfirm) {
+  if (confirmation !== expectedConfirm) {
     throw createError({ statusCode: 400, statusMessage: `Confirmation invalide (attendu : "${expectedConfirm}")` })
   }
 
@@ -58,7 +59,8 @@ export default defineEventHandler(async (event) => {
 
     let command: string
     if (ctrl.cliTool === 'storcli' || ctrl.cliTool === 'perccli') {
-      command = buildStorCliCreateLd(ctrl.cliTool, ctrl.id, body.raidLevel, body.drives, body.writePolicy, body.readPolicy)
+      const cliBin = ctrl.cliPath ?? ctrl.cliTool
+      command = buildStorCliCreateLd(cliBin, ctrl.id, body.raidLevel, body.drives, body.writePolicy, body.readPolicy)
     } else if (ctrl.cliTool === 'MegaCli64') {
       command = buildMegaCliCreateLd(ctrl.id, body.raidLevel, body.drives, body.writePolicy, body.readPolicy)
     } else if (ctrl.cliTool === 'arcconf') {

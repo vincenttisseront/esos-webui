@@ -252,9 +252,18 @@ export async function runPreflight(
     }
     case 'create_hw_ld': {
       const drives = (payload.drives as Array<Record<string, string>> | undefined) ?? []
-      for (const d of drives) {
-        impactedDevices.push(`slot ${d.slot}`)
+      const raidLevel = String(payload.raidLevel ?? '')
+      const minByLevel: Record<string, number> = { '0': 2, '1': 2, '5': 3, '6': 4, '10': 4 }
+      const min = minByLevel[raidLevel] ?? 2
+      if (!drives.length) {
+        blockers.push('Au moins un disque physique doit être sélectionné')
+      } else if (drives.length < min) {
+        blockers.push(`Minimum ${min} disques requis pour RAID${raidLevel}`)
       }
+      for (const d of drives) {
+        impactedDevices.push(`slot ${d.enclosure ? `${d.enclosure}:` : ''}${d.slot}`)
+      }
+      warnings.push('La création d\'un volume matériel efface les disques sélectionnés')
       break
     }
     default:
@@ -294,6 +303,8 @@ function buildConfirmationPhrase(req: RaidPreflightRequest): string {
       return expectedMdZeroMetadataConfirmation()
     case 'wipe_md_signatures':
       return expectedMdAdvancedCleanupConfirmation()
+    case 'create_hw_ld':
+      return `CREATE LD ${String(payload.raidLevel ?? '1')}`
     case 'delete_hw_ld':
       return `DELETE LD ${String(payload.id ?? '0')}`
     case 'md_remove_device':

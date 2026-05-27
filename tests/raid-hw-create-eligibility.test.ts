@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { runPreflight } from '../server/utils/raid-preflight'
 import {
   extractRaidCliFromToolsOutput,
   isRaidCliPath,
@@ -96,6 +97,25 @@ describe('raid-hw-create-eligibility', () => {
     expect(e.eligible).toBe(false)
     expect(e.reasons).toContain('no_free_disks')
     expect(e.freeDiskCount).toBe(0)
+  })
+
+  it('create_hw_ld preflight uses CREATE LD confirmation phrase', async () => {
+    const result = await runPreflight(
+      {} as any,
+      {
+        backend: 'hardware',
+        action: 'create_hw_ld',
+        payload: {
+          controllerId: '0',
+          raidLevel: '5',
+          drives: [{ slot: '0' }, { slot: '1' }, { slot: '2' }],
+        },
+      },
+      [],
+      [],
+    )
+    expect(result.requiredConfirmation).toBe('CREATE LD 5')
+    expect(result.ok).toBe(true)
   })
 
   it('wizard eligibility: full controller with supportsCreate and free disks is eligible', () => {

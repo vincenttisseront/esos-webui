@@ -648,15 +648,17 @@ function inferArcconfControllerMode(
 // ─── Générateurs de commandes (SDD §9) ───────────────────────────────────────
 
 export function buildStorCliCreateLd(
-  cli: 'storcli' | 'perccli',
+  cli: string,
   ctrlIndex: string,
   raidLevel: string,
   drives: Array<{ enclosure?: string; slot: string }>,
   writePolicy: 'WT' | 'WB',
   readPolicy: 'NORA' | 'RA' | 'ADRA',
 ): string {
-  const driveStr = drives.map(d => `${d.enclosure ?? '255'}:${d.slot}`).join(',')
-  return `${cli} /c${ctrlIndex}/e${drives[0].enclosure ?? '255'}/s${driveStr} add vd type=raid${raidLevel} drives=${driveStr} ${writePolicy.toLowerCase()} ${readPolicy.toLowerCase()}`
+  const qCli = cli.replace(/'/g, `'\\''`)
+  const driveStr = drives.map(d => `${d.enclosure ?? '252'}:${d.slot}`).join(',')
+  const enc = drives[0]?.enclosure ?? '252'
+  return `${qCli} /c${ctrlIndex} add vd type=raid${raidLevel} drives=${driveStr} ${writePolicy.toLowerCase()} ${readPolicy.toLowerCase()}`
 }
 
 export function buildMegaCliCreateLd(
