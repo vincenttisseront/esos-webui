@@ -2146,7 +2146,8 @@
     "deployment": {
       "page": {
         "title": "Catalogue des binaires",
-        "subtitle": "Importez depuis le conteneur WebUI les binaires disponibles pour les déployer ensuite depuis la configuration système de chaque SAN.",
+        "subtitle": "Gérez le catalogue global des binaires (upload, enregistrement, suppression).",
+        "deploy_hint": "Le déploiement sur un SAN se fait uniquement depuis Configuration système → Déploiement de binaire du SAN cible.",
         "refresh": "Rafraîchir"
       },
       "upload": {

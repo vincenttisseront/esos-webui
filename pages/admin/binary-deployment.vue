@@ -8,6 +8,9 @@
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
           {{ t('admin.deployment.page.subtitle') }}
         </p>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+          {{ t('admin.deployment.page.deploy_hint') }}
+        </p>
         <p v-if="containerDir" class="text-xs text-gray-400 mt-1 font-mono">
           {{ containerDir }}
         </p>
@@ -41,74 +44,6 @@
       @delete-full="confirmDeleteFull"
     />
 
-    <UCard>
-      <template #header>
-        <span class="font-semibold text-gray-600">{{ t('admin.deployment.bulk.title') }}</span>
-      </template>
-      <p class="text-sm text-gray-500 mb-4">
-        {{ t('admin.deployment.bulk.hint') }}
-      </p>
-      <div class="space-y-4">
-        <AppFormField :label="t('admin.deployment.deploy.select_binary') as string">
-          <USelectMenu
-            v-model="bulkBinaryId"
-            :items="bulkBinaryItems"
-            value-key="value"
-            label-key="label"
-            :placeholder="t('admin.deployment.san.select_placeholder') as string"
-            class="w-full max-w-md"
-          />
-        </AppFormField>
-        <div class="space-y-2">
-          <p class="text-xs font-medium text-gray-500 uppercase">
-            {{ t('admin.deployment.deploy.select_sans') }}
-          </p>
-          <div class="flex flex-wrap gap-3">
-            <label
-              v-for="san in activeSans"
-              :key="san.id"
-              class="flex items-center gap-2 text-sm"
-            >
-              <input
-                v-model="selectedSanIds"
-                type="checkbox"
-                :value="san.id"
-                :disabled="san.readOnly"
-              >
-              <span :class="san.readOnly ? 'text-gray-400 line-through' : ''">{{ san.label }}</span>
-            </label>
-          </div>
-        </div>
-        <UButton
-          color="gray"
-          variant="outline"
-          icon="i-heroicons-rocket-launch"
-          :disabled="!canBulkDeploy"
-          :loading="deploying"
-          @click="confirmBulkOpen = true"
-        >
-          {{ t('admin.deployment.bulk.run') }}
-        </UButton>
-      </div>
-    </UCard>
-
-    <UModal v-model:open="confirmBulkOpen">
-      <template #content>
-        <div class="p-6 space-y-4">
-          <h3 class="text-lg font-semibold">{{ t('admin.deployment.deploy.confirm_title') }}</h3>
-          <p class="text-sm text-gray-600">{{ confirmMessage }}</p>
-          <div class="flex justify-end gap-2">
-            <UButton color="gray" variant="outline" @click="confirmBulkOpen = false">
-              {{ t('common.actions.cancel') }}
-            </UButton>
-            <UButton color="primary" :loading="deploying" @click="runBulkDeploy">
-              {{ t('admin.deployment.bulk.run') }}
-            </UButton>
-          </div>
-        </div>
-      </template>
-    </UModal>
-
     <UModal v-model:open="deleteModal.open">
       <template #content>
         <div class="p-6 space-y-4">
@@ -129,8 +64,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ContainerBinaryListItem, DeploymentBinaryDto, DeploymentJobDto } from '~/types/deployment'
-import { isBinaryDeployable } from '~/utils/deployment-ui'
+import type { ContainerBinaryListItem, DeploymentBinaryDto } from '~/types/deployment'
 import BinaryCatalogStatusPanel from '~/components/deployment/BinaryCatalogStatusPanel.vue'
 import BinaryUploadCard from '~/components/deployment/BinaryUploadCard.vue'
 import ContainerBinaryList from '~/components/deployment/ContainerBinaryList.vue'
@@ -140,7 +74,6 @@ definePageMeta({ layout: 'default' })
 
 const { t } = useEsosI18n()
 const toast = useAppToast()
-const { activeSans } = useSelectedSan()
 
 const statusPanel = ref<{ reload: () => Promise<void> } | null>(null)
 const loading = ref(false)
@@ -150,29 +83,11 @@ const catalog = ref<DeploymentBinaryDto[]>([])
 const registeringPath = ref<string | null>(null)
 const deletingId = ref<string | null>(null)
 
-const bulkBinaryId = ref<string | null>(null)
-const selectedSanIds = ref<string[]>([])
-const deploying = ref(false)
-const confirmBulkOpen = ref(false)
-
 const deleteModal = reactive({
   open: false,
   title: '',
   message: '',
   action: null as (() => Promise<void>) | null,
-})
-
-const bulkBinaryItems = computed(() =>
-  catalog.value.filter(isBinaryDeployable).map(b => ({ value: b.id, label: b.name })),
-)
-
-const canBulkDeploy = computed(() =>
-  Boolean(bulkBinaryId.value) && selectedSanIds.value.length > 0 && !deploying.value,
-)
-
-const confirmMessage = computed(() => {
-  const name = catalog.value.find(b => b.id === bulkBinaryId.value)?.name ?? '—'
-  return t('admin.deployment.deploy.confirm_msg', { name, count: selectedSanIds.value.length }) as string
 })
 
 async function onUploaded() {
@@ -253,23 +168,6 @@ async function runDelete() {
     toast.error(t('common.failure') as string, String(err))
   } finally {
     deletingId.value = null
-  }
-}
-
-async function runBulkDeploy() {
-  if (!bulkBinaryId.value || !selectedSanIds.value.length) return
-  deploying.value = true
-  confirmBulkOpen.value = false
-  try {
-    await $fetch<{ job: DeploymentJobDto }>('/api/admin/deployment/jobs', {
-      method: 'POST',
-      body: { binaryId: bulkBinaryId.value, sanIds: selectedSanIds.value },
-    })
-    toast.success(t('admin.deployment.san.deploy_started') as string)
-  } catch (err: unknown) {
-    toast.error(t('common.failure') as string, String(err))
-  } finally {
-    deploying.value = false
   }
 }
 

@@ -4,7 +4,6 @@ import { getSSHPool } from '~~/server/utils/ssh-pool'
 import { assertSanWritable } from '~~/server/utils/san-request-context'
 import { transferLocalFileViaSsh } from '~~/server/utils/upgrade-package-transfer'
 import { setMissingToolsPackageStatus } from '~~/server/utils/missing-tools-package-store'
-import { getDeploymentBinaryById } from '~~/server/db/repositories/deployment.repository'
 import { assertBinaryDeployable, resolveBinaryLocalPath } from '~~/server/utils/deployment-binaries-service'
 
 const bodySchema = z.object({
@@ -29,10 +28,13 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: parsed.error.issues[0]?.message ?? 'Corps invalide' })
   }
 
-  const binary = getDeploymentBinaryById(parsed.data.binaryId)
-  if (!binary) throw createError({ statusCode: 404, message: 'Binaire catalogue introuvable' })
+  const binary = await assertBinaryDeployable(parsed.data.binaryId)
   if (binary.kind !== 'rpm') {
     throw createError({ statusCode: 400, message: 'Seuls les RPM du catalogue sont acceptés pour perccli' })
+  }
+  const localPath = await resolveBinaryLocalPath(binary)
+  if (!localPath) {
+    throw createError({ statusCode: 400, message: 'Fichier binaire absent du conteneur WebUI' })
   }
 
   const stagingId = randomUUID()

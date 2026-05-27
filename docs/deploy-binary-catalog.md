@@ -39,6 +39,12 @@ docker compose logs app | grep '\[binaries\]'
 
 Open **Administration → Catalogue des binaires** and confirm **Inscriptible: Oui**.
 
+## Deploying to a SAN
+
+Deployment is **not** done from the global catalog page. Use **Configuration système** on the target SAN (or cluster node) → **Déploiement de binaire**.
+
+Files are transferred to the SAN via **SFTP** (`/tmp/esos-deploy-…`). If SFTP is unavailable, the server falls back to small base64 chunks over SSH exec.
+
 ## Optional: seed from host directory (bind mount)
 
 Only on Linux hosts where you can fix ownership:

@@ -88,7 +88,7 @@ async function runTarget(
     const localPath = await resolveBinaryLocalPath(binary)
     if (!localPath) throw new Error('Fichier binaire introuvable sur le conteneur WebUI')
 
-    log(`Transfert vers ${remotePath}…`)
+    log(`Transfert SFTP vers ${remotePath}…`)
     await transferLocalFileViaSsh(manager, localPath, remotePath, {
       onProgress: (done, total) => {
         if (total > 0 && done % (512 * 1024) < 384 * 1024) {

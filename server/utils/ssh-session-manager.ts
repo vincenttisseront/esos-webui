@@ -189,6 +189,63 @@ export class SSHSessionManager extends EventEmitter {
     return this.status === 'connected' && !this.destroyed
   }
 
+  /**
+   * Upload a local file via SFTP (fastPut). Preferred over base64-over-exec for large binaries.
+   */
+  uploadFile(
+    localPath: string,
+    remotePath: string,
+    options?: { onProgress?: (transferred: number, total: number) => void },
+  ): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (this.destroyed || this.status === 'error') {
+        reject(new Error('SSH: connection in error state'))
+        return
+      }
+      if (!this.client || this.status !== 'connected') {
+        reject(new Error('SSH: not connected'))
+        return
+      }
+
+      void (async () => {
+        await this.acquireSlot()
+        let released = false
+        const release = () => {
+          if (!released) {
+            released = true
+            this.releaseSlot()
+          }
+        }
+
+        const { statSync } = await import('node:fs')
+        const total = statSync(localPath).size
+
+        this.client!.sftp((err, sftp) => {
+          if (err) {
+            release()
+            reject(err)
+            return
+          }
+
+          sftp.fastPut(localPath, remotePath, {
+            step: (transferred, _chunk, totalBytes) => {
+              options?.onProgress?.(transferred, totalBytes || total)
+            },
+          }, (putErr) => {
+            try {
+              sftp.end()
+            } catch {
+              /* ignore */
+            }
+            release()
+            if (putErr) reject(putErr)
+            else resolve()
+          })
+        })
+      })().catch((e) => reject(e instanceof Error ? e : new Error(String(e))))
+    })
+  }
+
   exec(cmd: string, timeoutMs = 30_000): Promise<ExecResult> {
     return new Promise((resolve, reject) => {
       if (this.destroyed || this.status === 'error') {

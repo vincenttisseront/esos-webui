@@ -3,7 +3,8 @@ import { randomBytes } from 'node:crypto'
 import type { SSHSessionManager } from './ssh-session-manager'
 import { shellSingleQuoteForRemote } from './remote-config-paths'
 
-const CHUNK_RAW_BYTES = 384 * 1024
+/** Small chunks for exec fallback — large values trigger ssh2 "Unable to exec". */
+const CHUNK_RAW_BYTES = 48 * 1024
 
 function heredocDelimiter(): string {
   return `ESOS_UPG_${randomBytes(8).toString('hex')}`
@@ -24,7 +25,8 @@ export function buildBase64ChunkScript(
   return `base64 -d ${op} <<'${delim}'\n${b64Chunk}\n${delim}`
 }
 
-export async function transferLocalFileViaSsh(
+/** Legacy base64-over-exec transfer (small payloads only — large RPMs exceed SSH exec limits). */
+async function transferLocalFileViaSshBase64(
   manager: SSHSessionManager,
   localFilePath: string,
   remotePath: string,
@@ -77,6 +79,26 @@ export async function transferLocalFileViaSsh(
     stream.on('end', () => resolve())
     stream.on('error', reject)
   })
+}
+
+export async function transferLocalFileViaSsh(
+  manager: SSHSessionManager,
+  localFilePath: string,
+  remotePath: string,
+  options?: {
+    onProgress?: (transferred: number, total: number) => void
+    timeoutMsPerChunk?: number
+  },
+): Promise<void> {
+  try {
+    await manager.uploadFile(localFilePath, remotePath, {
+      onProgress: options?.onProgress,
+    })
+  } catch (sftpErr) {
+    const msg = sftpErr instanceof Error ? sftpErr.message : String(sftpErr)
+    console.warn(`[transfer] SFTP upload failed (${msg}), falling back to base64 chunks`)
+    await transferLocalFileViaSshBase64(manager, localFilePath, remotePath, options)
+  }
 }
 
 export const ALLOWED_PACKAGE_EXTENSIONS = ['.zip', '.tar.gz', '.tgz', '.tar'] as const

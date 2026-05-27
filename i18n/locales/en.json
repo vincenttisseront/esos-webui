@@ -2146,7 +2146,8 @@
     "deployment": {
       "page": {
         "title": "Binary catalog",
-        "subtitle": "Import binaries from the WebUI container, then deploy them from each SAN's system configuration.",
+        "subtitle": "Manage the global binary catalog (upload, register, delete).",
+        "deploy_hint": "Deploy to a SAN only from that SAN's System configuration → Binary deployment section.",
         "refresh": "Refresh"
       },
       "upload": {
