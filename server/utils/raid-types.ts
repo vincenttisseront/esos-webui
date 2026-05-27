@@ -859,6 +859,23 @@ export interface CreateHardwareLogicalDriveRequest {
   confirmation: string
 }
 
+export interface CreateHardwareLogicalDriveResponse {
+  ok: boolean
+  warning: boolean
+  command: string
+  exitCode: number
+  stdout: string
+  stderr: string
+  controllerId: string
+  requestedRaidLevel: string
+  selectedSlots: string[]
+  createdVirtualDriveId?: string
+  verificationMessage?: string
+  refreshCommand?: string
+  refreshStdout?: string
+  overviewRefreshed: boolean
+}
+
 export interface CreateMdArrayRequest {
   name: string
   level: '0' | '1' | '5' | '6' | '10'

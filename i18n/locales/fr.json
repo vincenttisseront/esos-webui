@@ -1320,13 +1320,24 @@
       "next": "Suivant",
       "create": "Créer le volume",
       "submit_error": "Erreur lors de la création",
+      "result_success_title": "Volume matériel créé",
+      "result_success_vd": "Volume détecté : {id}",
+      "result_warning_title": "Commande exécutée, vérification incomplète",
+      "result_warning_body": "Commande exécutée, mais le nouveau volume n'a pas été détecté. Consultez les détails ci-dessous.",
+      "result_vd_id": "Volume logique",
+      "result_command": "Commande",
+      "result_exit_code": "Code de sortie",
+      "result_slots": "Emplacements sélectionnés",
+      "result_details": "Sortie CLI et diagnostic",
+      "result_close": "Terminer",
       "step": {
         "controller": "Contrôleur",
         "level": "Niveau RAID",
         "drives": "Disques",
         "cache": "Cache",
         "preflight": "Pré-vérification",
-        "confirm": "Confirmation"
+        "confirm": "Confirmation",
+        "result": "Résultat"
       },
       "policy": {
         "nora": "NORA — Pas de lecture anticipée",

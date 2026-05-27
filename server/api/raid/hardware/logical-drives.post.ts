@@ -5,12 +5,8 @@
 import { getActiveSSHManager, withSanContext } from '../../../utils/ssh-runtime'
 import { collectRaidOverview } from '../../../utils/raid-overview.service'
 import { withCache, invalidateCacheKey } from '../../../utils/cache'
-import {
-  buildStorCliCreateLd,
-  buildMegaCliCreateLd,
-  buildArcconfCreateLd,
-} from '../../../utils/raid-hardware'
 import { requireSanIdQuery } from '../../../utils/san-query'
+import { executeHwLogicalDriveCreate } from '../../../utils/raid-hw-ld-create'
 import type { CreateHardwareLogicalDriveRequest } from '../../../utils/raid-types'
 
 const WRITE_ENABLED = process.env.RAID_HARDWARE_WRITE_ENABLED !== 'false'
@@ -31,6 +27,9 @@ export default defineEventHandler(async (event) => {
   }
   if (!VALID_LEVELS.includes(body.raidLevel)) {
     throw createError({ statusCode: 400, statusMessage: `Niveau RAID invalide : ${body.raidLevel}` })
+  }
+  if (!body.readPolicy || !body.writePolicy) {
+    throw createError({ statusCode: 400, statusMessage: 'readPolicy et writePolicy requis' })
   }
   const confirmation = body.confirmation?.trim()
   if (!confirmation) {
@@ -57,25 +56,10 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 422, statusMessage: 'Ce contrôleur ne supporte pas la création via CLI' })
     }
 
-    let command: string
-    if (ctrl.cliTool === 'storcli' || ctrl.cliTool === 'perccli') {
-      const cliBin = ctrl.cliPath ?? ctrl.cliTool
-      command = buildStorCliCreateLd(cliBin, ctrl.id, body.raidLevel, body.drives, body.writePolicy, body.readPolicy)
-    } else if (ctrl.cliTool === 'MegaCli64') {
-      command = buildMegaCliCreateLd(ctrl.id, body.raidLevel, body.drives, body.writePolicy, body.readPolicy)
-    } else if (ctrl.cliTool === 'arcconf') {
-      command = buildArcconfCreateLd(ctrl.id, body.raidLevel, body.drives, body.writePolicy, body.readPolicy)
-    } else {
-      throw createError({ statusCode: 422, statusMessage: 'Outil CLI inconnu pour ce contrôleur' })
-    }
-
-    const { stdout } = await manager.exec(`${command} 2>&1; echo EXIT_CODE=$?`, 120_000)
-    if (stdout.match(/EXIT_CODE=[1-9]/)) {
-      throw createError({ statusCode: 500, statusMessage: `Échec création LD : ${stdout.slice(-500)}` })
-    }
+    const result = await executeHwLogicalDriveCreate(manager, cacheKey, ctrl, body)
 
     invalidateCacheKey(cacheKey)
-    return { command, stdout: stdout.slice(0, 2000) }
+    return result
   }
 
   try {
@@ -84,6 +68,7 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: err.statusCode ?? 500,
       statusMessage: err.statusMessage ?? err.message ?? 'Erreur création LD',
+      data: err.data,
     })
   }
 })

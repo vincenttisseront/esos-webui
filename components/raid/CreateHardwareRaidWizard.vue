@@ -226,6 +226,49 @@
         />
       </div>
 
+      <!-- Étape 6 : Résultat -->
+      <div v-else-if="step === 6" class="space-y-4">
+        <UAlert
+          v-if="createResult?.warning"
+          color="amber"
+          icon="i-heroicons-exclamation-triangle"
+          :title="t('raid.hw_create_wizard.result_warning_title')"
+          :description="t('raid.hw_create_wizard.result_warning_body')"
+        />
+        <UAlert
+          v-else-if="createResult?.ok"
+          color="green"
+          icon="i-heroicons-check-circle"
+          :title="t('raid.hw_create_wizard.result_success_title')"
+        />
+
+        <dl v-if="createResult" class="text-sm space-y-2 text-gray-700 dark:text-gray-300">
+          <div v-if="createResult.createdVirtualDriveId">
+            <dt class="font-medium text-gray-500 dark:text-gray-400">{{ t('raid.hw_create_wizard.result_vd_id') }}</dt>
+            <dd class="font-mono">{{ createResult.createdVirtualDriveId }}</dd>
+          </div>
+          <div>
+            <dt class="font-medium text-gray-500 dark:text-gray-400">{{ t('raid.hw_create_wizard.result_command') }}</dt>
+            <dd class="font-mono text-xs break-all bg-gray-50 dark:bg-gray-950 rounded p-2 mt-1">{{ createResult.command }}</dd>
+          </div>
+          <div>
+            <dt class="font-medium text-gray-500 dark:text-gray-400">{{ t('raid.hw_create_wizard.result_exit_code') }}</dt>
+            <dd>{{ createResult.exitCode }}</dd>
+          </div>
+          <div v-if="createResult.selectedSlots?.length">
+            <dt class="font-medium text-gray-500 dark:text-gray-400">{{ t('raid.hw_create_wizard.result_slots') }}</dt>
+            <dd class="font-mono">{{ createResult.selectedSlots.join(', ') }}</dd>
+          </div>
+        </dl>
+
+        <details v-if="createResult" class="text-xs">
+          <summary class="cursor-pointer text-gray-600 dark:text-gray-400">{{ t('raid.hw_create_wizard.result_details') }}</summary>
+          <pre class="mt-2 p-2 bg-gray-50 dark:bg-gray-950 rounded overflow-x-auto max-h-48 whitespace-pre-wrap">{{ createResult.stdout }}</pre>
+          <pre v-if="createResult.stderr" class="mt-2 p-2 bg-gray-50 dark:bg-gray-950 rounded overflow-x-auto max-h-24 whitespace-pre-wrap">{{ createResult.stderr }}</pre>
+          <p v-if="createResult.verificationMessage" class="mt-2 text-amber-600 dark:text-amber-400">{{ createResult.verificationMessage }}</p>
+        </details>
+      </div>
+
       <!-- Étape 5 : Confirmation -->
       <div v-else-if="step === 5" class="space-y-4">
         <RaidPreflightPanel v-if="preflightResult" :preflight="preflightResult" />
@@ -249,12 +292,12 @@
         color="gray"
         variant="ghost"
         :disabled="busy"
-        @click="step === 0 ? $emit('cancel') : step--"
+        @click="handleBack"
       >
-        {{ step === 0 ? t('raid.page.cancel') : t('raid.hw_create_wizard.back') }}
+        {{ step === 6 ? t('raid.hw_create_wizard.result_close') : step === 0 ? t('raid.page.cancel') : t('raid.hw_create_wizard.back') }}
       </UButton>
       <UButton
-        v-if="step < steps.length - 1"
+        v-if="step < 5"
         color="purple"
         :disabled="!canNext || busy"
         @click="handleNext"
@@ -262,7 +305,7 @@
         {{ t('raid.hw_create_wizard.next') }}
       </UButton>
       <UButton
-        v-else
+        v-else-if="step === 5"
         color="green"
         :disabled="!canSubmit || busy"
         :loading="busy"
@@ -271,12 +314,25 @@
       >
         {{ t('raid.hw_create_wizard.create') }}
       </UButton>
+      <UButton
+        v-else
+        color="purple"
+        :disabled="busy"
+        @click="finishWizard"
+      >
+        {{ t('raid.hw_create_wizard.result_close') }}
+      </UButton>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { HardwareRaidController, HardwareRaidPhysicalDrive, RaidPreflightResult } from '~/types/raid'
+import type {
+  CreateHardwareLogicalDriveResponse,
+  HardwareRaidController,
+  HardwareRaidPhysicalDrive,
+  RaidPreflightResult,
+} from '~/types/raid'
 import {
   assessHwRaidCreateEligibility,
   type HwRaidCreateIneligibilityReason,
@@ -289,11 +345,12 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  confirm: []
+  confirm: [result?: CreateHardwareLogicalDriveResponse]
   cancel: []
 }>()
 
 const { t } = useI18n()
+const toast = useToast()
 const raid = useRaidStore()
 
 const steps = computed(() => [
@@ -303,6 +360,7 @@ const steps = computed(() => [
   t('raid.hw_create_wizard.step.cache'),
   t('raid.hw_create_wizard.step.preflight'),
   t('raid.hw_create_wizard.step.confirm'),
+  t('raid.hw_create_wizard.step.result'),
 ])
 
 const step = ref(0)
@@ -311,6 +369,7 @@ const understood = ref(false)
 const submitError = ref<string | null>(null)
 const preflightResult = ref<RaidPreflightResult | null>(null)
 const preflightLoading = ref(false)
+const createResult = ref<CreateHardwareLogicalDriveResponse | null>(null)
 
 const HW_RAID_LEVELS = ['1', '5', '6', '10'] as const
 type HwRaidLevel = typeof HW_RAID_LEVELS[number]
@@ -427,12 +486,29 @@ function isDriveSelected(drive: HardwareRaidPhysicalDrive): boolean {
 }
 
 function toggleDrive(drive: HardwareRaidPhysicalDrive) {
+  if (!drive.eligible || drive.state !== 'unconfigured_good') return
   const key = driveKey(drive)
   if (isDriveSelected(drive)) {
     form.drives = form.drives.filter(d => driveKey(d) !== key)
   } else {
     form.drives.push({ enclosure: drive.enclosure, slot: drive.slot })
   }
+}
+
+function handleBack() {
+  if (step.value === 6) {
+    finishWizard()
+    return
+  }
+  if (step.value === 0) {
+    emit('cancel')
+    return
+  }
+  step.value--
+}
+
+function finishWizard() {
+  emit('confirm', createResult.value ?? undefined)
 }
 
 function selectController(id: string) {
@@ -497,10 +573,12 @@ async function runPreflight() {
 }
 
 async function submit() {
+  if (busy.value) return
   busy.value = true
   submitError.value = null
+  createResult.value = null
   try {
-    await raid.createHardwareLogicalDrive({
+    const result = await raid.createHardwareLogicalDrive({
       controllerId: form.controllerId,
       raidLevel: form.raidLevel,
       drives: form.drives,
@@ -510,9 +588,34 @@ async function submit() {
       writePolicy: form.writePolicy,
       confirmation: form.confirmation.trim(),
     })
-    emit('confirm')
+    createResult.value = result
+    step.value = 6
+    if (result.warning) {
+      toast.add({
+        title: t('raid.hw_create_wizard.result_warning_title'),
+        description: t('raid.hw_create_wizard.result_warning_body'),
+        color: 'amber',
+        icon: 'i-heroicons-exclamation-triangle',
+      })
+    } else {
+      toast.add({
+        title: t('raid.hw_create_wizard.result_success_title'),
+        description: result.createdVirtualDriveId
+          ? t('raid.hw_create_wizard.result_success_vd', { id: result.createdVirtualDriveId })
+          : undefined,
+        color: 'green',
+        icon: 'i-heroicons-check-circle',
+      })
+    }
   } catch (err: any) {
-    submitError.value = err?.data?.statusMessage ?? err.message ?? t('raid.hw_create_wizard.submit_error')
+    const msg = err?.data?.statusMessage ?? err?.statusMessage ?? err.message ?? t('raid.hw_create_wizard.submit_error')
+    submitError.value = msg
+    toast.add({
+      title: t('raid.hw_create_wizard.submit_error'),
+      description: msg,
+      color: 'red',
+      icon: 'i-heroicons-x-circle',
+    })
   } finally {
     busy.value = false
   }

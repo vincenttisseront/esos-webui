@@ -1320,13 +1320,24 @@
       "next": "Next",
       "create": "Create volume",
       "submit_error": "Error while creating the volume",
+      "result_success_title": "Hardware volume created",
+      "result_success_vd": "Detected volume: {id}",
+      "result_warning_title": "Command ran, verification incomplete",
+      "result_warning_body": "The command completed, but the new volume was not detected. See details below.",
+      "result_vd_id": "Logical drive",
+      "result_command": "Command",
+      "result_exit_code": "Exit code",
+      "result_slots": "Selected slots",
+      "result_details": "CLI output and diagnostics",
+      "result_close": "Done",
       "step": {
         "controller": "Controller",
         "level": "RAID level",
         "drives": "Disks",
         "cache": "Cache",
         "preflight": "Preflight",
-        "confirm": "Confirmation"
+        "confirm": "Confirmation",
+        "result": "Result"
       },
       "policy": {
         "nora": "NORA — No read ahead",

@@ -4,7 +4,8 @@
 import { defineStore } from 'pinia'
 import type {
   RaidOverviewResponse, RaidPreflightResult, RaidPreflightRequest,
-  RaidOperation, RaidHealth, CreateMdArrayRequest, CreateMdArrayExecutionPlan, CreateMdArrayResponse, CreateHardwareLogicalDriveRequest,
+  RaidOperation, RaidHealth, CreateMdArrayRequest, CreateMdArrayExecutionPlan, CreateMdArrayResponse,
+  CreateHardwareLogicalDriveRequest, CreateHardwareLogicalDriveResponse,
   PrepareMdPartitionsRequest, PrepareMdPartitionsResponse,
   AssembleMdArrayRequest, AssembleMdArrayResponse,
   ZeroMdSuperblocksRequest, ZeroMdSuperblocksResponse,
@@ -437,7 +438,7 @@ export const useRaidStore = defineStore('raid', {
     },
 
     async createHardwareLogicalDrive(req: CreateHardwareLogicalDriveRequest) {
-      const result = await $fetch('/api/raid/hardware/logical-drives', {
+      const result = await $fetch<CreateHardwareLogicalDriveResponse>('/api/raid/hardware/logical-drives', {
         method: 'POST',
         body: req,
         params: this.query(),
