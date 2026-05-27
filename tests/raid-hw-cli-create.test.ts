@@ -1,17 +1,25 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   buildHwCliCreateLd,
   buildPerccliCreateLd,
+  buildPerccliSetVdNameCommand,
   HW_VD_NAME_MAX_LENGTH,
   isRaidCliSyntaxError,
   mapRaidLevelToPerccliRx,
+  parseHardwareLdIdToVdIndex,
   resolveHwVdNameForCommand,
+  supportsHwVdNameOnCreate,
   supportsHwVdNameOption,
+  supportsHwVdNamePostCreate,
   validateHwVdName,
 } from '../utils/raid-hw-cli-create'
-import { resolveValidatedHwVdName } from '../server/utils/raid-hw-ld-create'
+import {
+  resolveValidatedHwVdName,
+  tryApplyHwVdNameAfterCreate,
+} from '../server/utils/raid-hw-ld-create'
 import { buildStorCliCreateLd } from '../server/utils/raid-hardware'
 import { isStorCliExecFailure } from '../server/utils/raid-hw-ld-create'
+import type { HardwareRaidController } from '../server/utils/raid-types'
 
 describe('raid-hw-cli-create', () => {
   it('mapRaidLevelToPerccliRx maps RAID levels to rX tokens', () => {
@@ -84,17 +92,25 @@ describe('raid-hw-cli-create', () => {
     expect(cmd).not.toContain('name=')
   })
 
-  it('buildPerccliCreateLd includes name= when valid and supported', () => {
+  it('buildPerccliCreateLd never includes name= on create even when volumeName set', () => {
     const cmd = buildPerccliCreateLd({
       cli: 'perccli64',
       ctrlIndex: '0',
       raidLevel: '1',
       drives: [{ enclosure: '32', slot: '6' }, { enclosure: '32', slot: '7' }],
-      volumeName: 'esos-data-01',
+      volumeName: 'test',
     })
-    expect(cmd).toContain(' name=esos-data-01')
-    expect(supportsHwVdNameOption('perccli')).toBe(true)
-    expect(resolveHwVdNameForCommand('esos-data-01', 'perccli')).toBe('esos-data-01')
+    expect(cmd).not.toContain('name=')
+    expect(supportsHwVdNameOnCreate('perccli')).toBe(false)
+    expect(supportsHwVdNamePostCreate('perccli')).toBe(true)
+    expect(resolveHwVdNameForCommand('test', 'perccli')).toBe('test')
+  })
+
+  it('buildPerccliSetVdNameCommand is separate from create', () => {
+    expect(buildPerccliSetVdNameCommand('perccli64', '0', '1', 'test')).toBe(
+      'perccli64 /c0/v1 set name=test',
+    )
+    expect(parseHardwareLdIdToVdIndex('0/vd1')).toBe('1')
   })
 
   it('buildPerccliCreateLd ignores invalid name token', () => {
@@ -112,6 +128,21 @@ describe('raid-hw-cli-create', () => {
     expect(() => resolveValidatedHwVdName('x y', 'perccli')).toThrow()
     expect(resolveValidatedHwVdName(undefined, 'perccli')).toBeUndefined()
     expect(resolveValidatedHwVdName('esos-vol', 'perccli')).toBe('esos-vol')
+  })
+
+  it('name apply failure does not throw from tryApplyHwVdNameAfterCreate', async () => {
+    const manager = {
+      exec: vi.fn().mockResolvedValue({ stdout: 'syntax error\nEXIT_CODE=0' }),
+    }
+    const ctrl = {
+      id: '0',
+      cliTool: 'perccli',
+      cliPath: 'perccli64',
+    } as HardwareRaidController
+    const result = await tryApplyHwVdNameAfterCreate(manager as any, ctrl, '0/vd2', 'test')
+    expect(result.applied).toBe(false)
+    expect(result.warning).toContain('nom')
+    expect(result.command).toContain('set name=test')
   })
 
   it('buildStorCliCreateLd wrapper matches perccli vs storcli flavors', () => {

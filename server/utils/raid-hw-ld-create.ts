@@ -11,9 +11,13 @@ import type {
 import {
   buildPerccliAddVdHelpCommand,
   buildHwCliCreateLd,
+  buildHwSetVdNameCommand,
   isRaidCliSyntaxError,
   normalizeHwVdNameInput,
+  parseHardwareLdIdToVdIndex,
+  supportsHwVdNameOnCreate,
   supportsHwVdNameOption,
+  supportsHwVdNamePostCreate,
   validateHwVdName,
   type RaidCliCreateFlavor,
 } from '../../utils/raid-hw-cli-create'
@@ -51,6 +55,10 @@ export interface HwLogicalDriveCreateResult {
   refreshCommand?: string
   refreshStdout?: string
   overviewRefreshed: boolean
+  requestedVolumeName?: string
+  nameApplyCommand?: string
+  nameApplied?: boolean
+  nameWarning?: string
 }
 
 export function hwLdDriveSlotKey(d: HwLdDriveSlot): string {
@@ -150,7 +158,10 @@ export function buildHwLogicalDriveCreateCommand(
 ): string {
   if (ctrl.cliTool === 'storcli' || ctrl.cliTool === 'perccli') {
     const cliBin = ctrl.cliPath ?? ctrl.cliTool
-    const volumeName = resolveValidatedHwVdName(body.name, ctrl.cliTool)
+    const flavor = ctrl.cliTool as RaidCliCreateFlavor
+    const volumeNameOnCreate = supportsHwVdNameOnCreate(flavor)
+      ? resolveValidatedHwVdName(body.name, ctrl.cliTool)
+      : undefined
     return buildHwCliCreateLd({
       cli: cliBin,
       ctrlIndex: ctrl.id,
@@ -160,7 +171,7 @@ export function buildHwLogicalDriveCreateCommand(
       readPolicy: body.readPolicy,
       flavor: ctrl.cliTool,
       includeCachePolicies: ctrl.cliTool === 'storcli',
-      volumeName,
+      volumeName: volumeNameOnCreate,
     })
   }
   if (ctrl.cliTool === 'MegaCli64') {
@@ -242,6 +253,101 @@ export function verifyHwLogicalDriveCreated(
 
 const SCSI_HOST_RESCAN_CMD = 'for _h in /sys/class/scsi_host/host*/scan; do [ -w "$_h" ] && echo "- - -" > "$_h"; done 2>/dev/null || true'
 
+const HW_VD_NAME_NOT_APPLIED_WARNING = 'Volume créé, mais le nom n\'a pas été appliqué.'
+
+export async function tryApplyHwVdNameAfterCreate(
+  manager: SSHSessionManager,
+  ctrl: HardwareRaidController,
+  createdVirtualDriveId: string,
+  name: string,
+): Promise<{ applied: boolean; command?: string; warning?: string; stdout?: string }> {
+  const flavor = ctrl.cliTool as RaidCliCreateFlavor
+  if (!supportsHwVdNamePostCreate(flavor)) {
+    return { applied: false, warning: HW_VD_NAME_NOT_APPLIED_WARNING }
+  }
+  const vdIndex = parseHardwareLdIdToVdIndex(createdVirtualDriveId)
+  if (!vdIndex) {
+    return { applied: false, warning: HW_VD_NAME_NOT_APPLIED_WARNING }
+  }
+  const cliBin = ctrl.cliPath ?? ctrl.cliTool
+  const command = buildHwSetVdNameCommand({
+    cli: cliBin,
+    ctrlIndex: ctrl.id,
+    vdIndex,
+    name,
+    flavor,
+  })
+  try {
+    const execRaw = await manager.exec(`${command} 2>&1; echo EXIT_CODE=$?`, 30_000)
+    const parsed = parseShellExecOutput(execRaw.stdout)
+    if (isHwCliExecFailure(ctrl.cliTool, execRaw.stdout)) {
+      return {
+        applied: false,
+        command,
+        warning: HW_VD_NAME_NOT_APPLIED_WARNING,
+        stdout: parsed.stdout.slice(0, 1000),
+      }
+    }
+    return { applied: true, command, stdout: parsed.stdout.slice(0, 500) }
+  } catch {
+    return { applied: false, command, warning: HW_VD_NAME_NOT_APPLIED_WARNING }
+  }
+}
+
+function buildCreateResultBase(
+  command: string,
+  parsed: ShellExecParsed,
+  body: CreateHardwareLogicalDriveRequest,
+  selectedSlots: string[],
+  refreshCommand?: string,
+  refreshStdout?: string,
+  requestedVolumeName?: string,
+): Omit<HwLogicalDriveCreateResult, 'ok' | 'warning' | 'createdVirtualDriveId' | 'verificationMessage' | 'nameApplyCommand' | 'nameApplied' | 'nameWarning'> {
+  return {
+    command,
+    exitCode: parsed.exitCode,
+    stdout: parsed.stdout.slice(0, 4000),
+    stderr: parsed.stderr,
+    controllerId: body.controllerId,
+    requestedRaidLevel: body.raidLevel,
+    selectedSlots,
+    refreshCommand,
+    refreshStdout,
+    overviewRefreshed: true,
+    requestedVolumeName,
+  }
+}
+
+async function applyOptionalVolumeName(
+  manager: SSHSessionManager,
+  ctrl: HardwareRaidController,
+  createdVirtualDriveId: string | undefined,
+  requestedVolumeName: string | undefined,
+): Promise<Pick<HwLogicalDriveCreateResult, 'nameApplyCommand' | 'nameApplied' | 'nameWarning' | 'warning'>> {
+  if (!requestedVolumeName || !createdVirtualDriveId) {
+    return { nameApplied: false, warning: false }
+  }
+  const nameResult = await tryApplyHwVdNameAfterCreate(
+    manager,
+    ctrl,
+    createdVirtualDriveId,
+    requestedVolumeName,
+  )
+  if (nameResult.applied) {
+    return {
+      nameApplied: true,
+      nameApplyCommand: nameResult.command,
+      warning: false,
+    }
+  }
+  return {
+    nameApplied: false,
+    nameApplyCommand: nameResult.command,
+    nameWarning: nameResult.warning ?? HW_VD_NAME_NOT_APPLIED_WARNING,
+    warning: true,
+  }
+}
+
 export async function executeHwLogicalDriveCreate(
   manager: SSHSessionManager,
   cacheKey: string,
@@ -256,6 +362,9 @@ export async function executeHwLogicalDriveCreate(
 
   const selectedSlots = body.drives.map(hwLdDriveSlotKey)
   const beforeLds = [...ctrl.logicalDrives]
+  const requestedVolumeName = body.name?.trim()
+    ? resolveValidatedHwVdName(body.name, ctrl.cliTool)
+    : undefined
   const command = buildHwLogicalDriveCreateCommand(ctrl, body)
 
   const execRaw = await manager.exec(`${command} 2>&1; echo EXIT_CODE=$?`, 120_000)
@@ -319,40 +428,44 @@ export async function executeHwLogicalDriveCreate(
   const verification = verifyHwLogicalDriveCreated(beforeLds, afterLds, body.raidLevel, ctrl.id, parsedVdNum)
   const canVerify = ctrl.cliTool === 'storcli' || ctrl.cliTool === 'perccli' || ctrl.cliTool === 'MegaCli64' || ctrl.cliTool === 'arcconf'
 
+  const createdVirtualDriveId = verification.createdVirtualDriveId
+    ?? (parsedVdNum ? `${ctrl.id}/vd${parsedVdNum}` : undefined)
+
+  const base = buildCreateResultBase(
+    command,
+    parsed,
+    body,
+    selectedSlots,
+    refreshCommand,
+    refreshStdout,
+    requestedVolumeName,
+  )
+
   if (canVerify && !verification.verified) {
     return {
       ok: false,
       warning: true,
-      command,
-      exitCode: parsed.exitCode,
-      stdout: parsed.stdout.slice(0, 4000),
-      stderr: parsed.stderr,
-      controllerId: body.controllerId,
-      requestedRaidLevel: body.raidLevel,
-      selectedSlots,
-      createdVirtualDriveId: parsedVdNum ? `${ctrl.id}/vd${parsedVdNum}` : undefined,
+      ...base,
+      createdVirtualDriveId,
       verificationMessage: verification.message,
-      refreshCommand,
-      refreshStdout,
-      overviewRefreshed: true,
     }
   }
 
+  const nameOutcome = await applyOptionalVolumeName(
+    manager,
+    ctrl,
+    createdVirtualDriveId,
+    requestedVolumeName,
+  )
+
   return {
     ok: true,
-    warning: false,
-    command,
-    exitCode: parsed.exitCode,
-    stdout: parsed.stdout.slice(0, 4000),
-    stderr: parsed.stderr,
-    controllerId: body.controllerId,
-    requestedRaidLevel: body.raidLevel,
-    selectedSlots,
-    createdVirtualDriveId: verification.createdVirtualDriveId
-      ?? (parsedVdNum ? `${ctrl.id}/vd${parsedVdNum}` : undefined),
+    warning: nameOutcome.warning ?? false,
+    ...base,
+    createdVirtualDriveId,
     verificationMessage: verification.message,
-    refreshCommand,
-    refreshStdout,
-    overviewRefreshed: true,
+    nameApplyCommand: nameOutcome.nameApplyCommand,
+    nameApplied: nameOutcome.nameApplied,
+    nameWarning: nameOutcome.nameWarning,
   }
 }

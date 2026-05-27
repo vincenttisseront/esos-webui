@@ -287,7 +287,24 @@
             <dt class="font-medium text-gray-500 dark:text-gray-400">{{ t('raid.hw_create_wizard.result_slots') }}</dt>
             <dd class="font-mono">{{ createResult.selectedSlots.join(', ') }}</dd>
           </div>
+          <div v-if="createResult.requestedVolumeName">
+            <dt class="font-medium text-gray-500 dark:text-gray-400">{{ t('raid.hw_create_wizard.result_requested_name') }}</dt>
+            <dd class="font-mono">{{ createResult.requestedVolumeName }}</dd>
+          </div>
+          <div v-if="createResult.nameApplyCommand">
+            <dt class="font-medium text-gray-500 dark:text-gray-400">{{ t('raid.hw_create_wizard.result_name_command') }}</dt>
+            <dd class="font-mono text-xs break-all">{{ createResult.nameApplyCommand }}</dd>
+          </div>
         </dl>
+
+        <UAlert
+          v-if="createResult?.nameWarning"
+          color="amber"
+          variant="subtle"
+          icon="i-heroicons-information-circle"
+          :title="t('raid.hw_create_wizard.result_name_not_applied_title')"
+          :description="createResult.nameWarning"
+        />
 
         <details v-if="createResult" class="text-xs">
           <summary class="cursor-pointer text-gray-600 dark:text-gray-400">{{ t('raid.hw_create_wizard.result_details') }}</summary>
@@ -316,6 +333,7 @@
           :read-policy="form.readPolicy"
           :write-policy="form.writePolicy"
           :volume-name="resolvedVolumeName"
+          :volume-name-on-create="supportsHwVdNameOnCreate(selectedController.cliTool as RaidCliCreateFlavor)"
         />
         <RaidPreflightPanel v-if="preflightResult" :preflight="preflightResult" />
         <div v-if="preflightResult?.requiredConfirmation" class="space-y-2">
@@ -386,6 +404,7 @@ import {
 import {
   buildHwCliCreateLd,
   resolveHwVdNameForCommand,
+  supportsHwVdNameOnCreate,
   supportsHwVdNameOption,
   validateHwVdName,
   type RaidCliCreateFlavor,
@@ -508,7 +527,7 @@ const previewCommand = computed(() => {
     readPolicy: form.readPolicy,
     flavor: ctrl.cliTool,
     includeCachePolicies: ctrl.cliTool === 'storcli',
-    volumeName: resolvedVolumeName.value,
+    volumeName: ctrl.cliTool === 'storcli' ? resolvedVolumeName.value : undefined,
   })
 })
 
@@ -696,7 +715,14 @@ async function submit() {
     })
     createResult.value = result
     step.value = 6
-    if (result.warning) {
+    if (result.nameWarning) {
+      toast.add({
+        title: t('raid.hw_create_wizard.result_name_not_applied_title'),
+        description: result.nameWarning,
+        color: 'amber',
+        icon: 'i-heroicons-information-circle',
+      })
+    } else if (result.warning) {
       toast.add({
         title: t('raid.hw_create_wizard.result_warning_title'),
         description: t('raid.hw_create_wizard.result_warning_body'),

@@ -208,4 +208,55 @@ describe('raid-hw-ld-create', () => {
     expect(hwLdDriveSlotKey({ enclosure: '252', slot: '2' })).toBe('252:2')
     expect(parseShellExecOutput(createStdout).exitCode).toBe(0)
   })
+
+  it('executeHwLogicalDriveCreate succeeds when post-create name fails', async () => {
+    const createStdout = 'VD=2\nStatus = Success\nEXIT_CODE=0'
+    const manager = {
+      exec: vi.fn()
+        .mockResolvedValueOnce({ stdout: createStdout })
+        .mockResolvedValueOnce({ stdout: '{}\nEXIT_CODE=0' })
+        .mockResolvedValueOnce({ stdout: 'EXIT_CODE=0' })
+        .mockResolvedValueOnce({ stdout: 'syntax error\nEXIT_CODE=0' }),
+    }
+
+    const overviewModule = await import('../server/utils/raid-overview.service')
+    const collectSpy = vi.spyOn(overviewModule, 'collectRaidOverview').mockResolvedValue({
+      tools: {} as any,
+      hardwareControllers: [mockController({
+        logicalDrives: [
+          { controllerId: '0', id: '0/vd0', raidLevel: '1', sizeBytes: 1, state: 'optimal' },
+          { controllerId: '0', id: '0/vd2', raidLevel: '1', sizeBytes: 1, state: 'optimal' },
+        ],
+      })],
+      mdArrays: [],
+      stoppedMdArrays: [],
+      blockDevices: [],
+      scannedAt: Date.now(),
+      alerts: [],
+    } as any)
+
+    const ctrl = mockController()
+    const result = await executeHwLogicalDriveCreate(
+      manager as any,
+      'raid-overview-test',
+      ctrl,
+      {
+        controllerId: '0',
+        raidLevel: '1',
+        drives: [{ enclosure: '252', slot: '2' }, { enclosure: '252', slot: '3' }],
+        sizeMode: 'max',
+        readPolicy: 'NORA',
+        writePolicy: 'WT',
+        confirmation: 'CREATE LD 1',
+        name: 'test',
+      },
+    )
+
+    collectSpy.mockRestore()
+    expect(result.ok).toBe(true)
+    expect(result.warning).toBe(true)
+    expect(result.command).not.toContain('name=')
+    expect(result.nameWarning).toBeTruthy()
+    expect(result.nameApplyCommand).toContain('set name=test')
+  })
 })

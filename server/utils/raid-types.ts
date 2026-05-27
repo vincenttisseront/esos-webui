@@ -874,6 +874,10 @@ export interface CreateHardwareLogicalDriveResponse {
   refreshCommand?: string
   refreshStdout?: string
   overviewRefreshed: boolean
+  requestedVolumeName?: string
+  nameApplyCommand?: string
+  nameApplied?: boolean
+  nameWarning?: string
 }
 
 export interface CreateMdArrayRequest {

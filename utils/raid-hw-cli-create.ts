@@ -8,8 +8,10 @@
  *
  * Verify on target host: `perccli /c0 add vd` or `perccli /c0 add help`
  *
- * VD name (perccli / storcli): optional `name=<value>` on `add vd` (Dell PERC CLI ref).
- * perccli 1.17.x: max 15 characters; storcli: up to 32 in practice. No spaces.
+ * VD naming:
+ * - perccli 1.17.x: `name=` on `add vd` is NOT supported — set after create via `/cX/vY set name=…`.
+ * - storcli: `name=` may be used on `add vd` when supported; otherwise post-create set.
+ * Max length: 15 (perccli), 32 (storcli). No spaces.
  */
 import { inferRaidCliTool } from '~/utils/raid-cli-path'
 
@@ -59,8 +61,18 @@ export function normalizeHwVdNameInput(raw: string | undefined | null): string {
   return (raw ?? '').trim()
 }
 
-/** perccli / storcli `add vd` document a `name=` parameter; MegaCLI/arcconf do not. */
+/** UI may collect and validate a name for these CLI tools. */
 export function supportsHwVdNameOption(flavor: RaidCliCreateFlavor): boolean {
+  return flavor === 'perccli' || flavor === 'storcli'
+}
+
+/** `name=` on `add vd` — not supported on perccli 1.17.x. */
+export function supportsHwVdNameOnCreate(flavor: RaidCliCreateFlavor): boolean {
+  return flavor === 'storcli'
+}
+
+/** Apply name after VD exists via `/cX/vY set name=…`. */
+export function supportsHwVdNamePostCreate(flavor: RaidCliCreateFlavor): boolean {
   return flavor === 'perccli' || flavor === 'storcli'
 }
 
@@ -91,10 +103,53 @@ export function resolveHwVdNameForCommand(
   return result.name
 }
 
-function appendVdNameToken(cmd: string, volumeName: string | undefined, flavor: RaidCliCreateFlavor): string {
+function appendVdNameOnCreateToken(cmd: string, volumeName: string | undefined, flavor: RaidCliCreateFlavor): string {
+  if (!supportsHwVdNameOnCreate(flavor)) return cmd
   const name = volumeName ? resolveHwVdNameForCommand(volumeName, flavor) : undefined
   if (!name) return cmd
   return `${cmd} name=${name}`
+}
+
+/** Parse controller LD id `0/vd1` → VD index `1`. */
+export function parseHardwareLdIdToVdIndex(ldId: string): string | undefined {
+  const m = ldId.match(/\/vd(\d+)$/i) ?? ldId.match(/\/v(\d+)$/i)
+  return m?.[1]
+}
+
+export function buildPerccliSetVdNameCommand(
+  cli: string,
+  ctrlIndex: string,
+  vdIndex: string,
+  name: string,
+): string {
+  const qCli = shellQuoteCliPath(cli)
+  return `${qCli} /c${ctrlIndex}/v${vdIndex} set name=${name}`
+}
+
+export function buildStorcliSetVdNameCommand(
+  cli: string,
+  ctrlIndex: string,
+  vdIndex: string,
+  name: string,
+): string {
+  return buildPerccliSetVdNameCommand(cli, ctrlIndex, vdIndex, name)
+}
+
+export function buildHwSetVdNameCommand(options: {
+  cli: string
+  ctrlIndex: string
+  vdIndex: string
+  name: string
+  flavor: RaidCliCreateFlavor
+}): string {
+  if (options.flavor === 'storcli') {
+    return buildStorcliSetVdNameCommand(options.cli, options.ctrlIndex, options.vdIndex, options.name)
+  }
+  return buildPerccliSetVdNameCommand(options.cli, options.ctrlIndex, options.vdIndex, options.name)
+}
+
+export function buildPerccliSetVdHelpCommand(cli: string, ctrlIndex: string, vdIndex: string): string {
+  return `${shellQuoteCliPath(cli)} /c${ctrlIndex}/v${vdIndex} set`
 }
 
 /** Map WebUI RAID level to perccli `rX` token (not `type=raidX`). */
@@ -140,7 +195,7 @@ export function buildPerccliCreateLd(options: BuildHwCliCreateLdOptions): string
     const rp = mapPerccliReadPolicyToken(options.readPolicy ?? 'NORA')
     cmd += ` ${wp} ${rp}`
   }
-  return appendVdNameToken(cmd, options.volumeName, 'perccli')
+  return cmd
 }
 
 export function buildStorcliModernCreateLd(options: BuildHwCliCreateLdOptions): string {
@@ -150,7 +205,7 @@ export function buildStorcliModernCreateLd(options: BuildHwCliCreateLdOptions): 
   const wp = (options.writePolicy ?? 'WT').toLowerCase()
   const rp = (options.readPolicy ?? 'ADRA').toLowerCase()
   let cmd = `${qCli} /c${options.ctrlIndex} add vd type=${type} drives=${driveStr} ${wp} ${rp}`
-  return appendVdNameToken(cmd, options.volumeName, 'storcli')
+  return appendVdNameOnCreateToken(cmd, options.volumeName, 'storcli')
 }
 
 export function resolveRaidCliCreateFlavor(cli: string, flavor?: RaidCliCreateFlavor): RaidCliCreateFlavor {

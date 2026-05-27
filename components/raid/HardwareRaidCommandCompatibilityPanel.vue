@@ -39,8 +39,8 @@
         <dd class="font-mono text-xs text-blue-950 dark:text-blue-50">{{ selectedDisksLabel }}</dd>
       </div>
       <div v-if="volumeName">
-        <dt class="text-blue-700/80 dark:text-blue-300/80 text-xs font-medium">{{ t('raid.hw_create_wizard.compat.volume_name') }}</dt>
-        <dd class="font-mono text-xs text-blue-950 dark:text-blue-50">{{ volumeName }}</dd>
+        <dt class="text-blue-700/80 dark:text-blue-300/80 text-xs font-medium">{{ volumeNameFieldLabel }}</dt>
+        <dd class="text-blue-950 dark:text-blue-50">{{ volumeNameFieldValue }}</dd>
       </div>
       <div>
         <dt class="text-blue-700/80 dark:text-blue-300/80 text-xs font-medium">{{ t('raid.hw_create_wizard.compat.read_policy') }}</dt>
@@ -79,6 +79,8 @@ const props = defineProps<{
   readPolicy: string
   writePolicy: string
   volumeName?: string
+  /** When false, name is applied after create (perccli), not in the command below */
+  volumeNameOnCreate?: boolean
 }>()
 
 const { t } = useI18n()
@@ -140,15 +142,33 @@ const introText = computed(() =>
     : t('raid.hw_create_wizard.compat.intro_storcli'),
 )
 
+const volumeNameFieldLabel = computed(() =>
+  props.volumeNameOnCreate
+    ? t('raid.hw_create_wizard.compat.volume_name')
+    : t('raid.hw_create_wizard.compat.volume_name_post_create_label'),
+)
+
+const volumeNameFieldValue = computed(() => {
+  if (!props.volumeName) return '—'
+  if (props.volumeNameOnCreate) {
+    return props.volumeName
+  }
+  return t('raid.hw_create_wizard.compat.volume_name_post_create_value', { name: props.volumeName })
+})
+
 const bulletPoints = computed(() => {
   if (isPerccliMinimal.value) {
-    return [
+    const points = [
       t('raid.hw_create_wizard.compat.point_minimal_syntax'),
       t('raid.hw_create_wizard.compat.point_cache_defaults'),
       t('raid.hw_create_wizard.compat.point_not_blocking'),
       t('raid.hw_create_wizard.compat.point_adjust_later'),
       t('raid.hw_create_wizard.compat.point_avoid_syntax_error'),
     ]
+    if (props.volumeName && !props.volumeNameOnCreate) {
+      points.push(t('raid.hw_create_wizard.compat.point_name_post_create'))
+    }
+    return points
   }
   return [
     t('raid.hw_create_wizard.compat.point_storcli_policies'),
