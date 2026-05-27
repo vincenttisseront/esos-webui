@@ -116,6 +116,54 @@ export function parseHardwareLdIdToVdIndex(ldId: string): string | undefined {
   return m?.[1]
 }
 
+/** Normalize LD id from route param (decode %2F, trim). */
+export function normalizeHardwareLdRouteId(raw: string): string {
+  let id = raw.trim()
+  try {
+    id = decodeURIComponent(id)
+  } catch {
+    /* keep raw */
+  }
+  return id.replace(/\\/g, '/')
+}
+
+export function expectedDeleteHwLdConfirmation(ldId: string): string {
+  return `DELETE LD ${normalizeHardwareLdRouteId(ldId)}`
+}
+
+export function hardwareLdIdsMatch(a: string, b: string): boolean {
+  const na = normalizeHardwareLdRouteId(a)
+  const nb = normalizeHardwareLdRouteId(b)
+  if (na === nb) return true
+  const va = parseHardwareLdIdToVdIndex(na)
+  const vb = parseHardwareLdIdToVdIndex(nb)
+  if (va === undefined || vb === undefined || va !== vb) return false
+  const ca = na.split('/')[0]
+  const cb = nb.split('/')[0]
+  return ca === cb
+}
+
+export function buildHwDeleteLdCommand(input: {
+  cliTool: string
+  cliPath?: string
+  controllerId: string
+  ldId: string
+}): string | null {
+  const vdIndex = parseHardwareLdIdToVdIndex(input.ldId)
+  if (vdIndex === undefined) return null
+  if (input.cliTool === 'storcli' || input.cliTool === 'perccli') {
+    const cliBin = (input.cliPath ?? input.cliTool).replace(/'/g, `'\\''`)
+    return `${cliBin} /c${input.controllerId}/v${vdIndex} del force`
+  }
+  if (input.cliTool === 'MegaCli64') {
+    return `MegaCli64 -CfgLdDel -L${vdIndex} -a${input.controllerId}`
+  }
+  if (input.cliTool === 'arcconf') {
+    return `arcconf DELETE ${input.controllerId} LOGICALDRIVE ${vdIndex}`
+  }
+  return null
+}
+
 export function buildPerccliSetVdNameCommand(
   cli: string,
   ctrlIndex: string,

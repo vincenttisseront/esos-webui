@@ -1461,6 +1461,7 @@ async function handleDeleteHwLd(ctrl: HardwareRaidController, ld: HardwareRaidLo
     preflight = await raid.preflight({ backend: 'hardware', action: 'delete_hw_ld', payload: { controllerId: ctrl.id, ldId: ld.id } })
     phrase = preflight.requiredConfirmation
   } catch { /* non bloquant */ }
+  if (!phrase) phrase = `DELETE LD ${ld.id}`
   const { default: Modal } = await import('~/components/raid/RaidDestructiveConfirmModal.vue')
   try {
     const confirmation = await openModal({

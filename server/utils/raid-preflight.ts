@@ -15,6 +15,7 @@ import {
   type MdAddMemberIntent,
 } from './raid-md-add-member-validation'
 import { PREPARE_MD_PARTITIONS_CONFIRMATION, validatePrepareMdPartitionsRequest } from './raid-md-partition-actions'
+import { expectedDeleteHwLdConfirmation } from '../../utils/raid-hw-cli-create'
 import {
   buildMdAssembleCommand,
   expectedMdAssembleConfirmation,
@@ -328,7 +329,7 @@ function buildConfirmationPhrase(req: RaidPreflightRequest): string {
     case 'create_hw_ld':
       return `CREATE LD ${String(payload.raidLevel ?? '1')}`
     case 'delete_hw_ld':
-      return `DELETE LD ${String(payload.ldId ?? payload.id ?? '0')}`
+      return expectedDeleteHwLdConfirmation(String(payload.ldId ?? payload.id ?? '0'))
     case 'md_remove_device':
       return `REMOVE ${String(payload.device ?? '')}`
     case 'md_set_faulty':

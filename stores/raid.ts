@@ -451,7 +451,8 @@ export const useRaidStore = defineStore('raid', {
       const result = await $fetch(`/api/raid/hardware/logical-drives/${encodeURIComponent(id)}`, {
         method: 'DELETE',
         body: { confirmation },
-        params: this.query(),
+        params: { ...this.query(), confirmation },
+        headers: { 'X-Raid-Confirmation': confirmation },
       })
       await this.fetchOverview(true)
       return result

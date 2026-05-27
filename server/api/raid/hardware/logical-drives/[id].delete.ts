@@ -1,14 +1,52 @@
 /**
  * DELETE /api/raid/hardware/logical-drives/[id] — Supprimer un LD (SDD v3.12 §8.3).
  */
+import type { H3Event } from 'h3'
 import { getActiveSSHManager, withSanContext } from '../../../../utils/ssh-runtime'
 import { collectRaidOverview } from '../../../../utils/raid-overview.service'
 import { withCache, invalidateCacheKey } from '../../../../utils/cache'
 import { requireSanIdQuery } from '../../../../utils/san-query'
 import { assertHardwareLdNotEsosProtected } from '../../../../utils/esos-system-protection'
+import {
+  buildHwDeleteLdCommand,
+  expectedDeleteHwLdConfirmation,
+  hardwareLdIdsMatch,
+  normalizeHardwareLdRouteId,
+} from '../../../../../utils/raid-hw-cli-create'
 
 const WRITE_ENABLED = process.env.RAID_HARDWARE_WRITE_ENABLED !== 'false'
   && process.env.RAID_WRITE_ACTIONS_ENABLED !== 'false'
+
+async function readDeleteConfirmation(event: H3Event, ldId: string): Promise<string> {
+  const expected = expectedDeleteHwLdConfirmation(ldId)
+  const query = getQuery(event)
+  const header = getRequestHeader(event, 'x-raid-confirmation')
+
+  let bodyConfirmation: string | undefined
+  try {
+    const body = await readBody<{ confirmation?: string }>(event)
+    bodyConfirmation = body?.confirmation
+  } catch {
+    bodyConfirmation = undefined
+  }
+
+  const candidates = [
+    bodyConfirmation,
+    typeof query.confirmation === 'string' ? query.confirmation : undefined,
+    header ?? undefined,
+  ].filter((c): c is string => typeof c === 'string' && c.length > 0)
+
+  for (const c of candidates) {
+    if (c === expected) return c
+  }
+
+  throw createError({
+    statusCode: 400,
+    statusMessage: candidates.length === 0
+      ? `Confirmation requise (attendu : "${expected}"). Les corps de requête DELETE peuvent être ignorés par le proxy — réessayez après mise à jour du client.`
+      : `Confirmation invalide (attendu : "${expected}")`,
+  })
+}
 
 export default defineEventHandler(async (event) => {
   if (!WRITE_ENABLED) {
@@ -16,15 +54,11 @@ export default defineEventHandler(async (event) => {
   }
 
   const sanId = requireSanIdQuery(event)
-  const ldId = getRouterParam(event, 'id')
-  const body = await readBody<{ confirmation: string }>(event)
+  const rawId = getRouterParam(event, 'id')
+  if (!rawId) throw createError({ statusCode: 400, statusMessage: 'id requis' })
 
-  if (!ldId) throw createError({ statusCode: 400, statusMessage: 'id requis' })
-
-  const expectedConfirm = `DELETE LD ${ldId}`
-  if (!body?.confirmation || body.confirmation !== expectedConfirm) {
-    throw createError({ statusCode: 400, statusMessage: `Confirmation invalide (attendu : "${expectedConfirm}")` })
-  }
+  const ldId = normalizeHardwareLdRouteId(rawId)
+  await readDeleteConfirmation(event, ldId)
 
   const run = async () => {
     const manager = getActiveSSHManager()
@@ -40,23 +74,17 @@ export default defineEventHandler(async (event) => {
       assertHardwareLdNotEsosProtected(ldId, protection, overview.hardwareControllers)
     }
 
-    // Trouver le LD et son contrôleur
     let command: string | null = null
     for (const ctrl of overview.hardwareControllers) {
-      const ld = ctrl.logicalDrives.find(l => l.id === ldId)
+      const ld = ctrl.logicalDrives.find(l => hardwareLdIdsMatch(l.id, ldId))
       if (!ld) continue
 
-      if (ctrl.cliTool === 'storcli' || ctrl.cliTool === 'perccli') {
-        const ldNum = ldId.split('/vd')[1] ?? '0'
-        const cliBin = ctrl.cliPath ?? ctrl.cliTool
-        command = `${cliBin.replace(/'/g, `'\\''`)} /c${ctrl.id}/v${ldNum} del force`
-      } else if (ctrl.cliTool === 'MegaCli64') {
-        const ldNum = ldId.split('/ld')[1] ?? '0'
-        command = `MegaCli64 -CfgLdDel -L${ldNum} -a${ctrl.id}`
-      } else if (ctrl.cliTool === 'arcconf') {
-        const ldNum = ldId.split('/ld')[1] ?? '0'
-        command = `arcconf DELETE ${ctrl.id} LOGICALDRIVE ${ldNum}`
-      }
+      command = buildHwDeleteLdCommand({
+        cliTool: ctrl.cliTool,
+        cliPath: ctrl.cliPath,
+        controllerId: ctrl.id,
+        ldId: ld.id,
+      })
       break
     }
 

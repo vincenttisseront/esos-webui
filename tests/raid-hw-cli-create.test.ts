@@ -7,6 +7,10 @@ import {
   isRaidCliSyntaxError,
   mapRaidLevelToPerccliRx,
   parseHardwareLdIdToVdIndex,
+  normalizeHardwareLdRouteId,
+  expectedDeleteHwLdConfirmation,
+  buildHwDeleteLdCommand,
+  hardwareLdIdsMatch,
   resolveHwVdNameForCommand,
   supportsHwVdNameOnCreate,
   supportsHwVdNameOption,
@@ -111,6 +115,18 @@ describe('raid-hw-cli-create', () => {
       'perccli64 /c0/v1 set name=test',
     )
     expect(parseHardwareLdIdToVdIndex('0/vd1')).toBe('1')
+  })
+
+  it('normalizes encoded LD route id and builds delete command', () => {
+    expect(normalizeHardwareLdRouteId('0%2Fvd1')).toBe('0/vd1')
+    expect(expectedDeleteHwLdConfirmation('0%2Fvd1')).toBe('DELETE LD 0/vd1')
+    expect(hardwareLdIdsMatch('0/vd1', '0%2Fvd1')).toBe(true)
+    expect(buildHwDeleteLdCommand({
+      cliTool: 'perccli',
+      cliPath: 'perccli64',
+      controllerId: '0',
+      ldId: '0/vd1',
+    })).toBe('perccli64 /c0/v1 del force')
   })
 
   it('buildPerccliCreateLd ignores invalid name token', () => {
