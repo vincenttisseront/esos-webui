@@ -2,9 +2,14 @@ import { describe, expect, it } from 'vitest'
 import {
   buildHwCliCreateLd,
   buildPerccliCreateLd,
+  HW_VD_NAME_MAX_LENGTH,
   isRaidCliSyntaxError,
   mapRaidLevelToPerccliRx,
+  resolveHwVdNameForCommand,
+  supportsHwVdNameOption,
+  validateHwVdName,
 } from '../utils/raid-hw-cli-create'
+import { resolveValidatedHwVdName } from '../server/utils/raid-hw-ld-create'
 import { buildStorCliCreateLd } from '../server/utils/raid-hardware'
 import { isStorCliExecFailure } from '../server/utils/raid-hw-ld-create'
 
@@ -50,6 +55,63 @@ describe('raid-hw-cli-create', () => {
     const out = 'syntax error, unexpected TOKEN_UNKNOWN\nEXIT_CODE=0'
     expect(isRaidCliSyntaxError(out)).toBe(true)
     expect(isStorCliExecFailure(out)).toBe(true)
+  })
+
+  it('validateHwVdName allows empty name', () => {
+    expect(validateHwVdName('', 'perccli')).toEqual({ ok: true, name: '' })
+    expect(validateHwVdName('   ', 'perccli')).toEqual({ ok: true, name: '' })
+  })
+
+  it('validateHwVdName rejects invalid characters and spaces', () => {
+    expect(validateHwVdName('bad name', 'perccli').ok).toBe(false)
+    expect(validateHwVdName('vol@1', 'perccli').ok).toBe(false)
+    expect(validateHwVdName('ok_name-1.2', 'perccli')).toEqual({ ok: true, name: 'ok_name-1.2' })
+  })
+
+  it('validateHwVdName enforces perccli 15 char limit', () => {
+    const long = 'a'.repeat(HW_VD_NAME_MAX_LENGTH.perccli + 1)
+    expect(validateHwVdName(long, 'perccli')).toEqual({ ok: false, error: 'too_long' })
+  })
+
+  it('buildPerccliCreateLd omits name when empty', () => {
+    const cmd = buildPerccliCreateLd({
+      cli: 'perccli64',
+      ctrlIndex: '0',
+      raidLevel: '1',
+      drives: [{ enclosure: '32', slot: '6' }],
+      volumeName: '',
+    })
+    expect(cmd).not.toContain('name=')
+  })
+
+  it('buildPerccliCreateLd includes name= when valid and supported', () => {
+    const cmd = buildPerccliCreateLd({
+      cli: 'perccli64',
+      ctrlIndex: '0',
+      raidLevel: '1',
+      drives: [{ enclosure: '32', slot: '6' }, { enclosure: '32', slot: '7' }],
+      volumeName: 'esos-data-01',
+    })
+    expect(cmd).toContain(' name=esos-data-01')
+    expect(supportsHwVdNameOption('perccli')).toBe(true)
+    expect(resolveHwVdNameForCommand('esos-data-01', 'perccli')).toBe('esos-data-01')
+  })
+
+  it('buildPerccliCreateLd ignores invalid name token', () => {
+    const cmd = buildPerccliCreateLd({
+      cli: 'perccli64',
+      ctrlIndex: '0',
+      raidLevel: '1',
+      drives: [{ enclosure: '32', slot: '6' }],
+      volumeName: 'bad name',
+    })
+    expect(cmd).not.toContain('name=')
+  })
+
+  it('resolveValidatedHwVdName rejects invalid name on server', () => {
+    expect(() => resolveValidatedHwVdName('x y', 'perccli')).toThrow()
+    expect(resolveValidatedHwVdName(undefined, 'perccli')).toBeUndefined()
+    expect(resolveValidatedHwVdName('esos-vol', 'perccli')).toBe('esos-vol')
   })
 
   it('buildStorCliCreateLd wrapper matches perccli vs storcli flavors', () => {

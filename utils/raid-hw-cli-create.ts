@@ -7,6 +7,9 @@
  * storcli (modern): `/cX add vd type=raid5 drives=...` with wt/wb and nora|ra|adra.
  *
  * Verify on target host: `perccli /c0 add vd` or `perccli /c0 add help`
+ *
+ * VD name (perccli / storcli): optional `name=<value>` on `add vd` (Dell PERC CLI ref).
+ * perccli 1.17.x: max 15 characters; storcli: up to 32 in practice. No spaces.
  */
 import { inferRaidCliTool } from '~/utils/raid-cli-path'
 
@@ -34,6 +37,64 @@ export interface BuildHwCliCreateLdOptions {
    * Append cache policy tokens. Off by default for perccli 1.17.x compatibility.
    */
   includeCachePolicies?: boolean
+  /** Optional VD name — included only when supported and valid */
+  volumeName?: string
+}
+
+/** Safe VD name charset (no spaces). */
+export const HW_VD_NAME_PATTERN = /^[A-Za-z0-9._-]+$/
+
+export const HW_VD_NAME_MAX_LENGTH: Record<RaidCliCreateFlavor, number> = {
+  perccli: 15,
+  storcli: 32,
+}
+
+export type HwVdNameValidationError = 'invalid_chars' | 'too_long'
+
+export type HwVdNameValidationResult =
+  | { ok: true; name: string }
+  | { ok: false; error: HwVdNameValidationError }
+
+export function normalizeHwVdNameInput(raw: string | undefined | null): string {
+  return (raw ?? '').trim()
+}
+
+/** perccli / storcli `add vd` document a `name=` parameter; MegaCLI/arcconf do not. */
+export function supportsHwVdNameOption(flavor: RaidCliCreateFlavor): boolean {
+  return flavor === 'perccli' || flavor === 'storcli'
+}
+
+export function validateHwVdName(
+  raw: string | undefined | null,
+  flavor: RaidCliCreateFlavor,
+): HwVdNameValidationResult {
+  const name = normalizeHwVdNameInput(raw)
+  if (!name) return { ok: true, name: '' }
+  if (!HW_VD_NAME_PATTERN.test(name)) {
+    return { ok: false, error: 'invalid_chars' }
+  }
+  const max = HW_VD_NAME_MAX_LENGTH[flavor]
+  if (name.length > max) {
+    return { ok: false, error: 'too_long' }
+  }
+  return { ok: true, name }
+}
+
+/** Returns validated name for CLI, or undefined if empty / unsupported / invalid. */
+export function resolveHwVdNameForCommand(
+  raw: string | undefined | null,
+  flavor: RaidCliCreateFlavor,
+): string | undefined {
+  if (!supportsHwVdNameOption(flavor)) return undefined
+  const result = validateHwVdName(raw, flavor)
+  if (!result.ok || !result.name) return undefined
+  return result.name
+}
+
+function appendVdNameToken(cmd: string, volumeName: string | undefined, flavor: RaidCliCreateFlavor): string {
+  const name = volumeName ? resolveHwVdNameForCommand(volumeName, flavor) : undefined
+  if (!name) return cmd
+  return `${cmd} name=${name}`
 }
 
 /** Map WebUI RAID level to perccli `rX` token (not `type=raidX`). */
@@ -79,7 +140,7 @@ export function buildPerccliCreateLd(options: BuildHwCliCreateLdOptions): string
     const rp = mapPerccliReadPolicyToken(options.readPolicy ?? 'NORA')
     cmd += ` ${wp} ${rp}`
   }
-  return cmd
+  return appendVdNameToken(cmd, options.volumeName, 'perccli')
 }
 
 export function buildStorcliModernCreateLd(options: BuildHwCliCreateLdOptions): string {
@@ -88,7 +149,8 @@ export function buildStorcliModernCreateLd(options: BuildHwCliCreateLdOptions): 
   const driveStr = formatHwCliDriveList(options.drives)
   const wp = (options.writePolicy ?? 'WT').toLowerCase()
   const rp = (options.readPolicy ?? 'ADRA').toLowerCase()
-  return `${qCli} /c${options.ctrlIndex} add vd type=${type} drives=${driveStr} ${wp} ${rp}`
+  let cmd = `${qCli} /c${options.ctrlIndex} add vd type=${type} drives=${driveStr} ${wp} ${rp}`
+  return appendVdNameToken(cmd, options.volumeName, 'storcli')
 }
 
 export function resolveRaidCliCreateFlavor(cli: string, flavor?: RaidCliCreateFlavor): RaidCliCreateFlavor {

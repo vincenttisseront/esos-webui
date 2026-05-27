@@ -206,9 +206,37 @@
           <p class="text-xs text-amber-600 dark:text-amber-400">{{ t('raid.hw_create_wizard.write_policy_hint') }}</p>
         </div>
 
-        <UFormGroup :label="t('raid.hw_create_wizard.volume_name')">
-          <UInput v-model="form.name" :placeholder="t('raid.hw_create_wizard.volume_name_placeholder')" />
-        </UFormGroup>
+        <div class="space-y-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <label
+              for="hw-create-vd-name"
+              class="text-sm font-medium text-gray-700 dark:text-gray-300"
+            >
+              {{ t('raid.hw_create_wizard.volume_name_label') }}
+            </label>
+            <UBadge color="neutral" variant="subtle" size="xs">
+              {{ t('raid.hw_create_wizard.volume_name_optional') }}
+            </UBadge>
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            {{ t('raid.hw_create_wizard.volume_name_help') }}
+          </p>
+          <UInput
+            id="hw-create-vd-name"
+            v-model="form.name"
+            :placeholder="t('raid.hw_create_wizard.volume_name_placeholder_example')"
+            class="font-mono"
+          />
+          <p v-if="volumeNameErrorMessage" class="text-xs text-red-600 dark:text-red-400">
+            {{ volumeNameErrorMessage }}
+          </p>
+          <p
+            v-else-if="volumeNameUnsupportedHint"
+            class="text-xs text-amber-600 dark:text-amber-400"
+          >
+            {{ volumeNameUnsupportedHint }}
+          </p>
+        </div>
       </div>
 
       <!-- Étape 4 : Pré-vérification -->
@@ -271,11 +299,24 @@
 
       <!-- Étape 5 : Confirmation -->
       <div v-else-if="step === 5" class="space-y-4">
-        <div v-if="previewCommand" class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-950 px-3 py-2 space-y-1">
-          <p class="text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('raid.hw_create_wizard.preview_command') }}</p>
-          <code class="block text-xs font-mono break-all text-gray-800 dark:text-gray-200">{{ previewCommand }}</code>
-          <p v-if="previewCacheNote" class="text-xs text-amber-600 dark:text-amber-400">{{ previewCacheNote }}</p>
-        </div>
+        <UAlert
+          color="error"
+          variant="subtle"
+          icon="i-heroicons-exclamation-triangle"
+          :title="t('raid.hw_create_wizard.destructive_warning_title')"
+          :description="t('raid.hw_create_wizard.destructive_warning_body')"
+        />
+        <HardwareRaidCommandCompatibilityPanel
+          v-if="previewCommand && selectedController"
+          :command="previewCommand"
+          :raid-level="form.raidLevel"
+          :drives="form.drives"
+          :cli-tool="selectedController.cliTool"
+          :cli-path="selectedController.cliPath ?? selectedController.cliTool"
+          :read-policy="form.readPolicy"
+          :write-policy="form.writePolicy"
+          :volume-name="resolvedVolumeName"
+        />
         <RaidPreflightPanel v-if="preflightResult" :preflight="preflightResult" />
         <div v-if="preflightResult?.requiredConfirmation" class="space-y-2">
           <p class="text-sm text-gray-600 dark:text-gray-400">
@@ -342,7 +383,13 @@ import {
   assessHwRaidCreateEligibility,
   type HwRaidCreateIneligibilityReason,
 } from '~/utils/raid-hw-create-eligibility'
-import { buildHwCliCreateLd } from '~/utils/raid-hw-cli-create'
+import {
+  buildHwCliCreateLd,
+  resolveHwVdNameForCommand,
+  supportsHwVdNameOption,
+  validateHwVdName,
+  type RaidCliCreateFlavor,
+} from '~/utils/raid-hw-cli-create'
 
 const props = defineProps<{
   controllers: HardwareRaidController[]
@@ -417,11 +464,41 @@ const availableDrives = computed((): HardwareRaidPhysicalDrive[] =>
 
 const freeDiskCount = computed(() => availableDrives.value.length)
 
+const cliCreateFlavor = computed((): RaidCliCreateFlavor | null => {
+  const tool = selectedController.value?.cliTool
+  if (tool === 'perccli' || tool === 'storcli') return tool
+  return null
+})
+
+const volumeNameErrorMessage = computed(() => {
+  if (!form.name.trim() || !cliCreateFlavor.value) return null
+  const result = validateHwVdName(form.name, cliCreateFlavor.value)
+  if (result.ok) return null
+  if (result.error === 'invalid_chars') {
+    return t('raid.hw_create_wizard.volume_name_invalid_chars')
+  }
+  return t('raid.hw_create_wizard.volume_name_too_long', {
+    max: cliCreateFlavor.value === 'perccli' ? 15 : 32,
+  })
+})
+
+const volumeNameUnsupportedHint = computed(() => {
+  if (!form.name.trim()) return null
+  if (cliCreateFlavor.value && supportsHwVdNameOption(cliCreateFlavor.value)) return null
+  return t('raid.hw_create_wizard.volume_name_unsupported')
+})
+
+const resolvedVolumeName = computed(() => {
+  if (!cliCreateFlavor.value || volumeNameErrorMessage.value) return undefined
+  return resolveHwVdNameForCommand(form.name, cliCreateFlavor.value)
+})
+
 const previewCommand = computed(() => {
   const ctrl = selectedController.value
   if (!ctrl || !form.controllerId || !form.drives.length || !form.raidLevel) return null
   const cli = ctrl.cliPath ?? ctrl.cliTool
   if (ctrl.cliTool !== 'perccli' && ctrl.cliTool !== 'storcli') return null
+  if (volumeNameErrorMessage.value) return null
   return buildHwCliCreateLd({
     cli,
     ctrlIndex: ctrl.id,
@@ -431,13 +508,8 @@ const previewCommand = computed(() => {
     readPolicy: form.readPolicy,
     flavor: ctrl.cliTool,
     includeCachePolicies: ctrl.cliTool === 'storcli',
+    volumeName: resolvedVolumeName.value,
   })
-})
-
-const previewCacheNote = computed(() => {
-  const ctrl = selectedController.value
-  if (!ctrl || ctrl.cliTool !== 'perccli') return null
-  return t('raid.hw_create_wizard.preview_cache_perccli')
 })
 
 function minDrivesForLevel(level: string): number {
@@ -483,6 +555,11 @@ const canNext = computed(() => {
     return !!card?.enabled
   }
   if (step.value === 2) return form.drives.length >= minDrives.value
+  if (step.value === 3) {
+    if (volumeNameErrorMessage.value) return false
+    if (form.name.trim() && volumeNameUnsupportedHint.value) return false
+    return true
+  }
   if (step.value === 4) return !!preflightResult.value?.ok
   return true
 })
@@ -611,7 +688,7 @@ async function submit() {
       controllerId: form.controllerId,
       raidLevel: form.raidLevel,
       drives: form.drives,
-      name: form.name || undefined,
+      name: resolvedVolumeName.value,
       sizeMode: 'max',
       readPolicy: form.readPolicy,
       writePolicy: form.writePolicy,

@@ -666,6 +666,7 @@ export function buildStorCliCreateLd(
     readPolicy,
     flavor: cliTool,
     includeCachePolicies: cliTool === 'storcli',
+    volumeName: undefined,
   })
 }
 

@@ -12,6 +12,10 @@ import {
   buildPerccliAddVdHelpCommand,
   buildHwCliCreateLd,
   isRaidCliSyntaxError,
+  normalizeHwVdNameInput,
+  supportsHwVdNameOption,
+  validateHwVdName,
+  type RaidCliCreateFlavor,
 } from '../../utils/raid-hw-cli-create'
 import {
   buildArcconfCreateLd,
@@ -111,12 +115,42 @@ export function buildStorCliControllerRefreshCommand(cli: string, ctrlIndex: str
   return `${qCli} /c${ctrlIndex}/vall show all J`
 }
 
+export function resolveValidatedHwVdName(
+  raw: string | undefined,
+  cliTool: HardwareRaidController['cliTool'],
+): string | undefined {
+  const trimmed = normalizeHwVdNameInput(raw)
+  if (!trimmed) return undefined
+  if (cliTool !== 'perccli' && cliTool !== 'storcli') {
+    throw createError({
+      statusCode: 422,
+      statusMessage: 'Le nom de volume n\'est pas supporté par l\'outil CLI de ce contrôleur',
+    })
+  }
+  const flavor = cliTool as RaidCliCreateFlavor
+  if (!supportsHwVdNameOption(flavor)) {
+    throw createError({
+      statusCode: 422,
+      statusMessage: 'Le nom de volume n\'est pas supporté par l\'outil CLI de ce contrôleur',
+    })
+  }
+  const result = validateHwVdName(trimmed, flavor)
+  if (!result.ok) {
+    const msg = result.error === 'invalid_chars'
+      ? 'Nom de volume invalide : lettres, chiffres, tiret, underscore et point uniquement (pas d\'espace)'
+      : `Nom de volume trop long (max ${flavor === 'perccli' ? 15 : 32} caractères)`
+    throw createError({ statusCode: 400, statusMessage: msg })
+  }
+  return result.name || undefined
+}
+
 export function buildHwLogicalDriveCreateCommand(
   ctrl: HardwareRaidController,
-  body: Pick<CreateHardwareLogicalDriveRequest, 'raidLevel' | 'drives' | 'readPolicy' | 'writePolicy'>,
+  body: Pick<CreateHardwareLogicalDriveRequest, 'raidLevel' | 'drives' | 'readPolicy' | 'writePolicy' | 'name'>,
 ): string {
   if (ctrl.cliTool === 'storcli' || ctrl.cliTool === 'perccli') {
     const cliBin = ctrl.cliPath ?? ctrl.cliTool
+    const volumeName = resolveValidatedHwVdName(body.name, ctrl.cliTool)
     return buildHwCliCreateLd({
       cli: cliBin,
       ctrlIndex: ctrl.id,
@@ -126,6 +160,7 @@ export function buildHwLogicalDriveCreateCommand(
       readPolicy: body.readPolicy,
       flavor: ctrl.cliTool,
       includeCachePolicies: ctrl.cliTool === 'storcli',
+      volumeName,
     })
   }
   if (ctrl.cliTool === 'MegaCli64') {
