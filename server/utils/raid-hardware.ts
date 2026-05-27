@@ -17,6 +17,7 @@ import {
 } from './raid-pci-detection'
 import { resolveRaidCliExecutable, validateRaidCliExecutable } from './raid-cli-runtime'
 import { extractStorCliJsonPayload, inferRaidCliTool, storCliJsonHasControllers } from '../../utils/raid-cli-path'
+import { buildHwCliCreateLd } from '../../utils/raid-hw-cli-create'
 import { countFreeHwRaidDisks } from '../../utils/raid-hw-create-eligibility'
 
 // ─── Point d'entrée ──────────────────────────────────────────────────────────
@@ -654,11 +655,18 @@ export function buildStorCliCreateLd(
   drives: Array<{ enclosure?: string; slot: string }>,
   writePolicy: 'WT' | 'WB',
   readPolicy: 'NORA' | 'RA' | 'ADRA',
+  cliTool?: 'perccli' | 'storcli',
 ): string {
-  const qCli = cli.replace(/'/g, `'\\''`)
-  const driveStr = drives.map(d => `${d.enclosure ?? '252'}:${d.slot}`).join(',')
-  const enc = drives[0]?.enclosure ?? '252'
-  return `${qCli} /c${ctrlIndex} add vd type=raid${raidLevel} drives=${driveStr} ${writePolicy.toLowerCase()} ${readPolicy.toLowerCase()}`
+  return buildHwCliCreateLd({
+    cli,
+    ctrlIndex,
+    raidLevel,
+    drives,
+    writePolicy,
+    readPolicy,
+    flavor: cliTool,
+    includeCachePolicies: cliTool === 'storcli',
+  })
 }
 
 export function buildMegaCliCreateLd(

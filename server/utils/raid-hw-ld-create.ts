@@ -9,9 +9,13 @@ import type {
   HardwareRaidLogicalDrive,
 } from './raid-types'
 import {
+  buildPerccliAddVdHelpCommand,
+  buildHwCliCreateLd,
+  isRaidCliSyntaxError,
+} from '../../utils/raid-hw-cli-create'
+import {
   buildArcconfCreateLd,
   buildMegaCliCreateLd,
-  buildStorCliCreateLd,
 } from './raid-hardware'
 import { collectRaidOverview } from './raid-overview.service'
 import { extractStorCliJsonPayload } from '../../utils/raid-cli-path'
@@ -59,6 +63,7 @@ export function parseShellExecOutput(raw: string): ShellExecParsed {
 export function isStorCliExecFailure(raw: string): boolean {
   const { exitCode, stdout } = parseShellExecOutput(raw)
   if (exitCode !== 0) return true
+  if (isRaidCliSyntaxError(stdout)) return true
   const text = stdout
   if (/Status\s*=\s*Failure/i.test(text)) return true
   if (/Command Status\s*=\s*Failed/i.test(text)) return true
@@ -112,7 +117,16 @@ export function buildHwLogicalDriveCreateCommand(
 ): string {
   if (ctrl.cliTool === 'storcli' || ctrl.cliTool === 'perccli') {
     const cliBin = ctrl.cliPath ?? ctrl.cliTool
-    return buildStorCliCreateLd(cliBin, ctrl.id, body.raidLevel, body.drives, body.writePolicy, body.readPolicy)
+    return buildHwCliCreateLd({
+      cli: cliBin,
+      ctrlIndex: ctrl.id,
+      raidLevel: body.raidLevel,
+      drives: body.drives,
+      writePolicy: body.writePolicy,
+      readPolicy: body.readPolicy,
+      flavor: ctrl.cliTool,
+      includeCachePolicies: ctrl.cliTool === 'storcli',
+    })
   }
   if (ctrl.cliTool === 'MegaCli64') {
     return buildMegaCliCreateLd(ctrl.id, body.raidLevel, body.drives, body.writePolicy, body.readPolicy)
@@ -213,9 +227,20 @@ export async function executeHwLogicalDriveCreate(
   const parsed = parseShellExecOutput(execRaw.stdout)
 
   if (isHwCliExecFailure(ctrl.cliTool, execRaw.stdout)) {
+    const syntaxError = (ctrl.cliTool === 'storcli' || ctrl.cliTool === 'perccli')
+      && isRaidCliSyntaxError(parsed.stdout)
+    const cliBin = ctrl.cliPath ?? ctrl.cliTool
+    const helpCommand = (ctrl.cliTool === 'storcli' || ctrl.cliTool === 'perccli')
+      ? buildPerccliAddVdHelpCommand(cliBin, ctrl.id)
+      : undefined
+    const statusMessage = syntaxError && ctrl.cliTool === 'perccli'
+      ? `Commande perccli invalide. Vérifiez la syntaxe avec : ${helpCommand}`
+      : syntaxError
+        ? `Commande CLI invalide (syntaxe). Consultez l'aide : ${helpCommand}`
+        : `Échec création LD : ${parsed.stdout.slice(-800)}`
     throw createError({
       statusCode: 500,
-      statusMessage: `Échec création LD : ${parsed.stdout.slice(-800)}`,
+      statusMessage,
       data: {
         command,
         exitCode: parsed.exitCode,
@@ -224,6 +249,8 @@ export async function executeHwLogicalDriveCreate(
         controllerId: body.controllerId,
         requestedRaidLevel: body.raidLevel,
         selectedSlots,
+        syntaxError,
+        helpCommand,
       },
     })
   }
@@ -259,7 +286,7 @@ export async function executeHwLogicalDriveCreate(
 
   if (canVerify && !verification.verified) {
     return {
-      ok: true,
+      ok: false,
       warning: true,
       command,
       exitCode: parsed.exitCode,

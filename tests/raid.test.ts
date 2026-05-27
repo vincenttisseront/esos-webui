@@ -278,20 +278,23 @@ describe('RAID06 – buildStorCliCreateLd', () => {
       { enclosure: '252', slot: '0' },
       { enclosure: '252', slot: '1' },
       { enclosure: '252', slot: '2' },
-    ], 'WT', 'ADRA')
+    ], 'WT', 'ADRA', 'storcli')
     expect(cmd).toContain('storcli')
-    expect(cmd).toContain('raid5')
+    expect(cmd).toContain('type=raid5')
     expect(cmd).toContain('wt')
     expect(cmd).toContain('adra')
   })
 
-  it('génère commande perccli RAID1', () => {
-    const cmd = buildStorCliCreateLd('perccli', '1', '1', [
-      { enclosure: '255', slot: '3' },
-      { enclosure: '255', slot: '4' },
-    ], 'WB', 'NORA')
-    expect(cmd).toContain('perccli')
-    expect(cmd).toContain('raid1')
+  it('génère commande perccli RAID1 (syntaxe r1, sans cache)', () => {
+    const cmd = buildStorCliCreateLd('/opt/MegaRAID/perccli/perccli64', '0', '1', [
+      { enclosure: '32', slot: '6' },
+      { enclosure: '32', slot: '7' },
+    ], 'WT', 'ADRA', 'perccli')
+    expect(cmd).toContain('perccli64')
+    expect(cmd).toContain('/c0 add vd r1 drives=32:6,32:7')
+    expect(cmd).not.toContain('type=raid')
+    expect(cmd).not.toContain('adra')
+    expect(cmd).not.toContain(' wt ')
   })
 })
 

@@ -271,6 +271,11 @@
 
       <!-- Étape 5 : Confirmation -->
       <div v-else-if="step === 5" class="space-y-4">
+        <div v-if="previewCommand" class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-950 px-3 py-2 space-y-1">
+          <p class="text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('raid.hw_create_wizard.preview_command') }}</p>
+          <code class="block text-xs font-mono break-all text-gray-800 dark:text-gray-200">{{ previewCommand }}</code>
+          <p v-if="previewCacheNote" class="text-xs text-amber-600 dark:text-amber-400">{{ previewCacheNote }}</p>
+        </div>
         <RaidPreflightPanel v-if="preflightResult" :preflight="preflightResult" />
         <div v-if="preflightResult?.requiredConfirmation" class="space-y-2">
           <p class="text-sm text-gray-600 dark:text-gray-400">
@@ -337,6 +342,7 @@ import {
   assessHwRaidCreateEligibility,
   type HwRaidCreateIneligibilityReason,
 } from '~/utils/raid-hw-create-eligibility'
+import { buildHwCliCreateLd } from '~/utils/raid-hw-cli-create'
 
 const props = defineProps<{
   controllers: HardwareRaidController[]
@@ -410,6 +416,29 @@ const availableDrives = computed((): HardwareRaidPhysicalDrive[] =>
 )
 
 const freeDiskCount = computed(() => availableDrives.value.length)
+
+const previewCommand = computed(() => {
+  const ctrl = selectedController.value
+  if (!ctrl || !form.controllerId || !form.drives.length || !form.raidLevel) return null
+  const cli = ctrl.cliPath ?? ctrl.cliTool
+  if (ctrl.cliTool !== 'perccli' && ctrl.cliTool !== 'storcli') return null
+  return buildHwCliCreateLd({
+    cli,
+    ctrlIndex: ctrl.id,
+    raidLevel: form.raidLevel,
+    drives: form.drives,
+    writePolicy: form.writePolicy,
+    readPolicy: form.readPolicy,
+    flavor: ctrl.cliTool,
+    includeCachePolicies: ctrl.cliTool === 'storcli',
+  })
+})
+
+const previewCacheNote = computed(() => {
+  const ctrl = selectedController.value
+  if (!ctrl || ctrl.cliTool !== 'perccli') return null
+  return t('raid.hw_create_wizard.preview_cache_perccli')
+})
 
 function minDrivesForLevel(level: string): number {
   const map: Record<string, number> = { '1': 2, '5': 3, '6': 4, '10': 4 }
@@ -608,7 +637,14 @@ async function submit() {
       })
     }
   } catch (err: any) {
-    const msg = err?.data?.statusMessage ?? err?.statusMessage ?? err.message ?? t('raid.hw_create_wizard.submit_error')
+    const data = err?.data ?? {}
+    let msg = data?.statusMessage ?? err?.statusMessage ?? err.message ?? t('raid.hw_create_wizard.submit_error')
+    if (data?.syntaxError && selectedController.value?.cliTool === 'perccli') {
+      msg = t('raid.hw_create_wizard.syntax_error_perccli')
+      if (data.helpCommand) {
+        msg += ` (${data.helpCommand})`
+      }
+    }
     submitError.value = msg
     toast.add({
       title: t('raid.hw_create_wizard.submit_error'),

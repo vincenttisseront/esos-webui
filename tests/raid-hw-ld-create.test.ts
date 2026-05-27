@@ -58,15 +58,19 @@ function mockController(overrides: Partial<HardwareRaidController> = {}): Hardwa
 }
 
 describe('raid-hw-ld-create', () => {
-  it('buildStorCliCreateLd RAID1 selected slots', () => {
+  it('buildStorCliCreateLd RAID1 selected slots (perccli r1 minimal)', () => {
     const cmd = buildStorCliCreateLd('perccli64', '0', '1', [
       { enclosure: '252', slot: '2' },
       { enclosure: '252', slot: '3' },
-    ], 'WT', 'NORA')
+    ], 'WT', 'NORA', 'perccli')
     expect(cmd).toContain('drives=252:2,252:3')
-    expect(cmd).toContain('type=raid1')
-    expect(cmd).toContain('wt')
-    expect(cmd).toContain('nora')
+    expect(cmd).toContain(' add vd r1 ')
+    expect(cmd).not.toContain('adra')
+    expect(cmd).not.toContain('type=raid')
+  })
+
+  it('isStorCliExecFailure treats syntax error as failure even with exit 0', () => {
+    expect(isStorCliExecFailure('syntax error, unexpected TOKEN_UNKNOWN\nEXIT_CODE=0')).toBe(true)
   })
 
   it('buildStorCliControllerRefreshCommand uses vall show all J', () => {
@@ -110,6 +114,28 @@ describe('raid-hw-ld-create', () => {
     const result = verifyHwLogicalDriveCreated(before as any, after as any, '1', '0', '1')
     expect(result.verified).toBe(true)
     expect(result.createdVirtualDriveId).toBe('0/vd1')
+  })
+
+  it('executeHwLogicalDriveCreate throws on perccli syntax error with exit 0', async () => {
+    const manager = {
+      exec: vi.fn()
+        .mockResolvedValueOnce({ stdout: 'syntax error, unexpected TOKEN_UNKNOWN\nEXIT_CODE=0' }),
+    }
+    const ctrl = mockController()
+    await expect(executeHwLogicalDriveCreate(
+      manager as any,
+      'raid-overview-test',
+      ctrl,
+      {
+        controllerId: '0',
+        raidLevel: '1',
+        drives: [{ enclosure: '252', slot: '2' }, { enclosure: '252', slot: '3' }],
+        sizeMode: 'max',
+        readPolicy: 'NORA',
+        writePolicy: 'WT',
+        confirmation: 'CREATE LD 1',
+      },
+    )).rejects.toMatchObject({ statusCode: 500 })
   })
 
   it('executeHwLogicalDriveCreate throws on perccli failure', async () => {
