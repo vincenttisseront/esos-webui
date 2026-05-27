@@ -2,12 +2,21 @@
  * Detect and protect ESOS boot/system block devices and mapped hardware RAID volumes.
  */
 import { createError } from 'h3'
+import {
+  emptyEsosSystemProtection,
+  type EsosProtectedDeviceDiagnostic,
+  type EsosSystemProtectionOverview,
+} from '../../utils/esos-system-protection'
 import type {
   HardwareRaidController,
   HardwareRaidLogicalDrive,
   RaidBlockDevice,
   RaidOverviewResponse,
 } from './raid-types'
+
+export type { EsosProtectedDeviceDiagnostic, EsosSystemProtectionOverview }
+export type EsosSystemProtectionSnapshot = EsosSystemProtectionOverview
+export { emptyEsosSystemProtection }
 
 export const ESOS_SYSTEM_LABELS = new Set([
   'ESOS_BOOT',
@@ -49,21 +58,8 @@ export interface EsosDeviceProtectionInfo {
   hardwareLogicalDriveIds?: string[]
 }
 
-export interface EsosProtectedDeviceDiagnostic {
-  protectedDevice: string
-  reasons: EsosProtectionReason[]
-  labelsFound: string[]
-  mountedPaths: string[]
-  relatedBlockPaths: string[]
-  hardwareLogicalDriveIds: string[]
-}
-
-export interface EsosSystemProtectionSnapshot {
-  entries: EsosProtectedDeviceDiagnostic[]
-  protectedBlockPaths: string[]
-  protectedDiskPaths: string[]
-  protectedHardwareLdIds: string[]
-  duplicateEsosLabels: boolean
+function protectionEntries(snapshot: EsosSystemProtectionOverview): EsosProtectedDeviceDiagnostic[] {
+  return snapshot.protectedDevices ?? []
 }
 
 export interface EsosProtectionProbe {
@@ -253,7 +249,7 @@ export function buildEsosSystemProtection(input: {
     }
   }
 
-  const entries: EsosProtectedDeviceDiagnostic[] = [...diskEntries.values()].map(e => ({
+  const protectedDevices: EsosProtectedDeviceDiagnostic[] = [...diskEntries.values()].map(e => ({
     protectedDevice: e.protectedDevice,
     reasons: e.reasons,
     labelsFound: [...e.labels],
@@ -263,7 +259,9 @@ export function buildEsosSystemProtection(input: {
   }))
 
   return {
-    entries,
+    protectedDevices,
+    warnings: [],
+    errors: [],
     protectedBlockPaths: [...protectedBlockPaths],
     protectedDiskPaths: [...protectedDiskPaths],
     protectedHardwareLdIds: [...protectedHardwareLdIds],
@@ -273,7 +271,7 @@ export function buildEsosSystemProtection(input: {
 
 export function findProtectionForBlockPath(
   path: string,
-  snapshot: EsosSystemProtectionSnapshot,
+  snapshot: EsosSystemProtectionOverview,
   blockDevices: RaidBlockDevice[],
 ): EsosDeviceProtectionInfo | null {
   const norm = normalizeBlockPath(path)
@@ -281,7 +279,7 @@ export function findProtectionForBlockPath(
   if (!snapshot.protectedBlockPaths.includes(norm) && !snapshot.protectedDiskPaths.includes(disk)) {
     return null
   }
-  const entry = snapshot.entries.find(e => e.protectedDevice === disk)
+  const entry = protectionEntries(snapshot).find(e => e.protectedDevice === disk)
   if (!entry) {
     return {
       protected: true,
@@ -305,14 +303,14 @@ export function findProtectionForBlockPath(
 
 export function findProtectionForHardwareLd(
   ldId: string,
-  snapshot: EsosSystemProtectionSnapshot,
+  snapshot: EsosSystemProtectionOverview,
   controllers: HardwareRaidController[],
 ): EsosDeviceProtectionInfo | null {
   if (!snapshot.protectedHardwareLdIds.includes(ldId)) return null
   for (const ctrl of controllers) {
     const ld = ctrl.logicalDrives.find(l => l.id === ldId)
     if (!ld) continue
-    const entry = snapshot.entries.find(e => e.hardwareLogicalDriveIds.includes(ldId))
+    const entry = protectionEntries(snapshot).find(e => e.hardwareLogicalDriveIds.includes(ldId))
     const osPath = ld.devicePath ?? ld.scsiDevice
     return {
       protected: true,
@@ -340,7 +338,7 @@ export function findProtectionForHardwareLd(
 
 export function assertBlockPathNotEsosProtected(
   path: string,
-  snapshot: EsosSystemProtectionSnapshot,
+  snapshot: EsosSystemProtectionOverview,
   blockDevices: RaidBlockDevice[],
 ): void {
   const info = findProtectionForBlockPath(path, snapshot, blockDevices)
@@ -350,7 +348,7 @@ export function assertBlockPathNotEsosProtected(
 
 export function assertHardwareLdNotEsosProtected(
   ldId: string,
-  snapshot: EsosSystemProtectionSnapshot,
+  snapshot: EsosSystemProtectionOverview,
   controllers: HardwareRaidController[],
 ): void {
   const info = findProtectionForHardwareLd(ldId, snapshot, controllers)
@@ -377,15 +375,17 @@ export function throwEsosProtectedError(info: EsosDeviceProtectionInfo): never {
 export function applyEsosProtectionToOverview(
   overview: Pick<RaidOverviewResponse, 'blockDevices' | 'hardwareControllers'>,
   probe?: EsosProtectionProbe,
-): EsosSystemProtectionSnapshot {
+): EsosSystemProtectionOverview {
+  const blockDevices = overview.blockDevices ?? []
+  const hardwareControllers = overview.hardwareControllers ?? []
   const snapshot = buildEsosSystemProtection({
-    blockDevices: overview.blockDevices,
-    hardwareControllers: overview.hardwareControllers,
+    blockDevices,
+    hardwareControllers,
     probe,
   })
 
-  for (const dev of overview.blockDevices) {
-    const info = findProtectionForBlockPath(dev.path, snapshot, overview.blockDevices)
+  for (const dev of blockDevices) {
+    const info = findProtectionForBlockPath(dev.path, snapshot, blockDevices)
     if (!info) continue
     dev.esosSystemProtected = true
     dev.esosProtection = info
@@ -399,9 +399,9 @@ export function applyEsosProtectionToOverview(
     }
   }
 
-  for (const ctrl of overview.hardwareControllers) {
+  for (const ctrl of hardwareControllers) {
     for (const ld of ctrl.logicalDrives) {
-      const info = findProtectionForHardwareLd(ld.id, snapshot, overview.hardwareControllers)
+      const info = findProtectionForHardwareLd(ld.id, snapshot, hardwareControllers)
       if (!info) continue
       ld.esosSystemProtected = true
       ld.esosProtection = info
@@ -413,6 +413,25 @@ export function applyEsosProtectionToOverview(
   }
 
   return snapshot
+}
+
+/** Non-fatal wrapper for RAID/LVM overview collection. */
+export function collectSystemProtectionForOverview(
+  overview: Pick<RaidOverviewResponse, 'blockDevices' | 'hardwareControllers'>,
+  probe?: EsosProtectionProbe,
+): EsosSystemProtectionOverview {
+  try {
+    return applyEsosProtectionToOverview(overview, probe)
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    return {
+      ...emptyEsosSystemProtection(),
+      errors: [message],
+      warnings: [
+        'La détection des volumes système ESOS a échoué. Les données RAID/LVM restent disponibles sans marquage de protection.',
+      ],
+    }
+  }
 }
 
 export function esosProtectionBlockerMessage(info: EsosDeviceProtectionInfo): string {

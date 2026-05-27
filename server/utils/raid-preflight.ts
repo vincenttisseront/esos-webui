@@ -28,7 +28,7 @@ import { isValidMdArrayName } from './stopped-md-arrays'
 import {
   esosProtectionBlockerMessage,
   findProtectionForHardwareLd,
-  type EsosSystemProtectionSnapshot,
+  type EsosSystemProtectionOverview,
 } from './esos-system-protection'
 import type { HardwareRaidController } from './raid-types'
 
@@ -60,7 +60,7 @@ export async function runPreflight(
   stoppedMdArrays: StoppedMdArray[] = [],
   options?: {
     sanId?: string
-    systemProtection?: EsosSystemProtectionSnapshot
+    systemProtection?: EsosSystemProtectionOverview
     hardwareControllers?: HardwareRaidController[]
   },
 ): Promise<RaidPreflightResult> {

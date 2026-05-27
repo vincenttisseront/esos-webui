@@ -20,6 +20,7 @@ import {
   savePendingAdvancedCleanup,
 } from '~/utils/stopped-md'
 import { overviewHasActiveMdProgress } from '~/utils/raid-md-progress'
+import { normalizeEsosSystemProtection } from '~/utils/esos-system-protection'
 
 const MD_PROGRESS_POLL_INTERVAL_MS = 5_000
 const MD_PROGRESS_POLL_MAX_FAILURES = 3
@@ -82,7 +83,9 @@ export const useRaidStore = defineStore('raid', {
       return paths.size
     },
 
-    runningOperations: (s) => s.operations.filter(o => o.status === 'running'),
+    runningOperations: (s) => s.operations.filter(o => s.status === 'running'),
+
+    systemProtection: (s) => normalizeEsosSystemProtection(s.overview?.systemProtection),
   },
 
   actions: {
@@ -125,7 +128,11 @@ export const useRaidStore = defineStore('raid', {
       let ok = false
       try {
         const params = { ...this.query(), ...(refresh ? { refresh: '1' } : {}) }
-        this.overview = await $fetch<RaidOverviewResponse>('/api/raid/overview', { params })
+        const data = await $fetch<RaidOverviewResponse>('/api/raid/overview', { params })
+        this.overview = {
+          ...data,
+          systemProtection: normalizeEsosSystemProtection(data.systemProtection),
+        }
         if (silent) this.progressPollFailures = 0
         ok = true
       } catch (err: any) {

@@ -672,7 +672,7 @@ export interface RaidOverviewResponse {
   mdArrays: MdArray[]
   stoppedMdArrays: StoppedMdArray[]
   blockDevices: RaidBlockDevice[]
-  systemProtection?: import('./esos-system-protection').EsosSystemProtectionSnapshot
+  systemProtection?: import('../../utils/esos-system-protection').EsosSystemProtectionOverview
   alerts: Array<{
     severity: 'info' | 'warning' | 'critical'
     message: string

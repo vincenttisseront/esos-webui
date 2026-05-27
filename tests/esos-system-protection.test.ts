@@ -111,7 +111,7 @@ describe('esos-system-protection', () => {
     expect(snap.duplicateEsosLabels).toBe(true)
     expect(snap.protectedDiskPaths).toContain('/dev/sda')
     expect(snap.protectedDiskPaths).toContain('/dev/sdb')
-    const reasons = snap.entries.flatMap(e => e.reasons.map(r => r.code))
+    const reasons = snap.protectedDevices.flatMap(e => e.reasons.map(r => r.code))
     expect(reasons).toContain('duplicate_esos_label')
   })
 

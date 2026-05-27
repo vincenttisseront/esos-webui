@@ -17,7 +17,7 @@ import { collectKernelRaidInfo } from './raid-pci-detection'
 import { buildMdDetectionSummary, getMdEligibilityReasons } from './raid-md-detection'
 import { detectStoppedMdArrays } from './stopped-md-arrays'
 import { extractRaidCliFromToolsOutput, toolsOutputHasRaidCli } from '../../utils/raid-cli-path'
-import { applyEsosProtectionToOverview, ESOS_SYSTEM_LABELS } from './esos-system-protection'
+import { collectSystemProtectionForOverview, ESOS_SYSTEM_LABELS } from './esos-system-protection'
 
 // ─── Commande bulk ───────────────────────────────────────────────────────────
 
@@ -102,7 +102,21 @@ export async function collectRaidOverview(manager: SSHSessionManager): Promise<R
   // Marquer les block devices utilisés par MD
   markMdUsage(blockDevices, mdArrays)
 
+  const systemProtection = collectSystemProtectionForOverview(
+    { blockDevices, hardwareControllers },
+    {
+      findmntLines: (sections.FINDMNT ?? '').split('\n'),
+      rootRealPath: (sections.ROOT_DEV ?? '').split('\n').map(l => l.trim()).find(l => l.startsWith('/')) ?? undefined,
+    },
+  )
+
   const alerts = buildAlerts(mdArrays, hardwareControllers, tools, blockDevices, stoppedMdArrays)
+  for (const w of systemProtection.warnings) {
+    alerts.push({ severity: 'warning', code: 'esos_protection_detection', message: w })
+  }
+  for (const e of systemProtection.errors) {
+    alerts.push({ severity: 'warning', code: 'esos_protection_detection', message: e })
+  }
 
   const mdDetection = buildMdDetectionSummary({
     nodeSanId: '',

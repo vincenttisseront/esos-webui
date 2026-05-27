@@ -3,6 +3,8 @@
  */
 import type { SSHSessionManager } from './ssh-session-manager'
 import { collectRaidOverview } from './raid-overview.service'
+import { emptyEsosSystemProtection } from '../../utils/esos-system-protection'
+import type { RaidOverviewResponse } from './raid-types'
 import { parsePvsJson, parseVgsJson, parseLvsJson } from './parsers/lvm-json.parser'
 import { allLvPathCandidates, mapParsedLvToLogicalVolume } from './lvm-lv-mapper'
 import { buildLvmCandidatesFromInventory } from './lvm-candidates'
@@ -89,9 +91,48 @@ function buildAlerts(tools: LvmToolsInfo, clusteredVg: boolean): LvmAlert[] {
   return alerts
 }
 
+async function collectRaidOverviewForLvm(manager: SSHSessionManager): Promise<RaidOverviewResponse> {
+  try {
+    return await collectRaidOverview(manager)
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    if (message.includes('SSH') || message.includes('non connecté')) {
+      throw err
+    }
+    return {
+      scannedAt: Date.now(),
+      tools: {
+        mdadm: false, lspci: false, storcli: false, perccli: false, MegaCli64: false,
+        arcconf: false, lsscsi: false, wipefs: false, parted: false, sfdisk: false,
+        fdisk: false, partprobe: false, udevadm: false,
+      },
+      hardwareControllers: [],
+      mdArrays: [],
+      stoppedMdArrays: [],
+      blockDevices: [],
+      systemProtection: {
+        ...emptyEsosSystemProtection(),
+        errors: [message],
+        warnings: ['Scan RAID partiel — inventaire LVM limité aux données LVM locales.'],
+      },
+      alerts: [{
+        severity: 'warning',
+        code: 'raid_overview_partial',
+        message: `Scan RAID incomplet : ${message}`,
+      }],
+      mdDetection: {
+        nodeSanId: '',
+        nodeLabel: 'local',
+        hasAnyMdState: false,
+        items: [],
+      },
+    }
+  }
+}
+
 export async function collectLvmOverview(manager: SSHSessionManager): Promise<LvmOverviewResponse> {
   const [raidOverview, lvmResult, scstMap] = await Promise.all([
-    collectRaidOverview(manager),
+    collectRaidOverviewForLvm(manager),
     manager.exec(LVM_OVERVIEW_CMD, 30_000),
     scstFilenamesByPath(manager),
   ])

@@ -948,20 +948,7 @@ export interface RaidOverviewResponse {
   mdArrays: MdArray[]
   stoppedMdArrays: StoppedMdArray[]
   blockDevices: RaidBlockDevice[]
-  systemProtection?: {
-    entries: Array<{
-      protectedDevice: string
-      reasons: EsosProtectionReason[]
-      labelsFound: string[]
-      mountedPaths: string[]
-      relatedBlockPaths: string[]
-      hardwareLogicalDriveIds: string[]
-    }>
-    protectedBlockPaths: string[]
-    protectedDiskPaths: string[]
-    protectedHardwareLdIds: string[]
-    duplicateEsosLabels: boolean
-  }
+  systemProtection?: import('~/utils/esos-system-protection').EsosSystemProtectionOverview
   alerts: Array<{
     severity: 'info' | 'warning' | 'critical'
     message: string
