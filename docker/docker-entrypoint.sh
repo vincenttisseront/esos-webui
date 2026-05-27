@@ -3,8 +3,13 @@
 # The app image runs node as UID/GID 1000 (see Dockerfile).
 set -e
 
-ESOS_UID="${ESOS_RUNTIME_UID:-1000}"
-ESOS_GID="${ESOS_RUNTIME_GID:-1000}"
+if id esos >/dev/null 2>&1; then
+  ESOS_UID=$(id -u esos)
+  ESOS_GID=$(id -g esos)
+else
+  ESOS_UID="${ESOS_RUNTIME_UID:-1000}"
+  ESOS_GID="${ESOS_RUNTIME_GID:-1000}"
+fi
 
 mkdir -p /opt/esos-webui/binaries /app/data /app/keys
 

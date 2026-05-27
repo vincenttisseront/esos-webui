@@ -31,8 +31,9 @@ FROM node:22-alpine AS runner
 
 WORKDIR /app
 
-# Non-root runtime user — fixed UID/GID 1000 for volume permissions (see docs/deploy-binary-catalog.md)
-RUN addgroup -g 1000 -S esos && adduser -u 1000 -S -G esos esos
+# Non-root runtime user — UID/GID 1000 when available (Alpine may already use GID 1000 for "users")
+COPY docker/create-esos-user.sh /tmp/create-esos-user.sh
+RUN chmod +x /tmp/create-esos-user.sh && /tmp/create-esos-user.sh && rm /tmp/create-esos-user.sh
 
 # Copy only the Nuxt build output
 COPY --from=builder --chown=esos:esos /app/.output ./

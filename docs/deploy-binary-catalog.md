@@ -7,7 +7,7 @@ The WebUI stores uploaded deployment binaries under **`/opt/esos-webui/binaries`
 | Property | Value |
 |----------|--------|
 | User | `esos` |
-| UID / GID | **1000** / **1000** |
+| UID / GID | **1000** when free on Alpine; otherwise `esos` uses the existing GID **1000** group (`users`) |
 | Process | `node server/index.mjs` (non-root after entrypoint) |
 
 The image entrypoint (`docker/docker-entrypoint.sh`) runs briefly as **root** to `chown` mounted volumes, then drops privileges with `su-exec esos`.
