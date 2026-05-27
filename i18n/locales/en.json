@@ -1261,6 +1261,59 @@
         "modal_description": "This action runs mdadm --zero-superblock on the selected partitions. It removes MD metadata and can prevent array recovery."
       }
     },
+    "hw_create_wizard": {
+      "title_step": "Step {step}/{total} — Create hardware RAID volume",
+      "controller_intro": "Select a controller with free physical disks and a working perccli/storcli CLI.",
+      "controller_label": "RAID controller",
+      "controller_id": "Controller {id}",
+      "no_eligible_title": "No controller eligible for volume creation",
+      "field_mode": "Mode",
+      "field_cli": "CLI",
+      "field_pd": "Physical disks",
+      "field_free": "Free (UGood)",
+      "field_vd": "Virtual drives",
+      "available_drives": "Available physical disks for this volume: {count}",
+      "raid_level": "RAID level",
+      "min_drives": "Minimum {min} drives required for RAID{level}.",
+      "select_drives": "Select physical disks ({min} minimum):",
+      "drives_selected": "Selected: {selected} / {min} required",
+      "read_policy": "Read policy",
+      "write_policy": "Write policy",
+      "write_policy_hint": "WB (Write-Back) improves performance but requires a BBU",
+      "volume_name": "Volume name (optional)",
+      "volume_name_placeholder": "My volume",
+      "preflight_loading": "Running checks…",
+      "preflight_blocked": "Operation blocked",
+      "confirm_phrase": "Type exactly:",
+      "understand_risk": "I understand that creating a hardware volume erases the selected disks.",
+      "back": "Back",
+      "next": "Next",
+      "create": "Create volume",
+      "submit_error": "Error while creating the volume",
+      "step": {
+        "controller": "Controller",
+        "level": "RAID level",
+        "drives": "Disks",
+        "cache": "Cache",
+        "preflight": "Preflight",
+        "confirm": "Confirmation"
+      },
+      "policy": {
+        "nora": "NORA — No read ahead",
+        "ra": "RA — Read ahead",
+        "adra": "ADRA — Adaptive read ahead (recommended)",
+        "wt": "WT — Write-Through (safe without BBU)",
+        "wb": "WB — Write-Back (fast, requires BBU)"
+      },
+      "reason": {
+        "cli_missing": "perccli/storcli CLI not found on this node",
+        "cli_test_failed": "CLI present but read-only test failed (/call show)",
+        "no_free_disks": "No free physical disks (UGood / unconfigured)",
+        "create_not_supported": "Volume creation not supported for this CLI type yet",
+        "san_read_only": "SAN is read-only — creation disabled",
+        "read_only_limited": "Controller detected via kernel only (limited read-only mode)"
+      }
+    },
     "missing_tools": {
       "install_cta": "Install perccli64",
       "wizard": { "title": "Install missing RAID tools" },

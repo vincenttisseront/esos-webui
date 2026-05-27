@@ -1,6 +1,7 @@
 import type { SSHSessionManager } from './ssh-session-manager'
 import type { MissingToolsReadinessResponse } from '~/types/missing-tools'
 import { collectKernelRaidInfo } from './raid-pci-detection'
+import { extractRaidCliFromToolsOutput, toolsOutputHasRaidCli } from '../../utils/raid-cli-path'
 
 const RAID_CLI_PATHS = [
   '/opt/MegaRAID/perccli/perccli64',
@@ -28,20 +29,14 @@ export function parseWhichAndPaths(out: string): Record<ToolName, boolean> & { r
     resolvedPath: null as string | null,
   }
 
-  for (const l of lines) {
-    if (l.includes('perccli64')) has.perccli64 = true
-    else if (l.includes('perccli')) has.perccli = true
-    if (l.includes('storcli64')) has.storcli64 = true
-    else if (l.includes('storcli')) has.storcli = true
-  }
+  const flags = toolsOutputHasRaidCli(out)
+  has.perccli = flags.perccli
+  has.storcli = flags.storcli
+  has.perccli64 = flags.perccli && out.toLowerCase().includes('perccli64')
+  has.storcli64 = flags.storcli && out.toLowerCase().includes('storcli64')
 
-  // Prefer the first usable absolute path; then short name fallback.
-  for (const l of lines) {
-    if (l.startsWith('/') && (l.includes('perccli64') || l.includes('storcli64') || l.endsWith('/perccli') || l.endsWith('/storcli'))) {
-      has.resolvedPath = l
-      return has
-    }
-  }
+  has.resolvedPath = extractRaidCliFromToolsOutput(out)
+  if (has.resolvedPath) return has
   if (has.perccli64) has.resolvedPath = 'perccli64'
   else if (has.storcli64) has.resolvedPath = 'storcli64'
   else if (has.perccli) has.resolvedPath = 'perccli'

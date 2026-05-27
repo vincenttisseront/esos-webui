@@ -1261,6 +1261,59 @@
         "modal_description": "Cette action exécute mdadm --zero-superblock sur les partitions sélectionnées. Elle supprime les métadonnées MD et peut empêcher la récupération du tableau."
       }
     },
+    "hw_create_wizard": {
+      "title_step": "Étape {step}/{total} — Créer un volume RAID matériel",
+      "controller_intro": "Sélectionnez un contrôleur avec des disques physiques libres et une CLI perccli/storcli fonctionnelle.",
+      "controller_label": "Contrôleur RAID",
+      "controller_id": "Contrôleur {id}",
+      "no_eligible_title": "Aucun contrôleur éligible à la création de volume",
+      "field_mode": "Mode",
+      "field_cli": "CLI",
+      "field_pd": "Disques physiques",
+      "field_free": "Libres (UGood)",
+      "field_vd": "Volumes virtuels",
+      "available_drives": "Disques physiques disponibles pour ce volume : {count}",
+      "raid_level": "Niveau RAID",
+      "min_drives": "Minimum {min} disques requis pour RAID{level}.",
+      "select_drives": "Sélectionnez les disques physiques ({min} minimum) :",
+      "drives_selected": "Sélectionnés : {selected} / {min} requis",
+      "read_policy": "Politique de lecture",
+      "write_policy": "Politique d'écriture",
+      "write_policy_hint": "WB (Write-Back) améliore les performances mais requiert une BBU",
+      "volume_name": "Nom du volume (optionnel)",
+      "volume_name_placeholder": "Mon volume",
+      "preflight_loading": "Analyse en cours…",
+      "preflight_blocked": "Opération bloquée",
+      "confirm_phrase": "Saisissez exactement :",
+      "understand_risk": "Je comprends que la création d'un volume matériel efface les disques sélectionnés.",
+      "back": "Retour",
+      "next": "Suivant",
+      "create": "Créer le volume",
+      "submit_error": "Erreur lors de la création",
+      "step": {
+        "controller": "Contrôleur",
+        "level": "Niveau RAID",
+        "drives": "Disques",
+        "cache": "Cache",
+        "preflight": "Pré-vérification",
+        "confirm": "Confirmation"
+      },
+      "policy": {
+        "nora": "NORA — Pas de lecture anticipée",
+        "ra": "RA — Lecture anticipée",
+        "adra": "ADRA — Lecture anticipée adaptative (recommandé)",
+        "wt": "WT — Write-Through (sûr sans BBU)",
+        "wb": "WB — Write-Back (performant, nécessite BBU)"
+      },
+      "reason": {
+        "cli_missing": "CLI perccli/storcli introuvable sur ce nœud",
+        "cli_test_failed": "CLI présente mais le test lecture seule a échoué (/call show)",
+        "no_free_disks": "Aucun disque physique libre (UGood / non configuré)",
+        "create_not_supported": "Création de volume non supportée pour ce type de CLI",
+        "san_read_only": "SAN en lecture seule — création désactivée",
+        "read_only_limited": "Contrôleur détecté via le kernel uniquement (mode lecture seule limitée)"
+      }
+    },
     "missing_tools": {
       "install_cta": "Installer perccli64",
       "wizard": { "title": "Installer des outils RAID manquants" },

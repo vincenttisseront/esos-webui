@@ -853,7 +853,15 @@ async function openPrepareMdPartitionsWizard() {
 async function openHwWizard(ctrl?: HardwareRaidController) {
   const { default: Wizard } = await import('~/components/raid/CreateHardwareRaidWizard.vue')
   try {
-    await openModal({ component: Wizard, props: { controllers: raid.controllers, persistent: true } })
+    await openModal({
+      component: Wizard,
+      props: {
+        controllers: raid.controllers,
+        initialControllerId: ctrl?.id,
+        sanReadOnly: isReadOnly.value,
+        persistent: true,
+      },
+    })
     await raid.fetchOverview(true)
   } catch { /* annulé */ }
 }
@@ -1474,7 +1482,7 @@ function opStatusColor(s: string) {
 }
 
 const canCreateHwRaid = computed(() =>
-  raid.controllers.some(c => c.supportsCreate),
+  raid.controllers.some(c => c.supportsCreate && c.managementMode === 'full'),
 )
 
 const lvmRaidSummary = computed(() =>

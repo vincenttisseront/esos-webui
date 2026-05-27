@@ -15,6 +15,9 @@ import {
   buildReadOnlyControllers,
   type PciRaidCandidate,
 } from './raid-pci-detection'
+import { resolveRaidCliExecutable, validateRaidCliExecutable } from './raid-cli-runtime'
+import { extractStorCliJsonPayload, inferRaidCliTool, storCliJsonHasControllers } from '../../utils/raid-cli-path'
+import { countFreeHwRaidDisks } from '../../utils/raid-hw-create-eligibility'
 
 // ─── Point d'entrée ──────────────────────────────────────────────────────────
 
@@ -27,8 +30,13 @@ export async function discoverHardwareControllers(
   const cliControllers: HardwareRaidController[] = []
 
   if (tools.storcli || tools.perccli) {
-    const cli = resolvedCli ?? (tools.perccli ? 'perccli' : 'storcli')
-    cliControllers.push(...await tryStorCliDiscovery(manager, cli))
+    const executableCli = await resolveRaidCliExecutable(manager, resolvedCli)
+    if (executableCli) {
+      const validation = await validateRaidCliExecutable(manager, executableCli)
+      if (validation.ok) {
+        cliControllers.push(...await tryStorCliDiscovery(manager, executableCli))
+      }
+    }
   } else if (tools.MegaCli64) {
     cliControllers.push(...await tryMegaCliDiscovery(manager))
   }
@@ -37,11 +45,16 @@ export async function discoverHardwareControllers(
     cliControllers.push(...await tryArcconfDiscovery(manager))
   }
 
-  // Mark all CLI-discovered controllers as fully managed
+  // Mark all CLI-discovered controllers as fully managed; gate create on free disks
   for (const ctrl of cliControllers) {
     ctrl.managementMode = 'full'
     ctrl.detectionSource = ['cli']
     ctrl.warnings = []
+    const freeDisks = countFreeHwRaidDisks(ctrl)
+    ctrl.supportsCreate = freeDisks > 0
+    if (freeDisks === 0) {
+      ctrl.warnings.push('Aucun disque physique libre (UGood) pour créer un volume.')
+    }
   }
 
   // Merge with PCI-detected controllers (add read-only ones not found by CLI)
@@ -90,8 +103,14 @@ async function tryStorCliDiscovery(
   manager: SSHSessionManager,
   cli: string,
 ): Promise<HardwareRaidController[]> {
+  const q = cli.replace(/'/g, `'\\''`)
   try {
-    const { stdout } = await manager.exec(`${cli} /call show all J 2>/dev/null`, 30_000)
+    const { stdout } = await manager.exec(`${q} /call show all J 2>/dev/null`, 45_000)
+    const parsed = parseStorCliJson(stdout, cli)
+    if (parsed.length) return parsed
+  } catch { /* try lighter command */ }
+  try {
+    const { stdout } = await manager.exec(`${q} /call show J 2>/dev/null`, 30_000)
     return parseStorCliJson(stdout, cli)
   } catch {
     return []
@@ -100,9 +119,13 @@ async function tryStorCliDiscovery(
 
 function parseStorCliJson(json: string, cli: string): HardwareRaidController[] {
   const controllers: HardwareRaidController[] = []
+  const payload = extractStorCliJsonPayload(json)
+  if (!storCliJsonHasControllers(payload) && !payload.includes('Response Data')) {
+    return controllers
+  }
   try {
-    const data = JSON.parse(json)
-    const clist: unknown[] = data?.Controllers ?? []
+    const data = JSON.parse(payload) as { Controllers?: unknown[]; controllers?: unknown[] }
+    const clist: unknown[] = data?.Controllers ?? data?.controllers ?? []
 
     for (const c of clist) {
       const cObj = c as Record<string, unknown>
@@ -175,8 +198,9 @@ function parseStorCliJson(json: string, cli: string): HardwareRaidController[] {
         }
       })
 
-      const vendor: RaidVendor = cli.includes('perccli') ? 'dell_perc' : 'lsi_megaraid'
+      const vendor: RaidVendor = inferRaidCliTool(cli) === 'perccli' ? 'dell_perc' : 'lsi_megaraid'
       const controllerMode = extractStorCliControllerMode(responseData, pdList, vdList)
+      const cliTool = inferRaidCliTool(cli)
 
       controllers.push({
         id: ctrlIndex,
@@ -184,7 +208,7 @@ function parseStorCliJson(json: string, cli: string): HardwareRaidController[] {
         model,
         serial,
         firmware,
-        cliTool: cli.includes('perccli') ? 'perccli' : 'storcli',
+        cliTool,
         cliPath: cli,
         detectionSource: ['cli'],
         managementMode: 'full',

@@ -16,6 +16,7 @@ import { enrichHardwareLdOsPaths } from './hw-raid-os-mapper'
 import { collectKernelRaidInfo } from './raid-pci-detection'
 import { buildMdDetectionSummary, getMdEligibilityReasons } from './raid-md-detection'
 import { detectStoppedMdArrays } from './stopped-md-arrays'
+import { extractRaidCliFromToolsOutput, toolsOutputHasRaidCli } from '../../utils/raid-cli-path'
 
 // ─── Commande bulk ───────────────────────────────────────────────────────────
 
@@ -24,7 +25,8 @@ const RAID_OVERVIEW_CMD = [
   'echo "===TOOLS==="',
   'which mdadm storcli storcli64 perccli perccli64 MegaCli64 megacli arcconf lsscsi lspci wipefs parted sfdisk fdisk partprobe udevadm 2>/dev/null || true',
   // Chemins connus pour les outils non dans PATH
-  'for _p in /opt/MegaRAID/perccli/perccli64 /opt/MegaRAID/perccli/perccli /opt/MegaRAID/storcli/storcli64 /opt/MegaRAID/storcli/storcli /opt/dell/perccli/perccli64 /usr/sbin/perccli64 /usr/local/sbin/perccli64 /usr/sbin/storcli64 /usr/local/sbin/storcli64 /sbin/perccli64 /sbin/storcli64; do [ -x "$_p" ] && echo "$_p"; done 2>/dev/null || true',
+  'for _p in /opt/MegaRAID/perccli/perccli64 /opt/MegaRAID/perccli/perccli /opt/MegaRAID/storcli/storcli64 /opt/MegaRAID/storcli/storcli /opt/dell/perccli/perccli64 /usr/sbin/perccli64 /usr/local/sbin/perccli64 /usr/sbin/storcli64 /usr/local/sbin/storcli64 /sbin/perccli64 /sbin/storcli64 /Opt/MegaRAID/Perccli/Perccli64; do [ -x "$_p" ] && echo "$_p"; done 2>/dev/null || true',
+  'find /opt /Opt /usr/local/sbin /usr/sbin /sbin 2>/dev/null \\( -iname perccli64 -o -iname storcli64 \\) -type f -perm -111 2>/dev/null | head -3 || true',
   // Block devices complets
   'echo "===LSBLK==="',
   'lsblk -J -b -o NAME,KNAME,PATH,SIZE,TYPE,FSTYPE,LABEL,UUID,MODEL,SERIAL,WWN,VENDOR,ROTA,TRAN,MOUNTPOINT,STATE,PKNAME,PARTTYPE,PARTTYPENAME 2>/dev/null || lsblk -J -b -o NAME,KNAME,PATH,SIZE,TYPE,FSTYPE,LABEL,UUID,MODEL,SERIAL,VENDOR,ROTA,TRAN,MOUNTPOINT,STATE,PKNAME,PARTTYPE,PARTTYPENAME 2>/dev/null || lsblk -J -b -o NAME,KNAME,PATH,SIZE,TYPE,FSTYPE,LABEL,UUID,MODEL,SERIAL,VENDOR,ROTA,TRAN,MOUNTPOINT,STATE,PKNAME 2>/dev/null || echo "{}"',
@@ -137,32 +139,17 @@ export function attachMdDetectionLabels(
 // Extraction du chemin/nom exact du binaire StorCLI/PercCLI depuis la sortie which + chemins directs
 // Retourne le chemin complet ou le nom court selon ce qui est trouvé en premier
 function extractStorCliBin(toolsOutput: string): string | null {
-  // D'abord chercher les chemins absolus (depuis la boucle for de vérification directe)
-  for (const line of toolsOutput.split('\n')) {
-    const l = line.trim()
-    if (l.startsWith('/') && l.includes('perccli64')) return l
-    if (l.startsWith('/') && l.includes('storcli64')) return l
-    if (l.startsWith('/') && l.includes('perccli'))   return l
-    if (l.startsWith('/') && l.includes('storcli'))   return l
-  }
-  // Sinon noms courts depuis which
-  for (const line of toolsOutput.split('\n')) {
-    const l = line.trim()
-    if (l.endsWith('perccli64') || l === 'perccli64') return 'perccli64'
-    if (l.endsWith('storcli64') || l === 'storcli64') return 'storcli64'
-    if (l.endsWith('perccli')   || l === 'perccli')   return 'perccli'
-    if (l.endsWith('storcli')   || l === 'storcli')   return 'storcli'
-  }
-  return null
+  return extractRaidCliFromToolsOutput(toolsOutput)
 }
 
 function parseTools(toolsOutput: string, kernelInfo?: Awaited<ReturnType<typeof collectKernelRaidInfo>>): RaidToolsInfo {
   const lspciAvailable = (kernelInfo?.pciCandidates.length ?? 0) > 0 || toolsOutput.includes('lspci')
+  const cliFlags = toolsOutputHasRaidCli(toolsOutput)
   return {
     mdadm:     toolsOutput.includes('mdadm'),
     lspci:     lspciAvailable,
-    storcli:   toolsOutput.includes('storcli'),   // match storcli, storcli64, full paths
-    perccli:   toolsOutput.includes('perccli'),   // match perccli, perccli64, full paths
+    storcli:   cliFlags.storcli,
+    perccli:   cliFlags.perccli,
     MegaCli64: toolsOutput.includes('MegaCli64') || toolsOutput.includes('megacli'),
     arcconf:   toolsOutput.includes('arcconf'),
     lsscsi:    toolsOutput.includes('lsscsi'),
