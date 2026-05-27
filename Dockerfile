@@ -35,23 +35,18 @@ WORKDIR /app
 COPY docker/create-esos-user.sh /tmp/create-esos-user.sh
 RUN chmod +x /tmp/create-esos-user.sh && /tmp/create-esos-user.sh && rm /tmp/create-esos-user.sh
 
-# Copy only the Nuxt build output
-COPY --from=builder --chown=esos:esos /app/.output ./
+# Copy only the Nuxt build output (--chown user only: primary group may be "users" on Alpine)
+COPY --from=builder --chown=esos /app/.output ./
 
 # Keep package metadata for Dependency Tracker in runtime container
-COPY --from=builder --chown=esos:esos /app/package.json ./package.json
+COPY --from=builder --chown=esos /app/package.json ./package.json
 
 # Copy DB migrations (read at runtime by drizzle migrate())
-COPY --from=builder --chown=esos:esos /app/server/db/migrations ./server/db/migrations
+COPY --from=builder --chown=esos /app/server/db/migrations ./server/db/migrations
 
-# Mount point for the SSH key (filled by docker-compose volume)
-RUN mkdir -p /app/keys && chown esos:esos /app/keys
-
-# Mount point for the SQLite database (filled by docker-compose volume db-data)
-RUN mkdir -p /app/data && chown esos:esos /app/data
-
-# Global binary catalog (filled by docker-compose volume binaries-data)
-RUN mkdir -p /opt/esos-webui/binaries && chown esos:esos /opt/esos-webui/binaries
+# Mount points (chown uses esos primary GID — not a group named "esos")
+RUN mkdir -p /app/keys /app/data /opt/esos-webui/binaries \
+ && chown -R esos:"$(id -g esos)" /app/keys /app/data /opt/esos-webui/binaries
 
 RUN apk add --no-cache su-exec
 

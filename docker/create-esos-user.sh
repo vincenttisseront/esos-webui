@@ -10,11 +10,14 @@ else
 fi
 
 if getent passwd esos >/dev/null 2>&1; then
+  echo "esos user exists (uid=$(id -u esos) gid=$(id -g esos) group=${ESOS_GROUP})"
   exit 0
 fi
 
 if getent passwd 1000 >/dev/null 2>&1; then
-  adduser -S -G "$ESOS_GROUP" -h /home/esos -s /sbin/nologin -D esos
+  adduser -S -G "$ESOS_GROUP" -D esos
 else
-  adduser -u 1000 -S -G "$ESOS_GROUP" -h /home/esos -s /sbin/nologin -D esos
+  adduser -u 1000 -S -G "$ESOS_GROUP" -D esos
 fi
+
+echo "created esos (uid=$(id -u esos) gid=$(id -g esos) group=${ESOS_GROUP})"
