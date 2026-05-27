@@ -55,6 +55,11 @@ const lastRefreshLabel = computed(() => {
   return new Date(stats.capturedAt).toLocaleTimeString()
 })
 
+const statsStale = computed(() => {
+  if (!stats.capturedAt || !ssh.isReady) return false
+  return Date.now() - stats.capturedAt > 25_000
+})
+
 const lastSampleLabel = computed(() => {
   const latest = perf.devices.reduce((max, d) => Math.max(max, d.lastSampleAt), 0)
   if (!latest) return ''
@@ -109,6 +114,9 @@ async function onSystemChange() {
         <div class="flex items-center gap-3">
           <UBadge :color="ssh.isReady ? 'green' : 'red'" size="xs">
             {{ t(ssh.statusKey) }}
+          </UBadge>
+          <UBadge v-if="statsStale" color="amber" size="xs" variant="soft">
+            {{ t('monitoring.stats.stale_badge') }}
           </UBadge>
           <span class="text-xs text-gray-400">{{ t('monitoring.stats.last_read', { time: lastRefreshLabel }) }}</span>
         </div>

@@ -2,6 +2,7 @@ import { createError, getQuery, type H3Event } from 'h3'
 import { getAllSans, getSanSummary } from '../db/repositories/san.repository'
 import { withSanContext } from './ssh-runtime'
 import { requireSanIdQuery } from './san-query'
+import { defaultMetricsSanId } from './metrics-constants'
 
 export const SAN_READONLY_CODE = 'san.read_only'
 
@@ -54,7 +55,7 @@ export function runReadWithSanScope<T>(event: H3Event, fn: () => Promise<T>): Pr
 
 /** Bucket key for in-memory stats when no resolved SAN (v1). */
 export function defaultStatsBucketSanId(): string {
-  return process.env.DEFAULT_SAN_ID ?? '__default__'
+  return defaultMetricsSanId()
 }
 
 /** Throws 403 when the SAN is marked read-only in the database. */

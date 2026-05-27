@@ -1,6 +1,6 @@
 import { getDB } from '../index'
 import { metricSamples } from '../schema'
-import { and, eq, gte, lte } from 'drizzle-orm'
+import { and, count, eq, gte, lte, max, min } from 'drizzle-orm'
 
 export interface MetricPoint {
   timestamp: number
@@ -84,6 +84,75 @@ export async function getSubjects(
       ),
     )
   return rows.map((r) => r.subject)
+}
+
+export interface SampleStats {
+  totalCount: number
+  rangeCount: number
+  oldestAt: number | null
+  newestAt: number | null
+  rangeOldestAt: number | null
+  rangeNewestAt: number | null
+}
+
+export async function getSampleStats(
+  sanId: string,
+  from?: number,
+  to?: number,
+): Promise<SampleStats> {
+  const db = getDB()
+  const sanCond = eq(metricSamples.sanId, sanId)
+
+  const [allRow] = await db
+    .select({
+      totalCount: count(),
+      oldestAt: min(metricSamples.timestamp),
+      newestAt: max(metricSamples.timestamp),
+    })
+    .from(metricSamples)
+    .where(sanCond)
+
+  const totalCount = allRow?.totalCount ?? 0
+  const oldestAt = allRow?.oldestAt ?? null
+  const newestAt = allRow?.newestAt ?? null
+
+  if (from == null || to == null) {
+    return {
+      totalCount,
+      rangeCount: totalCount,
+      oldestAt,
+      newestAt,
+      rangeOldestAt: oldestAt,
+      rangeNewestAt: newestAt,
+    }
+  }
+
+  const rangeCond = and(sanCond, gte(metricSamples.timestamp, from), lte(metricSamples.timestamp, to))
+  const [rangeRow] = await db
+    .select({
+      rangeCount: count(),
+      oldestAt: min(metricSamples.timestamp),
+      newestAt: max(metricSamples.timestamp),
+    })
+    .from(metricSamples)
+    .where(rangeCond)
+
+  return {
+    totalCount,
+    rangeCount: rangeRow?.rangeCount ?? 0,
+    oldestAt,
+    newestAt,
+    rangeOldestAt: rangeRow?.oldestAt ?? null,
+    rangeNewestAt: rangeRow?.newestAt ?? null,
+  }
+}
+
+export async function getVolumeSubjects(
+  sanId: string,
+  from: number,
+  to: number,
+): Promise<string[]> {
+  return getSubjects(sanId, 'volume', from, to)
 }
 
 // ─── Purge (rétention 24h) ───────────────────────────────────────────────────

@@ -1,26 +1,57 @@
-import { defineEventHandler, getQuery } from 'h3'
-import { getTimeSeries } from '../../db/repositories/metrics.repository'
-
-const WINDOWS: Record<string, number> = {
-  '1h':  3_600_000,
-  '6h':  21_600_000,
-  '24h': 86_400_000,
-}
+import { defineEventHandler } from 'h3'
+import { getTimeSeries, getVolumeSubjects } from '../../db/repositories/metrics.repository'
+import { parseHistoryQuery } from '../../utils/history-metrics'
 
 export default defineEventHandler(async (event) => {
-  const query     = getQuery(event)
-  const windowKey = (query.window as string) ?? '1h'
-  const sanId     = (query.sanId  as string) ?? 'default'
-  const windowMs  = WINDOWS[windowKey] ?? WINDOWS['1h']
-  const now       = Date.now()
-  const from      = now - windowMs
+  const scope = parseHistoryQuery(event)
 
-  const [cpu, load1m, ram, volume] = await Promise.all([
-    getTimeSeries({ sanId, category: 'system', subject: 'cpu',              metricName: 'cpu_pct',  from, to: now }),
-    getTimeSeries({ sanId, category: 'system', subject: 'cpu',              metricName: 'load_1m',  from, to: now }),
-    getTimeSeries({ sanId, category: 'memory', subject: 'ram',              metricName: 'used_pct', from, to: now }),
-    getTimeSeries({ sanId, category: 'volume', subject: 'mnt_vdisks_fs01', metricName: 'used_pct', from, to: now }),
+  const [cpu, load1m, ram, volumeSubjects] = await Promise.all([
+    getTimeSeries({
+      sanId: scope.sanId,
+      category: 'system',
+      subject: 'cpu',
+      metricName: 'cpu_pct',
+      from: scope.from,
+      to: scope.to,
+    }),
+    getTimeSeries({
+      sanId: scope.sanId,
+      category: 'system',
+      subject: 'cpu',
+      metricName: 'load_1m',
+      from: scope.from,
+      to: scope.to,
+    }),
+    getTimeSeries({
+      sanId: scope.sanId,
+      category: 'memory',
+      subject: 'ram',
+      metricName: 'used_pct',
+      from: scope.from,
+      to: scope.to,
+    }),
+    getVolumeSubjects(scope.sanId, scope.from, scope.to),
   ])
 
-  return { window: windowKey, from, to: now, series: { cpu, load1m, ram, volume } }
+  const volumeSeries = await Promise.all(
+    volumeSubjects.map(async (subject) => ({
+      subject,
+      points: await getTimeSeries({
+        sanId: scope.sanId,
+        category: 'volume',
+        subject,
+        metricName: 'used_pct',
+        from: scope.from,
+        to: scope.to,
+      }),
+    })),
+  )
+
+  return {
+    window: scope.windowKey,
+    sanId: scope.sanId,
+    from: scope.from,
+    to: scope.to,
+    series: { cpu, load1m, ram, volume: volumeSeries },
+  }
 })

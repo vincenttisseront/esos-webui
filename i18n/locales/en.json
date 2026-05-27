@@ -4189,7 +4189,43 @@
       "agent_not_configured_desc": "Configure the DBURI and block devices to enable performance collection.",
       "configure": "Configure",
       "stale_devices": "Some devices have not been updated for more than 15 minutes.",
-      "no_samples": "No samples for window {window}. Try a larger window or verify the agent is active."
+      "no_samples": "No samples for window {window}. Try a larger window or verify the agent is active.",
+      "stale_badge": "Stale"
+    },
+    "history": {
+      "page_title": "Metrics history",
+      "sessions_chart_title": "I/O sessions — initiators",
+      "devices_chart_title": "I/O devices",
+      "system_chart_title": "CPU & memory",
+      "cpu_pct": "CPU %",
+      "ram_pct": "RAM %",
+      "session_series_count": "{n} initiator series",
+      "device_series_count": "{n} device series",
+      "oldest_sample": "Data available since {time}",
+      "waiting_first_sample": "Collector running — first sample within {sec}s",
+      "scope_required_title": "Select a SAN",
+      "scope_required_desc": "Historical metrics are stored per SAN. Choose a single SAN (not “all SANs”) in the header.",
+      "empty": {
+        "title": "No chart data",
+        "no_series": "No series to display for this metric and time window.",
+        "collector_disabled": "Automatic collection is disabled in administration settings.",
+        "collector_not_running": "The collector has not run yet since the server started.",
+        "no_samples_yet": "No samples stored for this SAN yet. Wait for the next collection cycle.",
+        "range_empty": "Samples exist for this SAN but none fall in the selected time window. Try 6h or 24h.",
+        "ssh_unavailable": "The last collection failed (SSH unavailable or error)."
+      },
+      "diagnostics": {
+        "title": "Diagnostics",
+        "san": "SAN",
+        "window": "Window",
+        "samples": "Samples in window / total",
+        "last_sample": "Newest in window",
+        "collector": "Collector",
+        "interval": "every {sec}s",
+        "retention": "retention {hours}h",
+        "last_run": "last run",
+        "last_error": "Last error"
+      }
     },
     "perf": {
       "errors": {

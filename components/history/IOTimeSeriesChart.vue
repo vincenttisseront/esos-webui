@@ -3,10 +3,9 @@
     <div class="flex items-center justify-between mb-4">
       <div>
         <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ title }}</h3>
-        <p class="text-xs text-gray-400">{{ seriesCount }} initiateurs actifs</p>
+        <p class="text-xs text-gray-400">{{ seriesCountLabel }}</p>
       </div>
-      <div class="flex items-center gap-3">
-        <!-- Toggle Read / Write -->
+      <div v-if="scopeReady" class="flex items-center gap-3">
         <div class="flex gap-1">
           <button
             class="px-2 py-1 text-xs rounded"
@@ -27,14 +26,28 @@
       </div>
     </div>
 
+    <UAlert
+      v-if="!scopeReady"
+      color="blue"
+      variant="soft"
+      :title="t('monitoring.history.scope_required_title')"
+      :description="t('monitoring.history.scope_required_desc')"
+    />
+    <UAlert
+      v-else-if="emptyReason"
+      color="amber"
+      variant="soft"
+      :title="t('monitoring.history.empty.title')"
+      :description="t(historyEmptyReasonKey(emptyReason))"
+    />
     <Line
-      v-if="chartData"
+      v-else-if="chartData"
       :data="chartData"
       :options="chartOptions"
       class="max-h-64"
     />
     <p v-else class="text-center text-xs text-gray-400 py-8 italic">
-      Pas encore de données historiques (collecte toutes les 30s)
+      {{ t('monitoring.history.empty.no_series') }}
     </p>
   </div>
 </template>
@@ -54,6 +67,8 @@ import {
 } from 'chart.js'
 import type { MetricPoint } from '~/server/db/repositories/metrics.repository'
 import { useChartTheme } from '~/utils/chart-theme'
+import { historyEmptyReasonKey, kbpsTooltipLabel } from '~/utils/metrics-display'
+import type { HistoryMetaResponse } from '~/composables/useMetricsHistoryScope'
 
 ChartJS.register(
   CategoryScale,
@@ -66,9 +81,17 @@ ChartJS.register(
   Filler,
 )
 
-const props = defineProps<{ title: string }>()
+const props = defineProps<{
+  title: string
+  category: 'session' | 'device'
+  meta?: HistoryMetaResponse | null
+}>()
 
-const window = ref<string>('1h')
+const window = defineModel<string>('window', { default: '1h' })
+
+const { t } = useEsosI18n()
+const { scopeReady, historyParams } = useMetricsHistoryScope()
+
 const metric = ref<string>('read_kbps')
 
 const COLORS = [
@@ -76,49 +99,71 @@ const COLORS = [
   '#ef4444', '#06b6d4', '#f59e0b', '#ec4899',
 ]
 
-const { data: raw } = await useFetch(
-  () => `/api/history/sessions?window=${window.value}&metric=${metric.value}`,
-  { watch: [window, metric] },
+const endpoint = computed(() =>
+  props.category === 'device' ? '/api/history/devices' : '/api/history/sessions',
 )
 
-const seriesCount = computed(() => (raw.value as any)?.series?.length ?? 0)
+const fetchKey = computed(() => {
+  const p = historyParams({ window: window.value, metric: metric.value })
+  if (!p) return null
+  return `${endpoint.value}?${new URLSearchParams(p).toString()}`
+})
+
+const { data: raw } = await useAsyncData(
+  () => `history-io-${props.category}-${fetchKey.value ?? 'idle'}`,
+  () => (fetchKey.value ? $fetch(fetchKey.value) : Promise.resolve(null)),
+  { watch: [fetchKey] },
+)
+
+const emptyReason = computed(() => {
+  if (!scopeReady.value) return null
+  const series = (raw.value as { series?: unknown[] })?.series
+  if (series?.length) return null
+  if (!props.meta?.samples.totalCount) {
+    return props.meta?.emptyReason ?? 'no_samples_yet'
+  }
+  return 'range_empty'
+})
+
+const seriesCount = computed(() => (raw.value as { series?: unknown[] })?.series?.length ?? 0)
+
+const seriesCountLabel = computed(() =>
+  props.category === 'device'
+    ? t('monitoring.history.device_series_count', { n: seriesCount.value })
+    : t('monitoring.history.session_series_count', { n: seriesCount.value }),
+)
 
 const chartData = computed(() => {
-  const rawVal = raw.value as any
+  if (!scopeReady.value || emptyReason.value) return null
+  const rawVal = raw.value as { series?: Array<{ subject: string; points: MetricPoint[] }> }
   if (!rawVal?.series?.length) return null
 
   const allTs = [
     ...new Set<number>(
-      rawVal.series.flatMap((s: any) =>
-        s.points.map((p: MetricPoint) => p.timestamp),
-      ),
+      rawVal.series.flatMap(s => s.points.map(p => p.timestamp)),
     ),
   ].sort((a, b) => a - b)
+  if (!allTs.length) return null
 
-  const labels = allTs.map((ts) =>
-    new Date(ts).toLocaleTimeString('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    }),
+  const labels = allTs.map(ts =>
+    new Date(ts).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
   )
 
-  const datasets = rawVal.series.map((serie: any, i: number) => {
-    const color    = COLORS[i % COLORS.length]
+  const datasets = rawVal.series.map((serie, i) => {
+    const color = COLORS[i % COLORS.length]
     const pointMap = new Map<number, number>(
-      serie.points.map((p: MetricPoint) => [p.timestamp, p.value]),
+      serie.points.map(p => [p.timestamp, p.value]),
     )
-    const dataPoints = allTs.map((ts) => pointMap.get(ts) ?? null)
-
     return {
-      label:           shortWwn(serie.subject),
-      data:            dataPoints,
-      borderColor:     color,
+      label: props.category === 'session' ? shortWwn(serie.subject) : serie.subject,
+      data: allTs.map(ts => pointMap.get(ts) ?? null),
+      borderColor: color,
       backgroundColor: color + '20',
-      borderWidth:     1.5,
-      pointRadius:     0,
-      spanGaps:        true,
-      fill:            false,
-      tension:         0.3,
+      borderWidth: 1.5,
+      pointRadius: 0,
+      spanGaps: true,
+      fill: false,
+      tension: 0.3,
     }
   })
 
@@ -128,13 +173,13 @@ const chartData = computed(() => {
 const chartTheme = useChartTheme()
 
 const chartOptions = computed(() => ({
-  responsive:          true,
+  responsive: true,
   maintainAspectRatio: false,
-  animation:           false,
+  animation: false,
   plugins: {
     legend: {
       position: 'bottom' as const,
-      labels:   {
+      labels: {
         font: { family: 'JetBrains Mono', size: 10 },
         boxWidth: 12,
         color: chartTheme.value.legend,
@@ -142,13 +187,8 @@ const chartOptions = computed(() => ({
     },
     tooltip: {
       callbacks: {
-        label: (ctx: any) => {
-          const kbps = ctx.raw as number | null
-          if (kbps == null) return ''
-          if (kbps >= 1_048_576) return `${ctx.dataset.label}: ${(kbps / 1_048_576).toFixed(1)} GB/s`
-          if (kbps >= 1_024)     return `${ctx.dataset.label}: ${(kbps / 1_024).toFixed(1)} MB/s`
-          return `${ctx.dataset.label}: ${kbps.toFixed(0)} KB/s`
-        },
+        label: (ctx: { dataset: { label?: string }; raw: unknown }) =>
+          kbpsTooltipLabel(ctx.raw as number | null, ctx.dataset.label ?? ''),
       },
     },
   },

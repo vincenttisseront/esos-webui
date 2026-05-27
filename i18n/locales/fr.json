@@ -4189,7 +4189,43 @@
       "agent_not_configured_desc": "Configurez le DBURI et les block devices pour activer la collecte de performances.",
       "configure": "Configurer",
       "stale_devices": "Certains devices n'ont pas été mis à jour depuis plus de 15 minutes.",
-      "no_samples": "Aucun sample pour la fenêtre {window}. Essayez une fenêtre plus large ou vérifiez que l'agent est actif."
+      "no_samples": "Aucun sample pour la fenêtre {window}. Essayez une fenêtre plus large ou vérifiez que l'agent est actif.",
+      "stale_badge": "Périmé"
+    },
+    "history": {
+      "page_title": "Historique des métriques",
+      "sessions_chart_title": "Sessions I/O — initiateurs",
+      "devices_chart_title": "Devices I/O",
+      "system_chart_title": "CPU & mémoire",
+      "cpu_pct": "CPU %",
+      "ram_pct": "RAM %",
+      "session_series_count": "{n} séries initiateur",
+      "device_series_count": "{n} séries device",
+      "oldest_sample": "Données disponibles depuis {time}",
+      "waiting_first_sample": "Collecte active — premier point sous {sec}s",
+      "scope_required_title": "Sélectionnez un SAN",
+      "scope_required_desc": "L'historique est stocké par SAN. Choisissez un SAN unique (pas « tous les SAN ») dans l'en-tête.",
+      "empty": {
+        "title": "Aucune donnée sur le graphique",
+        "no_series": "Aucune série pour cette métrique et cette fenêtre.",
+        "collector_disabled": "La collecte automatique est désactivée dans les paramètres d'administration.",
+        "collector_not_running": "Le collecteur n'a pas encore tourné depuis le démarrage du serveur.",
+        "no_samples_yet": "Aucun échantillon enregistré pour ce SAN. Attendez le prochain cycle de collecte.",
+        "range_empty": "Des échantillons existent pour ce SAN mais pas dans la fenêtre choisie. Essayez 6h ou 24h.",
+        "ssh_unavailable": "La dernière collecte a échoué (SSH indisponible ou erreur)."
+      },
+      "diagnostics": {
+        "title": "Diagnostics",
+        "san": "SAN",
+        "window": "Fenêtre",
+        "samples": "Échantillons fenêtre / total",
+        "last_sample": "Plus récent dans la fenêtre",
+        "collector": "Collecteur",
+        "interval": "toutes les {sec}s",
+        "retention": "rétention {hours}h",
+        "last_run": "dernière exécution",
+        "last_error": "Dernière erreur"
+      }
     },
     "perf": {
       "errors": {
