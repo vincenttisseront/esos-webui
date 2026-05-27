@@ -357,6 +357,7 @@ export async function collectFsOverview(manager?: SSHSessionManager): Promise<Fs
     errors: scannerErrors,
     partial,
     candidates,
+    systemProtection: raid.systemProtection,
   }
 
   overview.nextAction = computeFsNextAction(overview)

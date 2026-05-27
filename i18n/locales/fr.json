@@ -478,7 +478,8 @@
         "col_lvm": "LVM PV",
         "col_fileio": "FILEIO",
         "badge_hw_vd": "VD matériel",
-        "used_by_hardware_raid": "hardware_raid"
+        "used_by_hardware_raid": "hardware_raid",
+        "esos_protected": "Protégé, volume système ESOS"
       },
       "ctrl_mode": {
         "raid": "Mode RAID",
@@ -828,6 +829,7 @@
         "cluster_title": "Cluster HA",
         "cluster_description": "La même opération mdadm --add sera planifiée sur chaque nœud avec la partition mappée.",
         "mapping_manual": "Mapping manuel requis",
+        "select_partition": "Choisir une partition…",
         "rerun_cluster_preflight": "Relancer le préflight cluster",
         "per_node_commands": "Commandes par nœud",
         "confirm_hint": "Saisissez exactement :",

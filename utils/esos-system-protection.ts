@@ -19,7 +19,11 @@ export interface EsosSystemProtectionOverview {
   protectedBlockPaths: string[]
   protectedDiskPaths: string[]
   protectedHardwareLdIds: string[]
+  protectedMountPoints: string[]
+  protectedFilePaths: string[]
   duplicateEsosLabels: boolean
+  /** True when detection threw or returned errors — destructive actions must fail closed. */
+  detectionFailed?: boolean
 }
 
 export function emptyEsosSystemProtection(): EsosSystemProtectionOverview {
@@ -30,7 +34,10 @@ export function emptyEsosSystemProtection(): EsosSystemProtectionOverview {
     protectedBlockPaths: [],
     protectedDiskPaths: [],
     protectedHardwareLdIds: [],
+    protectedMountPoints: [],
+    protectedFilePaths: [],
     duplicateEsosLabels: false,
+    detectionFailed: false,
   }
 }
 
@@ -45,6 +52,12 @@ export function normalizeEsosSystemProtection(
     protectedBlockPaths: value.protectedBlockPaths ?? [],
     protectedDiskPaths: value.protectedDiskPaths ?? [],
     protectedHardwareLdIds: value.protectedHardwareLdIds ?? [],
+    protectedMountPoints: value.protectedMountPoints ?? [],
+    protectedFilePaths: value.protectedFilePaths ?? [],
     duplicateEsosLabels: value.duplicateEsosLabels ?? false,
+    detectionFailed: value.detectionFailed ?? false,
   }
 }
+
+/** @alias Primary entry point for ESOS system resource detection (server implements details). */
+export type DetectSystemProtectedResourcesResult = EsosSystemProtectionOverview

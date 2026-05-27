@@ -1,5 +1,6 @@
 import { requireSanIdQuery } from '../../utils/san-query'
 import { assertFsWritable, invalidateFsCaches, withFsOverview } from '../../utils/fs-api-helpers'
+import { assertFilePathNotEsosProtected } from '../../utils/esos-system-protection'
 import { runFsPreflight } from '../../utils/fs-preflight'
 import { runBindFileio } from '../../utils/fs-actions'
 import {
@@ -30,6 +31,12 @@ export default defineEventHandler(async (event) => {
     if (body.confirmation?.trim() !== pre.requiredConfirmation) {
       throw createError({ statusCode: 400, statusMessage: `Confirmation : ${pre.requiredConfirmation}` })
     }
+
+    await withFsOverview(sanId, false, async overview => {
+      if (overview.systemProtection) {
+        assertFilePathNotEsosProtected(body.vdiskPath.trim(), overview.systemProtection)
+      }
+    })
 
     try {
       const { deviceName } = await runBindFileio(body)

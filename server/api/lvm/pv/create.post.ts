@@ -1,6 +1,8 @@
 import { requireSanIdQuery } from '../../../utils/san-query'
-import { requirePreflightOk, invalidateStorageCaches, withLvmOverview } from '../../../utils/lvm-api-helpers'
+import { requirePreflightOk, invalidateStorageCaches } from '../../../utils/lvm-api-helpers'
 import { runPvCreate } from '../../../utils/lvm-actions'
+import { collectRaidOverview } from '../../../utils/raid-overview.service'
+import { assertBlockPathNotEsosProtectedForDestructive } from '../../../utils/esos-system-protection'
 import { getActiveSSHManager, withSanContext } from '../../../utils/ssh-runtime'
 import type { PvCreatePayload } from '../../../utils/lvm-types'
 
@@ -11,6 +13,10 @@ export default defineEventHandler(async (event) => {
   await withSanContext(sanId, async () => {
     const manager = getActiveSSHManager()
     if (!manager) throw createError({ statusCode: 503, statusMessage: 'SSH non connecté' })
+    const raid = await collectRaidOverview(manager)
+    if (raid.systemProtection) {
+      assertBlockPathNotEsosProtectedForDestructive(body.path, raid.systemProtection, raid.blockDevices)
+    }
     await runPvCreate(manager, body.path, !!body.force)
     invalidateStorageCaches(sanId)
   })

@@ -84,11 +84,20 @@
             class="rounded border border-gray-200 dark:border-gray-700 p-3 space-y-2"
           >
             <p class="text-sm font-mono">{{ mapping.sourcePath }} → {{ peerLabel(mapping.targetSanId) }}</p>
-            <USelect
-              :model-value="manualMappingSelection[mappingKey(mapping)] ?? ''"
-              :options="mapping.candidates?.map(c => ({ label: c.path, value: c.path })) ?? []"
-              @update:model-value="(v) => manualMappingSelection[mappingKey(mapping)] = String(v)"
-            />
+            <select
+              class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm font-mono"
+              :value="manualMappingSelection[mappingKey(mapping)] ?? ''"
+              @change="(e) => manualMappingSelection[mappingKey(mapping)] = (e.target as HTMLSelectElement).value"
+            >
+              <option value="" disabled>{{ t('raid.add_member.wizard.select_partition') }}</option>
+              <option
+                v-for="c in mapping.candidates ?? []"
+                :key="c.path"
+                :value="c.path"
+              >
+                {{ c.path }}
+              </option>
+            </select>
           </div>
           <UButton size="sm" color="primary" :loading="clusterPreflightLoading" @click="rerunClusterPreflight">
             {{ t('raid.add_member.wizard.rerun_cluster_preflight') }}

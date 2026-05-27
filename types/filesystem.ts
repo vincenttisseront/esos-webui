@@ -164,6 +164,8 @@ export interface FsOverview {
   partial?: boolean
   /** @deprecated use backends — kept for wizard compatibility */
   candidates?: FsBackendCandidate[]
+  /** ESOS system volume protection snapshot (from RAID scan). */
+  systemProtection?: import('~/utils/esos-system-protection').EsosSystemProtectionOverview
 }
 
 export type FileioBindConflictCode =

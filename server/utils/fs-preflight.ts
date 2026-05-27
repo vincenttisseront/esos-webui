@@ -24,6 +24,14 @@ import type { FsBackendCandidate } from '~/types/filesystem'
 import { collectFsBackendCandidates } from './fs-candidates'
 import { resolveFileioBindConflicts } from './fs-fileio-bind-conflicts'
 import type { SSHSessionManager } from './ssh-session-manager'
+import {
+  esosProtectedFileBlocker,
+  esosProtectedMountBlocker,
+  esosProtectionDetectionFailedBlocker,
+  isEsosProtectionDetectionFailed,
+  isFilePathEsosProtected,
+  isMountPointEsosProtected,
+} from '../../utils/esos-resource-protection'
 
 export type FsPreflightAction =
   | 'create_fs'
@@ -35,6 +43,15 @@ export type FsPreflightAction =
 export interface FsPreflightRequest {
   action: FsPreflightAction
   payload: CreateFsPayload | CreateVdiskPayload | CreateFileioPayload | Record<string, string>
+}
+
+function esosBlockers(overview: FsOverview): string[] {
+  const snap = overview.systemProtection
+  if (!snap) return []
+  if (isEsosProtectionDetectionFailed(snap)) {
+    return [esosProtectionDetectionFailedBlocker()]
+  }
+  return []
 }
 
 function baseResult(partial?: Partial<FsPreflightResult>): FsPreflightResult {
@@ -79,7 +96,12 @@ async function preflightCreateFs(
   const partitionStrategy: PartitionStrategy = payload.partitionStrategy ?? 'none'
   const candidates = await collectFsBackendCandidates(manager, options)
   const cand = candidates.find(c => c.path === payload.backendPath)
-  const blockers: string[] = []
+  const blockers: string[] = [...esosBlockers(overview)]
+  if (overview.systemProtection && !isEsosProtectionDetectionFailed(overview.systemProtection)) {
+    if (isMountPointEsosProtected(payload.mountPoint, overview.systemProtection)) {
+      blockers.push(esosProtectedMountBlocker(payload.mountPoint))
+    }
+  }
   if (!cand) blockers.push('Backend introuvable')
   else if (!cand.eligible) blockers.push(...cand.reasons)
 
@@ -136,6 +158,14 @@ function preflightCreateVdisk(
   }
 
   const fullPath = buildVdiskPath(payload.mountPoint, payload.fileName)
+  if (overview.systemProtection && !isEsosProtectionDetectionFailed(overview.systemProtection)) {
+    if (isMountPointEsosProtected(payload.mountPoint, overview.systemProtection)) {
+      blockers.push(esosProtectedMountBlocker(payload.mountPoint))
+    }
+    if (isFilePathEsosProtected(fullPath, overview.systemProtection)) {
+      blockers.push(esosProtectedFileBlocker(fullPath))
+    }
+  }
   if (overview.vdiskFiles.some(v => v.path === fullPath)) {
     blockers.push('Fichier vdisk déjà présent')
   }
@@ -161,6 +191,13 @@ async function preflightBindFileio(
   payload: CreateFileioPayload,
   sanId: string,
 ): Promise<FsPreflightResult> {
+  const esos = esosBlockers(overview)
+  if (esos.length) {
+    return baseResult({ blockers: esos })
+  }
+  if (overview.systemProtection && isFilePathEsosProtected(payload.vdiskPath, overview.systemProtection)) {
+    return baseResult({ blockers: [esosProtectedFileBlocker(payload.vdiskPath)] })
+  }
   const conflict = await resolveFileioBindConflicts(manager, overview, payload, sanId)
   if (conflict) {
     return {
@@ -194,7 +231,10 @@ function preflightDeleteVdisk(
   overview: FsOverview,
   payload: { path: string },
 ): FsPreflightResult {
-  const blockers: string[] = []
+  const blockers: string[] = [...esosBlockers(overview)]
+  if (overview.systemProtection && isFilePathEsosProtected(payload.path, overview.systemProtection)) {
+    blockers.push(esosProtectedFileBlocker(payload.path))
+  }
   const vdisk = overview.vdiskFiles.find(v => v.path === payload.path)
   if (!vdisk) blockers.push('Fichier introuvable')
   else if (vdisk.mapped) blockers.push('Utilisé par SCST — supprimer le device d\'abord')
@@ -213,7 +253,10 @@ function preflightUnmount(
   overview: FsOverview,
   payload: { mountPoint: string },
 ): FsPreflightResult {
-  const blockers: string[] = []
+  const blockers: string[] = [...esosBlockers(overview)]
+  if (overview.systemProtection && isMountPointEsosProtected(payload.mountPoint, overview.systemProtection)) {
+    blockers.push(esosProtectedMountBlocker(payload.mountPoint))
+  }
   const mount = overview.mounts.find(m => m.mountPoint === payload.mountPoint)
   if (!mount) blockers.push('Montage introuvable')
 

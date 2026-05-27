@@ -1,5 +1,6 @@
 import { requireSanIdQuery } from '../../utils/san-query'
 import { assertFsWritable, invalidateFsCaches, withFsOverview } from '../../utils/fs-api-helpers'
+import { assertMountPointNotEsosProtected } from '../../utils/esos-system-protection'
 import { runFsPreflight } from '../../utils/fs-preflight'
 import { runCreateVdisk } from '../../utils/fs-actions'
 import { getActiveSSHManager, withSanContext } from '../../utils/ssh-runtime'
@@ -22,10 +23,15 @@ export default defineEventHandler(async (event) => {
     if (body.confirmation?.trim() !== pre.requiredConfirmation) {
       throw createError({ statusCode: 400, statusMessage: `Confirmation : ${pre.requiredConfirmation}` })
     }
-    const manager = getActiveSSHManager()
-    if (!manager) throw createError({ statusCode: 503, statusMessage: 'SSH non connecté' })
-    const result = await runCreateVdisk(manager, body)
-    invalidateFsCaches(sanId)
-    return { success: true, ...result }
+    return withFsOverview(sanId, false, async overview => {
+      if (overview.systemProtection) {
+        assertMountPointNotEsosProtected(body.mountPoint, overview.systemProtection)
+      }
+      const manager = getActiveSSHManager()
+      if (!manager) throw createError({ statusCode: 503, statusMessage: 'SSH non connecté' })
+      const result = await runCreateVdisk(manager, body)
+      invalidateFsCaches(sanId)
+      return { success: true, ...result }
+    })
   })
 })

@@ -14,14 +14,26 @@
           :title="t('storage.fs.wizard.create_fs.no_backend')"
         />
         <UFormGroup :label="t('storage.fs.wizard.create_fs.backend')">
-          <USelect
+          <StorageNativeSelect
             v-model="backendPath"
             :options="backendOptions"
             :disabled="!backendOptions.length"
           />
         </UFormGroup>
         <UFormGroup :label="t('storage.fs.wizard.create_fs.fs_type')">
-          <USelect v-model="fsType" :options="fsTypeOptions" />
+          <div class="flex flex-wrap gap-2" role="radiogroup">
+            <label
+              v-for="opt in fsTypeOptions"
+              :key="opt.value"
+              class="flex-1 min-w-[6rem] rounded-lg border px-3 py-2 cursor-pointer text-sm text-center transition-colors"
+              :class="fsType === opt.value
+                ? 'border-primary-500 bg-primary-50 dark:bg-primary-500/10 ring-1 ring-primary-500 font-semibold'
+                : 'border-gray-200 dark:border-gray-700'"
+            >
+              <input v-model="fsType" type="radio" class="sr-only" :value="opt.value">
+              {{ opt.label }}
+            </label>
+          </div>
         </UFormGroup>
         <UFormGroup :label="t('storage.fs.wizard.create_fs.label')">
           <UInput v-model="label" />
@@ -30,7 +42,19 @@
           <UInput v-model="mountPoint" placeholder="/mnt/vdisks/fs01" />
         </UFormGroup>
         <UFormGroup :label="t('storage.fs.wizard.create_fs.partition')">
-          <USelect v-model="partitionStrategy" :options="partitionOptions" />
+          <div class="space-y-2" role="radiogroup">
+            <label
+              v-for="opt in partitionOptions"
+              :key="opt.value"
+              class="flex items-start gap-2 rounded-lg border px-3 py-2 cursor-pointer text-sm transition-colors"
+              :class="partitionStrategy === opt.value
+                ? 'border-primary-500 bg-primary-50 dark:bg-primary-500/10 ring-1 ring-primary-500'
+                : 'border-gray-200 dark:border-gray-700'"
+            >
+              <input v-model="partitionStrategy" type="radio" class="mt-0.5 accent-primary-500" :value="opt.value">
+              <span>{{ opt.label }}</span>
+            </label>
+          </div>
         </UFormGroup>
       </template>
 
@@ -112,6 +136,8 @@ import type { ClusterLvmNodeResult } from '~/types/lvm'
 import { validateMountPoint, validateFsLabel } from '~/utils/fs-preflight-validation'
 import { parseFsWizardExecuteFailure } from '~/utils/fs-wizard-execute'
 import { pickDefaultFsBackend } from '~/utils/fs-wizard-ui'
+import { backendsEligibleForCreateFs } from '~/utils/fs-wizard-filters'
+import StorageNativeSelect from '~/components/storage/StorageNativeSelect.vue'
 
 const props = defineProps<{
   sanId: string
@@ -144,7 +170,9 @@ function mountFromLabel(l: string) {
 
 const lastSuggestedMount = ref(mountFromLabel('fs01'))
 
-const eligibleBackends = computed(() => props.candidates.filter(c => c.eligible))
+const eligibleBackends = computed(() =>
+  backendsEligibleForCreateFs(props.candidates, fs.overview?.systemProtection),
+)
 const backendOptions = computed(() =>
   eligibleBackends.value.map(c => ({
     label: c.displayName ? `${c.path} (${c.displayName})` : `${c.path} (${c.kind})`,

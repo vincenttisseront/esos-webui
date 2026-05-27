@@ -5,8 +5,14 @@ import { createError } from 'h3'
 import {
   emptyEsosSystemProtection,
   type EsosProtectedDeviceDiagnostic,
+  type DetectSystemProtectedResourcesResult,
   type EsosSystemProtectionOverview,
 } from '../../utils/esos-system-protection'
+import {
+  ESOS_SQUASH_ROOT_BASENAMES,
+  ESOS_SQUASH_ROOT_FILE_PATHS,
+} from '../../utils/esos-resource-protection'
+import { ESOS_SYSTEM_MOUNT_POINTS as FS_ESOS_MOUNT_POINTS } from '../../utils/fs-mount-classifier'
 import type {
   HardwareRaidController,
   HardwareRaidLogicalDrive,
@@ -29,7 +35,7 @@ export const ESOS_SYSTEM_LABELS = new Set([
   'ESOS_LOGS',
 ])
 
-export const ESOS_SYSTEM_MOUNT_POINTS = new Set(['/', '/mnt/root', '/mnt/ram'])
+export const ESOS_SYSTEM_MOUNT_POINTS = new Set(['/', '/mnt/root', '/mnt/ram', ...FS_ESOS_MOUNT_POINTS])
 
 export const ESOS_SQUASH_ROOT_BASENAMES = new Set([
   'PRIMARY-root.sqsh',
@@ -258,6 +264,32 @@ export function buildEsosSystemProtection(input: {
     hardwareLogicalDriveIds: [...e.ldIds],
   }))
 
+  const protectedMountPoints = new Set<string>(['/', '/mnt/root', '/mnt/ram'])
+  for (const dev of blockDevices) {
+    if (dev.mountpoint && (protectedBlockPaths.has(dev.path) || protectedDiskPaths.has(resolveParentDiskPath(dev.path, blockDevices)))) {
+      protectedMountPoints.add(dev.mountpoint)
+    }
+  }
+  for (const m of findmnt) {
+    if (ESOS_SYSTEM_MOUNT_POINTS.has(m.target)) protectedMountPoints.add(m.target)
+  }
+
+  const protectedFilePaths = new Set<string>(ESOS_SQUASH_ROOT_FILE_PATHS)
+  for (const base of protectedMountPoints) {
+    for (const name of ESOS_SQUASH_ROOT_BASENAMES) {
+      protectedFilePaths.add(`${base}/${name}`.replace('//', '/'))
+    }
+  }
+  for (const dev of blockDevices) {
+    const blob = `${dev.path} ${dev.mountpoint ?? ''} ${dev.label ?? ''}`
+    for (const name of ESOS_SQUASH_ROOT_BASENAMES) {
+      if (blob.includes(name)) {
+        if (dev.mountpoint) protectedFilePaths.add(`${dev.mountpoint}/${name}`)
+        protectedFilePaths.add(`/mnt/root/${name}`)
+      }
+    }
+  }
+
   return {
     protectedDevices,
     warnings: [],
@@ -265,8 +297,20 @@ export function buildEsosSystemProtection(input: {
     protectedBlockPaths: [...protectedBlockPaths],
     protectedDiskPaths: [...protectedDiskPaths],
     protectedHardwareLdIds: [...protectedHardwareLdIds],
+    protectedMountPoints: [...protectedMountPoints],
+    protectedFilePaths: [...protectedFilePaths],
     duplicateEsosLabels,
+    detectionFailed: false,
   }
+}
+
+/** Global helper: detect ESOS-protected block devices, mounts, files, and hardware VDs. */
+export function detectSystemProtectedResources(input: {
+  blockDevices: RaidBlockDevice[]
+  hardwareControllers?: HardwareRaidController[]
+  probe?: EsosProtectionProbe
+}): DetectSystemProtectedResourcesResult {
+  return buildEsosSystemProtection(input)
 }
 
 export function findProtectionForBlockPath(
@@ -351,9 +395,88 @@ export function assertHardwareLdNotEsosProtected(
   snapshot: EsosSystemProtectionOverview,
   controllers: HardwareRaidController[],
 ): void {
+  assertEsosProtectionReliable(snapshot)
   const info = findProtectionForHardwareLd(ldId, snapshot, controllers)
   if (!info) return
   throwEsosProtectedError(info)
+}
+
+export function assertEsosProtectionReliable(snapshot: EsosSystemProtectionOverview): void {
+  if (!snapshot.detectionFailed && !(snapshot.errors?.length)) return
+  throw createError({
+    statusCode: 503,
+    statusMessage: 'Détection des volumes système ESOS indisponible — action destructive refusée par sécurité',
+    data: {
+      code: 'ESOS_PROTECTION_DETECTION_FAILED',
+      errors: snapshot.errors,
+    },
+  })
+}
+
+export function findProtectionForMountPoint(
+  mountPoint: string,
+  snapshot: EsosSystemProtectionOverview,
+): EsosDeviceProtectionInfo | null {
+  if (!snapshot.protectedMountPoints.includes(mountPoint)) return null
+  const entry = protectionEntries(snapshot)[0]
+  return {
+    protected: true,
+    protectedDevice: entry?.protectedDevice ?? mountPoint,
+    reasons: [{ code: 'system_mount', message: `Point de montage système ESOS : ${mountPoint}` }],
+    labelsFound: entry?.labelsFound ?? [],
+    mountedPaths: [mountPoint],
+    relatedBlockPaths: entry?.relatedBlockPaths ?? [],
+    hardwareLogicalDriveIds: entry?.hardwareLogicalDriveIds,
+  }
+}
+
+export function assertMountPointNotEsosProtected(
+  mountPoint: string,
+  snapshot: EsosSystemProtectionOverview,
+): void {
+  assertEsosProtectionReliable(snapshot)
+  const info = findProtectionForMountPoint(mountPoint, snapshot)
+  if (!info) return
+  throwEsosProtectedError(info)
+}
+
+export function assertFilePathNotEsosProtected(
+  filePath: string,
+  snapshot: EsosSystemProtectionOverview,
+): void {
+  assertEsosProtectionReliable(snapshot)
+  if (!snapshot.protectedFilePaths.some(p => filePath === p || filePath.startsWith(`${p}/`))) {
+    for (const name of ESOS_SQUASH_ROOT_BASENAMES) {
+      if (filePath.endsWith(`/${name}`) || filePath.includes(name)) {
+        throwEsosProtectedError({
+          protected: true,
+          protectedDevice: filePath,
+          reasons: [{ code: 'squash_root_image', message: `Image système ESOS : ${name}` }],
+          labelsFound: [],
+          mountedPaths: [],
+          relatedBlockPaths: [],
+        })
+      }
+    }
+    return
+  }
+  throwEsosProtectedError({
+    protected: true,
+    protectedDevice: filePath,
+    reasons: [{ code: 'squash_root_image', message: `Fichier système ESOS protégé : ${filePath}` }],
+    labelsFound: [],
+    mountedPaths: [],
+    relatedBlockPaths: [],
+  })
+}
+
+export function assertBlockPathNotEsosProtectedForDestructive(
+  path: string,
+  snapshot: EsosSystemProtectionOverview,
+  blockDevices: RaidBlockDevice[],
+): void {
+  assertEsosProtectionReliable(snapshot)
+  assertBlockPathNotEsosProtected(path, snapshot, blockDevices)
 }
 
 export function throwEsosProtectedError(info: EsosDeviceProtectionInfo): never {
@@ -427,8 +550,9 @@ export function collectSystemProtectionForOverview(
     return {
       ...emptyEsosSystemProtection(),
       errors: [message],
+      detectionFailed: true,
       warnings: [
-        'La détection des volumes système ESOS a échoué. Les données RAID/LVM restent disponibles sans marquage de protection.',
+        'La détection des volumes système ESOS a échoué. Les actions destructives sont bloquées par sécurité.',
       ],
     }
   }

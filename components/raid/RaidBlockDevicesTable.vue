@@ -44,6 +44,13 @@
           <td class="py-1.5 pr-3">
             <div class="flex flex-wrap gap-1">
               <UBadge
+                v-if="dev.esosSystemProtected"
+                color="red"
+                :label="t('raid.page.devices.esos_protected')"
+                size="xs"
+                variant="soft"
+              />
+              <UBadge
                 v-for="u in dev.usedBy"
                 :key="u"
                 :color="usedByColor(u)"
@@ -51,8 +58,14 @@
                 size="xs"
                 variant="soft"
               />
-              <span v-if="!dev.usedBy.length" class="text-gray-400">—</span>
+              <span v-if="!dev.usedBy.length && !dev.esosSystemProtected" class="text-gray-400">—</span>
             </div>
+            <p
+              v-if="dev.esosSystemProtected && dev.esosProtection?.reasons?.length"
+              class="text-[10px] text-red-600 dark:text-red-400 mt-0.5 max-w-xs"
+            >
+              {{ dev.esosProtection.reasons.map(r => r.message).join(' · ') }}
+            </p>
           </td>
           <td class="py-1.5 pr-3">
             <div class="flex items-center gap-1">

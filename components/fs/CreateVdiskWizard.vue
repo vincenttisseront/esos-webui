@@ -14,7 +14,11 @@
           :title="t('storage.fs.wizard.create_vdisk.no_mount')"
         />
         <UFormGroup :label="t('storage.fs.wizard.create_vdisk.mount')">
-          <USelect v-model="mountPoint" :options="mountOptions" :disabled="!mountOptions.length" />
+          <StorageNativeSelect
+            v-model="mountPoint"
+            :options="mountOptions"
+            :disabled="!mountOptions.length"
+          />
         </UFormGroup>
         <UFormGroup :label="t('storage.fs.wizard.create_vdisk.file_name')">
           <UInput v-model="fileName" placeholder="data01.img" />
@@ -24,7 +28,7 @@
             <UInput v-model.number="sizeValue" type="number" min="1" />
           </UFormGroup>
           <UFormGroup class="w-28" :label="t('storage.fs.wizard.create_vdisk.size_unit')">
-            <USelect v-model="sizeUnit" :options="sizeUnitOptions" />
+            <StorageNativeSelect v-model="sizeUnit" :options="sizeUnitOptions" />
           </UFormGroup>
         </div>
         <p v-if="selectedMount" class="text-xs text-gray-500 dark:text-gray-400">
@@ -32,7 +36,19 @@
         </p>
         <p v-if="sizeError" class="text-sm text-red-500 mt-1">{{ sizeError }}</p>
         <UFormGroup :label="t('storage.fs.wizard.create_vdisk.alloc')">
-          <USelect v-model="allocMode" :options="allocOptions" />
+          <div class="flex flex-wrap gap-2" role="radiogroup">
+            <label
+              v-for="opt in allocOptions"
+              :key="opt.value"
+              class="flex-1 min-w-[8rem] rounded-lg border px-3 py-2 cursor-pointer text-sm transition-colors"
+              :class="allocMode === opt.value
+                ? 'border-primary-500 bg-primary-50 dark:bg-primary-500/10 ring-1 ring-primary-500'
+                : 'border-gray-200 dark:border-gray-700 hover:border-primary-300'"
+            >
+              <input v-model="allocMode" type="radio" class="sr-only" :value="opt.value">
+              <span class="font-medium">{{ opt.label }}</span>
+            </label>
+          </div>
         </UFormGroup>
       </template>
 
@@ -107,6 +123,8 @@ import type { ClusterLvmNodeResult } from '~/types/lvm'
 import { validateVdiskFileName, validateVdiskSize } from '~/utils/fs-preflight-validation'
 import { parseFsWizardExecuteFailure } from '~/utils/fs-wizard-execute'
 import { formatFsBytes, parseFsSizeToBytes, type FsSizeUnit } from '~/utils/fs-wizard-ui'
+import { mountsEligibleForVdisk } from '~/utils/fs-wizard-filters'
+import StorageNativeSelect from '~/components/storage/StorageNativeSelect.vue'
 
 const props = defineProps<{
   sanId: string
@@ -142,8 +160,9 @@ const allocOptions = [
   { label: 'dd', value: 'dd' },
 ]
 
-const mountOptions = computed(() => props.mounts.map(m => ({ label: m.mountPoint, value: m.mountPoint })))
-const selectedMount = computed(() => props.mounts.find(m => m.mountPoint === mountPoint.value))
+const eligibleMounts = computed(() => mountsEligibleForVdisk(props.mounts, fs.overview?.systemProtection))
+const mountOptions = computed(() => eligibleMounts.value.map(m => ({ label: m.mountPoint, value: m.mountPoint })))
+const selectedMount = computed(() => eligibleMounts.value.find(m => m.mountPoint === mountPoint.value))
 const sizeBytes = computed(() => parseFsSizeToBytes(Number(sizeValue.value), sizeUnit.value))
 
 const sizeError = computed(() => {

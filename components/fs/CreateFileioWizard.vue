@@ -95,9 +95,10 @@
           </template>
         </UAlert>
         <UFormGroup :label="t('storage.fs.wizard.fileio.vdisk')">
-          <USelect
+          <StorageNativeSelect
             v-model="selectedPath"
             :options="vdiskOptions"
+            :disabled="!vdiskOptions.length"
           />
         </UFormGroup>
         <UFormGroup :label="t('storage.fs.wizard.fileio.device_name')">
@@ -234,6 +235,7 @@ import {
 } from '~/utils/fs-fileio-bind-conflict'
 import { parseFsWizardExecuteFailure } from '~/utils/fs-wizard-execute'
 import { eligibleVdisksForFileioBind } from '~/utils/fs-fileio-eligible-vdisks'
+import StorageNativeSelect from '~/components/storage/StorageNativeSelect.vue'
 
 const props = defineProps<{
   sanId: string
