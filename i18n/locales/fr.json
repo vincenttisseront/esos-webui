@@ -89,7 +89,8 @@
       "esos_version_hint": "Build installé vs GitHub (lecture seule)",
       "dependencies": "Dépendances",
       "webui_version": "Version WebUI",
-      "advanced_storage": "Stockage avancé"
+      "advanced_storage": "Stockage avancé",
+      "binary_deployment": "Déploiement binaires"
     },
     "page_titles": {
       "dashboard": "Dashboard",
@@ -1254,6 +1255,12 @@
       "need_desc": "Cet assistant déploie perccli64 sur ESOS. Il affecte le système local, pas le navigateur.",
       "package_title": "Paquet (RPM)",
       "package_desc": "Téléversez un RPM Dell perccli (perccli-*.rpm). Le WebUI ne télécharge rien automatiquement.",
+      "catalog_title": "Binaire depuis le catalogue",
+      "catalog_desc": "Choisissez un RPM perccli enregistré dans le catalogue de déploiement (importé depuis le conteneur WebUI).",
+      "catalog_select": "RPM perccli",
+      "catalog_placeholder": "Sélectionner un binaire…",
+      "catalog_stage": "Transférer vers ce SAN",
+      "catalog_manage": "Gérer le catalogue de binaires →",
       "preflight_title": "Vérifications preflight",
       "preflight_desc": "Vérifie les binaires requis, l'espace /tmp, et identifie la partition esos_root à modifier.",
       "temp_title": "Installation temporaire et test",
@@ -1285,8 +1292,9 @@
       "reboot_item_2": "Rouvrez la page RAID et rafraîchissez.",
       "reboot_item_3": "Vérifiez que le contrôleur n'est plus limité (mode complet).",
       "err_file_required": "Veuillez sélectionner un fichier RPM.",
-      "err_upload_first": "Téléversez le RPM d'abord.",
-      "err_preflight_first": "Lancez le preflight d'abord."
+      "err_upload_first": "Transférez un RPM depuis le catalogue d'abord.",
+      "err_preflight_first": "Lancez le preflight d'abord.",
+      "err_catalog_required": "Sélectionnez un binaire du catalogue."
     }
   },
   "lvm": {
@@ -2122,6 +2130,49 @@
       "login_success": "Succès",
       "login_failure": "Échec"
     },
+    "deployment": {
+      "page": {
+        "title": "Déploiement de binaires",
+        "subtitle": "Importez des binaires depuis le conteneur WebUI et déployez-les sur un ou plusieurs SAN.",
+        "refresh": "Rafraîchir"
+      },
+      "container": {
+        "title": "Binaires dans le conteneur",
+        "empty": "Aucun fichier dans le répertoire configuré.",
+        "import": "Importer",
+        "path": "Chemin",
+        "size": "Taille",
+        "mtime": "Modifié"
+      },
+      "catalog": {
+        "title": "Catalogue enregistré",
+        "empty": "Aucun binaire enregistré. Importez depuis le conteneur ci-dessus.",
+        "name": "Nom",
+        "version": "Version",
+        "sha256": "SHA256",
+        "imported": "Importé le"
+      },
+      "deploy": {
+        "title": "Déployer",
+        "select_binary": "Binaire",
+        "select_sans": "SAN cibles",
+        "confirm_title": "Confirmer le déploiement",
+        "confirm_msg": "Déployer « {name} » sur {count} SAN(s) ?",
+        "run": "Déployer",
+        "no_binary": "Sélectionnez un binaire.",
+        "no_sans": "Sélectionnez au moins un SAN."
+      },
+      "job": {
+        "title": "Progression",
+        "retry": "Relancer les échecs",
+        "status_pending": "En attente",
+        "status_uploading": "Transfert",
+        "status_applying": "Application",
+        "status_success": "Succès",
+        "status_failed": "Échec",
+        "logs": "Journaux"
+      }
+    },
     "alertThresholds": {
       "page": {
         "title": "Seuils d'alerte",
@@ -2622,7 +2673,9 @@
         "save": "Enregistrer et appliquer",
         "save_success": "Keymap enregistré et appliqué",
         "loadkeys_missing": "La commande « loadkeys » n'est pas disponible sur ce système.",
-        "no_keymaps": "Aucun keymap n'a été détecté sur ce système."
+        "no_keymaps": "Aucun keymap n'a été détecté sur ce système.",
+        "fallback_list_hint": "Liste de secours utilisée — les keymaps n'ont pas tous été détectés sur ce nœud. Vous pouvez tout de même tester et enregistrer un choix courant.",
+        "select_search": "Rechercher un keymap…"
       },
       "system": {
         "title": "Système",

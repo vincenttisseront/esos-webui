@@ -23,24 +23,37 @@
       </UButton>
     </div>
 
-    <!-- B. Package selection/upload -->
+    <!-- B. Catalogue binaire -->
     <div v-else-if="step === 1" class="space-y-3">
       <UAlert
         color="neutral"
         variant="subtle"
-        icon="i-heroicons-document-arrow-up"
-        :title="t('raid.missing_tools.package_title') as string"
-        :description="t('raid.missing_tools.package_desc') as string"
+        icon="i-heroicons-archive-box"
+        :title="t('raid.missing_tools.catalog_title') as string"
+        :description="t('raid.missing_tools.catalog_desc') as string"
       />
-      <input ref="fileInput" type="file" accept=".rpm" class="block w-full text-sm" />
+      <UFormField :label="t('raid.missing_tools.catalog_select') as string">
+        <USelectMenu
+          v-model="selectedBinaryId"
+          :items="catalogItems"
+          value-key="value"
+          label-key="label"
+          :loading="loadingCatalog"
+          :placeholder="t('raid.missing_tools.catalog_placeholder') as string"
+          class="w-full"
+        />
+      </UFormField>
       <UButton
         size="sm"
-        :disabled="uploading"
-        :loading="uploading"
-        @click="uploadRpm"
+        :disabled="!selectedBinaryId || staging"
+        :loading="staging"
+        @click="stageFromCatalog"
       >
-        {{ t('raid.missing_tools.upload') }}
+        {{ t('raid.missing_tools.catalog_stage') }}
       </UButton>
+      <NuxtLink to="/admin/binary-deployment" class="text-xs text-primary-600 hover:underline">
+        {{ t('raid.missing_tools.catalog_manage') }}
+      </NuxtLink>
       <p v-if="stagingId" class="text-xs text-gray-500">
         {{ t('raid.missing_tools.staging_id') }} <span class="font-mono">{{ stagingId }}</span>
       </p>
@@ -212,13 +225,16 @@ defineEmits<{ close: []; completed: [] }>()
 const { t, tError } = useEsosI18n()
 
 const step = ref(0)
-const fileInput = ref<HTMLInputElement | null>(null)
 
 const readiness = ref<MissingToolsReadinessResponse | null>(null)
 const loadingReadiness = ref(false)
 
+const catalogBinaries = ref<Array<{ id: string; name: string; filename: string; version: string | null }>>([])
+const loadingCatalog = ref(false)
+const selectedBinaryId = ref<string | null>(null)
+const staging = ref(false)
+
 const stagingId = ref<string>('')
-const uploading = ref(false)
 
 const preflight = ref<any>(null)
 const loadingPreflight = ref(false)
@@ -245,26 +261,52 @@ async function reloadReadiness() {
   }
 }
 
-async function uploadRpm() {
+const catalogItems = computed(() =>
+  catalogBinaries.value.map(b => ({
+    value: b.id,
+    label: b.version ? `${b.name} (${b.version}) — ${b.filename}` : `${b.name} — ${b.filename}`,
+  })),
+)
+
+async function loadCatalog() {
+  loadingCatalog.value = true
+  try {
+    const res = await $fetch<{ binaries: Array<{ id: string; name: string; filename: string; version: string | null; kind: string; installSpec: { installKind?: string } }> }>(
+      '/api/admin/deployment/catalog',
+    )
+    catalogBinaries.value = res.binaries.filter(b =>
+      b.kind === 'rpm' && (
+        b.installSpec?.installKind === 'perccli'
+        || b.filename.toLowerCase().includes('perccli')
+      ),
+    )
+    if (catalogBinaries.value.length === 1) {
+      selectedBinaryId.value = catalogBinaries.value[0]!.id
+    }
+  } catch (err: unknown) {
+    error.value = tError(err as Parameters<typeof tError>[0])
+  } finally {
+    loadingCatalog.value = false
+  }
+}
+
+async function stageFromCatalog() {
   error.value = ''
-  const f = fileInput.value?.files?.[0]
-  if (!f) {
-    error.value = t('raid.missing_tools.err_file_required') as string
+  if (!selectedBinaryId.value) {
+    error.value = t('raid.missing_tools.err_catalog_required') as string
     return
   }
-  uploading.value = true
+  staging.value = true
   try {
-    const form = new FormData()
-    form.append('file', f, f.name)
-    const res = await $fetch<{ stagingId: string }>(`/api/san/${encodeURIComponent(props.sanId)}/missing-tools/upload`, {
-      method: 'POST',
-      body: form,
-    })
+    const res = await $fetch<{ stagingId: string }>(
+      `/api/san/${encodeURIComponent(props.sanId)}/missing-tools/stage-from-catalog`,
+      { method: 'POST', body: { binaryId: selectedBinaryId.value } },
+    )
     stagingId.value = res.stagingId
   } catch (err: unknown) {
     error.value = tError(err as Parameters<typeof tError>[0])
   } finally {
-    uploading.value = false
+    staging.value = false
   }
 }
 
@@ -371,6 +413,9 @@ const canNext = computed(() => {
   return true
 })
 
-onMounted(() => { void reloadReadiness() })
+onMounted(() => {
+  void reloadReadiness()
+  void loadCatalog()
+})
 </script>
 

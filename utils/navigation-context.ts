@@ -33,6 +33,7 @@ const ADMIN_STATIC_PREFIXES = [
   '/admin/esos-version',
   '/admin/dependencies',
   '/admin/app-version',
+  '/admin/binary-deployment',
   '/admin/auth-providers',
   '/admin/alert-thresholds',
   '/admin/performance',

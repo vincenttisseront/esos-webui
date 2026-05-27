@@ -219,6 +219,20 @@ describe('api-rbac (auth-providers admin)', () => {
   })
 })
 
+describe('api-rbac (deployment)', () => {
+  it('RB50 — operator cannot POST /api/admin/deployment/jobs', () => {
+    expectForbidden(() => enforceMutationAccess('/api/admin/deployment/jobs', 'POST', 'operator'))
+  })
+
+  it('RB51 — admin can POST /api/admin/deployment/catalog/import', () => {
+    expect(() => enforceMutationAccess('/api/admin/deployment/catalog/import', 'POST', 'admin')).not.toThrow()
+  })
+
+  it('RB52 — operator can GET /api/admin/deployment/catalog', () => {
+    expect(() => enforceReadAccess('/api/admin/deployment/catalog', 'GET', 'operator')).not.toThrow()
+  })
+})
+
 describe('api-rbac (reads)', () => {
   it('RB10 — viewer cannot GET /api/admin/users', () => {
     expectForbidden(() => enforceReadAccess('/api/admin/users', 'GET', 'viewer'))

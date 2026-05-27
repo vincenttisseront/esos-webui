@@ -327,7 +327,7 @@
             <UDivider />
             <ConsoleKeymapPanel
               :san-id="sanId"
-              :disabled="isReadOnly || isSshDown"
+              :disabled="isReadOnly || isSshDown || isSshConnecting"
             />
             <UDivider />
             <!-- Power toujours disponible -->

@@ -95,6 +95,17 @@
           </NuxtLink>
 
           <NuxtLink
+            v-if="authStore.user?.role === 'admin'"
+            to="/admin/binary-deployment"
+            class="flex items-center gap-3 pl-8 pr-3 py-1.5 rounded-md text-xs transition-colors text-gray-500 hover:bg-gray-200 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+            active-class="bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
+            exact-active-class="bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
+          >
+            <UIcon name="i-heroicons-archive-box-arrow-down" class="w-3.5 h-3.5 shrink-0" />
+            <span class="flex-1">{{ t('nav.items.binary_deployment') }}</span>
+          </NuxtLink>
+
+          <NuxtLink
             to="/admin/esos-version"
             :title="t('nav.items.esos_version_hint')"
             class="flex items-center gap-3 pl-8 pr-3 py-1.5 rounded-md text-xs transition-colors text-gray-500 hover:bg-gray-200 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"

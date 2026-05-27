@@ -89,7 +89,8 @@
       "esos_version_hint": "Installed build vs GitHub (read-only)",
       "dependencies": "Dependencies",
       "webui_version": "WebUI Version",
-      "advanced_storage": "Advanced Storage"
+      "advanced_storage": "Advanced Storage",
+      "binary_deployment": "Binary deployment"
     },
     "page_titles": {
       "dashboard": "Dashboard",
@@ -1254,6 +1255,12 @@
       "need_desc": "This wizard deploys perccli64 on ESOS. It affects the local system, not the browser.",
       "package_title": "Package (RPM)",
       "package_desc": "Upload a Dell perccli RPM (perccli-*.rpm). The WebUI will not download anything automatically.",
+      "catalog_title": "Binary from catalog",
+      "catalog_desc": "Choose a perccli RPM registered in the deployment catalog (imported from the WebUI container).",
+      "catalog_select": "perccli RPM",
+      "catalog_placeholder": "Select a binary…",
+      "catalog_stage": "Transfer to this SAN",
+      "catalog_manage": "Manage binary catalog →",
       "preflight_title": "Preflight checks",
       "preflight_desc": "Checks required binaries, /tmp space, and identifies the esos_root partition to modify.",
       "temp_title": "Temporary install and test",
@@ -1285,8 +1292,9 @@
       "reboot_item_2": "Open the RAID page again and refresh.",
       "reboot_item_3": "Verify the controller is no longer limited (full mode).",
       "err_file_required": "Please select an RPM file.",
-      "err_upload_first": "Upload the RPM first.",
-      "err_preflight_first": "Run preflight first."
+      "err_upload_first": "Stage an RPM from the catalog first.",
+      "err_preflight_first": "Run preflight first.",
+      "err_catalog_required": "Select a binary from the catalog."
     }
   },
   "lvm": {
@@ -2122,6 +2130,49 @@
       "login_success": "Success",
       "login_failure": "Failed"
     },
+    "deployment": {
+      "page": {
+        "title": "Binary deployment",
+        "subtitle": "Import binaries from the WebUI container and deploy them to one or more SANs.",
+        "refresh": "Refresh"
+      },
+      "container": {
+        "title": "Container binaries",
+        "empty": "No files in the configured directory.",
+        "import": "Import",
+        "path": "Path",
+        "size": "Size",
+        "mtime": "Modified"
+      },
+      "catalog": {
+        "title": "Registered catalog",
+        "empty": "No registered binaries. Import from the container above.",
+        "name": "Name",
+        "version": "Version",
+        "sha256": "SHA256",
+        "imported": "Imported"
+      },
+      "deploy": {
+        "title": "Deploy",
+        "select_binary": "Binary",
+        "select_sans": "Target SANs",
+        "confirm_title": "Confirm deployment",
+        "confirm_msg": "Deploy “{name}” to {count} SAN(s)?",
+        "run": "Deploy",
+        "no_binary": "Select a binary.",
+        "no_sans": "Select at least one SAN."
+      },
+      "job": {
+        "title": "Progress",
+        "retry": "Retry failed",
+        "status_pending": "Pending",
+        "status_uploading": "Uploading",
+        "status_applying": "Applying",
+        "status_success": "Success",
+        "status_failed": "Failed",
+        "logs": "Logs"
+      }
+    },
     "alertThresholds": {
       "page": {
         "title": "Alert thresholds",
@@ -2622,7 +2673,9 @@
         "save": "Save and apply",
         "save_success": "Keymap saved and applied",
         "loadkeys_missing": "The “loadkeys” command is not available on this system.",
-        "no_keymaps": "No keymaps were detected on this system."
+        "no_keymaps": "No keymaps were detected on this system.",
+        "fallback_list_hint": "Using fallback list — not all keymaps were detected on this node. You can still test and save a common layout.",
+        "select_search": "Search keymaps…"
       },
       "system": {
         "title": "System",

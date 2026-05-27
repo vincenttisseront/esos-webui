@@ -44,6 +44,9 @@ export default defineNuxtConfig({
     sshPrivateKey: process.env.NUXT_SSH_PRIVATE_KEY || '',
     sshPassword: process.env.NUXT_SSH_PASSWORD || '',
     sshKeyPath: process.env.NUXT_SSH_KEY_PATH || '',
+    esosBinariesDir: process.env.ESOS_BINARIES_DIR || '/opt/esos-webui/binaries',
+    deploymentCatalogDir: process.env.ESOS_DEPLOYMENT_CATALOG_DIR || '/app/data/deployment-binaries',
+    deploymentMaxBytes: Number(process.env.NUXT_DEPLOYMENT_MAX_BYTES) || 524_288_000,
   },
   nitro: {
     experimental: {

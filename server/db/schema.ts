@@ -261,6 +261,44 @@ export const appVersion = sqliteTable('app_version', {
 /**
  * Historique des changements de version WebUI (SDD v3.13).
  */
+/** Container binary catalog + multi-SAN deployment jobs. */
+export const deploymentBinaries = sqliteTable('deployment_binaries', {
+  id:              text('id').primaryKey(),
+  name:            text('name').notNull(),
+  version:         text('version'),
+  filename:        text('filename').notNull(),
+  sourcePath:      text('source_path'),
+  storedPath:      text('stored_path').notNull(),
+  sizeBytes:       integer('size_bytes').notNull(),
+  sha256:          text('sha256').notNull().unique(),
+  kind:            text('kind').notNull(),
+  installSpecJson: text('install_spec_json').notNull().default('{}'),
+  status:          text('status').notNull().default('registered'),
+  createdAt:       text('created_at').notNull(),
+  updatedAt:       text('updated_at').notNull(),
+})
+
+export const deploymentJobs = sqliteTable('deployment_jobs', {
+  id:          text('id').primaryKey(),
+  binaryId:    text('binary_id').notNull().references(() => deploymentBinaries.id),
+  requestedBy: text('requested_by').notNull(),
+  status:      text('status').notNull(),
+  createdAt:   text('created_at').notNull(),
+  updatedAt:   text('updated_at').notNull(),
+})
+
+export const deploymentJobTargets = sqliteTable('deployment_job_targets', {
+  id:           text('id').primaryKey(),
+  jobId:        text('job_id').notNull().references(() => deploymentJobs.id, { onDelete: 'cascade' }),
+  sanId:        text('san_id').notNull(),
+  status:       text('status').notNull(),
+  remotePath:   text('remote_path'),
+  logs:         text('logs').notNull().default(''),
+  errorMessage: text('error_message'),
+  startedAt:    text('started_at'),
+  finishedAt:   text('finished_at'),
+})
+
 export const appVersionHistory = sqliteTable('app_version_history', {
   id:                text('id').primaryKey(),
   version:           text('version').notNull(),

@@ -15,7 +15,11 @@
         :title="t('admin.sysconfig.keymap.subtitle') as string"
       />
 
-      <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+      <div v-if="loading" class="flex justify-center py-6">
+        <UIcon name="i-heroicons-arrow-path" class="size-6 text-gray-400 animate-spin" />
+      </div>
+
+      <div v-else class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
           <div class="space-y-1">
             <p class="text-xs font-medium text-gray-400 uppercase tracking-wide">
@@ -26,18 +30,27 @@
             </p>
           </div>
 
-          <UFormField :label="t('admin.sysconfig.keymap.select_label') as string">
-            <USelect
+          <AppFormField :label="t('admin.sysconfig.keymap.select_label') as string">
+            <USelectMenu
               v-model="selectedKeymap"
               :items="items"
               value-key="value"
               label-key="label"
+              :loading="loading"
               :placeholder="t('admin.sysconfig.keymap.select_placeholder') as string"
-              :disabled="isDisabled"
+              :disabled="isDisabled || items.length === 0"
+              :search-input="{ placeholder: t('admin.sysconfig.keymap.select_search') as string }"
               class="w-full"
             />
-          </UFormField>
+          </AppFormField>
         </div>
+
+        <p
+          v-if="status === 'ok' && info.usingFallback"
+          class="text-xs text-blue-700 dark:text-blue-300"
+        >
+          {{ t('admin.sysconfig.keymap.fallback_list_hint') }}
+        </p>
 
         <div class="flex flex-col sm:flex-row gap-3">
           <UButton
@@ -71,7 +84,10 @@
         <p v-else-if="status === 'ok' && !info.loadkeysPresent" class="text-xs text-amber-700 dark:text-amber-300">
           {{ t('admin.sysconfig.keymap.loadkeys_missing') }}
         </p>
-        <p v-else-if="status === 'ok' && info.available.length === 0" class="text-xs text-amber-700 dark:text-amber-300">
+        <p
+          v-else-if="status === 'ok' && info.detectedCount === 0 && !info.usingFallback"
+          class="text-xs text-amber-700 dark:text-amber-300"
+        >
           {{ t('admin.sysconfig.keymap.no_keymaps') }}
         </p>
       </div>
@@ -84,9 +100,11 @@ import { useAppToast } from '~/composables/useAppToast'
 
 type ConsoleKeymapInfo = {
   current: { id: string } | null
-  available: Array<{ id: string; label: string }>
+  available: Array<{ id: string; label: string; source?: string }>
   loadkeysPresent: boolean
   rcKeymapPresent: boolean
+  usingFallback: boolean
+  detectedCount: number
 }
 
 type ConsoleKeymapStatus =
@@ -101,12 +119,15 @@ const props = defineProps<{
 const { t, tError } = useEsosI18n()
 const toast = useAppToast()
 
+const loading = ref(false)
 const status = ref<ConsoleKeymapStatus['status']>('unavailable')
 const info = reactive<ConsoleKeymapInfo>({
   current: null,
   available: [],
   loadkeysPresent: false,
   rcKeymapPresent: false,
+  usingFallback: false,
+  detectedCount: 0,
 })
 const errorMessage = ref<string>('')
 
@@ -114,7 +135,7 @@ const selectedKeymap = ref<string | null>(null)
 const testing = ref(false)
 const saving = ref(false)
 
-const isDisabled = computed(() => Boolean(props.disabled) || testing.value || saving.value)
+const isDisabled = computed(() => Boolean(props.disabled) || testing.value || saving.value || loading.value)
 
 const items = computed(() =>
   info.available.map(k => ({ value: k.id, label: k.label })),
@@ -122,11 +143,27 @@ const items = computed(() =>
 
 const currentLabel = computed(() => info.current?.id ?? (t('admin.sysconfig.keymap.current_unknown') as string))
 
-const canSubmit = computed(() =>
-  !isDisabled.value && !!selectedKeymap.value?.trim() && status.value === 'ok' && info.loadkeysPresent,
-)
+const canSubmit = computed(() => {
+  if (isDisabled.value || status.value !== 'ok' || !info.loadkeysPresent) return false
+  const sel = selectedKeymap.value?.trim()
+  if (!sel) return false
+  return items.value.some(i => i.value === sel)
+})
+
+function resetState() {
+  status.value = 'unavailable'
+  info.current = null
+  info.available = []
+  info.loadkeysPresent = false
+  info.rcKeymapPresent = false
+  info.usingFallback = false
+  info.detectedCount = 0
+  selectedKeymap.value = null
+  errorMessage.value = ''
+}
 
 async function reload() {
+  loading.value = true
   errorMessage.value = ''
   try {
     const res = await $fetch<ConsoleKeymapStatus>(`/api/san/${encodeURIComponent(props.sanId)}/system-config/keymap`)
@@ -136,13 +173,28 @@ async function reload() {
       info.available = res.data.available
       info.loadkeysPresent = res.data.loadkeysPresent
       info.rcKeymapPresent = res.data.rcKeymapPresent
-      if (!selectedKeymap.value && res.data.current?.id) selectedKeymap.value = res.data.current.id
+      info.usingFallback = res.data.usingFallback
+      info.detectedCount = res.data.detectedCount
+
+      const ids = new Set(res.data.available.map(k => k.id))
+      const currentId = res.data.current?.id
+      if (currentId && ids.has(currentId)) {
+        selectedKeymap.value = currentId
+      } else if (selectedKeymap.value && ids.has(selectedKeymap.value)) {
+        // keep user selection
+      } else if (res.data.available.length > 0) {
+        selectedKeymap.value = res.data.available[0]!.id
+      } else {
+        selectedKeymap.value = null
+      }
     } else {
       errorMessage.value = res.error.message
     }
   } catch (err: unknown) {
     status.value = 'unavailable'
     errorMessage.value = tError(err as Parameters<typeof tError>[0])
+  } finally {
+    loading.value = false
   }
 }
 
@@ -180,8 +232,7 @@ async function onSave() {
 }
 
 watch(() => props.sanId, () => {
-  selectedKeymap.value = null
+  resetState()
   void reload()
 }, { immediate: true })
 </script>
-
