@@ -53,7 +53,7 @@ export interface HwLdOsMappingInput {
   mounts?: FileSystemMount[]
 }
 
-const SIZE_TOLERANCE = 0.02
+const SIZE_TOLERANCE = 0.10
 
 function normalizeOsPath(p: string | undefined): string | null {
   const t = p?.trim()
@@ -293,8 +293,10 @@ function enrichLogicalDrive(
       ...ld,
       device: existing,
       devicePath: existing,
+      osDeviceSource: 'cli',
       osDevicePath: existing,
       scsiDevice: existing,
+      sgPath: ld.osSgDevice,
       scsiHctl: ld.scsiAddress,
       osMappingStatus: 'mapped',
       osDeviceDetectionSource: 'cli',
@@ -324,8 +326,10 @@ function enrichLogicalDrive(
       ...ld,
       device: kernelHit.path,
       devicePath: kernelHit.path,
+      osDeviceSource: 'lsscsi',
       osDevicePath: kernelHit.path,
       scsiDevice: kernelHit.path,
+      sgPath: kernelHit.sgPath,
       osSgDevice: kernelHit.sgPath,
       scsiAddress: kernelHit.scsiAddress ?? ld.scsiAddress,
       scsiHctl: kernelHit.scsiAddress ?? ld.scsiAddress,
@@ -352,6 +356,7 @@ function enrichLogicalDrive(
       ...ld,
       device: blockHit.path,
       devicePath: blockHit.path,
+      osDeviceSource: 'heuristic',
       osDevicePath: blockHit.path,
       scsiDevice: blockHit.path,
       osMappingStatus: 'mapped',
@@ -374,6 +379,7 @@ function enrichLogicalDrive(
       ...ld,
       device: mountHit.path,
       devicePath: mountHit.path,
+      osDeviceSource: 'heuristic',
       osDevicePath: mountHit.path,
       scsiDevice: mountHit.path,
       osMappingStatus: 'mapped',
@@ -397,6 +403,7 @@ function enrichLogicalDrive(
       ...ld,
       device: orderHit.path,
       devicePath: orderHit.path,
+      osDeviceSource: 'heuristic',
       osDevicePath: orderHit.path,
       scsiDevice: orderHit.path,
       osMappingStatus: 'mapped',

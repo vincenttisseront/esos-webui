@@ -5,6 +5,7 @@
  */
 import { getActiveSSHManager, withSanContext } from '../../../utils/ssh-runtime'
 import { resolveScopedSanIdForRead } from '../../../utils/san-request-context'
+import { collectRaidOverview } from '../../../utils/raid-overview.service'
 
 // Cherche le premier CLI disponible et lit les champs de mode contrôleur via sortie texte (grep)
 const CTRL_MODE_CMD = `_CLI=""
@@ -99,10 +100,26 @@ export default defineEventHandler(async (event) => {
     }
 
     const sections = splitDiagSections(stdout)
+    let mappingApplied = ''
+    try {
+      const overview = await collectRaidOverview(manager)
+      const lines: string[] = []
+      for (const ctrl of overview.hardwareControllers) {
+        for (const ld of ctrl.logicalDrives) {
+          if (ld.osDeviceDetectionSource === 'lsscsi' && (ld.osDevicePath || ld.devicePath || ld.device)) {
+            const path = ld.osDevicePath ?? ld.devicePath ?? ld.device
+            lines.push(`Mapping lsscsi appliqué: ${ld.id} -> ${path}`)
+          }
+        }
+      }
+      mappingApplied = lines.join('\n')
+    } catch {
+      mappingApplied = ''
+    }
 
     return {
       collectedAt: Date.now(),
-      ctrlMode: truncate(sections.CTRL_MODE ?? ''),
+      ctrlMode: truncate([sections.CTRL_MODE ?? '', mappingApplied].filter(Boolean).join('\n')),
       lspci: truncate(sections.LSPCI ?? ''),
       lsmod: truncate(sections.LSMOD ?? ''),
       dmesg: truncate(sections.DMESG ?? ''),

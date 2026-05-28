@@ -127,8 +127,10 @@ export interface HardwareRaidLogicalDrive {
   readPolicy?: string
   writePolicy?: string
   devicePath?: string
+  osDeviceSource?: 'cli' | 'lsscsi' | 'heuristic'
   osDevicePath?: string
   scsiDevice?: string
+  sgPath?: string
   osSgDevice?: string
   scsiAddress?: string
   scsiHctl?: string

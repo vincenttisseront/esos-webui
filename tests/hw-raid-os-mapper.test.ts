@@ -83,7 +83,38 @@ describe('hw-raid-os-mapper', () => {
     })
     expect(enriched[0].logicalDrives[0].device).toBe('/dev/sda')
     expect(enriched[0].logicalDrives[1].device).toBe('/dev/sdb')
+    expect(enriched[0].logicalDrives[1].osDeviceSource).toBe('lsscsi')
+    expect(enriched[0].logicalDrives[1].sgPath).toBe('/dev/sg1')
     expect(enriched[0].logicalDrives[1].scsiHctl).toBe('0:2:1:0')
+  })
+
+  it('accepts decimal-vs-binary size gap for target-based mapping', () => {
+    const kernel = parseLsscsi('[0:2:1:0] disk DELL PERC H710 3.13 /dev/sdb /dev/sg1')
+    const controllers: HardwareRaidController[] = [{
+      id: '0',
+      vendor: 'dell_perc',
+      model: 'PERC H710',
+      cliTool: 'perccli',
+      detectionSource: ['cli'],
+      managementMode: 'full',
+      health: 'ok',
+      supportsCreate: true,
+      supportsDelete: true,
+      supportsHotSpare: true,
+      physicalDrives: [],
+      logicalDrives: [{ controllerId: '0', id: '1/vd1', raidLevel: '1', sizeBytes: 223_000_000_000, state: 'optimal', devicePath: '' }],
+      warnings: [],
+    }]
+    // ~240 GB in binary-ish bytes (about 7-8% gap vs 223e9)
+    const blockDevices = [blockDev('/dev/sdb', 240_057_409_536)]
+    const enriched = enrichHardwareLdOsPaths({
+      controllers,
+      blockDevices,
+      kernelLogicalDrives: kernel,
+      tools: toolsWithPerccli,
+    })
+    expect(enriched[0].logicalDrives[0].osDevicePath).toBe('/dev/sdb')
+    expect(enriched[0].logicalDrives[0].osDeviceConfidence).toBe('high')
   })
 
   it('parses lsscsi disk tuple with block and sg paths', () => {
