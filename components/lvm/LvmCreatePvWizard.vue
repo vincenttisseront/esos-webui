@@ -43,6 +43,7 @@ import { filterLocalPvCreateCandidates, pickDefaultPvCreatePath } from '~/utils/
 
 const props = defineProps<{
   sanId: string
+  initialDevicePath?: string
   onNavigateBlockDevices?: () => void
 }>()
 const emit = defineEmits<{ cancel: []; close: [] }>()
@@ -65,7 +66,9 @@ function goBlockDevices() {
 
 onMounted(() => {
   lvm.setSanId(props.sanId)
-  selectedPath.value = pickDefaultPvCreatePath(eligibleCandidates.value)
+  const prefill = props.initialDevicePath?.trim()
+  const match = prefill && eligibleCandidates.value.some(c => c.path === prefill)
+  selectedPath.value = match ? prefill! : pickDefaultPvCreatePath(eligibleCandidates.value)
 })
 
 watch([selectedPath, force], async () => {

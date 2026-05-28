@@ -31,7 +31,7 @@ describe('lvm-wizard-ui PV create filters', () => {
 
   it('toPvCreateDeviceOptions omits disabled/ineligible labels', () => {
     const opts = toPvCreateDeviceOptions([cand('/dev/md0', true)])
-    expect(opts).toEqual([{ value: '/dev/md0', label: '/dev/md0' }])
+    expect(opts).toEqual([{ value: '/dev/md0', label: '/dev/md0', disabled: false, title: undefined }])
   })
 
   it('pickDefaultPvCreatePath returns first eligible or empty', () => {

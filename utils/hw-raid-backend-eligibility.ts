@@ -56,6 +56,21 @@ export function findLogicalDriveForOsPath(
   return null
 }
 
+/** Resolve block inventory row by canonical /dev path or disk name. */
+export function findBlockDeviceByPath(
+  blockDevices: RaidBlockDevice[],
+  path: string,
+): RaidBlockDevice | undefined {
+  const target = normalizeDevPath(path)
+  if (!target) return undefined
+  const name = target.replace(/^\/dev\//, '')
+  return blockDevices.find(d =>
+    d.path === target
+    || d.name === name
+    || normalizeDevPath(d.path) === target,
+  )
+}
+
 export function markBlockDevicesFromHardwareRaid(
   controllers: HardwareRaidController[],
   blockDevices: RaidBlockDevice[],
@@ -65,7 +80,7 @@ export function markBlockDevicesFromHardwareRaid(
     for (const ld of controller.logicalDrives) {
       const path = hwLdOsPath(ld)
       if (!path) continue
-      const dev = blockDevices.find(d => d.path === path)
+      const dev = findBlockDeviceByPath(blockDevices, path)
       if (!dev) continue
       if (!dev.usedBy.includes('hardware_raid')) dev.usedBy.push('hardware_raid')
       dev.hwRaidControllerId = controller.id
@@ -182,7 +197,7 @@ export function resolveHwLdBackendContext(
   const hit = findLogicalDriveById(controllers, vdId)
   if (!hit) return null
   const osPath = hwLdOsPath(hit.ld)
-  const dev = osPath ? blockDevices.find(d => d.path === osPath) : undefined
+  const dev = osPath ? findBlockDeviceByPath(blockDevices, osPath) : undefined
   return {
     vdId: hit.ld.id,
     controllerId: hit.controller.id,

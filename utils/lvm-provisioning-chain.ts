@@ -6,6 +6,7 @@ import type {
   VolumeGroup,
 } from '~/types/lvm'
 import { lvCanBindScst, vgsWithFreeSpace } from '~/utils/lvm-action-availability'
+import { formatCandidateSize, formatLvmSourceStepDetail } from '~/utils/lvm-candidate-display'
 
 export type ProvisioningStepId = 'source' | 'pv' | 'vg' | 'lv' | 'scst'
 export type ProvisioningStepStatus = 'ready' | 'created' | 'missing' | 'blocked' | 'next' | 'optional'
@@ -56,12 +57,34 @@ export function pickSourcePath(
   candidates: LvmCandidateDevice[],
   pvs: PhysicalVolume[],
 ): string | null {
-  const eligible = candidates.filter(c => c.eligible)
+  const eligible = candidates.filter(c => c.eligible && !c.path.startsWith('hw:'))
   const preferred = eligible.find(c => c.kind === 'md' || c.kind === 'hw_raid_ld')
   if (preferred) return preferred.path
   if (eligible[0]) return eligible[0].path
   if (pvs[0]) return pvs[0].path
   return null
+}
+
+/** Source step detail for provisioning chain (includes HW VD id and size). */
+export function pickSourceDisplayDetail(
+  candidates: LvmCandidateDevice[],
+  pvs: PhysicalVolume[],
+): string {
+  const path = pickSourcePath(candidates, pvs)
+  if (path) return formatLvmSourceStepDetail(candidates, path)
+  const hw = candidates.find(c => c.kind === 'hw_raid_ld')
+  if (hw) {
+    if (hw.path.startsWith('hw:')) {
+      const sizeStr = hw.sizeBytes ? formatCandidateSize(hw.sizeBytes) : ''
+      const label = hw.hwLdId ?? hw.path
+      return sizeStr ? `${label}, ${sizeStr} (—)` : `${label} (—)`
+    }
+    return formatLvmSourceStepDetail(candidates, hw.path)
+  }
+  const md = candidates.find(c => c.kind === 'md')
+  if (md) return formatLvmSourceStepDetail(candidates, md.path)
+  if (pvs[0]) return pvs[0].path
+  return '—'
 }
 
 function firstUnboundLv(lvs: LogicalVolume[]): LogicalVolume | undefined {
@@ -248,7 +271,7 @@ export function buildProvisioningChain(ctx: LvmProvisioningContext): Provisionin
     {
       id: 'source',
       status: baseStepStatus(sourceSatisfied, sourceMissing, sourceBlocked, nextId, 'source'),
-      detail: sourcePath ?? '—',
+      detail: pickSourceDisplayDetail(ctx.candidates, ctx.pvs),
     },
     {
       id: 'pv',

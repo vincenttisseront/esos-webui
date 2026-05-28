@@ -1,6 +1,10 @@
 import type { HardwareRaidController, HardwareRaidLogicalDrive, MdArray, RaidBlockDevice, RaidToolsInfo } from './raid-types'
 import { hwLdUnmappedReasonKey } from './hw-raid-os-mapper'
-import { evaluateHwBackendEligibility } from '../../utils/hw-raid-backend-eligibility'
+import {
+  evaluateHwBackendEligibility,
+  findBlockDeviceByPath,
+  hwLdOsPath,
+} from '../../utils/hw-raid-backend-eligibility'
 import type { LvmCandidateDevice, LvmCandidateKind, LvmUsedBy, PhysicalVolume } from './lvm-types'
 
 const MD_PATH_RE = /^\/dev\/md[a-z0-9_-]{0,15}$/i
@@ -12,9 +16,18 @@ function isActiveMdArray(arr: MdArray): boolean {
 }
 
 function hwLdPath(ld: HardwareRaidLogicalDrive): string | null {
-  const p = ld.devicePath?.trim() || ld.scsiDevice?.trim()
-  if (!p) return null
-  return p.startsWith('/dev/') ? p : `/dev/${p}`
+  return hwLdOsPath(ld)
+}
+
+function collectMappedHwOsPaths(controllers: HardwareRaidController[] | undefined): Set<string> {
+  const paths = new Set<string>()
+  for (const ctrl of controllers ?? []) {
+    for (const ld of ctrl.logicalDrives) {
+      const p = hwLdPath(ld)
+      if (p) paths.add(p)
+    }
+  }
+  return paths
 }
 
 function hwLdEligible(ld: HardwareRaidLogicalDrive): boolean {
@@ -31,6 +44,8 @@ function candidateFromPath(input: {
   model?: string
   serial?: string
   signatures?: string[]
+  hwLdId?: string
+  controllerId?: string
 }): LvmCandidateDevice {
   return {
     path: input.path,
@@ -43,6 +58,8 @@ function candidateFromPath(input: {
     signatures: input.signatures ?? [],
     model: input.model,
     serial: input.serial,
+    hwLdId: input.hwLdId,
+    controllerId: input.controllerId,
   }
 }
 
@@ -84,6 +101,8 @@ function evaluateHwRaidLdFromBlockDevice(
     model: dev.model ?? ld?.scsiModel,
     serial: dev.serial,
     signatures: dev.diskSignatures ?? dev.wipefsSignatures ?? [],
+    hwLdId: ld?.id,
+    controllerId: ld?.controllerId,
   })
 }
 
@@ -189,6 +208,8 @@ export function buildLvmCandidatesFromInventory(input: LvmCandidateInventoryInpu
     udevadm: false,
   }
 
+  const mappedHwPaths = collectMappedHwOsPaths(input.hardwareControllers)
+
   for (const ctrl of input.hardwareControllers ?? []) {
     for (const ld of ctrl.logicalDrives) {
       if (!hwLdEligible(ld)) continue
@@ -201,29 +222,33 @@ export function buildLvmCandidatesFromInventory(input: LvmCandidateInventoryInpu
           usedBy: [],
           reasons: [hwLdUnmappedReasonKey(raidTools)],
           model: ld.scsiModel,
+          hwLdId: ld.id,
+          controllerId: ctrl.id,
         }))
         continue
       }
       if (pvPaths.has(path)) continue
-      const dev = input.blockDevices.find(d => d.path === path)
+      const dev = findBlockDeviceByPath(input.blockDevices, path)
       if (dev) {
-        push(dev.usedBy.includes('hardware_raid')
-          ? evaluateHwRaidLdFromBlockDevice(dev, ld, pvPaths, input.lvPaths)
-          : evaluateBlockDevice(dev, pvPaths, input.lvPaths))
+        push(evaluateHwRaidLdFromBlockDevice(dev, ld, pvPaths, input.lvPaths))
         continue
       }
+      const backend = evaluateHwBackendEligibility(undefined, ld)
       push(candidateFromPath({
         path,
         kind: 'hw_raid_ld',
         sizeBytes: ld.sizeBytes ?? 0,
         usedBy: [],
-        reasons: [],
+        reasons: backend.reasons.length ? backend.reasons : ['lvm.candidate.reason.no_os_path'],
         model: ld.scsiModel,
+        hwLdId: ld.id,
+        controllerId: ctrl.id,
       }))
     }
   }
 
   for (const dev of input.blockDevices) {
+    if (mappedHwPaths.has(dev.path)) continue
     if (MD_PATH_RE.test(dev.path)) {
       const already = candidates.find(c => c.path === dev.path)
       if (already) continue

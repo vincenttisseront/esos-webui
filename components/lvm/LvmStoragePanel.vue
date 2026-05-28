@@ -221,6 +221,58 @@
       />
     </div>
 
+    <UCard v-if="pvSourceCandidates.length">
+      <template #header>
+        <h3 class="text-sm font-medium">{{ t('lvm.pv.candidates_title') }}</h3>
+      </template>
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs">
+          <thead>
+            <tr class="text-left text-gray-500 dark:text-gray-400 border-b">
+              <th class="py-1.5 pr-3">{{ t('lvm.col.device') }}</th>
+              <th class="py-1.5 pr-3">{{ t('lvm.col.kind') }}</th>
+              <th class="py-1.5 pr-3">{{ t('lvm.col.size') }}</th>
+              <th class="py-1.5 pr-3">{{ t('lvm.candidate.status_eligible') }}</th>
+              <th class="py-1.5" />
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="row in pvSourceCandidates"
+              :key="row.path"
+              class="border-b border-gray-100 dark:border-gray-800"
+            >
+              <td class="py-1.5 font-mono">{{ pvCandidateLabel(row) }}</td>
+              <td class="py-1.5">{{ row.kind }}</td>
+              <td class="py-1.5">{{ formatBytes(row.sizeBytes) }}</td>
+              <td class="py-1.5">
+                <UBadge
+                  :color="row.eligible ? 'green' : 'amber'"
+                  variant="soft"
+                  size="xs"
+                  :label="row.eligible ? t('lvm.candidate.status_eligible') : t('lvm.candidate.status_ineligible')"
+                />
+                <ul v-if="!row.eligible && row.reasons.length" class="mt-1 text-[10px] text-amber-800 dark:text-amber-200 list-disc pl-4">
+                  <li v-for="(reason, ri) in row.reasons" :key="ri">{{ pvCandidateReason(reason) }}</li>
+                </ul>
+              </td>
+              <td class="py-1.5 text-right">
+                <UButton
+                  v-if="row.eligible && canMutate && !row.path.startsWith('hw:')"
+                  size="xs"
+                  color="primary"
+                  variant="soft"
+                  @click="openPvWizard(row.path)"
+                >
+                  {{ t('lvm.pv.create_from_row') }}
+                </UButton>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </UCard>
+
     <UCard>
       <template #header>
         <div class="flex items-center justify-between gap-2">
@@ -452,6 +504,11 @@ import {
 } from '~/utils/lvm-provisioning-chain'
 import { classifyLvFileioUsage } from '~/utils/lvm-lv-usage'
 import { buildExposureSummary, fileioEligibleBackendPaths } from '~/utils/storage-workflow-guidance'
+import {
+  formatLvmCandidateLabel,
+  formatLvmCandidateReason,
+  listPvSourceCandidates,
+} from '~/utils/lvm-candidate-display'
 
 const props = defineProps<{
   sanId: string
@@ -498,6 +555,16 @@ function navigateBlockDevicesFromWizard() {
 }
 
 const eligibleCandidates = computed(() => lvm.candidates.filter(c => c.eligible))
+
+const pvSourceCandidates = computed(() => listPvSourceCandidates(lvm.candidates))
+
+function pvCandidateLabel(row: (typeof lvm.candidates)[number]) {
+  return formatLvmCandidateLabel(row, t)
+}
+
+function pvCandidateReason(reason: string) {
+  return formatLvmCandidateReason(reason, t)
+}
 
 const displayCandidates = computed(() => {
   if (props.isClustered && props.clusterId && lvm.clusterInventory) {
@@ -706,7 +773,7 @@ function onNextStepAction(kind: NonNullable<LvmNextAction['action']>) {
   }
 }
 
-async function openPvWizard() {
+async function openPvWizard(prefillPath?: string) {
   const Wizard = props.isClustered && clusterId.value
     ? (await import('~/components/lvm/LvmClusterPvWizard.vue')).default
     : (await import('~/components/lvm/LvmCreatePvWizard.vue')).default
@@ -716,6 +783,7 @@ async function openPvWizard() {
       props: {
         sanId: props.sanId,
         ...(props.isClustered && clusterId.value ? { clusterId: clusterId.value } : {}),
+        ...(!props.isClustered && prefillPath ? { initialDevicePath: prefillPath } : {}),
         persistent: true,
         onNavigateBlockDevices: navigateBlockDevicesFromWizard,
       },

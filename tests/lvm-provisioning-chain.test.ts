@@ -158,6 +158,6 @@ describe('lvm-provisioning-chain', () => {
       orphanPvs: [],
     })
     expect(chain.find(s => s.id === 'pv')?.status).toBe('next')
-    expect(chain.find(s => s.id === 'source')?.detail).toBe('/dev/md0')
+    expect(chain.find(s => s.id === 'source')?.detail).toContain('/dev/md0')
   })
 })

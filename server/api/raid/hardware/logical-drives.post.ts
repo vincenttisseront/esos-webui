@@ -59,6 +59,7 @@ export default defineEventHandler(async (event) => {
     const result = await executeHwLogicalDriveCreate(manager, cacheKey, ctrl, body)
 
     invalidateCacheKey(cacheKey)
+    invalidateCacheKey(`lvm-overview-${sanId}`)
     return result
   }
 

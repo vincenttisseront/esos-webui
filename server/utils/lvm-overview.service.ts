@@ -179,6 +179,7 @@ export async function collectLvmOverview(manager: SSHSessionManager): Promise<Lv
     hardwareControllers: raidOverview.hardwareControllers,
     pvs,
     lvPaths,
+    tools: raidOverview.tools,
   })
   const alerts = buildAlerts(tools, vgs.some(v => v.clustered))
 

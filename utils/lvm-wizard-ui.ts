@@ -1,5 +1,6 @@
 import type { ClusterLvmNodeInventory, LvmCandidateDevice } from '~/types/lvm'
 import { listClusterEligiblePaths } from '~/utils/lvm-cluster-ui'
+import { formatLvmCandidateLabel, formatLvmCandidateReason } from '~/utils/lvm-candidate-display'
 
 /** Native &lt;select&gt; styling for LVM modal wizards (avoids USelect popper z-index under AppModalHost). */
 export const LVM_NATIVE_SELECT_CLASS =
@@ -25,8 +26,21 @@ export function filterClusterPvCreateCandidates(
   return listClusterEligiblePaths(primarySanId, candidates, inventory)
 }
 
-export function toPvCreateDeviceOptions(candidates: LvmCandidateDevice[]): LvmSelectOption[] {
-  return candidates.map(c => ({ value: c.path, label: c.path }))
+export function toPvCreateDeviceOptions(
+  candidates: LvmCandidateDevice[],
+  t?: (key: string, params?: Record<string, string | number>) => string,
+): LvmSelectOption[] {
+  const labelFor = (c: LvmCandidateDevice) => (t ? formatLvmCandidateLabel(c, t) : c.path)
+  const reasonFor = (c: LvmCandidateDevice) => {
+    if (c.eligible || !c.reasons.length || !t) return undefined
+    return c.reasons.map(r => formatLvmCandidateReason(r, t)).join(' · ')
+  }
+  return candidates.map(c => ({
+    value: c.path.startsWith('hw:') ? '' : c.path,
+    label: labelFor(c),
+    disabled: !c.eligible || c.path.startsWith('hw:'),
+    title: reasonFor(c),
+  })).filter(o => o.value)
 }
 
 export function pickDefaultPvCreatePath(candidates: LvmCandidateDevice[]): string {

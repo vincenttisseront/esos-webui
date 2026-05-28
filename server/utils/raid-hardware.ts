@@ -186,7 +186,7 @@ function parseStorCliJson(json: string, cli: string): HardwareRaidController[] {
 
         return {
           controllerId: ctrlIndex,
-          id: `${ctrlIndex}/vd${idx}`,
+          id: parseStorCliLogicalDriveId(ctrlIndex, vd, idx),
           raidLevel,
           sizeBytes,
           state: mapStorCliVdState(stateStr),
@@ -321,6 +321,23 @@ function extractStorCliControllerMode(
 
   evidence.push('Mode contrôleur non déterminable depuis les données CLI disponibles')
   return { mode: 'unknown', confidence: 'low', evidence }
+}
+
+/** Stable LD id from storcli/perccli VD LIST row (DG/VD preferred over array index). */
+export function parseStorCliLogicalDriveId(
+  ctrlIndex: string,
+  vd: Record<string, unknown>,
+  fallbackIdx: number,
+): string {
+  const dgVd = String(vd['DG/VD'] ?? vd['DG-VD'] ?? vd['DG_VD'] ?? '').trim()
+  const dgMatch = dgVd.match(/^(\d+)\/(\d+)$/)
+  if (dgMatch) return `${dgMatch[1]}/vd${dgMatch[2]}`
+
+  const vdField = String(vd['VD'] ?? vd['VD ID'] ?? vd['VDID'] ?? '').trim()
+  const vdNum = vdField.match(/(\d+)\s*$/)?.[1]
+  if (vdNum) return `${ctrlIndex}/vd${vdNum}`
+
+  return `${ctrlIndex}/vd${fallbackIdx}`
 }
 
 function parseStorCliSize(s: string): number {

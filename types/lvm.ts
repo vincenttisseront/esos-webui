@@ -100,6 +100,9 @@ export interface LvmCandidateDevice {
   signatures: string[]
   model?: string
   serial?: string
+  /** Hardware RAID logical drive id (e.g. 0/vd1). */
+  hwLdId?: string
+  controllerId?: string
 }
 
 export interface LvmAlert {

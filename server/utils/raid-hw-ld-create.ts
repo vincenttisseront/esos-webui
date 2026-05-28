@@ -432,6 +432,9 @@ export async function executeHwLogicalDriveCreate(
     : undefined
 
   invalidateCacheKey(cacheKey)
+  if (cacheKey.startsWith('raid-overview-')) {
+    invalidateCacheKey(cacheKey.replace(/^raid-overview-/, 'lvm-overview-'))
+  }
 
   let refreshCommand: string | undefined
   let refreshStdout: string | undefined

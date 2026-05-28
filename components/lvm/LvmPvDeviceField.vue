@@ -43,5 +43,5 @@ const props = defineProps<{
 const emit = defineEmits<{ 'update:modelValue': [string] }>()
 const { t } = useEsosI18n()
 
-const options = computed(() => toPvCreateDeviceOptions(props.candidates))
+const options = computed(() => toPvCreateDeviceOptions(props.candidates, t))
 </script>

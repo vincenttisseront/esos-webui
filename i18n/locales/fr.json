@@ -1624,9 +1624,28 @@
     },
     "pv": {
       "table_title": "Volumes physiques (PV)",
+      "candidates_title": "Candidats source PV (MD / RAID matériel)",
       "create_action": "Créer un PV",
+      "create_from_row": "Créer PV",
       "remove": "Supprimer le PV",
       "removed": "PV supprimé"
+    },
+    "candidate": {
+      "label": {
+        "hw_raid": "{path}, Volume RAID matériel {vdId}, {size}",
+        "md": "{path}, tableau MD, {size}"
+      },
+      "reason": {
+        "no_os_path": "Aucun chemin bloc OS (rescan SCSI ou actualiser l'inventaire)",
+        "system_protected": "Volume système ESOS protégé",
+        "mounted": "Périphérique monté",
+        "already_pv": "Déjà volume physique",
+        "signature": "Signature ou système de fichiers — wipefs requis avant pvcreate",
+        "scst": "Utilisé par SCST",
+        "raw_disk": "Disque brut — utiliser un volume MD ou RAID matériel"
+      },
+      "status_eligible": "Éligible",
+      "status_ineligible": "Non éligible"
     },
     "vg": {
       "table_title": "Groupes de volumes (VG)",
