@@ -16,7 +16,7 @@ function isActiveMdArray(arr: MdArray): boolean {
 }
 
 function hwLdPath(ld: HardwareRaidLogicalDrive): string | null {
-  return hwLdOsPath(ld)
+  return ld.osDevicePath?.trim() || hwLdOsPath(ld)
 }
 
 function collectMappedHwOsPaths(controllers: HardwareRaidController[] | undefined): Set<string> {

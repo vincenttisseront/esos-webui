@@ -196,6 +196,52 @@ describe('buildLvmCandidatesFromInventory', () => {
     expect(vd?.eligible).toBe(true)
   })
 
+  it('uses osDevicePath when legacy devicePath is empty', () => {
+    const candidates = buildLvmCandidatesFromInventory({
+      blockDevices: [{
+        name: 'sdb',
+        path: '/dev/sdb',
+        type: 'disk',
+        sizeBytes: 223 * 1024 ** 3,
+        usedBy: ['hardware_raid'],
+        mdEligibilityReasons: [],
+        eligibleForMdPartitionPrep: false,
+        mdPartitionPrepReasons: [],
+        eligibleForMd: false,
+        eligibleForHardwareRaid: false,
+        warnings: [],
+      }],
+      hardwareControllers: [{
+        id: '0',
+        vendor: 'dell_perc',
+        model: 'PERC',
+        cliTool: 'perccli',
+        detectionSource: ['cli'],
+        managementMode: 'full',
+        health: 'ok',
+        supportsCreate: true,
+        supportsDelete: true,
+        supportsHotSpare: true,
+        physicalDrives: [],
+        logicalDrives: [{
+          controllerId: '0',
+          id: '1/vd1',
+          raidLevel: '1',
+          sizeBytes: 223 * 1024 ** 3,
+          state: 'optimal',
+          devicePath: '',
+          osDevicePath: '/dev/sdb',
+          detectionSource: 'lsscsi',
+        }],
+      }],
+      pvs: [],
+      lvPaths: new Set(),
+    })
+    const vd = candidates.find(c => c.path === '/dev/sdb')
+    expect(vd?.kind).toBe('hw_raid_ld')
+    expect(vd?.eligible).toBe(true)
+  })
+
   it('excludes protected system hardware RAID VD', () => {
     const candidates = buildLvmCandidatesFromInventory({
       blockDevices: [{

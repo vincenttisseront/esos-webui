@@ -68,6 +68,19 @@ function splitDiagSections(output: string): Record<string, string> {
   return sections
 }
 
+function normalizeCliStatus(whichCliRaw: string, directPathsRaw: string): string {
+  const whichTrimmed = (whichCliRaw ?? '').trim()
+  const directFound = (directPathsRaw ?? '').split('\n').some(line => line.trim().startsWith('FOUND:'))
+  if (!directFound) return whichTrimmed
+  if (whichTrimmed.includes('(aucun outil CLI RAID dans PATH)')) {
+    return [
+      whichTrimmed,
+      'CLI hors PATH mais disponible via chemin direct.',
+    ].join('\n')
+  }
+  return whichTrimmed
+}
+
 export default defineEventHandler(async (event) => {
   const scopeId = resolveScopedSanIdForRead(event)
 
@@ -94,7 +107,7 @@ export default defineEventHandler(async (event) => {
       lsmod: truncate(sections.LSMOD ?? ''),
       dmesg: truncate(sections.DMESG ?? ''),
       lsscsi: truncate(sections.LSSCSI ?? ''),
-      whichCli: truncate(sections.WHICH_CLI ?? ''),
+      whichCli: truncate(normalizeCliStatus(sections.WHICH_CLI ?? '', sections.DIRECT_PATHS ?? '')),
       directPaths: truncate(sections.DIRECT_PATHS ?? ''),
     }
   }

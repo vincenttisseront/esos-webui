@@ -18,7 +18,7 @@ export function normalizeDevPath(p: string | undefined): string | null {
 }
 
 export function hwLdOsPath(ld: HardwareRaidLogicalDrive): string | null {
-  return normalizeDevPath(ld.devicePath) ?? normalizeDevPath(ld.scsiDevice)
+  return normalizeDevPath(ld.osDevicePath) ?? normalizeDevPath(ld.devicePath) ?? normalizeDevPath(ld.scsiDevice)
 }
 
 export interface HwLdRef {

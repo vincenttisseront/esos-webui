@@ -12,6 +12,17 @@ function ld(devicePath?: string): HardwareRaidLogicalDrive {
   }
 }
 
+function ldWithOsPath(osDevicePath?: string): HardwareRaidLogicalDrive {
+  return {
+    controllerId: '0',
+    id: '1/vd1',
+    raidLevel: '1',
+    state: 'optimal',
+    devicePath: '',
+    osDevicePath,
+  }
+}
+
 describe('hw-raid-vd-ui', () => {
   it('flags VD without OS path for rescan action', () => {
     expect(vdNeedsOsRescan(ld(''))).toBe(true)
@@ -23,5 +34,10 @@ describe('hw-raid-vd-ui', () => {
 
   it('rescan no-result keeps not-detected text', () => {
     expect(vdDeviceText(ld(''), 'Non détecté côté OS')).toBe('Non détecté côté OS')
+  })
+
+  it('uses osDevicePath mapping and no longer flags pending', () => {
+    expect(vdNeedsOsRescan(ldWithOsPath('/dev/sdb'))).toBe(false)
+    expect(vdDeviceText(ldWithOsPath('/dev/sdb'), 'Non détecté côté OS')).toBe('/dev/sdb')
   })
 })

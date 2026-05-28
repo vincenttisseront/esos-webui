@@ -287,8 +287,11 @@ function enrichLogicalDrive(
     return {
       ...ld,
       devicePath: existing,
+      osDevicePath: existing,
       scsiDevice: existing,
       osMappingStatus: 'mapped',
+      osDeviceDetectionSource: 'cli',
+      osDeviceConfidence: 'high',
       osMappingDiagnostic: {
         ...diag,
         matchedPath: existing,
@@ -313,10 +316,14 @@ function enrichLogicalDrive(
     return {
       ...ld,
       devicePath: kernelHit.path,
+      osDevicePath: kernelHit.path,
       scsiDevice: kernelHit.path,
+      osSgDevice: kernelHit.sgPath,
       scsiAddress: kernelHit.scsiAddress ?? ld.scsiAddress,
       detectionSource: ld.detectionSource ?? 'lsscsi',
       osMappingStatus: 'mapped',
+      osDeviceDetectionSource: 'lsscsi',
+      osDeviceConfidence: confidence,
       osMappingDiagnostic: {
         ...diag,
         matchedPath: kernelHit.path,
@@ -335,8 +342,11 @@ function enrichLogicalDrive(
     return {
       ...ld,
       devicePath: blockHit.path,
+      osDevicePath: blockHit.path,
       scsiDevice: blockHit.path,
       osMappingStatus: 'mapped',
+      osDeviceDetectionSource: 'heuristic',
+      osDeviceConfidence: blockHit.method === 'size_wwn' || blockHit.method === 'size_serial' ? 'high' : 'medium',
       osMappingDiagnostic: {
         ...diag,
         matchedPath: blockHit.path,
@@ -353,8 +363,11 @@ function enrichLogicalDrive(
     return {
       ...ld,
       devicePath: mountHit.path,
+      osDevicePath: mountHit.path,
       scsiDevice: mountHit.path,
       osMappingStatus: 'mapped',
+      osDeviceDetectionSource: 'heuristic',
+      osDeviceConfidence: 'medium',
       osMappingDiagnostic: {
         ...diag,
         matchedPath: mountHit.path,
@@ -372,8 +385,11 @@ function enrichLogicalDrive(
     return {
       ...ld,
       devicePath: orderHit.path,
+      osDevicePath: orderHit.path,
       scsiDevice: orderHit.path,
       osMappingStatus: 'mapped',
+      osDeviceDetectionSource: 'heuristic',
+      osDeviceConfidence: 'low',
       osMappingDiagnostic: {
         ...diag,
         matchedPath: orderHit.path,

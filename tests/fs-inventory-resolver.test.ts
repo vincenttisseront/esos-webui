@@ -79,4 +79,52 @@ describe('fs-inventory-resolver', () => {
     expect(hw?.reasons.some(r => r.startsWith('storage.fs.backend.reason.mounted'))).toBe(true)
     expect(hw?.path).toBe('/dev/sdb')
   })
+
+  it('uses osDevicePath for HW LD backend path', () => {
+    const raid: RaidOverview = {
+      blockDevices: [{
+        path: '/dev/sdb',
+        name: 'sdb',
+        type: 'disk',
+        sizeBytes: 223e9,
+        usedBy: ['hardware_raid'],
+      }],
+      mdArrays: [],
+      hardwareControllers: [{
+        id: '0',
+        vendor: 'dell_perc',
+        model: 'PERC H710',
+        cliTool: 'perccli',
+        detectionSource: ['cli'],
+        managementMode: 'full',
+        health: 'ok',
+        supportsCreate: true,
+        supportsDelete: true,
+        supportsHotSpare: true,
+        physicalDrives: [],
+        logicalDrives: [{
+          controllerId: '0',
+          id: '1/vd1',
+          raidLevel: '1',
+          sizeBytes: 223e9,
+          state: 'optimal',
+          devicePath: '',
+          osDevicePath: '/dev/sdb',
+          osDeviceDetectionSource: 'lsscsi',
+          osDeviceConfidence: 'high',
+        }],
+        warnings: [],
+      }],
+    } as RaidOverview
+
+    const { backends } = buildFsBackendsAndLinks({
+      raid,
+      lvm: { pvs: [], vgs: [], lvs: [] } as any,
+      mounts: [],
+      pathToDevices: new Map(),
+    })
+    const hw = backends.find(b => b.kind === 'hw_raid_ld')
+    expect(hw?.path).toBe('/dev/sdb')
+    expect(hw?.eligible).toBe(true)
+  })
 })

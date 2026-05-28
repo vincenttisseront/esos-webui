@@ -126,10 +126,14 @@ export interface HardwareRaidLogicalDrive {
   readPolicy?: string
   writePolicy?: string
   devicePath?: string
+  osDevicePath?: string
   scsiDevice?: string
+  osSgDevice?: string
   scsiAddress?: string
   scsiModel?: string
   detectionSource?: 'cli' | 'lsscsi' | 'dmesg' | 'proc_scsi'
+  osDeviceDetectionSource?: 'cli' | 'lsscsi' | 'heuristic'
+  osDeviceConfidence?: 'high' | 'medium' | 'low'
   progressPct?: number
   warnings?: string[]
   wwn?: string

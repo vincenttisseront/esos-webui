@@ -61,7 +61,7 @@ export function resolveCanonicalPath(path: string, index: PathAliasIndex): strin
 }
 
 function hwLdPath(ld: { devicePath?: string; scsiDevice?: string }): string | null {
-  const p = ld.devicePath?.trim() || ld.scsiDevice?.trim()
+  const p = (ld as { osDevicePath?: string }).osDevicePath?.trim() || ld.devicePath?.trim() || ld.scsiDevice?.trim()
   if (!p) return null
   return normalizeDevPath(p)
 }

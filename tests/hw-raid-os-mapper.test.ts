@@ -109,6 +109,9 @@ describe('hw-raid-os-mapper', () => {
     expect(enriched[0].logicalDrives.every(ld => ld.osMappingStatus === 'mapped')).toBe(true)
     const vd1 = enriched[0].logicalDrives.find(ld => ld.id === '0/vd1')
     expect(vd1?.devicePath).toBe('/dev/sdb')
+    expect(vd1?.osDevicePath).toBe('/dev/sdb')
+    expect(vd1?.osDeviceDetectionSource).toBe('lsscsi')
+    expect(vd1?.osDeviceConfidence).toBe('high')
     expect(vd1?.osMappingDiagnostic?.mappingSource).toBe('lsscsi')
     expect(vd1?.osMappingDiagnostic?.mappedSgPath).toBe('/dev/sg1')
     expect(vd1?.osMappingDiagnostic?.mappedScsiTuple).toBe('0:2:1:0')
@@ -170,6 +173,8 @@ describe('hw-raid-os-mapper', () => {
     })
     const mapped = enriched[0].logicalDrives[0]
     expect(mapped.devicePath).toBe('/dev/sdb')
+    expect(mapped.osDevicePath).toBe('/dev/sdb')
+    expect(mapped.osDeviceDetectionSource).toBe('lsscsi')
     expect(mapped.osMappingDiagnostic?.mappedScsiTuple).toBe('0:2:1:0')
     expect(mapped.osMappingDiagnostic?.mappingSource).toBe('lsscsi')
   })
@@ -206,6 +211,7 @@ describe('hw-raid-os-mapper', () => {
       tools: toolsWithPerccli,
     })
     expect(enriched[0].logicalDrives[0].devicePath).toBe('/dev/sdb')
+    expect(enriched[0].logicalDrives[0].osDeviceConfidence).toBe('medium')
     expect(enriched[0].logicalDrives[0].osMappingDiagnostic?.confidence).toBe('medium')
   })
 
