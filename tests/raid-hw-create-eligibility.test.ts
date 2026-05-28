@@ -3,6 +3,7 @@ import { runPreflight } from '../server/utils/raid-preflight'
 import {
   extractRaidCliFromToolsOutput,
   isRaidCliPath,
+  normalizeRaidCliPath,
   toolsOutputHasRaidCli,
 } from '../utils/raid-cli-path'
 import {
@@ -45,6 +46,10 @@ describe('raid-cli-path', () => {
   it('normalizes basename check for mixed-case paths', () => {
     expect(isRaidCliPath('/usr/local/sbin/perccli64')).toBe(true)
     expect(isRaidCliPath('/opt/MegaRAID/storcli/storcli64')).toBe(true)
+  })
+
+  it('normalizes detected path separators', () => {
+    expect(normalizeRaidCliPath('\\usr\\local\\sbin\\perccli64')).toBe('/usr/local/sbin/perccli64')
   })
 })
 

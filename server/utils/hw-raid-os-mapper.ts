@@ -38,6 +38,9 @@ export interface HwLdOsMappingDiagnostic {
   candidateOsPaths: HwLdOsMappingCandidate[]
   matchedPath?: string
   matchMethod?: HwLdOsMatchMethod
+  mappingSource?: 'cli' | 'lsscsi' | 'heuristic'
+  mappedScsiTuple?: string
+  confidence?: 'high' | 'medium' | 'low'
   failureReason?: string
 }
 
@@ -92,6 +95,18 @@ function parseVdIndex(ldId: string): number {
   return m ? Number.parseInt(m[1], 10) : 0
 }
 
+function parseScsiTuple(scsiAddress: string | undefined): { host: number; channel: number; target: number; lun: number } | null {
+  if (!scsiAddress) return null
+  const m = scsiAddress.trim().match(/^(\d+):(\d+):(\d+):(\d+)$/)
+  if (!m) return null
+  return {
+    host: Number.parseInt(m[1], 10),
+    channel: Number.parseInt(m[2], 10),
+    target: Number.parseInt(m[3], 10),
+    lun: Number.parseInt(m[4], 10),
+  }
+}
+
 function cliOsPath(ld: HardwareRaidLogicalDrive): string | null {
   return normalizeOsPath(ld.devicePath) ?? normalizeOsPath(ld.scsiDevice)
 }
@@ -109,6 +124,7 @@ function kernelDrivesForController(
 }
 
 function matchFromKernel(
+  ctrl: HardwareRaidController,
   ld: HardwareRaidLogicalDrive,
   kernelPool: KernelExposedLogicalDrive[],
   blockDevices: RaidBlockDevice[],
@@ -121,9 +137,26 @@ function matchFromKernel(
     if (!path || used.has(path)) continue
     const dev = blockDevices.find(d => d.path === path)
     const sizeOk = !ld.sizeBytes || sizeMatch(ld.sizeBytes, dev?.sizeBytes)
+    const kTuple = parseScsiTuple(k.scsiAddress)
+    const vdIndex = parseVdIndex(ld.id)
+    const targetMatchesVd = kTuple ? kTuple.target === vdIndex : false
+    const hostMatchesControllerId = kTuple
+      ? (!Number.isNaN(Number.parseInt(ctrl.id, 10)) && kTuple.host === Number.parseInt(ctrl.id, 10))
+      : false
+    const vendorModel = `${k.vendor} ${k.model}`.toLowerCase()
+    const isPercLike = vendorModel.includes('dell') || vendorModel.includes('perc') || vendorModel.includes('megaraid')
 
     if (ld.scsiAddress && k.scsiAddress === ld.scsiAddress && sizeOk) {
       candidates.push({ path, method: 'lsscsi', scsiAddress: k.scsiAddress, score: 100 })
+      continue
+    }
+    if (sizeOk && targetMatchesVd && (isPercLike || !!dev)) {
+      candidates.push({
+        path,
+        method: 'lsscsi',
+        scsiAddress: k.scsiAddress,
+        score: hostMatchesControllerId ? 96 : 92,
+      })
       continue
     }
     if (sizeOk && dev && isRaidExposedDisk(dev)) {
@@ -246,12 +279,23 @@ function enrichLogicalDrive(
       devicePath: existing,
       scsiDevice: existing,
       osMappingStatus: 'mapped',
-      osMappingDiagnostic: { ...diag, matchedPath: existing, matchMethod: 'os_drive_name' },
+      osMappingDiagnostic: {
+        ...diag,
+        matchedPath: existing,
+        matchMethod: 'os_drive_name',
+        mappingSource: 'cli',
+        confidence: 'high',
+      },
     }
   }
 
-  const kernelHit = matchFromKernel(ld, ctx.kernelPool, ctx.blockDevices, ctx.usedPaths)
+  const kernelHit = matchFromKernel(ctrl, ld, ctx.kernelPool, ctx.blockDevices, ctx.usedPaths)
   if (kernelHit) {
+    const tuple = parseScsiTuple(kernelHit.scsiAddress)
+    const vdIndex = parseVdIndex(ld.id)
+    const confidence: 'high' | 'medium' | 'low' = tuple && tuple.target === vdIndex
+      ? 'high'
+      : (ld.sizeBytes ? 'medium' : 'low')
     ctx.usedPaths.add(kernelHit.path)
     return {
       ...ld,
@@ -264,6 +308,9 @@ function enrichLogicalDrive(
         ...diag,
         matchedPath: kernelHit.path,
         matchMethod: kernelHit.method,
+        mappingSource: 'lsscsi',
+        mappedScsiTuple: kernelHit.scsiAddress,
+        confidence,
       },
     }
   }
@@ -276,7 +323,13 @@ function enrichLogicalDrive(
       devicePath: blockHit.path,
       scsiDevice: blockHit.path,
       osMappingStatus: 'mapped',
-      osMappingDiagnostic: { ...diag, matchedPath: blockHit.path, matchMethod: blockHit.method },
+      osMappingDiagnostic: {
+        ...diag,
+        matchedPath: blockHit.path,
+        matchMethod: blockHit.method,
+        mappingSource: 'heuristic',
+        confidence: blockHit.method === 'size_wwn' || blockHit.method === 'size_serial' ? 'high' : 'medium',
+      },
     }
   }
 
@@ -288,7 +341,13 @@ function enrichLogicalDrive(
       devicePath: mountHit.path,
       scsiDevice: mountHit.path,
       osMappingStatus: 'mapped',
-      osMappingDiagnostic: { ...diag, matchedPath: mountHit.path, matchMethod: mountHit.method },
+      osMappingDiagnostic: {
+        ...diag,
+        matchedPath: mountHit.path,
+        matchMethod: mountHit.method,
+        mappingSource: 'heuristic',
+        confidence: 'medium',
+      },
     }
   }
 
@@ -305,6 +364,8 @@ function enrichLogicalDrive(
         ...diag,
         matchedPath: orderHit.path,
         matchMethod: orderHit.method,
+        mappingSource: 'heuristic',
+        confidence: 'low',
       },
       warnings: [...(ld.warnings ?? []), diag.failureReason],
     }

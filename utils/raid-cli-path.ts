@@ -25,6 +25,11 @@ export function raidCliBasename(path: string): string {
   return segment.toLowerCase()
 }
 
+export function normalizeRaidCliPath(path: string): string {
+  const normalized = path.trim().replace(/\\/g, '/').replace(/\/+/g, '/')
+  return normalized
+}
+
 export function isRaidCliPath(path: string): boolean {
   const base = raidCliBasename(path)
   return base === 'perccli64' || base === 'perccli' || base === 'storcli64' || base === 'storcli'
@@ -39,11 +44,11 @@ export function inferRaidCliTool(path: string): 'perccli' | 'storcli' {
 export function extractRaidCliFromToolsOutput(output: string): string | null {
   for (const line of output.split('\n')) {
     const l = line.trim()
-    if (l.startsWith('/') && isRaidCliPath(l)) return l
+    if (l.startsWith('/') && isRaidCliPath(l)) return normalizeRaidCliPath(l)
   }
   for (const line of output.split('\n')) {
     const l = line.trim()
-    if (isRaidCliPath(l)) return l
+    if (isRaidCliPath(l)) return normalizeRaidCliPath(l)
   }
   return null
 }
@@ -78,6 +83,7 @@ export function buildResolveRaidCliShell(hint?: string | null): string {
   const qHint = hint ? `'${hint.replace(/'/g, `'\\''`)}'` : '""'
   const paths = KNOWN_RAID_CLI_PATHS.map(p => `"${p}"`).join(' ')
   return [
+    'export PATH="/usr/local/sbin:/usr/sbin:/sbin:$PATH"',
     `_H=${qHint}`,
     'if [ -n "$_H" ] && [ -x "$_H" ]; then echo "$_H"; exit 0; fi',
     `for _p in ${paths}; do`,
@@ -93,5 +99,8 @@ export function buildResolveRaidCliShell(hint?: string | null): string {
 /** Read-only validation command (matches missing-tools temp install checks). */
 export function buildValidateRaidCliShell(cliPath: string): string {
   const q = cliPath.replace(/'/g, `'\\''`)
-  return `${q} /call show J 2>/dev/null`
+  return [
+    'export PATH="/usr/local/sbin:/usr/sbin:/sbin:$PATH"',
+    `${q} /call show J 2>/dev/null`,
+  ].join('\n')
 }

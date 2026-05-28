@@ -48,6 +48,13 @@ function blockDev(path: string, sizeBytes: number): RaidBlockDevice {
 }
 
 describe('hw-raid-os-mapper', () => {
+  it('parses lsscsi disk tuple with block and sg paths', () => {
+    const kernel = parseLsscsi(LSSCSI_OUTPUT)
+    const second = kernel.find(k => k.scsiAddress === '0:2:1:0')
+    expect(second?.devicePath).toBe('/dev/sdb')
+    expect(second?.sgDevicePath).toBe('/dev/sg1')
+  })
+
   it('maps VDs from lsscsi when OS Drive Name is empty', () => {
     const kernel = parseLsscsi(LSSCSI_OUTPUT)
     const controllers: HardwareRaidController[] = [{
@@ -100,6 +107,53 @@ describe('hw-raid-os-mapper', () => {
     const paths = enriched[0].logicalDrives.map(ld => ld.devicePath).sort()
     expect(paths).toEqual(['/dev/sda', '/dev/sdb'])
     expect(enriched[0].logicalDrives.every(ld => ld.osMappingStatus === 'mapped')).toBe(true)
+    const vd1 = enriched[0].logicalDrives.find(ld => ld.id === '0/vd1')
+    expect(vd1?.devicePath).toBe('/dev/sdb')
+    expect(vd1?.osMappingDiagnostic?.mappingSource).toBe('lsscsi')
+    expect(vd1?.osMappingDiagnostic?.mappedScsiTuple).toBe('0:2:1:0')
+    expect(vd1?.osMappingDiagnostic?.confidence).toBe('high')
+  })
+
+  it('does not mark lsscsi mapping as high confidence on size mismatch', () => {
+    const kernel = parseLsscsi(LSSCSI_OUTPUT)
+    const controllers: HardwareRaidController[] = [{
+      id: '0',
+      vendor: 'dell_perc',
+      model: 'PERC H730P',
+      cliTool: 'perccli',
+      detectionSource: ['cli'],
+      managementMode: 'full',
+      health: 'ok',
+      supportsCreate: true,
+      supportsDelete: true,
+      supportsHotSpare: true,
+      physicalDrives: [],
+      logicalDrives: [{
+        controllerId: '0',
+        id: '0/vd1',
+        raidLevel: '1',
+        sizeBytes: 99_000_000_000,
+        state: 'optimal',
+        devicePath: '',
+        detectionSource: 'cli',
+      }],
+      warnings: [],
+    }]
+
+    const blockDevices = [
+      blockDev('/dev/sda', 1_000_000_000_000),
+      blockDev('/dev/sdb', 2_000_000_000_000),
+    ]
+
+    const enriched = enrichHardwareLdOsPaths({
+      controllers,
+      blockDevices,
+      kernelLogicalDrives: kernel,
+      tools: toolsWithPerccli,
+    })
+    expect(enriched[0].logicalDrives[0].devicePath ?? '').not.toBe('/dev/sdb')
+    expect(enriched[0].logicalDrives[0].osMappingDiagnostic?.confidence).not.toBe('high')
+    expect(enriched[0].logicalDrives[0].osMappingStatus).not.toBe('mapped')
   })
 
   it('distinguishes tool missing vs mapping not found', () => {

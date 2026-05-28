@@ -25,6 +25,7 @@ export interface KernelExposedLogicalDrive {
   model: string
   revision?: string
   devicePath?: string
+  sgDevicePath?: string
   source: 'lsscsi' | 'dmesg' | 'proc_scsi'
 }
 
@@ -253,6 +254,7 @@ export function parseLsscsi(output: string): KernelExposedLogicalDrive[] {
     // device path: prefer /dev/sd* over /dev/sg*
     const devPath = rest.match(/(\/dev\/sd[a-z]+)/)?.[1]
       ?? rest.match(/(\/dev\/[a-z][a-z0-9]+)/)?.[1]
+    const sgPath = rest.match(/(\/dev\/sg\d+)/)?.[1]
 
     // Only include devices that look like they come from a RAID controller
     const combined = `${vendorStr} ${modelStr}`.toLowerCase()
@@ -274,6 +276,7 @@ export function parseLsscsi(output: string): KernelExposedLogicalDrive[] {
       model: modelStr,
       revision: revision || undefined,
       devicePath: devPath,
+      sgDevicePath: sgPath,
       source: 'lsscsi',
     })
   }

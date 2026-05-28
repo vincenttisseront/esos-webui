@@ -17,7 +17,7 @@ import { applyHardwareRaidMdRestrictions } from '../../utils/hw-raid-backend-eli
 import { collectKernelRaidInfo } from './raid-pci-detection'
 import { buildMdDetectionSummary, getMdEligibilityReasons } from './raid-md-detection'
 import { detectStoppedMdArrays } from './stopped-md-arrays'
-import { extractRaidCliFromToolsOutput, toolsOutputHasRaidCli } from '../../utils/raid-cli-path'
+import { extractRaidCliFromToolsOutput, inferRaidCliTool, toolsOutputHasRaidCli } from '../../utils/raid-cli-path'
 import { collectSystemProtectionForOverview, ESOS_SYSTEM_LABELS } from './esos-system-protection'
 
 // ─── Commande bulk ───────────────────────────────────────────────────────────
@@ -76,8 +76,8 @@ export async function collectRaidOverview(manager: SSHSessionManager): Promise<R
   const { stdout } = overviewResult
   const sections = splitSections(stdout)
 
-  const tools = parseTools(sections.TOOLS ?? '', kernelInfo)
   const resolvedCli = extractStorCliBin(sections.TOOLS ?? '')
+  const tools = parseTools(sections.TOOLS ?? '', kernelInfo, resolvedCli)
   const lsblkJson = sections.LSBLK?.trim() ?? '{}'
   const blockDevices = parseLsblkJson(
     lsblkJson,
@@ -165,14 +165,21 @@ function extractStorCliBin(toolsOutput: string): string | null {
   return extractRaidCliFromToolsOutput(toolsOutput)
 }
 
-function parseTools(toolsOutput: string, kernelInfo?: Awaited<ReturnType<typeof collectKernelRaidInfo>>): RaidToolsInfo {
+function parseTools(
+  toolsOutput: string,
+  kernelInfo?: Awaited<ReturnType<typeof collectKernelRaidInfo>>,
+  resolvedCli?: string | null,
+): RaidToolsInfo {
   const lspciAvailable = (kernelInfo?.pciCandidates.length ?? 0) > 0 || toolsOutput.includes('lspci')
   const cliFlags = toolsOutputHasRaidCli(toolsOutput)
+  const resolvedTool = resolvedCli ? inferRaidCliTool(resolvedCli) : null
+  const hasPerccli = cliFlags.perccli || resolvedTool === 'perccli'
+  const hasStorcli = cliFlags.storcli || resolvedTool === 'storcli'
   return {
     mdadm:     toolsOutput.includes('mdadm'),
     lspci:     lspciAvailable,
-    storcli:   cliFlags.storcli,
-    perccli:   cliFlags.perccli,
+    storcli:   hasStorcli,
+    perccli:   hasPerccli,
     MegaCli64: toolsOutput.includes('MegaCli64') || toolsOutput.includes('megacli'),
     arcconf:   toolsOutput.includes('arcconf'),
     lsscsi:    toolsOutput.includes('lsscsi'),
