@@ -110,8 +110,103 @@ describe('hw-raid-os-mapper', () => {
     const vd1 = enriched[0].logicalDrives.find(ld => ld.id === '0/vd1')
     expect(vd1?.devicePath).toBe('/dev/sdb')
     expect(vd1?.osMappingDiagnostic?.mappingSource).toBe('lsscsi')
+    expect(vd1?.osMappingDiagnostic?.mappedSgPath).toBe('/dev/sg1')
     expect(vd1?.osMappingDiagnostic?.mappedScsiTuple).toBe('0:2:1:0')
     expect(vd1?.osMappingDiagnostic?.confidence).toBe('high')
+  })
+
+  it('maps DG/VD-style id 1/vd1 to target 1 via lsscsi fallback', () => {
+    const kernel = parseLsscsi(LSSCSI_OUTPUT)
+    const controllers: HardwareRaidController[] = [
+      {
+        id: '0',
+        vendor: 'dell_perc',
+        model: 'PERC H710',
+        cliTool: 'perccli',
+        detectionSource: ['cli'],
+        managementMode: 'full',
+        health: 'ok',
+        supportsCreate: true,
+        supportsDelete: true,
+        supportsHotSpare: true,
+        physicalDrives: [],
+        logicalDrives: [{
+          controllerId: '0',
+          id: '1/vd1',
+          raidLevel: '1',
+          sizeBytes: 223_000_000_000,
+          state: 'optimal',
+          devicePath: '',
+          detectionSource: 'cli',
+        }],
+        warnings: [],
+      },
+      {
+        id: '1',
+        vendor: 'dell_perc',
+        model: 'PERC H710',
+        cliTool: 'perccli',
+        detectionSource: ['cli'],
+        managementMode: 'full',
+        health: 'ok',
+        supportsCreate: true,
+        supportsDelete: true,
+        supportsHotSpare: true,
+        physicalDrives: [],
+        logicalDrives: [],
+        warnings: [],
+      },
+    ]
+    const blockDevices = [
+      blockDev('/dev/sda', 278_900_000_000),
+      blockDev('/dev/sdb', 223_000_000_000),
+    ]
+
+    const enriched = enrichHardwareLdOsPaths({
+      controllers,
+      blockDevices,
+      kernelLogicalDrives: kernel,
+      tools: toolsWithPerccli,
+    })
+    const mapped = enriched[0].logicalDrives[0]
+    expect(mapped.devicePath).toBe('/dev/sdb')
+    expect(mapped.osMappingDiagnostic?.mappedScsiTuple).toBe('0:2:1:0')
+    expect(mapped.osMappingDiagnostic?.mappingSource).toBe('lsscsi')
+  })
+
+  it('uses medium confidence when size is unavailable but target matches', () => {
+    const kernel = parseLsscsi(LSSCSI_OUTPUT)
+    const controllers: HardwareRaidController[] = [{
+      id: '0',
+      vendor: 'dell_perc',
+      model: 'PERC H710',
+      cliTool: 'perccli',
+      detectionSource: ['cli'],
+      managementMode: 'full',
+      health: 'ok',
+      supportsCreate: true,
+      supportsDelete: true,
+      supportsHotSpare: true,
+      physicalDrives: [],
+      logicalDrives: [{
+        controllerId: '0',
+        id: '0/vd1',
+        raidLevel: '1',
+        state: 'optimal',
+        devicePath: '',
+        detectionSource: 'cli',
+      }],
+      warnings: [],
+    }]
+    const blockDevices = [blockDev('/dev/sdb', 223_000_000_000)]
+    const enriched = enrichHardwareLdOsPaths({
+      controllers,
+      blockDevices,
+      kernelLogicalDrives: kernel,
+      tools: toolsWithPerccli,
+    })
+    expect(enriched[0].logicalDrives[0].devicePath).toBe('/dev/sdb')
+    expect(enriched[0].logicalDrives[0].osMappingDiagnostic?.confidence).toBe('medium')
   })
 
   it('does not mark lsscsi mapping as high confidence on size mismatch', () => {

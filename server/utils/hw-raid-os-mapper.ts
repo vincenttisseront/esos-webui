@@ -39,6 +39,7 @@ export interface HwLdOsMappingDiagnostic {
   matchedPath?: string
   matchMethod?: HwLdOsMatchMethod
   mappingSource?: 'cli' | 'lsscsi' | 'heuristic'
+  mappedSgPath?: string
   mappedScsiTuple?: string
   confidence?: 'high' | 'medium' | 'low'
   failureReason?: string
@@ -117,10 +118,18 @@ function kernelDrivesForController(
   singleController: boolean,
 ): KernelExposedLogicalDrive[] {
   if (singleController) return allKernel
-  return allKernel.filter(ld =>
+  const filtered = allKernel.filter(ld =>
     ld.scsiAddress.startsWith(`${ctrl.id}:`)
     || ld.id.includes(ctrl.id),
   )
+  // Some controllers report VD ids as "1/vd1" (DG/VD) while controller id is "0".
+  // When strict host/controller filtering yields nothing, keep RAID-like kernel
+  // disks so lsscsi fallback can still map VD target->/dev/sdX.
+  if (filtered.length > 0) return filtered
+  return allKernel.filter((ld) => {
+    const blob = `${ld.vendor} ${ld.model}`.toLowerCase()
+    return blob.includes('perc') || blob.includes('megaraid') || blob.includes('dell') || blob.includes('lsi')
+  })
 }
 
 function matchFromKernel(
@@ -129,8 +138,8 @@ function matchFromKernel(
   kernelPool: KernelExposedLogicalDrive[],
   blockDevices: RaidBlockDevice[],
   used: Set<string>,
-): { path: string; method: HwLdOsMatchMethod; scsiAddress?: string } | null {
-  const candidates: Array<{ path: string; method: HwLdOsMatchMethod; scsiAddress?: string; score: number }> = []
+): { path: string; method: HwLdOsMatchMethod; scsiAddress?: string; sgPath?: string } | null {
+  const candidates: Array<{ path: string; method: HwLdOsMatchMethod; scsiAddress?: string; sgPath?: string; score: number }> = []
 
   for (const k of kernelPool) {
     const path = normalizeOsPath(k.devicePath)
@@ -147,7 +156,7 @@ function matchFromKernel(
     const isPercLike = vendorModel.includes('dell') || vendorModel.includes('perc') || vendorModel.includes('megaraid')
 
     if (ld.scsiAddress && k.scsiAddress === ld.scsiAddress && sizeOk) {
-      candidates.push({ path, method: 'lsscsi', scsiAddress: k.scsiAddress, score: 100 })
+      candidates.push({ path, method: 'lsscsi', scsiAddress: k.scsiAddress, sgPath: k.sgDevicePath, score: 100 })
       continue
     }
     if (sizeOk && targetMatchesVd && (isPercLike || !!dev)) {
@@ -155,17 +164,18 @@ function matchFromKernel(
         path,
         method: 'lsscsi',
         scsiAddress: k.scsiAddress,
+        sgPath: k.sgDevicePath,
         score: hostMatchesControllerId ? 96 : 92,
       })
       continue
     }
     if (sizeOk && dev && isRaidExposedDisk(dev)) {
-      candidates.push({ path, method: 'lsscsi', scsiAddress: k.scsiAddress, score: 80 })
+      candidates.push({ path, method: 'lsscsi', scsiAddress: k.scsiAddress, sgPath: k.sgDevicePath, score: 80 })
     }
   }
 
   const best = candidates.sort((a, b) => b.score - a.score)[0]
-  return best ? { path: best.path, method: best.method, scsiAddress: best.scsiAddress } : null
+  return best ? { path: best.path, method: best.method, scsiAddress: best.scsiAddress, sgPath: best.sgPath } : null
 }
 
 function matchFromBlockDevices(
@@ -293,8 +303,11 @@ function enrichLogicalDrive(
   if (kernelHit) {
     const tuple = parseScsiTuple(kernelHit.scsiAddress)
     const vdIndex = parseVdIndex(ld.id)
+    const mappedDev = ctx.blockDevices.find(d => d.path === kernelHit.path)
+    const sizeKnown = !!ld.sizeBytes && !!mappedDev?.sizeBytes
+    const sizeConsistent = sizeKnown ? sizeMatch(ld.sizeBytes, mappedDev?.sizeBytes) : false
     const confidence: 'high' | 'medium' | 'low' = tuple && tuple.target === vdIndex
-      ? 'high'
+      ? (sizeKnown ? (sizeConsistent ? 'high' : 'low') : 'medium')
       : (ld.sizeBytes ? 'medium' : 'low')
     ctx.usedPaths.add(kernelHit.path)
     return {
@@ -309,6 +322,7 @@ function enrichLogicalDrive(
         matchedPath: kernelHit.path,
         matchMethod: kernelHit.method,
         mappingSource: 'lsscsi',
+        mappedSgPath: kernelHit.sgPath,
         mappedScsiTuple: kernelHit.scsiAddress,
         confidence,
       },
