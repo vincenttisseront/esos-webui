@@ -48,11 +48,51 @@ function blockDev(path: string, sizeBytes: number): RaidBlockDevice {
 }
 
 describe('hw-raid-os-mapper', () => {
+  it('maps exact H710 fixture vd0/vd1 to /dev/sda,/dev/sdb', () => {
+    const kernel = parseLsscsi([
+      '[0:2:0:0] disk DELL PERC H710 3.13 /dev/sda /dev/sg0',
+      '[0:2:1:0] disk DELL PERC H710 3.13 /dev/sdb /dev/sg1',
+    ].join('\n'))
+    const controllers: HardwareRaidController[] = [{
+      id: '0',
+      vendor: 'dell_perc',
+      model: 'PERC H710',
+      cliTool: 'perccli',
+      detectionSource: ['cli'],
+      managementMode: 'full',
+      health: 'ok',
+      supportsCreate: true,
+      supportsDelete: true,
+      supportsHotSpare: true,
+      physicalDrives: [],
+      logicalDrives: [
+        { controllerId: '0', id: '0/vd0', raidLevel: '1', sizeBytes: 278_900_000_000, state: 'optimal', devicePath: '' },
+        { controllerId: '0', id: '1/vd1', raidLevel: '1', sizeBytes: 223_000_000_000, state: 'optimal', devicePath: '' },
+      ],
+      warnings: [],
+    }]
+    const blockDevices = [
+      blockDev('/dev/sda', 278_900_000_000),
+      blockDev('/dev/sdb', 223_000_000_000),
+    ]
+    const enriched = enrichHardwareLdOsPaths({
+      controllers,
+      blockDevices,
+      kernelLogicalDrives: kernel,
+      tools: toolsWithPerccli,
+    })
+    expect(enriched[0].logicalDrives[0].device).toBe('/dev/sda')
+    expect(enriched[0].logicalDrives[1].device).toBe('/dev/sdb')
+    expect(enriched[0].logicalDrives[1].scsiHctl).toBe('0:2:1:0')
+  })
+
   it('parses lsscsi disk tuple with block and sg paths', () => {
     const kernel = parseLsscsi(LSSCSI_OUTPUT)
     const second = kernel.find(k => k.scsiAddress === '0:2:1:0')
     expect(second?.devicePath).toBe('/dev/sdb')
     expect(second?.sgDevicePath).toBe('/dev/sg1')
+    expect(second?.hctl).toBe('0:2:1:0')
+    expect(second?.target).toBe(1)
   })
 
   it('maps VDs from lsscsi when OS Drive Name is empty', () => {

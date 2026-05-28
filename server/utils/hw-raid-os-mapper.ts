@@ -92,7 +92,12 @@ function serialNorm(s?: string): string {
 }
 
 function parseVdIndex(ldId: string): number {
-  const m = ldId.match(/vd(\d+)/i)
+  const m = ldId.match(/(?:vd|ld)(\d+)/i)
+  if (m) return Number.parseInt(m[1], 10)
+  const tailNum = ldId.match(/(?:^|\/)(\d+)$/)
+  if (tailNum) return Number.parseInt(tailNum[1], 10)
+  const slashNum = ldId.match(/^\d+\/(\d+)$/)
+  if (slashNum) return Number.parseInt(slashNum[1], 10)
   return m ? Number.parseInt(m[1], 10) : 0
 }
 
@@ -286,9 +291,11 @@ function enrichLogicalDrive(
     ctx.usedPaths.add(existing)
     return {
       ...ld,
+      device: existing,
       devicePath: existing,
       osDevicePath: existing,
       scsiDevice: existing,
+      scsiHctl: ld.scsiAddress,
       osMappingStatus: 'mapped',
       osDeviceDetectionSource: 'cli',
       osDeviceConfidence: 'high',
@@ -315,11 +322,13 @@ function enrichLogicalDrive(
     ctx.usedPaths.add(kernelHit.path)
     return {
       ...ld,
+      device: kernelHit.path,
       devicePath: kernelHit.path,
       osDevicePath: kernelHit.path,
       scsiDevice: kernelHit.path,
       osSgDevice: kernelHit.sgPath,
       scsiAddress: kernelHit.scsiAddress ?? ld.scsiAddress,
+      scsiHctl: kernelHit.scsiAddress ?? ld.scsiAddress,
       detectionSource: ld.detectionSource ?? 'lsscsi',
       osMappingStatus: 'mapped',
       osDeviceDetectionSource: 'lsscsi',
@@ -341,6 +350,7 @@ function enrichLogicalDrive(
     ctx.usedPaths.add(blockHit.path)
     return {
       ...ld,
+      device: blockHit.path,
       devicePath: blockHit.path,
       osDevicePath: blockHit.path,
       scsiDevice: blockHit.path,
@@ -362,6 +372,7 @@ function enrichLogicalDrive(
     ctx.usedPaths.add(mountHit.path)
     return {
       ...ld,
+      device: mountHit.path,
       devicePath: mountHit.path,
       osDevicePath: mountHit.path,
       scsiDevice: mountHit.path,
@@ -384,6 +395,7 @@ function enrichLogicalDrive(
     diag.failureReason = 'Mapped by VD order vs SCSI disk order (low confidence)'
     return {
       ...ld,
+      device: orderHit.path,
       devicePath: orderHit.path,
       osDevicePath: orderHit.path,
       scsiDevice: orderHit.path,

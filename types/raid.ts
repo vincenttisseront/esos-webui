@@ -134,6 +134,7 @@ export interface HardwareRaidLogicalDrive {
   controllerId: string
   id: string
   name?: string
+  device?: string
   raidLevel: '0' | '1' | '5' | '6' | '10' | '50' | '60' | 'unknown'
   sizeBytes?: number
   state: 'optimal' | 'degraded' | 'rebuilding' | 'failed' | 'offline' | 'unknown'
@@ -145,6 +146,7 @@ export interface HardwareRaidLogicalDrive {
   scsiDevice?: string
   osSgDevice?: string
   scsiAddress?: string
+  scsiHctl?: string
   scsiModel?: string
   detectionSource?: 'cli' | 'lsscsi' | 'dmesg' | 'proc_scsi'
   osDeviceDetectionSource?: 'cli' | 'lsscsi' | 'heuristic'

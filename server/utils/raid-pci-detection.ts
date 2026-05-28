@@ -21,6 +21,11 @@ export interface PciRaidCandidate {
 export interface KernelExposedLogicalDrive {
   id: string
   scsiAddress: string
+  hctl: string
+  host: number
+  channel: number
+  target: number
+  lun: number
   vendor: string
   model: string
   revision?: string
@@ -239,6 +244,8 @@ export function parseLsscsi(output: string): KernelExposedLogicalDrive[] {
     if (!m) continue
 
     const scsiAddress = m[1]
+    const tuple = scsiAddress.split(':').map(v => Number.parseInt(v, 10))
+    if (tuple.length !== 4 || tuple.some(n => Number.isNaN(n))) continue
     const devType = m[2]  // 'disk', 'enclosu', etc.
     if (devType !== 'disk') continue  // only expose disk-type SCSI devices
 
@@ -272,6 +279,11 @@ export function parseLsscsi(output: string): KernelExposedLogicalDrive[] {
     drives.push({
       id: `scsi-${scsiAddress}`,
       scsiAddress,
+      hctl: scsiAddress,
+      host: tuple[0],
+      channel: tuple[1],
+      target: tuple[2],
+      lun: tuple[3],
       vendor: vendorStr,
       model: modelStr,
       revision: revision || undefined,
@@ -313,6 +325,11 @@ export function parseDmesgScsiDevices(dmesg: string): KernelExposedLogicalDrive[
     drives.push({
       id: `scsi-${scsiAddress}`,
       scsiAddress,
+      hctl: scsiAddress,
+      host: Number.parseInt(scsiAddress.split(':')[0] ?? '0', 10),
+      channel: Number.parseInt(scsiAddress.split(':')[1] ?? '0', 10),
+      target: Number.parseInt(scsiAddress.split(':')[2] ?? '0', 10),
+      lun: Number.parseInt(scsiAddress.split(':')[3] ?? '0', 10),
       vendor,
       model,
       source: 'dmesg',
@@ -352,6 +369,11 @@ export function parseProcScsi(output: string): KernelExposedLogicalDrive[] {
         drives.push({
           id: `scsi-${current.addr}`,
           scsiAddress: current.addr,
+          hctl: current.addr,
+          host: Number.parseInt(current.addr.split(':')[0] ?? '0', 10),
+          channel: Number.parseInt(current.addr.split(':')[1] ?? '0', 10),
+          target: Number.parseInt(current.addr.split(':')[2] ?? '0', 10),
+          lun: Number.parseInt(current.addr.split(':')[3] ?? '0', 10),
           vendor,
           model,
           revision: vm[3],
