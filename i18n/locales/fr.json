@@ -445,6 +445,54 @@
       "rebuilding": "Rebuild",
       "unknown": "Inconnu"
     },
+    "block_device": {
+      "col": {
+        "device": "Device",
+        "type": "Type",
+        "size": "Taille",
+        "tags": "Tags",
+        "mounts": "Montages",
+        "md_eligibility": "Éligible MD"
+      },
+      "tag": {
+        "mounted": "Monté",
+        "filesystem": "Filesystem",
+        "md": "MD",
+        "lvm": "LVM",
+        "scst": "SCST",
+        "hardware_raid": "RAID matériel",
+        "unknown_signature": "Signature étrangère"
+      },
+      "signature": {
+        "xfs": "XFS",
+        "ext4": "ext4",
+        "ext3": "ext3",
+        "ext2": "ext2",
+        "btrfs": "btrfs",
+        "vfat": "FAT",
+        "ntfs": "NTFS",
+        "gpt": "GPT",
+        "dos": "MBR",
+        "filesystem": "Filesystem",
+        "unknown_signature": "Signature inconnue"
+      },
+      "eligibility": {
+        "ineligible": "Non éligible : {reason}",
+        "ineligible_with_more": "Non éligible : {reason} (+{count} autres)"
+      },
+      "reason": {
+        "mounted_at": "Monté sur {mount}",
+        "mounted": "Périphérique monté",
+        "hardware_raid": "Volume RAID matériel",
+        "scst": "Utilisé par SCST",
+        "lvm": "LVM en cours d'utilisation",
+        "md": "Membre ou métadonnées MD",
+        "signature": "Système de fichiers ou signature détecté",
+        "partition": "Prérequis partition non respectés",
+        "esos_protected": "Volume protégé ESOS",
+        "other": "Non éligible"
+      }
+    },
     "page": {
       "title": "Gestion RAID",
       "refresh": "Rafraîchir",

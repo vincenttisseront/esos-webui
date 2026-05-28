@@ -329,9 +329,15 @@
                   size="xs"
                   :label="row.eligible ? t('lvm.candidate.status_eligible') : t('lvm.candidate.status_ineligible')"
                 />
-                <ul v-if="!row.eligible && row.reasons.length" class="mt-1 text-[10px] text-amber-800 dark:text-amber-200 list-disc pl-4">
-                  <li v-for="(reason, ri) in row.reasons" :key="ri">{{ pvCandidateReason(reason) }}</li>
-                </ul>
+                <UTooltip
+                  v-if="!row.eligible && row.reasons.length"
+                  :text="formatLvmCandidateEligibilityTooltip(row.reasons, t)"
+                  :disabled="!formatLvmCandidateEligibilityTooltip(row.reasons, t)"
+                >
+                  <p class="mt-1 text-[10px] text-amber-800 dark:text-amber-200 max-w-[14rem]">
+                    {{ formatLvmCandidateEligibilitySummary(row.reasons, t) }}
+                  </p>
+                </UTooltip>
               </td>
               <td class="py-1.5 text-right">
                 <UButton
@@ -583,6 +589,8 @@ import { classifyLvFileioUsage } from '~/utils/lvm-lv-usage'
 import { buildExposureSummary, fileioEligibleBackendPaths } from '~/utils/storage-workflow-guidance'
 import {
   formatLvmCandidateLabel,
+  formatLvmCandidateEligibilitySummary,
+  formatLvmCandidateEligibilityTooltip,
   formatLvmCandidateReason,
   listPvSourceCandidates,
 } from '~/utils/lvm-candidate-display'

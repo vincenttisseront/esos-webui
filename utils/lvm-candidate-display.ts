@@ -1,4 +1,5 @@
 import type { LvmCandidateDevice } from '~/types/lvm'
+import { dedupeEligibilityReasons, formatIneligibleSummary } from '~/utils/block-device-display'
 
 /** Human-readable label for a PV source candidate row (wizard + tables). */
 export function formatLvmCandidateLabel(
@@ -69,7 +70,7 @@ export function formatLvmCandidateReason(
   t: (key: string) => string,
 ): string {
   const key = resolveLvmCandidateReasonKey(reason)
-  if (key.startsWith('lvm.') || key.startsWith('storage.')) {
+  if (key.startsWith('lvm.') || key.startsWith('storage.') || key.startsWith('raid.block_device.')) {
     try {
       return t(key)
     } catch {
@@ -77,6 +78,23 @@ export function formatLvmCandidateReason(
     }
   }
   return reason
+}
+
+/** Primary ineligible line for tables; full list available via tooltip helper. */
+export function formatLvmCandidateEligibilitySummary(
+  reasons: string[],
+  t: (key: string, params?: Record<string, string>) => string,
+): string {
+  return formatIneligibleSummary(dedupeEligibilityReasons(reasons), t)
+}
+
+export function formatLvmCandidateEligibilityTooltip(
+  reasons: string[],
+  t: (key: string) => string,
+): string {
+  const deduped = dedupeEligibilityReasons(reasons)
+  if (deduped.length <= 1) return ''
+  return deduped.map(r => formatLvmCandidateReason(r, t)).join('\n')
 }
 
 /** PV / MD / HW RAID candidates for the LVM tab (excludes raw disks). */

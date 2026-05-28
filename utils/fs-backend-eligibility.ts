@@ -61,9 +61,19 @@ export function classifyBackendStatusGroup(backend: FsBackendRef): FsBackendStat
   return 'ineligible'
 }
 
+function dedupeParsedReasons(views: ParsedFsBackendReason[]): ParsedFsBackendReason[] {
+  const seen = new Set<string>()
+  return views.filter(v => {
+    const key = `${v.code}:${v.messageParams?.mount ?? ''}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
 export function buildBackendEligibilityView(backend: FsBackendRef): FsBackendEligibilityView {
   const statusGroup = classifyBackendStatusGroup(backend)
-  const reasonViews = backend.reasons.map(parseReasonRaw)
+  const reasonViews = dedupeParsedReasons(backend.reasons.map(parseReasonRaw))
   const codes = reasonViews.map(r => r.code)
 
   let summaryKey = 'storage.fs.backend.summary.available'

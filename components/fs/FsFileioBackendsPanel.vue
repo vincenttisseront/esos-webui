@@ -116,15 +116,15 @@
               {{ t(item.summaryKey, item.summaryParams ?? {}) }}
             </p>
 
-            <ul
+            <UTooltip
               v-if="item.reasonViews.length && item.statusGroup !== 'available'"
-              class="mt-1.5 space-y-0.5 text-xs text-gray-600 dark:text-gray-400"
+              :text="fileioReasonTooltip(item)"
+              :disabled="item.reasonViews.length <= 1"
             >
-              <li v-for="(rv, ri) in item.reasonViews" :key="ri" class="flex gap-1.5">
-                <span class="text-gray-400 shrink-0">•</span>
-                <span>{{ t(rv.messageKey, rv.messageParams ?? {}) }}</span>
-              </li>
-            </ul>
+              <p class="mt-1.5 text-xs text-gray-600 dark:text-gray-400">
+                {{ fileioReasonPrimary(item) }}
+              </p>
+            </UTooltip>
 
             <p
               v-if="item.recommendationKey"
@@ -194,5 +194,25 @@ function badgeColor(group: FsBackendStatusGroup): 'green' | 'amber' | 'gray' {
   if (group === 'available') return 'green'
   if (group === 'in_use') return 'amber'
   return 'gray'
+}
+
+function fileioReasonLabels(item: FsBackendEligibilityView): string[] {
+  return item.reasonViews.map(rv => t(rv.messageKey, rv.messageParams ?? {}) as string)
+}
+
+function fileioReasonPrimary(item: FsBackendEligibilityView): string {
+  const labels = fileioReasonLabels(item)
+  if (!labels.length) return ''
+  if (labels.length === 1) return labels[0]
+  return t('raid.block_device.eligibility.ineligible_with_more', {
+    reason: labels[0],
+    count: String(labels.length - 1),
+  })
+}
+
+function fileioReasonTooltip(item: FsBackendEligibilityView): string {
+  const labels = fileioReasonLabels(item)
+  if (labels.length <= 1) return ''
+  return labels.join('\n')
 }
 </script>

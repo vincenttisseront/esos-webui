@@ -445,6 +445,54 @@
       "rebuilding": "Rebuild",
       "unknown": "Unknown"
     },
+    "block_device": {
+      "col": {
+        "device": "Device",
+        "type": "Type",
+        "size": "Size",
+        "tags": "Tags",
+        "mounts": "Mounts",
+        "md_eligibility": "MD eligible"
+      },
+      "tag": {
+        "mounted": "Mounted",
+        "filesystem": "Filesystem",
+        "md": "MD",
+        "lvm": "LVM",
+        "scst": "SCST",
+        "hardware_raid": "Hardware RAID",
+        "unknown_signature": "Foreign signature"
+      },
+      "signature": {
+        "xfs": "XFS",
+        "ext4": "ext4",
+        "ext3": "ext3",
+        "ext2": "ext2",
+        "btrfs": "btrfs",
+        "vfat": "FAT",
+        "ntfs": "NTFS",
+        "gpt": "GPT",
+        "dos": "MBR",
+        "filesystem": "Filesystem",
+        "unknown_signature": "Unknown signature"
+      },
+      "eligibility": {
+        "ineligible": "Not eligible: {reason}",
+        "ineligible_with_more": "Not eligible: {reason} (+{count} more)"
+      },
+      "reason": {
+        "mounted_at": "Mounted on {mount}",
+        "mounted": "Device is mounted",
+        "hardware_raid": "Hardware RAID volume",
+        "scst": "Used by SCST",
+        "lvm": "LVM in use",
+        "md": "MD member or metadata",
+        "signature": "Filesystem or signature detected",
+        "partition": "Partition requirements not met",
+        "esos_protected": "ESOS protected volume",
+        "other": "Not eligible"
+      }
+    },
     "page": {
       "title": "RAID management",
       "refresh": "Refresh",
