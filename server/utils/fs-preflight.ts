@@ -22,6 +22,11 @@ import type {
 } from '~/types/filesystem'
 import type { FsBackendCandidate } from '~/types/filesystem'
 import { collectFsBackendCandidates } from './fs-candidates'
+import {
+  mountPathStateBlockerKey,
+  mountPathStateWarningKey,
+  probeMountPathOnNode,
+} from './fs-mount-path-preflight'
 import { resolveFileioBindConflicts } from './fs-fileio-bind-conflicts'
 import type { SSHSessionManager } from './ssh-session-manager'
 import {
@@ -108,8 +113,23 @@ async function preflightCreateFs(
     blockers.push('storage.fs.wizard.create_fs.blocker_wipe_not_confirmed')
   }
 
-  const mountExists = overview.mounts.some(m => m.mountPoint === payload.mountPoint)
-  if (mountExists) blockers.push('Point de montage déjà utilisé')
+  if (overview.mounts.some(m => m.mountPoint === payload.mountPoint && m.mounted)) {
+    blockers.push('storage.fs.errors.mount_point_already_mounted')
+  }
+
+  let mountPathWarnings: string[] = []
+  try {
+    const remoteState = await probeMountPathOnNode(manager, payload.mountPoint)
+    const remoteBlocker = mountPathStateBlockerKey(remoteState)
+    if (remoteBlocker) blockers.push(remoteBlocker)
+    else if (remoteState === 'empty_dir' && !payload.allowUseEmptyMountDir) {
+      blockers.push('storage.fs.wizard.create_fs.blocker_empty_mount_not_confirmed')
+    }
+    const warnKey = mountPathStateWarningKey(remoteState)
+    if (warnKey) mountPathWarnings = [warnKey]
+  } catch {
+    blockers.push('storage.fs.errors.mount_point_probe_failed')
+  }
 
   const val = validateCreateFsInput({
     ...payload,
@@ -139,6 +159,7 @@ async function preflightCreateFs(
     configPreview: [fstabPreview],
     commands: cmds,
     warnings: [
+      ...mountPathWarnings,
       ...(partitionStrategy === 'gpt' ? ['storage.fs.wizard.create_fs.warn_gpt_partition'] : []),
       ...(cand?.eligibility === 'eligible_with_wipe_required'
         ? ['storage.fs.wizard.create_fs.warn_wipe_required']
@@ -176,7 +197,7 @@ function preflightCreateVdisk(
     }
   }
   if (overview.vdiskFiles.some(v => v.path === fullPath)) {
-    blockers.push('Fichier vdisk déjà présent')
+    blockers.push('storage.fs.errors.vdisk_file_exists')
   }
 
   const allocMode = payload.allocMode ?? 'fallocate'

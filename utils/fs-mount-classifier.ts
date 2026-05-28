@@ -1,4 +1,5 @@
 import type { FileSystemMount, FsMountRole } from '~/types/filesystem'
+import { pickActiveFileioMount } from '~/utils/fs-active-filesystem'
 
 /** ESOS overlay / ram mounts — not FILEIO data stores. */
 export const ESOS_SYSTEM_MOUNT_POINTS = new Set([
@@ -42,10 +43,9 @@ export function fileioRelevantMounts(mounts: FileSystemMount[]): FileSystemMount
   return mounts.filter(m => m.mounted && m.role === 'fileio_data')
 }
 
+/** @deprecated Prefer {@link pickActiveFileioMount} with explicit options. */
 export function pickPrimaryFileioMount(mounts: FileSystemMount[]): FileSystemMount | undefined {
-  const relevant = fileioRelevantMounts(mounts)
-  if (!relevant.length) return undefined
-  return relevant.sort((a, b) => a.mountPoint.localeCompare(b.mountPoint))[0]
+  return pickActiveFileioMount(mounts)
 }
 
 /** Normalize /dev path for alias matching. */

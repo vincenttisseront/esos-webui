@@ -35,14 +35,17 @@ export interface FsFileioViewModel {
   errors?: FsScanError[]
 }
 
-export function buildFsFileioViewModel(overview: FsOverview | null): FsFileioViewModel | null {
+export function buildFsFileioViewModel(
+  overview: FsOverview | null,
+  options?: { activeMountPoint?: string | null },
+): FsFileioViewModel | null {
   if (!overview) return null
 
   const inventory = extractFileioInventory(overview)
 
   return {
     ...inventory,
-    chain: buildFsProvisioningSteps(overview, inventory),
+    chain: buildFsProvisioningSteps(overview, inventory, options),
     counts: buildFsDisplayCountsFromInventory(inventory),
     diagnostics: overview.diagnostics ?? null,
     warnings: collectFileioWarnings(overview),

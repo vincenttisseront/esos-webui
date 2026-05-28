@@ -3,7 +3,7 @@ import type { FsType, PartitionStrategy } from '~/types/filesystem'
 const MOUNT_POINT_RE = /^\/[a-zA-Z0-9][a-zA-Z0-9_./-]*$/
 const LABEL_RE = /^[a-zA-Z0-9._-]{1,32}$/
 const DEVICE_PATH_RE = /^\/dev\/[a-zA-Z0-9_./-]+$/
-const BLOCKED_MOUNT_PREFIXES = ['/boot', '/etc', '/proc', '/sys', '/dev', '/run', '/var/run']
+const BLOCKED_MOUNT_PREFIXES = ['/boot', '/etc', '/proc', '/sys', '/dev', '/run', '/var/run', '/mnt/root']
 
 /** @deprecated Use {@link expectedCreateFilesystemConfirmation} */
 export function expectedFormatFsConfirmation(backendPath: string): string {

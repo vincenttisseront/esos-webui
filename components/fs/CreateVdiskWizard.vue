@@ -14,14 +14,42 @@
           :title="t('storage.fs.wizard.create_vdisk.no_mount')"
         />
         <UFormGroup :label="t('storage.fs.wizard.create_vdisk.mount')">
-          <StorageNativeSelect
-            v-model="mountPoint"
-            :options="mountOptions"
-            :disabled="!mountOptions.length"
-          />
+          <div
+            v-if="showMountSelect"
+            class="grid grid-cols-1 sm:grid-cols-2 gap-2"
+            role="radiogroup"
+            :aria-label="t('storage.fs.wizard.create_vdisk.mount')"
+          >
+            <label
+              v-for="m in eligibleMounts"
+              :key="m.mountPoint"
+              class="rounded-lg border px-3 py-3 cursor-pointer transition-colors"
+              :class="mountPoint === m.mountPoint
+                ? 'border-primary-500 bg-primary-50 dark:bg-primary-500/10 ring-1 ring-primary-500'
+                : 'border-gray-200 dark:border-gray-700'"
+            >
+              <input v-model="mountPoint" type="radio" class="sr-only" :value="m.mountPoint">
+              <span class="block text-sm font-mono font-semibold">{{ m.mountPoint }}</span>
+              <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                {{ t('storage.fs.active_filesystem.free', {
+                  free: formatFsBytes(m.freeBytes),
+                  total: formatFsBytes(m.totalBytes),
+                }) }}
+              </span>
+            </label>
+          </div>
+          <p v-else-if="selectedMount" class="text-sm font-mono rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
+            {{ selectedMount.mountPoint }}
+            <span class="text-xs text-gray-500 dark:text-gray-400 ml-2">
+              {{ t('storage.fs.wizard.create_vdisk.free_hint', { free: formatFsBytes(selectedMount.freeBytes) }) }}
+            </span>
+          </p>
         </UFormGroup>
-        <UFormGroup :label="t('storage.fs.wizard.create_vdisk.file_name')">
-          <UInput v-model="fileName" placeholder="data01.img" />
+        <UFormGroup
+          :label="t('storage.fs.wizard.create_vdisk.file_name')"
+          :error="fileNameError ? t(fileNameError) : undefined"
+        >
+          <UInput v-model="fileName" placeholder="data01.img" class="font-mono" />
         </UFormGroup>
         <div class="flex gap-2">
           <UFormGroup class="flex-1" :label="t('storage.fs.wizard.create_vdisk.size')">
@@ -120,6 +148,7 @@
 import ScstClusterNodeResults from '~/components/targets/ScstClusterNodeResults.vue'
 import type { FileSystemMount } from '~/types/filesystem'
 import type { ClusterLvmNodeResult } from '~/types/lvm'
+import { pickActiveFileioMount } from '~/utils/fs-active-filesystem'
 import { validateVdiskFileName, validateVdiskSize } from '~/utils/fs-preflight-validation'
 import { parseFsWizardExecuteFailure } from '~/utils/fs-wizard-execute'
 import { formatFsBytes, parseFsSizeToBytes, type FsSizeUnit } from '~/utils/fs-wizard-ui'
@@ -161,9 +190,11 @@ const allocOptions = [
 ]
 
 const eligibleMounts = computed(() => mountsEligibleForVdisk(props.mounts, fs.overview?.systemProtection))
-const mountOptions = computed(() => eligibleMounts.value.map(m => ({ label: m.mountPoint, value: m.mountPoint })))
+const showMountSelect = computed(() => eligibleMounts.value.length > 1)
 const selectedMount = computed(() => eligibleMounts.value.find(m => m.mountPoint === mountPoint.value))
 const sizeBytes = computed(() => parseFsSizeToBytes(Number(sizeValue.value), sizeUnit.value))
+
+const fileNameError = computed(() => validateVdiskFileName(fileName.value))
 
 const sizeError = computed(() => {
   if (!selectedMount.value) return ''
@@ -174,12 +205,16 @@ const sizeError = computed(() => {
 const step1Valid = computed(() =>
   !!mountPoint.value
   && !!fileName.value.trim()
-  && !validateVdiskFileName(fileName.value)
+  && !fileNameError.value
   && sizeBytes.value >= 1024 * 1024
   && !sizeError.value,
 )
 
-const preflightBlockers = computed(() => preflight.value?.blockers?.join(' · ') || '')
+const preflightBlockers = computed(() =>
+  (preflight.value?.blockers ?? [])
+    .map(b => (b.startsWith('storage.') ? t(b) : b))
+    .join(' · ') || '',
+)
 const commandPreview = computed(() =>
   (preflight.value?.commands ?? []).join('\n') || '—',
 )
@@ -192,12 +227,11 @@ const canExecute = computed(() =>
 onMounted(() => {
   fs.setSanId(props.sanId)
   if (props.clusterId) fs.setClusterContext(props.clusterId, props.sanId)
-  const preferred = props.initialMountPoint
-  if (preferred && props.mounts.some(m => m.mountPoint === preferred)) {
-    mountPoint.value = preferred
-  } else if (mountOptions.value[0]) {
-    mountPoint.value = mountOptions.value[0].value
-  }
+  const picked = pickActiveFileioMount(eligibleMounts.value, {
+    preferredMountPoint: props.initialMountPoint,
+    newlyCreatedMountPoint: props.initialMountPoint,
+  })
+  if (picked) mountPoint.value = picked.mountPoint
 })
 
 async function loadPreflight() {

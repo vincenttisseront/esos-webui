@@ -1,5 +1,6 @@
 import type { FsNextActionHint, FsOverview } from '~/types/filesystem'
-import { fileioRelevantMounts, pickPrimaryFileioMount } from '~/utils/fs-mount-classifier'
+import { pickActiveFileioMount } from '~/utils/fs-active-filesystem'
+import { fileioRelevantMounts } from '~/utils/fs-mount-classifier'
 import type { FileioInventory } from '~/utils/fs-fileio-inventory'
 import { extractFileioInventory } from '~/utils/fs-fileio-inventory'
 import type { ProvisioningStepStatus, ProvisioningStepView } from '~/utils/lvm-provisioning-chain'
@@ -11,7 +12,10 @@ const DEFAULT_NEXT: FsNextActionHint = {
   messageKey: 'storage.fs.next.create_fs',
 }
 
-export function computeFsNextAction(overview: FsOverview): FsNextActionHint {
+export function computeFsNextAction(
+  overview: FsOverview,
+  options?: { activeMountPoint?: string | null },
+): FsNextActionHint {
   const mounts = fileioRelevantMounts(
     overview.mounts.filter(m => m.mounted && m.status === 'mounted'),
   )
@@ -19,7 +23,9 @@ export function computeFsNextAction(overview: FsOverview): FsNextActionHint {
     return { kind: 'create_fs', messageKey: 'storage.fs.next.create_fs' }
   }
 
-  const primaryMount = pickPrimaryFileioMount(overview.mounts)
+  const primaryMount = pickActiveFileioMount(overview.mounts, {
+    preferredMountPoint: options?.activeMountPoint,
+  })
   if (!primaryMount) {
     return { kind: 'create_fs', messageKey: 'storage.fs.next.create_fs' }
   }
@@ -71,7 +77,7 @@ function stepDetailForInventory(
   stepId: FsProvisioningStepId,
 ): string {
   const dataMounts = inventory.filesystems
-  const primary = pickPrimaryFileioMount(overview.mounts)
+  const primary = pickActiveFileioMount(overview.mounts)
   const vdisks = inventory.vdiskFiles
   const fileio = inventory.fileioDevices
   const mappedLuns = inventory.lunMappings
@@ -104,12 +110,16 @@ function stepDetailForInventory(
 export function buildFsProvisioningSteps(
   overview: FsOverview | null,
   inventory?: FileioInventory,
+  options?: { activeMountPoint?: string | null },
 ): ProvisioningStepView[] {
   if (!overview) {
     return buildFsProvisioningStepsEmpty()
   }
 
   const inv = inventory ?? extractFileioInventory(overview)
+  const activeMount = pickActiveFileioMount(overview.mounts, {
+    preferredMountPoint: options?.activeMountPoint,
+  })
   const dataMounts = fileioRelevantMounts(overview.mounts.filter(m => m.mounted))
   const vdisks = inv.vdiskFiles
   const fileioDevices = inv.fileioDevices
@@ -151,13 +161,13 @@ export function buildFsProvisioningSteps(
         ? 'optional'
         : 'missing'
 
-  const next = overview.nextAction ?? DEFAULT_NEXT
+  const next = computeFsNextAction(overview, { activeMountPoint: options?.activeMountPoint })
 
   return [
     {
       id: 'filesystem',
       status: fsStatus,
-      detail: stepDetailForInventory(overview, inv, 'filesystem'),
+      detail: activeMount?.mountPoint ?? stepDetailForInventory(overview, inv, 'filesystem'),
       count: dataMounts.length || undefined,
       hintKey: dataMounts.length
         ? undefined

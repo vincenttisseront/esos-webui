@@ -4501,6 +4501,12 @@
           "warn_gpt_partition": "A single GPT partition will be created on the device.",
           "warn_wipe_required": "Existing signatures: wipefs -a will run before formatting.",
           "blocker_wipe_not_confirmed": "Confirm signature erase (final step) before executing.",
+          "warn_mount_dir_empty": "Mount directory exists but is empty — it will be used as the mount point.",
+          "blocker_empty_mount_not_confirmed": "Confirm use of the existing empty directory (final step) before executing.",
+          "confirm_empty_mount": "I confirm using the existing empty directory as the mount point.",
+          "empty_mount_final_title": "Use existing empty directory",
+          "empty_mount_final_body": "The directory exists and is empty. It will become the mount point for the new filesystem.",
+          "no_backend_optional": "No new block backend available — you can still create vdisks on an existing FILEIO filesystem.",
           "status": {
             "available": "Available",
             "wipe_required": "Cleanup required",
@@ -4564,14 +4570,27 @@
         "delete_vdisk": { "success": "VDisk file deleted" },
         "unmount": { "success": "Filesystem unmounted" }
       },
+      "active_filesystem": {
+        "title": "Active FILEIO filesystem",
+        "hint": "Used by the provisioning chain and vdisk wizard.",
+        "free": "{free} free of {total}",
+        "selected": "Active: {mount}"
+      },
       "errors": {
         "mount_point_invalid": "Invalid mount point",
         "mount_point_system": "Mount point not allowed on system paths",
+        "mount_point_protected": "This path is protected.",
+        "mount_point_already_mounted": "Mount point is already mounted.",
+        "mount_point_not_empty": "Directory already exists and is not empty.",
+        "mount_point_not_directory": "Path exists but is not a directory.",
+        "mount_point_parent_missing": "Parent directory does not exist.",
+        "mount_point_probe_failed": "Could not verify mount path on the node.",
         "label_required": "Label required",
         "label_invalid": "Invalid label",
         "backend_invalid": "Invalid backend path",
         "fs_type_invalid": "Invalid filesystem type",
         "vdisk_name_invalid": "Invalid vdisk file name",
+        "vdisk_file_exists": "VDisk file already exists at this path.",
         "vdisk_size_min": "VDisk size too small (min 1 MiB)",
         "vdisk_size_free": "Size exceeds available free space"
       }

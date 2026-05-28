@@ -4501,6 +4501,12 @@
           "warn_gpt_partition": "Une partition GPT unique sera créée sur le device.",
           "warn_wipe_required": "Des signatures existent : wipefs -a sera exécuté avant le formatage.",
           "blocker_wipe_not_confirmed": "Confirmez l'effacement des signatures (étape finale) avant d'exécuter.",
+          "warn_mount_dir_empty": "Le répertoire de montage existe mais est vide — il sera utilisé comme point de montage.",
+          "blocker_empty_mount_not_confirmed": "Confirmez l’utilisation du répertoire vide existant (étape finale) avant d’exécuter.",
+          "confirm_empty_mount": "Je confirme l’utilisation du répertoire vide existant comme point de montage.",
+          "empty_mount_final_title": "Utiliser un répertoire vide existant",
+          "empty_mount_final_body": "Le répertoire existe et est vide. Il deviendra le point de montage du nouveau filesystem.",
+          "no_backend_optional": "Aucun nouveau backend bloc — vous pouvez tout de même créer des vdisks sur un filesystem FILEIO existant.",
           "status": {
             "available": "Disponible",
             "wipe_required": "Nettoyage requis",
@@ -4564,14 +4570,27 @@
         "delete_vdisk": { "success": "Fichier vdisk supprimé" },
         "unmount": { "success": "Filesystem démonté" }
       },
+      "active_filesystem": {
+        "title": "Filesystem FILEIO actif",
+        "hint": "Utilisé par la chaîne de provisioning et l’assistant vdisk.",
+        "free": "{free} libres sur {total}",
+        "selected": "Actif : {mount}"
+      },
       "errors": {
         "mount_point_invalid": "Point de montage invalide",
         "mount_point_system": "Point de montage interdit sur chemins système",
+        "mount_point_protected": "Ce chemin est protégé.",
+        "mount_point_already_mounted": "Le point de montage existe déjà et est monté.",
+        "mount_point_not_empty": "Le dossier existe déjà et n’est pas vide.",
+        "mount_point_not_directory": "Le chemin existe mais n’est pas un répertoire.",
+        "mount_point_parent_missing": "Le répertoire parent n’existe pas.",
+        "mount_point_probe_failed": "Impossible de vérifier le point de montage sur le nœud.",
         "label_required": "Label requis",
         "label_invalid": "Label invalide",
         "backend_invalid": "Chemin backend invalide",
         "fs_type_invalid": "Type de filesystem invalide",
         "vdisk_name_invalid": "Nom de fichier vdisk invalide",
+        "vdisk_file_exists": "Un fichier vdisk existe déjà à ce chemin.",
         "vdisk_size_min": "Taille vdisk trop petite (min 1 Mio)",
         "vdisk_size_free": "Taille supérieure à l'espace libre"
       }

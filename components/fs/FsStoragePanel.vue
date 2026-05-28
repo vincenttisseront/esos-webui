@@ -142,6 +142,54 @@
       :description="t('storage.fs.refresh.stale_body', { time: scannedAtLabel })"
     />
 
+    <div
+      v-if="fileioDataMounts.length"
+      class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 p-4 space-y-3"
+    >
+      <div>
+        <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">
+          {{ t('storage.fs.active_filesystem.title') }}
+        </p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+          {{ t('storage.fs.active_filesystem.hint') }}
+        </p>
+      </div>
+      <div
+        v-if="fileioDataMounts.length > 1"
+        class="grid grid-cols-1 sm:grid-cols-2 gap-2"
+        role="radiogroup"
+        :aria-label="t('storage.fs.active_filesystem.title')"
+      >
+        <button
+          v-for="m in fileioDataMounts"
+          :key="m.mountPoint"
+          type="button"
+          class="rounded-lg border px-3 py-2 text-left text-sm transition-colors"
+          :class="m.mountPoint === activeFileioMountPoint
+            ? 'border-primary-500 bg-primary-50 dark:bg-primary-500/10 ring-1 ring-primary-500'
+            : 'border-gray-200 dark:border-gray-700 hover:border-primary-300'"
+          @click="selectActiveFileioMount(m.mountPoint)"
+        >
+          <span class="block font-mono font-medium">{{ m.mountPoint }}</span>
+          <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            {{ t('storage.fs.active_filesystem.free', {
+              free: formatBytes(m.freeBytes),
+              total: formatBytes(m.totalBytes),
+            }) }}
+          </span>
+        </button>
+      </div>
+      <p v-else-if="activeFileioMount" class="text-sm font-mono">
+        {{ t('storage.fs.active_filesystem.selected', { mount: activeFileioMount.mountPoint }) }}
+        <span class="text-gray-500 dark:text-gray-400 text-xs ml-2">
+          {{ t('storage.fs.active_filesystem.free', {
+            free: formatBytes(activeFileioMount.freeBytes),
+            total: formatBytes(activeFileioMount.totalBytes),
+          }) }}
+        </span>
+      </p>
+    </div>
+
     <FsProvisioningChain :steps="chainSteps" />
 
     <div v-if="!readOnly" class="flex flex-wrap gap-2 items-center">
@@ -160,7 +208,7 @@
         color="primary"
         icon="i-heroicons-plus"
         :disabled="!eligibleCandidates.length"
-        :title="!eligibleCandidates.length ? t('storage.fs.wizard.create_fs.no_backend') : undefined"
+        :title="createFsButtonTitle"
         @click="openCreateFsWizard"
       >
         {{ t('storage.fs.actions.create_fs') }}
@@ -629,7 +677,21 @@ const diagnosticsText = computed(() => {
   return JSON.stringify(diagnostics.value, null, 2)
 })
 
-const nextAction = computed(() => fs.overview?.nextAction)
+const nextAction = computed(() => fs.effectiveNextAction ?? fs.overview?.nextAction)
+const activeFileioMountPoint = computed(() => fs.activeFileioMountPoint)
+const activeFileioMount = computed(() => fs.activeFileioMount)
+
+const createFsButtonTitle = computed(() => {
+  if (eligibleCandidates.value.length) return undefined
+  if (fileioDataMounts.value.length) {
+    return t('storage.fs.wizard.create_fs.no_backend_optional') as string
+  }
+  return t('storage.fs.wizard.create_fs.no_backend') as string
+})
+
+function selectActiveFileioMount(mountPoint: string) {
+  fs.setActiveFileioMount(mountPoint)
+}
 
 const nextActionText = computed(() => {
   const action = nextAction.value
@@ -810,7 +872,7 @@ async function openCreateVdiskWizard(initialMountPoint?: string) {
       component: Wizard,
       props: wizardProps({
         mounts: fileioDataMounts.value,
-        initialMountPoint,
+        initialMountPoint: initialMountPoint ?? activeFileioMountPoint.value ?? undefined,
       }),
     })
     await refreshAll()
@@ -825,7 +887,7 @@ async function openFileioWizard(vdisks = eligibleFileioVdisks.value, initialVdis
       props: wizardProps({
         vdisks: fileioView.value?.vdiskFiles ?? vdisks,
         initialVdiskPath,
-        onCreateVdisk: () => openCreateVdiskWizard(),
+        onCreateVdisk: () => openCreateVdiskWizard(activeFileioMountPoint.value ?? undefined),
       }),
     })
     await refreshAll()

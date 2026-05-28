@@ -220,6 +220,7 @@ export interface CreateFsPayload {
   mountPoint: string
   partitionStrategy?: PartitionStrategy
   allowWipeSignatures?: boolean
+  allowUseEmptyMountDir?: boolean
   confirmation?: string
 }
 

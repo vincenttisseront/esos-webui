@@ -190,6 +190,21 @@
         <p class="text-sm text-gray-700 dark:text-gray-300">{{ t('storage.fs.wizard.create_fs.final_intro') }}</p>
 
         <div
+          v-if="needsEmptyMountConfirm"
+          class="rounded-lg border border-amber-200 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-950/30 p-3 space-y-3"
+        >
+          <p class="text-sm font-semibold text-amber-900 dark:text-amber-100">
+            {{ t('storage.fs.wizard.create_fs.empty_mount_final_title') }}
+          </p>
+          <p class="text-xs text-amber-800 dark:text-amber-200 font-mono">{{ mountPoint }}</p>
+          <p class="text-xs text-amber-800 dark:text-amber-200">{{ t('storage.fs.wizard.create_fs.empty_mount_final_body') }}</p>
+          <UCheckbox
+            v-model="confirmEmptyMountDir"
+            :label="t('storage.fs.wizard.create_fs.confirm_empty_mount')"
+          />
+        </div>
+
+        <div
           v-if="needsWipe"
           class="rounded-lg border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/20 p-3 space-y-3"
         >
@@ -302,6 +317,7 @@ const partitionStrategy = ref<PartitionStrategy>('none')
 const mountPointManuallyEdited = ref(false)
 const lastSuggestedMount = ref('/mnt/vdisks/fs01')
 const confirmWipeSignatures = ref(false)
+const confirmEmptyMountDir = ref(false)
 const confirmation = ref('')
 const preflight = ref<Awaited<ReturnType<typeof fs.preflight>> | null>(null)
 const preflightLoading = ref(false)
@@ -328,6 +344,9 @@ const selectedBackend = computed(() =>
 const selectedBackendRef = computed(() => selectedBackend.value as FsBackendRef | undefined)
 const selectedBackendStatus = computed(() => fsCreateWizardBackendStatus(selectedBackend.value))
 const needsWipe = computed(() => fsCreateWizardNeedsWipe(selectedBackend.value))
+const needsEmptyMountConfirm = computed(() =>
+  (preflight.value?.warnings ?? []).includes('storage.fs.wizard.create_fs.warn_mount_dir_empty'),
+)
 
 const initialBackendBlocked = computed(() => {
   const preferred = props.initialBackendPath?.trim()
@@ -427,7 +446,8 @@ const preflightWarningLabels = computed(() =>
 const canExecute = computed(() =>
   preflight.value?.ok
   && confirmation.value.trim() === preflight.value.requiredConfirmation
-  && (!needsWipe.value || confirmWipeSignatures.value),
+  && (!needsWipe.value || confirmWipeSignatures.value)
+  && (!needsEmptyMountConfirm.value || confirmEmptyMountDir.value),
 )
 
 watch(label, (l) => {
@@ -473,7 +493,8 @@ async function loadPreflight() {
       label: label.value,
       mountPoint: mountPoint.value,
       partitionStrategy: partitionStrategy.value,
-      allowWipeSignatures: needsWipe.value,
+      allowWipeSignatures: true,
+      allowUseEmptyMountDir: true,
     })
   } catch (e: unknown) {
     preflight.value = {
@@ -500,6 +521,7 @@ async function onNext() {
     step.value = 3
     confirmation.value = ''
     confirmWipeSignatures.value = false
+    confirmEmptyMountDir.value = false
   }
 }
 
@@ -519,6 +541,7 @@ async function execute() {
       mountPoint: mountPoint.value,
       partitionStrategy: partitionStrategy.value,
       allowWipeSignatures: needsWipe.value ? confirmWipeSignatures.value : false,
+      allowUseEmptyMountDir: needsEmptyMountConfirm.value ? confirmEmptyMountDir.value : true,
       confirmation: confirmation.value.trim(),
     }, clusterExecution)
     toast.success(t('storage.fs.wizard.create_fs.success'))

@@ -2,10 +2,19 @@ import { describe, expect, it, vi } from 'vitest'
 import type { FsOverview } from '~/types/filesystem'
 import { runFsPreflight } from '../server/utils/fs-preflight'
 import { collectFsBackendCandidates } from '../server/utils/fs-candidates'
+import { probeMountPathOnNode } from '../server/utils/fs-mount-path-preflight'
 
 vi.mock('../server/utils/fs-candidates', () => ({
   collectFsBackendCandidates: vi.fn().mockResolvedValue([]),
 }))
+
+vi.mock('../server/utils/fs-mount-path-preflight', async importOriginal => {
+  const actual = await importOriginal<typeof import('../server/utils/fs-mount-path-preflight')>()
+  return {
+    ...actual,
+    probeMountPathOnNode: vi.fn().mockResolvedValue('not_exists' as const),
+  }
+})
 
 vi.mock('../server/utils/scst-config-reader', () => ({
   readScstConfig: vi.fn().mockResolvedValue({ handlers: [], drivers: [] }),
@@ -78,6 +87,7 @@ function baseOverview(overrides?: Partial<FsOverview>): FsOverview {
 
 const manager = {} as import('../server/utils/ssh-session-manager').SSHSessionManager
 const mockedCollectCandidates = vi.mocked(collectFsBackendCandidates)
+const mockedProbeMountPath = vi.mocked(probeMountPathOnNode)
 
 describe('runFsPreflight — create_vdisk', () => {
   it('blocks when size exceeds free space', async () => {
@@ -106,6 +116,20 @@ describe('runFsPreflight — create_vdisk', () => {
     })
     expect(res.ok).toBe(false)
     expect(res.blockers.some(b => b.toLowerCase().includes('vdisk'))).toBe(true)
+  })
+
+  it('blocks duplicate vdisk filename with i18n key', async () => {
+    const res = await runFsPreflight(manager, baseOverview(), {
+      action: 'create_vdisk',
+      payload: {
+        mountPoint: '/mnt/vdisks/fs01',
+        fileName: 'existing.img',
+        sizeBytes: 2_000_000,
+        allocMode: 'fallocate',
+      },
+    })
+    expect(res.ok).toBe(false)
+    expect(res.blockers).toContain('storage.fs.errors.vdisk_file_exists')
   })
 
   it('accepts valid vdisk create', async () => {

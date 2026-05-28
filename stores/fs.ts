@@ -11,6 +11,12 @@ import type {
 import type { ClusterFsExecutionRequest } from '~/server/utils/fs-cluster-execution'
 import { buildFsFileioViewModel } from '~/utils/fs-fileio-view'
 import { mergeFsOverview } from '~/utils/fs-overview-merge'
+import {
+  loadPersistedActiveFileioMount,
+  persistActiveFileioMount,
+  pickActiveFileioMount,
+} from '~/utils/fs-active-filesystem'
+import { computeFsNextAction } from '~/utils/fs-provisioning-chain'
 
 export const useFsStore = defineStore('fs', {
   state: () => ({
@@ -24,6 +30,8 @@ export const useFsStore = defineStore('fs', {
     partialErrors: [] as FsScanError[],
     sanId: null as string | null,
     clusterId: null as string | null,
+    /** Session override set after wizard create or user selection. */
+    activeFileioMountOverride: null as string | null,
   }),
 
   getters: {
@@ -34,7 +42,32 @@ export const useFsStore = defineStore('fs', {
     backends: s => s.overview?.backends ?? [],
     diagnostics: s => s.overview?.diagnostics,
     tools: s => s.overview?.tools,
-    fileioView: s => buildFsFileioViewModel(s.overview),
+    activeFileioMountPoint(s): string | null {
+      const mounts = s.overview?.mounts ?? []
+      const preferred = s.activeFileioMountOverride
+        ?? (s.sanId ? loadPersistedActiveFileioMount(s.sanId) : null)
+      const hit = pickActiveFileioMount(mounts, { preferredMountPoint: preferred })
+      return hit?.mountPoint ?? null
+    },
+
+    activeFileioMount(s) {
+      const mp = (this as { activeFileioMountPoint: string | null }).activeFileioMountPoint
+      if (!mp || !s.overview) return undefined
+      return s.overview.mounts.find(m => m.mountPoint === mp)
+    },
+
+    fileioView(s) {
+      return buildFsFileioViewModel(s.overview, {
+        activeMountPoint: (this as { activeFileioMountPoint: string | null }).activeFileioMountPoint,
+      })
+    },
+
+    effectiveNextAction(s) {
+      if (!s.overview) return null
+      return computeFsNextAction(s.overview, {
+        activeMountPoint: (this as { activeFileioMountPoint: string | null }).activeFileioMountPoint,
+      })
+    },
 
     hasStaleData: (s): boolean => {
       if (!s.overview) return false
@@ -51,6 +84,14 @@ export const useFsStore = defineStore('fs', {
 
     setSanId(sanId: string) {
       this.sanId = sanId
+      this.activeFileioMountOverride = loadPersistedActiveFileioMount(sanId)
+    },
+
+    setActiveFileioMount(mountPoint: string) {
+      const mp = mountPoint.trim()
+      if (!mp) return
+      this.activeFileioMountOverride = mp
+      if (this.sanId) persistActiveFileioMount(this.sanId, mp)
     },
 
     setClusterContext(clusterId: string, primarySanId: string) {
@@ -103,11 +144,13 @@ export const useFsStore = defineStore('fs', {
 
     async createFilesystem(payload: CreateFsPayload, clusterExecution?: ClusterFsExecutionRequest) {
       const url = clusterExecution ? '/api/fs/create/cluster' : '/api/fs/create'
-      return $fetch(url, {
+      const result = await $fetch<{ success: boolean; mountPoint: string }>(url, {
         method: 'POST',
         query: this.query(),
         body: clusterExecution ? { ...payload, clusterExecution } : payload,
       })
+      if (result.mountPoint) this.setActiveFileioMount(result.mountPoint)
+      return result
     },
 
     async createVdisk(payload: CreateVdiskPayload, clusterExecution?: ClusterFsExecutionRequest) {
