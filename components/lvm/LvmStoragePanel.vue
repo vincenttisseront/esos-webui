@@ -83,6 +83,53 @@
           {{ row.controllerLabel }} {{ row.vdId }} ({{ formatBytes(row.sizeBytes) }})
         </li>
       </ul>
+      <div class="mt-2 flex flex-wrap gap-2">
+        <UButton
+          size="xs"
+          color="amber"
+          variant="soft"
+          :loading="rescanningHw"
+          :disabled="!canMutate"
+          @click="rescanPendingHwBackends"
+        >
+          {{ t('lvm.pending_hw_backend.action_rescan') }}
+        </UButton>
+        <UButton size="xs" color="gray" variant="ghost" @click="emit('navigate-block-devices')">
+          {{ t('lvm.pending_hw_backend.action_devices') }}
+        </UButton>
+      </div>
+    </UAlert>
+
+    <UAlert
+      v-if="lastHwRescan?.mappedPath"
+      color="green"
+      variant="soft"
+      :title="t('lvm.pending_hw_backend.detected_title', { path: lastHwRescan.mappedPath })"
+    >
+      <div class="mt-2 flex flex-wrap gap-2">
+        <UButton size="xs" color="primary" variant="soft" @click="openPvWizard(lastHwRescan.mappedPath)">
+          {{ t('lvm.pending_hw_backend.action_create_pv') }}
+        </UButton>
+        <UButton size="xs" color="emerald" variant="soft" @click="emit('navigate-filesystems')">
+          {{ t('lvm.pending_hw_backend.action_create_fs') }}
+        </UButton>
+        <UButton size="xs" color="gray" variant="ghost" @click="emit('navigate-block-devices')">
+          {{ t('lvm.pending_hw_backend.action_devices') }}
+        </UButton>
+      </div>
+    </UAlert>
+
+    <UAlert
+      v-else-if="lastHwRescan && !lastHwRescan.mappedPath"
+      color="amber"
+      variant="soft"
+      :title="t('lvm.pending_hw_backend.no_device_after_rescan_title')"
+    >
+      <div class="mt-2 flex flex-wrap gap-2">
+        <UButton size="xs" color="gray" variant="soft" @click="emit('navigate-block-devices')">
+          {{ t('lvm.pending_hw_backend.action_diagnostic') }}
+        </UButton>
+      </div>
     </UAlert>
 
     <div v-if="isClustered && lvm.clusterInventoryLoading && !clusterView" class="text-sm text-gray-500 dark:text-gray-400">
@@ -531,13 +578,15 @@ const props = defineProps<{
   readOnly?: boolean
 }>()
 
-const emit = defineEmits<{ 'navigate-block-devices': [] }>()
+const emit = defineEmits<{ 'navigate-block-devices': []; 'navigate-filesystems': [] }>()
 
 const { t, tLvmAlert } = useEsosI18n()
 const lvm = useLvmStore()
 const fs = useFsStore()
+const raid = useRaidStore()
 const { pendingPrefill, consumeLvWizardPrefill } = useLvWizardPrefill()
 const { open: openModal } = useAppModal()
+const toast = useAppToast()
 
 const canMutate = computed(() => !props.readOnly)
 const canCreate = computed(() => canMutate.value)
@@ -570,6 +619,8 @@ function navigateBlockDevicesFromWizard() {
 
 const eligibleCandidates = computed(() => lvm.candidates.filter(c => c.eligible))
 const pendingHwBackends = computed(() => lvm.overview?.pendingHwRaidBackends ?? [])
+const rescanningHw = ref(false)
+const lastHwRescan = ref<null | { mappedPath: string | null; foundNewDevice: boolean }>(null)
 
 const pvSourceCandidates = computed(() => listPvSourceCandidates(lvm.candidates))
 
@@ -579,6 +630,29 @@ function pvCandidateLabel(row: (typeof lvm.candidates)[number]) {
 
 function pvCandidateReason(reason: string) {
   return formatLvmCandidateReason(reason, t)
+}
+
+async function rescanPendingHwBackends() {
+  if (rescanningHw.value || !pendingHwBackends.value.length) return
+  rescanningHw.value = true
+  try {
+    const target = pendingHwBackends.value[0]
+    const result = await raid.rescanHardwareScsi({
+      controllerId: target?.controllerId,
+      vdId: target?.vdId,
+    })
+    lastHwRescan.value = { mappedPath: result.mappedPath, foundNewDevice: result.foundNewDevice }
+    await Promise.all([lvm.fetchOverview(true), fs.fetchOverview(true)])
+    if (result.mappedPath) {
+      toast.success(t('lvm.pending_hw_backend.detected_title', { path: result.mappedPath }) as string)
+    } else {
+      toast.warning(t('lvm.pending_hw_backend.no_device_after_rescan_title') as string)
+    }
+  } catch (err: any) {
+    toast.error(err?.data?.statusMessage ?? err?.message ?? String(t('lvm.pending_hw_backend.rescan_failed')))
+  } finally {
+    rescanningHw.value = false
+  }
 }
 
 const displayCandidates = computed(() => {

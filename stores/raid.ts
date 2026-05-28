@@ -447,11 +447,27 @@ export const useRaidStore = defineStore('raid', {
       return result
     },
 
-    async rescanHardwareScsi(host?: string) {
-      const result = await $fetch<{ ok: boolean; command: string; host: string | null }>('/api/raid/hardware/rescan', {
+    async rescanHardwareScsi(input?: { host?: string; controllerId?: string; vdId?: string }) {
+      const result = await $fetch<{
+        ok: boolean
+        command: string
+        host: string | null
+        foundNewDevice: boolean
+        mappedPath: string | null
+        diagnostics: {
+          vdId: string | null
+          controllerId: string | null
+          expectedSizeBytes: number | null
+          lsscsiBefore: string
+          lsscsiAfter: string
+          lsblkBefore: string
+          lsblkAfter: string
+          dmesgTail: string
+        }
+      }>('/api/raid/hardware/rescan', {
         method: 'POST',
         params: this.query(),
-        body: { host },
+        body: { host: input?.host, controllerId: input?.controllerId, vdId: input?.vdId },
       })
       await this.fetchOverview(true)
       return result

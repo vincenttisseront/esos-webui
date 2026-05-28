@@ -1693,7 +1693,15 @@
     "candidate": { "table_title": "Candidate devices for pvcreate" },
     "pending_hw_backend": {
       "title": "Hardware RAID backend pending OS device",
-      "body": "A hardware virtual drive exists on the controller but no Linux block device path is mapped yet."
+      "body": "A hardware virtual drive exists on the controller but no Linux block device path is mapped yet.",
+      "action_rescan": "Rescan SCSI buses",
+      "action_devices": "View Block Devices",
+      "action_create_pv": "Create LVM PV",
+      "action_create_fs": "Create FILEIO filesystem",
+      "action_diagnostic": "View diagnostics",
+      "detected_title": "New device detected: {path}",
+      "no_device_after_rescan_title": "No device detected after rescan. A reboot may be required.",
+      "rescan_failed": "SCSI rescan failed"
     },
     "confirm": { "label": "Confirmation phrase" },
     "cluster": {
@@ -4279,7 +4287,15 @@
       },
       "pending_hw_backend": {
         "title": "Hardware RAID backend pending OS device",
-        "body": "A newly created hardware RAID virtual drive is not yet visible as a Linux block device. It cannot be used as FILEIO/LVM backend yet."
+        "body": "A newly created hardware RAID virtual drive is not yet visible as a Linux block device. It cannot be used as FILEIO/LVM backend yet.",
+        "action_rescan": "Rescan SCSI buses",
+        "action_devices": "View Block Devices",
+        "action_create_pv": "Create LVM PV",
+        "action_create_fs": "Create FILEIO filesystem",
+        "action_diagnostic": "View diagnostics",
+        "detected_title": "New device detected: {path}",
+        "no_device_after_rescan_title": "No device detected after rescan. A reboot may be required.",
+        "rescan_failed": "SCSI rescan failed"
       },
       "hw_ld": {
         "tool_missing": "No storcli/perccli tool available to resolve the OS path for this logical volume.",

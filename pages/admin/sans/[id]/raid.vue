@@ -327,6 +327,7 @@
         :is-clustered="isClusteredSan"
         :read-only="isReadOnly"
         @navigate-block-devices="activeTab = 'devices'"
+        @navigate-filesystems="activeTab = 'fs'"
       />
     </div>
 

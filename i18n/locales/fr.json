@@ -1693,7 +1693,15 @@
     "candidate": { "table_title": "Périphériques candidats pour pvcreate" },
     "pending_hw_backend": {
       "title": "Backend RAID matériel en attente côté OS",
-      "body": "Un volume virtuel RAID matériel existe côté contrôleur, mais aucun chemin bloc Linux n'est mappé."
+      "body": "Un volume virtuel RAID matériel existe côté contrôleur, mais aucun chemin bloc Linux n'est mappé.",
+      "action_rescan": "Rescanner les bus SCSI",
+      "action_devices": "Voir Block Devices",
+      "action_create_pv": "Créer PV LVM",
+      "action_create_fs": "Créer filesystem FILEIO",
+      "action_diagnostic": "Voir diagnostic",
+      "detected_title": "Nouveau périphérique détecté: {path}",
+      "no_device_after_rescan_title": "Aucun périphérique détecté après rescan. Un redémarrage peut être nécessaire.",
+      "rescan_failed": "Échec du rescan SCSI"
     },
     "confirm": { "label": "Phrase de confirmation" },
     "cluster": {
@@ -4279,7 +4287,15 @@
       },
       "pending_hw_backend": {
         "title": "Backend RAID matériel en attente côté OS",
-        "body": "Un volume virtuel RAID matériel nouvellement créé n'est pas encore visible comme périphérique bloc Linux. Il ne peut pas encore servir de backend FILEIO/LVM."
+        "body": "Un volume virtuel RAID matériel nouvellement créé n'est pas encore visible comme périphérique bloc Linux. Il ne peut pas encore servir de backend FILEIO/LVM.",
+        "action_rescan": "Rescanner les bus SCSI",
+        "action_devices": "Voir Block Devices",
+        "action_create_pv": "Créer PV LVM",
+        "action_create_fs": "Créer filesystem FILEIO",
+        "action_diagnostic": "Voir diagnostic",
+        "detected_title": "Nouveau périphérique détecté: {path}",
+        "no_device_after_rescan_title": "Aucun périphérique détecté après rescan. Un redémarrage peut être nécessaire.",
+        "rescan_failed": "Échec du rescan SCSI"
       },
       "hw_ld": {
         "tool_missing": "Aucun outil storcli/perccli disponible pour résoudre le chemin OS de ce volume logique.",

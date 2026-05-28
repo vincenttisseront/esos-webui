@@ -40,6 +40,53 @@
           {{ row.controllerLabel }} {{ row.vdId }} ({{ formatBytes(row.sizeBytes) }})
         </li>
       </ul>
+      <div class="mt-2 flex flex-wrap gap-2">
+        <UButton
+          size="xs"
+          color="amber"
+          variant="soft"
+          :loading="rescanningHw"
+          :disabled="props.readOnly"
+          @click="rescanPendingHwBackends"
+        >
+          {{ t('storage.fs.pending_hw_backend.action_rescan') }}
+        </UButton>
+        <UButton size="xs" color="gray" variant="ghost" @click="emit('navigate-block-devices')">
+          {{ t('storage.fs.pending_hw_backend.action_devices') }}
+        </UButton>
+      </div>
+    </UAlert>
+
+    <UAlert
+      v-if="lastHwRescan?.mappedPath"
+      color="green"
+      variant="soft"
+      :title="t('storage.fs.pending_hw_backend.detected_title', { path: lastHwRescan.mappedPath })"
+    >
+      <div class="mt-2 flex flex-wrap gap-2">
+        <UButton size="xs" color="primary" variant="soft" @click="emit('navigate-lvm')">
+          {{ t('storage.fs.pending_hw_backend.action_create_pv') }}
+        </UButton>
+        <UButton size="xs" color="emerald" variant="soft" @click="openCreateFsWizard">
+          {{ t('storage.fs.pending_hw_backend.action_create_fs') }}
+        </UButton>
+        <UButton size="xs" color="gray" variant="ghost" @click="emit('navigate-block-devices')">
+          {{ t('storage.fs.pending_hw_backend.action_devices') }}
+        </UButton>
+      </div>
+    </UAlert>
+
+    <UAlert
+      v-else-if="lastHwRescan && !lastHwRescan.mappedPath"
+      color="amber"
+      variant="soft"
+      :title="t('storage.fs.pending_hw_backend.no_device_after_rescan_title')"
+    >
+      <div class="mt-2 flex flex-wrap gap-2">
+        <UButton size="xs" color="gray" variant="soft" @click="emit('navigate-block-devices')">
+          {{ t('storage.fs.pending_hw_backend.action_diagnostic') }}
+        </UButton>
+      </div>
     </UAlert>
 
     <UAlert
@@ -429,6 +476,7 @@ const emit = defineEmits<{
 const { t } = useEsosI18n()
 const fs = useFsStore()
 const lvm = useLvmStore()
+const raid = useRaidStore()
 const { overview, refresh: refreshOverview } = useOverview()
 const toast = useAppToast()
 const { open: openModal } = useAppModal()
@@ -448,6 +496,8 @@ const fileioView = computed(() => fs.fileioView)
 const chainSteps = computed(() => fileioView.value?.chain ?? [])
 const backends = computed(() => fs.backends)
 const pendingHwBackends = computed(() => fs.overview?.pendingHwRaidBackends ?? [])
+const rescanningHw = ref(false)
+const lastHwRescan = ref<null | { mappedPath: string | null; foundNewDevice: boolean }>(null)
 const eligibleCandidates = computed(() => backends.value.filter(c => c.eligible))
 const unmappedVdisks = computed(() => fileioView.value?.vdiskFiles.filter(v => !v.mapped) ?? [])
 const eligibleFileioVdisks = computed(() =>
@@ -608,6 +658,29 @@ function runNextStep() {
       ? eligibleFileioVdisks.value.filter(v => v.path === path)
       : eligibleFileioVdisks.value
     void openFileioWizard(list.length ? list : eligibleFileioVdisks.value, path)
+  }
+}
+
+async function rescanPendingHwBackends() {
+  if (rescanningHw.value || !pendingHwBackends.value.length) return
+  rescanningHw.value = true
+  try {
+    const target = pendingHwBackends.value[0]
+    const result = await raid.rescanHardwareScsi({
+      controllerId: target?.controllerId,
+      vdId: target?.vdId,
+    })
+    lastHwRescan.value = { mappedPath: result.mappedPath, foundNewDevice: result.foundNewDevice }
+    await Promise.all([refreshAll(), lvm.fetchOverview(true)])
+    if (result.mappedPath) {
+      toast.success(t('storage.fs.pending_hw_backend.detected_title', { path: result.mappedPath }) as string)
+    } else {
+      toast.warning(t('storage.fs.pending_hw_backend.no_device_after_rescan_title') as string)
+    }
+  } catch (err: any) {
+    toast.error(err?.data?.statusMessage ?? err?.message ?? String(t('storage.fs.pending_hw_backend.rescan_failed')))
+  } finally {
+    rescanningHw.value = false
   }
 }
 
