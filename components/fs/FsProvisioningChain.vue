@@ -13,9 +13,11 @@
             <span class="font-medium">{{ stepLabel(step.id) }}</span>
             <UBadge :color="badgeColor(step.status)" variant="soft" size="xs" :label="statusLabel(step.status)" />
           </div>
-          <p class="font-mono text-[11px] truncate" :title="step.detail">{{ step.detail }}</p>
+          <p class="font-mono text-[11px] truncate" :title="stepDetailText(step)">
+            {{ stepDetailText(step) }}
+          </p>
           <p v-if="step.hintKey" class="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
-            {{ t(step.hintKey) }}
+            {{ t(step.hintKey, step.messageParams ?? {}) }}
           </p>
         </div>
         <span v-if="index < steps.length - 1" class="hidden sm:flex items-center text-gray-400">→</span>
@@ -40,6 +42,13 @@ const labels: Record<string, string> = {
 function stepLabel(id: string) {
   const key = labels[id]
   return key ? t(key) : id
+}
+
+function stepDetailText(step: ProvisioningStepView): string {
+  if (step.detailKey) {
+    return t(step.detailKey, step.detailParams ?? {}) as string
+  }
+  return step.detail
 }
 
 function statusLabel(s: ProvisioningStepStatus) {

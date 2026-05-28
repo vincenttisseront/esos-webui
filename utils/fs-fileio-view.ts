@@ -63,6 +63,14 @@ export function chainDetailInInventory(
   const detail = step?.detail?.trim()
   if (!detail || detail === '—') return true
 
+  if (step?.detailKey?.includes('.vdisk_multiple') || step?.detailKey?.includes('.fileio_')
+    || step?.detailKey?.includes('.expose_')) {
+    const count = step.count ?? 0
+    if (stepId === 'vdisk') return count === 0 || view.vdiskFiles.length >= count
+    if (stepId === 'fileio') return count === 0 || view.fileioDevices.length >= count
+    if (stepId === 'expose') return view.lunMappings.length >= 0
+  }
+
   switch (stepId) {
     case 'filesystem':
       return view.filesystems.some(m => m.mountPoint === detail || detail.startsWith(m.mountPoint))
@@ -70,6 +78,8 @@ export function chainDetailInInventory(
       return view.vdiskFiles.some(v => v.fileName === detail || v.path === detail || detail.includes(v.fileName))
     case 'fileio':
       return view.fileioDevices.some(d => d.name === detail)
+        || detail.toLowerCase().includes('device')
+        || detail.toLowerCase().includes('enregistr')
     case 'expose': {
       const lunMatch = detail.match(/LUN\s+(\d+)/i)
       const lunId = lunMatch ? Number(lunMatch[1]) : undefined

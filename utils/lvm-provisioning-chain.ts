@@ -25,6 +25,9 @@ export interface ProvisioningStepView {
   id: ProvisioningStepId | string
   status: ProvisioningStepStatus
   detail: string
+  /** When set, UI should render t(detailKey, detailParams) instead of raw detail. */
+  detailKey?: string
+  detailParams?: Record<string, string>
   count?: number
   hintKey?: string
   messageParams?: Record<string, string>

@@ -4444,7 +4444,9 @@
         "create_fs": "Créez un filesystem sur un backend bloc éligible.",
         "create_vdisk_in_mount": "Créez un fichier vdisk dans {mountPoint}.",
         "bind_fileio": "Enregistrez un device SCST FILEIO pour {path}.",
-        "expose": "Exposez le device aux clients via les groupes d'accès.",
+        "bind_fileio_remaining": "Il reste {count} fichier(s) vdisk à enregistrer dans SCST ({total} au total).",
+        "expose": "Exposez {name} aux clients via les groupes d'accès.",
+        "expose_remaining": "Il reste {count} device(s) FILEIO à exposer aux clients ({total} au total).",
         "complete": "Chaîne FILEIO complète.",
         "none": "Aucune action requise."
       },
@@ -4471,6 +4473,21 @@
         "hint": {
           "filesystem_optional": "Non requis lorsque BLOCKIO est déjà complet.",
           "fileio_optional": "La piste FILEIO est optionnelle si vous n'avez besoin que de BLOCKIO."
+        },
+        "detail": {
+          "dash": "—",
+          "no_vdisk": "Aucun fichier",
+          "vdisk_single": "{name}",
+          "vdisk_multiple": "{count} fichiers vdisk",
+          "fileio_single": "{name}",
+          "fileio_single_missing": "Manquant",
+          "fileio_none_registered": "0 device enregistré",
+          "fileio_all_registered": "{count} devices enregistrés",
+          "fileio_partial": "{registered} devices sur {total} enregistrés",
+          "expose_single": "{target} LUN {lun}",
+          "expose_none": "0 LUN mappé",
+          "expose_all": "{count} LUNs mappés",
+          "expose_partial": "{mapped} LUNs sur {total}"
         }
       },
       "actions": {

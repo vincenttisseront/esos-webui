@@ -156,7 +156,7 @@ describe('fs-fileio-view', () => {
     expect(chainDetailInInventory(view, 'vdisk')).toBe(true)
     expect(chainDetailInInventory(view, 'fileio')).toBe(true)
     expect(chainDetailInInventory(view, 'expose')).toBe(true)
-    expect(view.chain.find(s => s.id === 'vdisk')?.detail).toBe('/mnt/vdisks/linux')
+    expect(view.chain.find(s => s.id === 'vdisk')?.detail).toBe('linux')
   })
 
   it('inventory is unchanged when SAN is read-only (UI-only flag)', () => {

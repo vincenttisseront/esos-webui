@@ -144,10 +144,59 @@ describe('fs-provisioning-chain', () => {
     })
     overview.nextAction = computeFsNextAction(overview)
     const steps = buildFsProvisioningSteps(overview)
-    expect(steps.find(s => s.id === 'vdisk')?.detail).toBe('/mnt/vdisks/linux')
+    expect(steps.find(s => s.id === 'vdisk')?.detail).toBe('linux')
+    expect(steps.find(s => s.id === 'vdisk')?.detailKey).toBe('storage.fs.chain.detail.vdisk_single')
     expect(steps.find(s => s.id === 'fileio')?.detail).toBe('LINUX')
     expect(steps.find(s => s.id === 'expose')?.status).toBe('created')
     expect(steps.find(s => s.id === 'expose')?.detail).toContain('21:00:00:24:ff:91:60:bc')
+  })
+
+  it('shows aggregate vdisk and fileio details for multiple files on active mount', () => {
+    const mount = '/mnt/vdisks/fs01'
+    const overview = baseOverview({
+      mounts: [{
+        mountPoint: mount,
+        backingDevice: '/dev/md0',
+        fsType: 'xfs',
+        totalBytes: 1e9,
+        freeBytes: 5e8,
+        usedPct: 10,
+        mounted: true,
+        status: 'mounted',
+        role: 'fileio_data',
+        source: 'findmnt',
+      }],
+      vdiskFiles: [
+        {
+          path: `${mount}/data01.img`,
+          fileName: 'data01.img',
+          sizeBytes: 1e9,
+          mountPoint: mount,
+          scstDeviceNames: ['VD01'],
+          mapped: true,
+        },
+        {
+          path: `${mount}/data02.img`,
+          fileName: 'data02.img',
+          sizeBytes: 1e9,
+          mountPoint: mount,
+          scstDeviceNames: [],
+          mapped: false,
+        },
+      ],
+      fileioDevices: [{
+        name: 'VD01',
+        handler: 'vdisk_fileio',
+        filename: `${mount}/data01.img`,
+        attrs: {},
+        mapped: false,
+      }],
+    })
+    const steps = buildFsProvisioningSteps(overview, undefined, { activeMountPoint: mount })
+    expect(steps.find(s => s.id === 'vdisk')?.detailKey).toBe('storage.fs.chain.detail.vdisk_multiple')
+    expect(steps.find(s => s.id === 'vdisk')?.detailParams?.count).toBe('2')
+    expect(steps.find(s => s.id === 'fileio')?.detailKey).toBe('storage.fs.chain.detail.fileio_partial')
+    expect(steps.find(s => s.id === 'fileio')?.detailParams?.registered).toBe('1')
   })
 
   it('next action suggests vdisk in mount when mount exists without vdisk', () => {
