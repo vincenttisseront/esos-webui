@@ -89,6 +89,22 @@
       </div>
     </UAlert>
 
+    <details
+      v-if="lastHwRescan?.diagnostics"
+      class="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2"
+    >
+      <summary class="text-xs font-medium cursor-pointer select-none">
+        {{ t('storage.fs.pending_hw_backend.rescan_details') }}
+      </summary>
+      <div class="mt-2 text-[11px] space-y-2 font-mono text-gray-600 dark:text-gray-300">
+        <p>{{ t('storage.fs.pending_hw_backend.hosts_scanned') }}: {{ (lastHwRescan.diagnostics.megaraidHosts ?? []).join(', ') || 'all' }}</p>
+        <p>{{ t('storage.fs.pending_hw_backend.new_lsscsi_entries') }}: {{ (lastHwRescan.diagnostics.newLsscsiEntries ?? []).length }}</p>
+        <p>{{ t('storage.fs.pending_hw_backend.new_lsblk_entries') }}: {{ (lastHwRescan.diagnostics.newLsblkEntries ?? []).length }}</p>
+        <pre class="bg-gray-50 dark:bg-gray-950 rounded p-2 overflow-x-auto">{{ (lastHwRescan.diagnostics.manualCommands ?? []).join('\n') }}</pre>
+        <pre class="bg-gray-50 dark:bg-gray-950 rounded p-2 overflow-x-auto">{{ lastHwRescan.diagnostics.dmesgTail || '—' }}</pre>
+      </div>
+    </details>
+
     <UAlert
       v-if="fs.partialRefresh && partialScannerErrors.length"
       color="amber"
@@ -497,7 +513,7 @@ const chainSteps = computed(() => fileioView.value?.chain ?? [])
 const backends = computed(() => fs.backends)
 const pendingHwBackends = computed(() => fs.overview?.pendingHwRaidBackends ?? [])
 const rescanningHw = ref(false)
-const lastHwRescan = ref<null | { mappedPath: string | null; foundNewDevice: boolean }>(null)
+const lastHwRescan = ref<null | Awaited<ReturnType<typeof raid.rescanHardwareScsi>>>(null)
 const eligibleCandidates = computed(() => backends.value.filter(c => c.eligible))
 const unmappedVdisks = computed(() => fileioView.value?.vdiskFiles.filter(v => !v.mapped) ?? [])
 const eligibleFileioVdisks = computed(() =>
@@ -670,7 +686,7 @@ async function rescanPendingHwBackends() {
       controllerId: target?.controllerId,
       vdId: target?.vdId,
     })
-    lastHwRescan.value = { mappedPath: result.mappedPath, foundNewDevice: result.foundNewDevice }
+    lastHwRescan.value = result
     await Promise.all([refreshAll(), lvm.fetchOverview(true)])
     if (result.mappedPath) {
       toast.success(t('storage.fs.pending_hw_backend.detected_title', { path: result.mappedPath }) as string)

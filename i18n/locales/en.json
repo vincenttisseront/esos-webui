@@ -1707,7 +1707,11 @@
       "action_diagnostic": "View diagnostics",
       "detected_title": "New device detected: {path}",
       "no_device_after_rescan_title": "No device detected after rescan. A reboot may be required.",
-      "rescan_failed": "SCSI rescan failed"
+      "rescan_failed": "SCSI rescan failed",
+      "rescan_details": "Rescan diagnostics",
+      "hosts_scanned": "Hosts scanned",
+      "new_lsscsi_entries": "New lsscsi entries",
+      "new_lsblk_entries": "New lsblk entries"
     },
     "confirm": { "label": "Confirmation phrase" },
     "cluster": {
@@ -4301,7 +4305,11 @@
         "action_diagnostic": "View diagnostics",
         "detected_title": "New device detected: {path}",
         "no_device_after_rescan_title": "No device detected after rescan. A reboot may be required.",
-        "rescan_failed": "SCSI rescan failed"
+        "rescan_failed": "SCSI rescan failed",
+        "rescan_details": "Rescan diagnostics",
+        "hosts_scanned": "Hosts scanned",
+        "new_lsscsi_entries": "New lsscsi entries",
+        "new_lsblk_entries": "New lsblk entries"
       },
       "hw_ld": {
         "tool_missing": "No storcli/perccli tool available to resolve the OS path for this logical volume.",

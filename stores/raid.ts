@@ -454,15 +454,27 @@ export const useRaidStore = defineStore('raid', {
         host: string | null
         foundNewDevice: boolean
         mappedPath: string | null
+        suggestReboot?: boolean
+        resultMessage?: string
         diagnostics: {
           vdId: string | null
           controllerId: string | null
           expectedSizeBytes: number | null
+          hostsProcNames?: string
+          megaraidHosts?: string[]
+          stepsExecuted?: Array<{ key: string; command: string; scannedHosts: string[] }>
+          perccliBefore?: string
+          perccliAfter?: string
+          lsscsiGBefore?: string
+          lsscsiGAfter?: string
           lsscsiBefore: string
           lsscsiAfter: string
           lsblkBefore: string
           lsblkAfter: string
+          newLsscsiEntries?: string[]
+          newLsblkEntries?: string[]
           dmesgTail: string
+          manualCommands?: string[]
         }
       }>('/api/raid/hardware/rescan-scsi', {
         method: 'POST',

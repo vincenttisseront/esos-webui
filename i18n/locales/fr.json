@@ -1707,7 +1707,11 @@
       "action_diagnostic": "Voir diagnostic",
       "detected_title": "Nouveau périphérique détecté: {path}",
       "no_device_after_rescan_title": "Aucun périphérique détecté après rescan. Un redémarrage peut être nécessaire.",
-      "rescan_failed": "Échec du rescan SCSI"
+      "rescan_failed": "Échec du rescan SCSI",
+      "rescan_details": "Diagnostic du rescan",
+      "hosts_scanned": "Hosts scannés",
+      "new_lsscsi_entries": "Nouvelles entrées lsscsi",
+      "new_lsblk_entries": "Nouvelles entrées lsblk"
     },
     "confirm": { "label": "Phrase de confirmation" },
     "cluster": {
@@ -4301,7 +4305,11 @@
         "action_diagnostic": "Voir diagnostic",
         "detected_title": "Nouveau périphérique détecté: {path}",
         "no_device_after_rescan_title": "Aucun périphérique détecté après rescan. Un redémarrage peut être nécessaire.",
-        "rescan_failed": "Échec du rescan SCSI"
+        "rescan_failed": "Échec du rescan SCSI",
+        "rescan_details": "Diagnostic du rescan",
+        "hosts_scanned": "Hosts scannés",
+        "new_lsscsi_entries": "Nouvelles entrées lsscsi",
+        "new_lsblk_entries": "Nouvelles entrées lsblk"
       },
       "hw_ld": {
         "tool_missing": "Aucun outil storcli/perccli disponible pour résoudre le chemin OS de ce volume logique.",
