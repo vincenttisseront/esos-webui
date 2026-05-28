@@ -6,7 +6,7 @@ import {
   mkfsDevicePath,
 } from '~/utils/fs-command-builder'
 import {
-  expectedFormatFsConfirmation,
+  expectedCreateFilesystemConfirmation,
   validateCreateFsInput,
   validateMountPoint,
   validateVdiskFileName,
@@ -105,7 +105,7 @@ async function preflightCreateFs(
   if (!cand) blockers.push('Backend introuvable')
   else if (cand.eligibility === 'blocked' || !cand.eligible) blockers.push(...cand.reasons)
   else if (cand.eligibility === 'eligible_with_wipe_required' && !payload.allowWipeSignatures) {
-    blockers.push('Signatures détectées — confirmez le nettoyage avant formatage')
+    blockers.push('storage.fs.wizard.create_fs.blocker_wipe_not_confirmed')
   }
 
   const mountExists = overview.mounts.some(m => m.mountPoint === payload.mountPoint)
@@ -119,7 +119,7 @@ async function preflightCreateFs(
   if (!val.ok) {
     return baseResult({
       blockers: val.blockers,
-      requiredConfirmation: expectedFormatFsConfirmation(payload.backendPath),
+      requiredConfirmation: expectedCreateFilesystemConfirmation(payload.mountPoint),
     })
   }
 
@@ -139,13 +139,13 @@ async function preflightCreateFs(
     configPreview: [fstabPreview],
     commands: cmds,
     warnings: [
-      ...(partitionStrategy === 'gpt' ? ['Partition GPT sera créée'] : []),
+      ...(partitionStrategy === 'gpt' ? ['storage.fs.wizard.create_fs.warn_gpt_partition'] : []),
       ...(cand?.eligibility === 'eligible_with_wipe_required'
-        ? ['Signatures détectées. La création du filesystem effacera les signatures existantes.']
+        ? ['storage.fs.wizard.create_fs.warn_wipe_required']
         : []),
     ],
     blockers,
-    requiredConfirmation: expectedFormatFsConfirmation(payload.backendPath),
+    requiredConfirmation: expectedCreateFilesystemConfirmation(payload.mountPoint),
   }
 }
 

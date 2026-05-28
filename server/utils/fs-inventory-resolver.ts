@@ -302,6 +302,7 @@ export function buildFsBackendsAndLinks(input: BuildFsInventoryInput): FsInvento
         displayName: ld.name ?? ld.id,
         hwLdId: ld.id,
         controllerLabel: ctrlLabel,
+        raidLevel: ld.raidLevel,
         mountPoint: mp,
         scstDeviceNames: scstNames.length ? scstNames : undefined,
         signatures: dev?.diskSignatures,

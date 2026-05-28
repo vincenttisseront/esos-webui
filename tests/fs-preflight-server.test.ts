@@ -212,7 +212,7 @@ describe('runFsPreflight — create_fs wipe required', () => {
       payload,
     })
     expect(res.ok).toBe(false)
-    expect(res.blockers.some(b => b.toLowerCase().includes('signatures'))).toBe(true)
+    expect(res.blockers).toContain('storage.fs.wizard.create_fs.blocker_wipe_not_confirmed')
   })
 
   it('allows create_fs and previews wipefs command when wipe confirmed', async () => {
@@ -238,5 +238,6 @@ describe('runFsPreflight — create_fs wipe required', () => {
     })
     expect(res.ok).toBe(true)
     expect(res.commands.some(c => c.includes('wipefs -a') && c.includes('/dev/sdb'))).toBe(true)
+    expect(res.requiredConfirmation).toBe('CREATE FILESYSTEM /mnt/vdisks/newfs')
   })
 })

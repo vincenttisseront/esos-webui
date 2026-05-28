@@ -5,8 +5,13 @@ const LABEL_RE = /^[a-zA-Z0-9._-]{1,32}$/
 const DEVICE_PATH_RE = /^\/dev\/[a-zA-Z0-9_./-]+$/
 const BLOCKED_MOUNT_PREFIXES = ['/boot', '/etc', '/proc', '/sys', '/dev', '/run', '/var/run']
 
+/** @deprecated Use {@link expectedCreateFilesystemConfirmation} */
 export function expectedFormatFsConfirmation(backendPath: string): string {
   return `FORMAT ${backendPath}`
+}
+
+export function expectedCreateFilesystemConfirmation(mountPoint: string): string {
+  return `CREATE FILESYSTEM ${mountPoint.trim()}`
 }
 
 export function validateMountPoint(mountPoint: string): string | null {

@@ -94,6 +94,12 @@ export interface FsBackendCandidate {
   eligibility?: FsBackendEligibility
   reasons: string[]
   displayName?: string
+  source?: FsBackendSource
+  hwLdId?: string
+  controllerLabel?: string
+  raidLevel?: string
+  signatures?: string[]
+  mountPoint?: string
 }
 
 /** Unified backend row (candidates + linkage metadata). */

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  expectedCreateFilesystemConfirmation,
   expectedFormatFsConfirmation,
   validateCreateFsInput,
   validateMountPoint,
@@ -16,6 +17,7 @@ describe('fs-preflight-validation', () => {
 
   it('format confirmation phrase', () => {
     expect(expectedFormatFsConfirmation('/dev/md0')).toBe('FORMAT /dev/md0')
+    expect(expectedCreateFilesystemConfirmation('/mnt/vdisks/fs01')).toBe('CREATE FILESYSTEM /mnt/vdisks/fs01')
   })
 
   it('vdisk size vs free space', () => {
