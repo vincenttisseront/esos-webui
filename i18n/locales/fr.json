@@ -472,6 +472,10 @@
       "diagnostic_empty": "(vide)",
       "filter_placeholder": "Filtrer…",
       "eligible_only": "Éligibles seulement",
+      "pending_hw_backend": {
+        "title": "Périphérique OS en attente pour volume virtuel matériel",
+        "body": "Ces volumes virtuels sont créés côté contrôleur mais ne sont pas encore visibles comme périphériques bloc Linux."
+      },
       "devices": {
         "col_hw_raid": "RAID mat.",
         "col_controller": "Contrôleur",
@@ -1389,6 +1393,13 @@
       "result_name_not_applied_title": "Nom non appliqué",
       "result_os_path": "Périphérique OS",
       "result_os_unmapped": "Chemin OS non détecté — rafraîchissez l'inventaire ou vérifiez le scan SCSI.",
+      "result_os_pending_title": "Volume créé côté contrôleur, mais non visible par Linux.",
+      "result_os_pending_body": "Ce backend ne peut pas être utilisé pour LVM/FILEIO/BLOCKIO tant qu'aucun chemin bloc OS n'est détecté.",
+      "result_action_rescan_scsi": "Rescanner SCSI",
+      "result_action_check_lsscsi": "Vérifiez lsscsi / dmesg pour les nouveaux périphériques détectés.",
+      "result_action_reboot_if_needed": "Un redémarrage peut être nécessaire selon le système.",
+      "result_rescan_done": "Rescan SCSI exécuté. Inventaire rafraîchi.",
+      "result_rescan_failed": "Échec du rescan SCSI",
       "next_steps_title": "Étapes suivantes recommandées",
       "next_steps_body": "Ce volume est déjà redondant (RAID matériel). Utilisez-le comme backend pour LVM, un filesystem FILEIO ou SCST BLOCKIO — pas comme membre d'un tableau MD.",
       "next_open_lvm": "Ouvrir LVM",
@@ -1680,6 +1691,10 @@
       }
     },
     "candidate": { "table_title": "Périphériques candidats pour pvcreate" },
+    "pending_hw_backend": {
+      "title": "Backend RAID matériel en attente côté OS",
+      "body": "Un volume virtuel RAID matériel existe côté contrôleur, mais aucun chemin bloc Linux n'est mappé."
+    },
     "confirm": { "label": "Phrase de confirmation" },
     "cluster": {
       "mode_title": "Mode LVM local symétrique",
@@ -4261,6 +4276,10 @@
         "technical_details": "Détails techniques",
         "stale_title": "Données affichées depuis le dernier scan réussi",
         "stale_body": "Données du dernier scan réussi ({time})."
+      },
+      "pending_hw_backend": {
+        "title": "Backend RAID matériel en attente côté OS",
+        "body": "Un volume virtuel RAID matériel nouvellement créé n'est pas encore visible comme périphérique bloc Linux. Il ne peut pas encore servir de backend FILEIO/LVM."
       },
       "hw_ld": {
         "tool_missing": "Aucun outil storcli/perccli disponible pour résoudre le chemin OS de ce volume logique.",

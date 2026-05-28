@@ -31,6 +31,7 @@ import {
 import type { FileSystemMount, FsBackendCandidate, FsOverview, FsScanError, FsToolsInfo, VDiskFile } from '~/types/filesystem'
 import type { SSHSessionManager } from './ssh-session-manager'
 import { collectScannerErrors, FS_SCANNER_FALLBACKS, runFsScanner } from './fs-scanner-runner'
+import { collectPendingHwRaidBackends } from '../../utils/hw-raid-pending-backend'
 
 const VDISK_GLOB = '*.img'
 
@@ -299,6 +300,10 @@ export async function collectFsOverview(manager?: SSHSessionManager): Promise<Fs
     tools: raid.tools,
   })
   const backends = inventory.backends
+  const pendingHwRaidBackends = collectPendingHwRaidBackends(
+    raid.hardwareControllers,
+    raid.tools,
+  )
 
   const resourceLinks = [
     ...enriched.links,
@@ -348,6 +353,7 @@ export async function collectFsOverview(manager?: SSHSessionManager): Promise<Fs
     fileioDevices,
     lunMappings,
     backends,
+    pendingHwRaidBackends,
     links: resourceLinks,
     diagnostics,
     tools,

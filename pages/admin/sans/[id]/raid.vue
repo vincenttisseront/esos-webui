@@ -356,6 +356,19 @@
           {{ t('raid.md_detection.filter_md_metadata') }}
         </label>
       </div>
+      <UAlert
+        v-if="pendingHwBackends.length"
+        color="amber"
+        variant="soft"
+        :title="t('raid.page.pending_hw_backend.title')"
+        :description="t('raid.page.pending_hw_backend.body')"
+      >
+        <ul class="list-disc pl-4 text-xs mt-1">
+          <li v-for="row in pendingHwBackends" :key="`${row.controllerId}:${row.vdId}`">
+            {{ row.controllerLabel }} {{ row.vdId }} ({{ row.status.osPath || '—' }})
+          </li>
+        </ul>
+      </UAlert>
       <UCard>
         <RaidBlockDevicesTable
           :devices="filteredDevices"
@@ -547,6 +560,7 @@ import {
 } from '~/utils/cluster-raid-page-health'
 import { clusterStorageQuery, isClusterStorageScope } from '~/utils/cluster-storage-navigation'
 import MissingPerccliWizard from '~/components/raid/MissingPerccliWizard.vue'
+import { collectPendingHwRaidBackends } from '~/utils/hw-raid-pending-backend'
 
 definePageMeta({ layout: 'default', ssr: false })
 
@@ -940,6 +954,9 @@ const filteredDevices = computed(() => {
 
 const hasHardwareRaidBlockDevices = computed(() =>
   raid.blockDevices.some(d => d.usedBy.includes('hardware_raid')),
+)
+const pendingHwBackends = computed(() =>
+  collectPendingHwRaidBackends(raid.controllers, raid.tools),
 )
 
 const diagnosticSections = computed(() => {

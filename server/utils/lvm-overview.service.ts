@@ -9,6 +9,7 @@ import { parsePvsJson, parseVgsJson, parseLvsJson } from './parsers/lvm-json.par
 import { allLvPathCandidates, mapParsedLvToLogicalVolume } from './lvm-lv-mapper'
 import { buildLvmCandidatesFromInventory } from './lvm-candidates'
 import { readScstDeviceIndex } from './scst-device-index'
+import { collectPendingHwRaidBackends } from '../../utils/hw-raid-pending-backend'
 import type {
   LvmAlert,
   LvmOverviewResponse,
@@ -181,6 +182,10 @@ export async function collectLvmOverview(manager: SSHSessionManager): Promise<Lv
     lvPaths,
     tools: raidOverview.tools,
   })
+  const pendingHwRaidBackends = collectPendingHwRaidBackends(
+    raidOverview.hardwareControllers,
+    raidOverview.tools,
+  )
   const alerts = buildAlerts(tools, vgs.some(v => v.clustered))
 
   return {
@@ -190,6 +195,7 @@ export async function collectLvmOverview(manager: SSHSessionManager): Promise<Lv
     vgs,
     lvs,
     candidates,
+    pendingHwRaidBackends,
     alerts,
   }
 }

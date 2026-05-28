@@ -472,6 +472,10 @@
       "diagnostic_empty": "(empty)",
       "filter_placeholder": "Filter…",
       "eligible_only": "Eligible only",
+      "pending_hw_backend": {
+        "title": "Pending OS device for hardware virtual drive",
+        "body": "These virtual drives are created on the controller but not visible as Linux block devices yet."
+      },
       "devices": {
         "col_hw_raid": "HW RAID",
         "col_controller": "Controller",
@@ -1389,6 +1393,13 @@
       "result_name_not_applied_title": "Name not applied",
       "result_os_path": "OS device",
       "result_os_unmapped": "OS path not detected — refresh inventory or check the SCSI scan.",
+      "result_os_pending_title": "Volume created on controller, but not visible to Linux yet.",
+      "result_os_pending_body": "This backend cannot be used for LVM/FILEIO/BLOCKIO until an OS block path is detected.",
+      "result_action_rescan_scsi": "Rescan SCSI",
+      "result_action_check_lsscsi": "Check lsscsi / dmesg for newly detected devices.",
+      "result_action_reboot_if_needed": "Reboot may be required on some systems.",
+      "result_rescan_done": "SCSI rescan executed. Inventory refreshed.",
+      "result_rescan_failed": "SCSI rescan failed",
       "next_steps_title": "Recommended next steps",
       "next_steps_body": "This volume is already redundant (hardware RAID). Use it as a backend for LVM, a FILEIO filesystem, or SCST BLOCKIO — not as an MD array member.",
       "next_open_lvm": "Open LVM",
@@ -1680,6 +1691,10 @@
       }
     },
     "candidate": { "table_title": "Candidate devices for pvcreate" },
+    "pending_hw_backend": {
+      "title": "Hardware RAID backend pending OS device",
+      "body": "A hardware virtual drive exists on the controller but no Linux block device path is mapped yet."
+    },
     "confirm": { "label": "Confirmation phrase" },
     "cluster": {
       "mode_title": "Local symmetric LVM mode",
@@ -4261,6 +4276,10 @@
         "technical_details": "Technical details",
         "stale_title": "Stale data",
         "stale_body": "Showing data from the last successful scan ({time})."
+      },
+      "pending_hw_backend": {
+        "title": "Hardware RAID backend pending OS device",
+        "body": "A newly created hardware RAID virtual drive is not yet visible as a Linux block device. It cannot be used as FILEIO/LVM backend yet."
       },
       "hw_ld": {
         "tool_missing": "No storcli/perccli tool available to resolve the OS path for this logical volume.",

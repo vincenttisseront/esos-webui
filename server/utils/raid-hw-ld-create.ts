@@ -62,6 +62,7 @@ export interface HwLogicalDriveCreateResult {
   nameWarning?: string
   osDevicePath?: string
   osMappingStatus?: 'mapped' | 'unmapped'
+  backendStatus?: import('../../utils/hw-raid-pending-backend').HwRaidBackendStatus
   lvmEligible?: boolean
   fileioEligible?: boolean
   backendDiagnostics?: string[]
@@ -78,11 +79,26 @@ function withBackendContext(
     overview.blockDevices,
     createdVirtualDriveId,
   )
-  if (!ctx) return result
+  if (!ctx) {
+    return {
+      ...result,
+      backendStatus: {
+        controllerDetected: false,
+        osDeviceDetected: false,
+        pendingRescan: true,
+      },
+    }
+  }
   return {
     ...result,
     osDevicePath: ctx.osPath ?? undefined,
     osMappingStatus: ctx.osMappingStatus,
+    backendStatus: {
+      controllerDetected: true,
+      osDeviceDetected: Boolean(ctx.osPath),
+      osPath: ctx.osPath ?? undefined,
+      pendingRescan: !ctx.osPath,
+    },
     lvmEligible: ctx.eligibility.lvmEligible,
     fileioEligible: ctx.eligibility.fileioEligible,
     backendDiagnostics: ctx.eligibility.reasons.length ? ctx.eligibility.reasons : undefined,
@@ -280,6 +296,15 @@ export function verifyHwLogicalDriveCreated(
 }
 
 const SCSI_HOST_RESCAN_CMD = 'for _h in /sys/class/scsi_host/host*/scan; do [ -w "$_h" ] && echo "- - -" > "$_h"; done 2>/dev/null || true'
+function scsiTargetedRescanCmd(hostIndex: string): string {
+  return `[ -w "/sys/class/scsi_host/host${hostIndex}/scan" ] && echo "- - -" > "/sys/class/scsi_host/host${hostIndex}/scan" || true`
+}
+
+function hostFromScsiAddress(address: string | undefined): string | undefined {
+  if (!address) return undefined
+  const m = address.match(/^(\d+):\d+:\d+:\d+$/)
+  return m?.[1]
+}
 
 const HW_VD_NAME_NOT_APPLIED_WARNING = 'Volume créé, mais le nom n\'a pas été appliqué.'
 
@@ -452,7 +477,7 @@ export async function executeHwLogicalDriveCreate(
     await manager.exec(SCSI_HOST_RESCAN_CMD, 15_000)
   } catch { /* best effort */ }
 
-  const overview = await collectRaidOverview(manager)
+  let overview = await collectRaidOverview(manager)
   const refreshedCtrl = overview.hardwareControllers.find(c => c.id === body.controllerId)
   const afterLds = refreshedCtrl?.logicalDrives ?? []
 
@@ -461,6 +486,18 @@ export async function executeHwLogicalDriveCreate(
 
   const createdVirtualDriveId = verification.createdVirtualDriveId
     ?? (parsedVdNum ? `${ctrl.id}/vd${parsedVdNum}` : undefined)
+
+  const createdLd = createdVirtualDriveId
+    ? afterLds.find(ld => ld.id === createdVirtualDriveId)
+    : undefined
+  const knownHost = hostFromScsiAddress(createdLd?.scsiAddress)
+  const needsTargetedRescan = Boolean(createdLd && !createdLd.devicePath && knownHost)
+  if (needsTargetedRescan && knownHost) {
+    try {
+      await manager.exec(scsiTargetedRescanCmd(knownHost), 8_000)
+      overview = await collectRaidOverview(manager)
+    } catch { /* best effort */ }
+  }
 
   const base = buildCreateResultBase(
     command,

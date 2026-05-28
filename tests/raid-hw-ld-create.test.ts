@@ -209,6 +209,50 @@ describe('raid-hw-ld-create', () => {
     expect(parseShellExecOutput(createStdout).exitCode).toBe(0)
   })
 
+  it('sets backendStatus pending when OS path remains missing', async () => {
+    const createStdout = 'VD=1\nStatus = Success\nEXIT_CODE=0'
+    const manager = {
+      exec: vi.fn()
+        .mockResolvedValueOnce({ stdout: createStdout })
+        .mockResolvedValueOnce({ stdout: '{}\nEXIT_CODE=0' })
+        .mockResolvedValueOnce({ stdout: 'EXIT_CODE=0' }),
+    }
+    const overviewModule = await import('../server/utils/raid-overview.service')
+    const collectSpy = vi.spyOn(overviewModule, 'collectRaidOverview').mockResolvedValue({
+      tools: {} as any,
+      hardwareControllers: [mockController({
+        logicalDrives: [
+          { controllerId: '0', id: '0/vd0', raidLevel: '1', sizeBytes: 1, state: 'optimal' },
+          { controllerId: '0', id: '0/vd1', raidLevel: '1', sizeBytes: 1, state: 'optimal', devicePath: '' },
+        ],
+      })],
+      mdArrays: [],
+      stoppedMdArrays: [],
+      blockDevices: [],
+      scannedAt: Date.now(),
+      alerts: [],
+    } as any)
+    const result = await executeHwLogicalDriveCreate(
+      manager as any,
+      'raid-overview-test',
+      mockController(),
+      {
+        controllerId: '0',
+        raidLevel: '1',
+        drives: [{ enclosure: '252', slot: '2' }, { enclosure: '252', slot: '3' }],
+        sizeMode: 'max',
+        readPolicy: 'NORA',
+        writePolicy: 'WT',
+        confirmation: 'CREATE LD 1',
+      },
+    )
+    collectSpy.mockRestore()
+    expect(result.createdVirtualDriveId).toBe('0/vd1')
+    expect(result.backendStatus?.controllerDetected).toBe(true)
+    expect(result.backendStatus?.osDeviceDetected).toBe(false)
+    expect(result.backendStatus?.pendingRescan).toBe(true)
+  })
+
   it('executeHwLogicalDriveCreate succeeds when post-create name fails', async () => {
     const createStdout = 'VD=2\nStatus = Success\nEXIT_CODE=0'
     const manager = {

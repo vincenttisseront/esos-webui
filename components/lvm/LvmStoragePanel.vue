@@ -71,6 +71,20 @@
       </UButton>
     </div>
 
+    <UAlert
+      v-if="pendingHwBackends.length"
+      color="amber"
+      variant="soft"
+      :title="t('lvm.pending_hw_backend.title')"
+      :description="t('lvm.pending_hw_backend.body')"
+    >
+      <ul class="list-disc pl-4 mt-1 text-xs">
+        <li v-for="row in pendingHwBackends" :key="`${row.controllerId}:${row.vdId}`">
+          {{ row.controllerLabel }} {{ row.vdId }} ({{ formatBytes(row.sizeBytes) }})
+        </li>
+      </ul>
+    </UAlert>
+
     <div v-if="isClustered && lvm.clusterInventoryLoading && !clusterView" class="text-sm text-gray-500 dark:text-gray-400">
       {{ t('lvm.cluster.view.inventory_loading') }}
     </div>
@@ -555,6 +569,7 @@ function navigateBlockDevicesFromWizard() {
 }
 
 const eligibleCandidates = computed(() => lvm.candidates.filter(c => c.eligible))
+const pendingHwBackends = computed(() => lvm.overview?.pendingHwRaidBackends ?? [])
 
 const pvSourceCandidates = computed(() => listPvSourceCandidates(lvm.candidates))
 

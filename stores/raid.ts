@@ -447,6 +447,16 @@ export const useRaidStore = defineStore('raid', {
       return result
     },
 
+    async rescanHardwareScsi(host?: string) {
+      const result = await $fetch<{ ok: boolean; command: string; host: string | null }>('/api/raid/hardware/rescan', {
+        method: 'POST',
+        params: this.query(),
+        body: { host },
+      })
+      await this.fetchOverview(true)
+      return result
+    },
+
     async deleteHardwareLogicalDrive(id: string, confirmation: string) {
       const result = await $fetch(`/api/raid/hardware/logical-drives/${encodeURIComponent(id)}`, {
         method: 'DELETE',

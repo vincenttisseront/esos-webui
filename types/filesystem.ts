@@ -151,6 +151,7 @@ export interface FsOverview {
   fileioDevices: FileioDeviceRef[]
   lunMappings: ScstLunMappingRef[]
   backends: FsBackendRef[]
+  pendingHwRaidBackends?: import('~/utils/hw-raid-pending-backend').PendingHwRaidBackend[]
   links: FsResourceLink[]
   diagnostics: FsDetectionDiagnostics
   tools: FsToolsInfo

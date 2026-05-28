@@ -883,6 +883,7 @@ export interface CreateHardwareLogicalDriveResponse {
   nameWarning?: string
   osDevicePath?: string
   osMappingStatus?: 'mapped' | 'unmapped'
+  backendStatus?: import('../../utils/hw-raid-pending-backend').HwRaidBackendStatus
   lvmEligible?: boolean
   fileioEligible?: boolean
   backendDiagnostics?: string[]

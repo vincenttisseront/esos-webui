@@ -303,6 +303,39 @@
         </dl>
 
         <UAlert
+          v-if="createResult?.ok && postCreateContext && !postCreateContext.osPath"
+          color="amber"
+          variant="soft"
+          icon="i-heroicons-exclamation-triangle"
+          :title="t('raid.hw_create_wizard.result_os_pending_title')"
+          :description="t('raid.hw_create_wizard.result_os_pending_body')"
+        >
+          <div class="mt-2 flex flex-wrap gap-2">
+            <UButton
+              size="xs"
+              color="amber"
+              variant="soft"
+              :loading="rescanning"
+              @click="rescanForNewBackend"
+            >
+              {{ t('raid.hw_create_wizard.result_action_rescan_scsi') }}
+            </UButton>
+            <UButton
+              size="xs"
+              color="gray"
+              variant="ghost"
+              @click="finishWizard('devices')"
+            >
+              {{ t('raid.hw_create_wizard.next_view_devices') }}
+            </UButton>
+          </div>
+          <ul class="list-disc pl-4 text-xs mt-2 space-y-0.5">
+            <li>{{ t('raid.hw_create_wizard.result_action_check_lsscsi') }}</li>
+            <li>{{ t('raid.hw_create_wizard.result_action_reboot_if_needed') }}</li>
+          </ul>
+        </UAlert>
+
+        <UAlert
           v-if="createResult?.nameWarning"
           color="amber"
           variant="subtle"
@@ -311,7 +344,7 @@
           :description="createResult.nameWarning"
         />
 
-        <div v-if="createResult?.ok" class="rounded-lg border border-blue-100 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-950/40 px-3 py-3 space-y-3">
+        <div v-if="createResult?.ok && postCreateContext?.osPath" class="rounded-lg border border-blue-100 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-950/40 px-3 py-3 space-y-3">
           <p class="text-xs font-semibold text-blue-900 dark:text-blue-100 uppercase tracking-wide">{{ t('raid.hw_create_wizard.next_steps_title') }}</p>
           <p class="text-xs text-blue-800 dark:text-blue-200">{{ t('raid.hw_create_wizard.next_steps_body') }}</p>
           <div class="flex flex-wrap gap-2">
@@ -476,6 +509,7 @@ const submitError = ref<string | null>(null)
 const preflightResult = ref<RaidPreflightResult | null>(null)
 const preflightLoading = ref(false)
 const createResult = ref<CreateHardwareLogicalDriveResponse | null>(null)
+const rescanning = ref(false)
 
 const postCreateContext = computed(() => {
   const r = createResult.value
@@ -483,6 +517,7 @@ const postCreateContext = computed(() => {
   if (r.osMappingStatus) {
     return {
       osPath: r.osDevicePath ?? null,
+      status: r.backendStatus,
       eligibility: {
         lvmEligible: r.lvmEligible ?? false,
         fileioEligible: r.fileioEligible ?? false,
@@ -492,7 +527,16 @@ const postCreateContext = computed(() => {
   }
   const ctx = resolveHwLdBackendContext(raid.controllers, raid.blockDevices, r.createdVirtualDriveId)
   if (!ctx) return null
-  return { osPath: ctx.osPath, eligibility: ctx.eligibility }
+  return {
+    osPath: ctx.osPath,
+    status: {
+      controllerDetected: true,
+      osDeviceDetected: Boolean(ctx.osPath),
+      osPath: ctx.osPath ?? undefined,
+      pendingRescan: !ctx.osPath,
+    },
+    eligibility: ctx.eligibility,
+  }
 })
 
 const HW_RAID_LEVELS = ['1', '5', '6', '10'] as const
@@ -817,6 +861,30 @@ async function submit() {
     })
   } finally {
     busy.value = false
+  }
+}
+
+async function rescanForNewBackend() {
+  if (rescanning.value) return
+  rescanning.value = true
+  try {
+    await raid.rescanHardwareScsi()
+    await raid.fetchOverview(true)
+    toast.add({
+      title: t('raid.hw_create_wizard.result_action_rescan_scsi'),
+      description: t('raid.hw_create_wizard.result_rescan_done'),
+      color: 'green',
+      icon: 'i-heroicons-check-circle',
+    })
+  } catch (err: any) {
+    toast.add({
+      title: t('raid.hw_create_wizard.result_rescan_failed'),
+      description: err?.data?.statusMessage ?? err?.message ?? t('raid.hw_create_wizard.submit_error'),
+      color: 'red',
+      icon: 'i-heroicons-x-circle',
+    })
+  } finally {
+    rescanning.value = false
   }
 }
 

@@ -29,6 +29,20 @@
     />
 
     <UAlert
+      v-if="pendingHwBackends.length"
+      color="amber"
+      variant="soft"
+      :title="t('storage.fs.pending_hw_backend.title')"
+      :description="t('storage.fs.pending_hw_backend.body')"
+    >
+      <ul class="list-disc pl-4 mt-1 text-xs">
+        <li v-for="row in pendingHwBackends" :key="`${row.controllerId}:${row.vdId}`">
+          {{ row.controllerLabel }} {{ row.vdId }} ({{ formatBytes(row.sizeBytes) }})
+        </li>
+      </ul>
+    </UAlert>
+
+    <UAlert
       v-if="fs.partialRefresh && partialScannerErrors.length"
       color="amber"
       variant="soft"
@@ -433,6 +447,7 @@ onMounted(async () => {
 const fileioView = computed(() => fs.fileioView)
 const chainSteps = computed(() => fileioView.value?.chain ?? [])
 const backends = computed(() => fs.backends)
+const pendingHwBackends = computed(() => fs.overview?.pendingHwRaidBackends ?? [])
 const eligibleCandidates = computed(() => backends.value.filter(c => c.eligible))
 const unmappedVdisks = computed(() => fileioView.value?.vdiskFiles.filter(v => !v.mapped) ?? [])
 const eligibleFileioVdisks = computed(() =>
@@ -551,6 +566,9 @@ const nextActionText = computed(() => {
 })
 
 const workflowNextHint = computed(() => {
+  if (pendingHwBackends.value.length) {
+    return t('storage.fs.pending_hw_backend.body') as string
+  }
   if (exposure.value?.blockioOperationalFileioOptional) {
     return t('storage.exposure.fileio_optional_operational') as string
   }
@@ -568,6 +586,7 @@ const workflowNextHint = computed(() => {
 })
 
 const showNextStepButton = computed(() => {
+  if (pendingHwBackends.value.length) return false
   if (exposure.value?.blockioOperationalFileioOptional) return false
   const kind = nextAction.value?.kind
   if (kind === 'create_fs' && exposure.value?.blockio.complete && !exposure.value?.fileio.started) {

@@ -177,6 +177,7 @@ export interface LvmOverviewResponse {
   vgs: VolumeGroup[]
   lvs: LogicalVolume[]
   candidates: LvmCandidateDevice[]
+  pendingHwRaidBackends?: import('~/utils/hw-raid-pending-backend').PendingHwRaidBackend[]
   alerts: LvmAlert[]
   clusterLvmDetection?: LvmNodeSnapshot[]
 }
