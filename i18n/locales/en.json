@@ -4333,6 +4333,8 @@
         },
         "status": {
           "available": "Available",
+          "needs_wipe": "Cleanup required",
+          "blocked": "Blocked",
           "in_use": "In use",
           "ineligible": "Not eligible"
         },
@@ -4472,6 +4474,13 @@
           "partition": "Partition",
           "partition_none": "None (format whole device)",
           "partition_gpt": "GPT single partition",
+          "wipe_warning": "Signatures detected. Creating the filesystem will erase existing signatures.",
+          "confirm_wipe": "I confirm wiping existing signatures (wipefs -a).",
+          "status": {
+            "available": "Available",
+            "wipe_required": "Cleanup required",
+            "blocked": "Blocked"
+          },
           "confirm_phrase": "Type exactly to confirm:",
           "execute": "Format and mount"
         },

@@ -46,9 +46,13 @@ export function buildCreateFilesystemCommands(input: {
   label: string
   mountPoint: string
   partitionStrategy: PartitionStrategy
+  wipeBeforeFormat?: boolean
   uuidPlaceholder?: string
 }): string[] {
   const cmds: string[] = []
+  if (input.wipeBeforeFormat) {
+    cmds.push(`wipefs -a ${shellSingleQuoteForRemote(input.backendPath)}`)
+  }
   if (input.partitionStrategy === 'gpt') {
     cmds.push(...buildGptPartitionCommands(input.backendPath))
   }

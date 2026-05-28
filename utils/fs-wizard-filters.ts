@@ -30,9 +30,19 @@ export function backendsEligibleForCreateFs(
   backends: FsBackendCandidate[],
   protection?: EsosSystemProtectionOverview | null,
 ): FsBackendCandidate[] {
-  if (!protection) return backends.filter(b => b.eligible)
+  if (!protection) return backends.filter(b => b.eligibility !== 'blocked' && b.eligible)
   return backends.filter(b =>
-    b.eligible
+    b.eligibility !== 'blocked'
+    && b.eligible
     && !isMountPointEsosProtected(b.mountPoint ?? '', protection),
   )
+}
+
+export type FsCreateWizardBackendStatus = 'available' | 'wipe_required' | 'blocked'
+
+export function fsCreateWizardBackendStatus(backend: FsBackendCandidate | undefined): FsCreateWizardBackendStatus {
+  if (!backend) return 'blocked'
+  if (backend.eligibility === 'eligible_with_wipe_required') return 'wipe_required'
+  if (backend.eligibility === 'eligible_clean' || backend.eligible) return 'available'
+  return 'blocked'
 }

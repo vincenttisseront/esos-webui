@@ -76,6 +76,7 @@ describe('fs-inventory-resolver', () => {
     const hw = backends.find(b => b.kind === 'hw_raid_ld')
     expect(hw).toBeDefined()
     expect(hw?.eligible).toBe(false)
+    expect(hw?.eligibility).toBe('blocked')
     expect(hw?.reasons.some(r => r.startsWith('storage.fs.backend.reason.mounted'))).toBe(true)
     expect(hw?.path).toBe('/dev/sdb')
   })
@@ -128,7 +129,7 @@ describe('fs-inventory-resolver', () => {
     expect(hw?.eligible).toBe(true)
   })
 
-  it('keeps hw RAID /dev/sdb eligible when no signature is detected', () => {
+  it('marks hw RAID /dev/sdb as wipe-required when signature exists', () => {
     const raid: RaidOverview = {
       blockDevices: [{
         path: '/dev/sdb',
@@ -136,7 +137,7 @@ describe('fs-inventory-resolver', () => {
         type: 'disk',
         sizeBytes: 223e9,
         usedBy: ['hardware_raid', 'unknown_signature'],
-        diskSignatures: [],
+        diskSignatures: ['xfs'],
       }],
       mdArrays: [],
       hardwareControllers: [{
@@ -172,6 +173,8 @@ describe('fs-inventory-resolver', () => {
     })
     const hw = backends.find(b => b.path === '/dev/sdb')
     expect(hw?.eligible).toBe(true)
+    expect(hw?.eligibility).toBe('eligible_with_wipe_required')
+    expect(hw?.reasons).toContain('storage.fs.backend.reason.filesystem_signature')
   })
 
   it('marks hw RAID /dev/sda ineligible when ESOS system-protected', () => {
@@ -219,6 +222,7 @@ describe('fs-inventory-resolver', () => {
     })
     const hw = backends.find(b => b.path === '/dev/sda')
     expect(hw?.eligible).toBe(false)
+    expect(hw?.eligibility).toBe('blocked')
     expect(hw?.reasons.some(r => r.includes('ESOS'))).toBe(true)
   })
 
@@ -265,6 +269,7 @@ describe('fs-inventory-resolver', () => {
     })
     const hw = backends.find(b => b.path === '/dev/sdb')
     expect(hw?.eligible).toBe(false)
+    expect(hw?.eligibility).toBe('blocked')
     expect(hw?.reasons.some(r => r.includes('scst'))).toBe(true)
   })
 })

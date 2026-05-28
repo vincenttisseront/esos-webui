@@ -4,6 +4,7 @@
 
 export type FsType = 'xfs' | 'ext4'
 export type FsBackendKind = 'lvm_lv' | 'md' | 'hw_raid_ld' | 'disk'
+export type FsBackendEligibility = 'eligible_clean' | 'eligible_with_wipe_required' | 'blocked'
 export type VdiskAllocMode = 'fallocate' | 'dd'
 export type PartitionStrategy = 'none' | 'gpt'
 export type MountStatus = 'mounted' | 'unmounted' | 'unknown'
@@ -90,6 +91,7 @@ export interface FsBackendCandidate {
   kind: FsBackendKind
   sizeBytes: number
   eligible: boolean
+  eligibility?: FsBackendEligibility
   reasons: string[]
   displayName?: string
 }
@@ -211,6 +213,7 @@ export interface CreateFsPayload {
   label: string
   mountPoint: string
   partitionStrategy?: PartitionStrategy
+  allowWipeSignatures?: boolean
   confirmation?: string
 }
 

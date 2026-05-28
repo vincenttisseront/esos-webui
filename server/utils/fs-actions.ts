@@ -37,6 +37,7 @@ export async function runCreateFilesystem(
     label: payload.label,
     mountPoint: payload.mountPoint,
     partitionStrategy,
+    wipeBeforeFormat: Boolean(payload.allowWipeSignatures),
   }).filter(c => !c.includes('blkid -o export'))
 
   const mkfsTarget = mkfsDevicePath(payload.backendPath, partitionStrategy)

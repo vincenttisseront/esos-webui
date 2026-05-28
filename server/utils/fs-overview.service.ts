@@ -340,6 +340,7 @@ export async function collectFsOverview(manager?: SSHSessionManager): Promise<Fs
     kind: b.kind,
     sizeBytes: b.sizeBytes,
     eligible: b.eligible,
+    eligibility: b.eligibility,
     reasons: b.reasons,
     displayName: b.displayName,
   }))

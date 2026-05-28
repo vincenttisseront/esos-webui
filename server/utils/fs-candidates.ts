@@ -13,6 +13,7 @@ export async function collectFsBackendCandidates(
     kind: b.kind,
     sizeBytes: b.sizeBytes,
     eligible: b.eligible,
+    eligibility: b.eligibility,
     reasons: b.reasons,
     displayName: b.displayName,
   }))

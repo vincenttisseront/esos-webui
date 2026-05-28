@@ -20,6 +20,26 @@
             :disabled="!backendOptions.length"
           />
         </UFormGroup>
+        <div v-if="selectedBackend" class="flex items-center gap-2">
+          <UBadge
+            size="xs"
+            variant="soft"
+            :color="selectedBackendStatus === 'available' ? 'green' : selectedBackendStatus === 'wipe_required' ? 'amber' : 'gray'"
+            :label="t(`storage.fs.wizard.create_fs.status.${selectedBackendStatus}`)"
+          />
+          <span class="text-xs text-gray-500 dark:text-gray-400 font-mono">{{ selectedBackend.path }}</span>
+        </div>
+        <UAlert
+          v-if="selectedBackendStatus === 'wipe_required'"
+          color="amber"
+          variant="soft"
+          :title="t('storage.fs.wizard.create_fs.wipe_warning')"
+        />
+        <UCheckbox
+          v-if="selectedBackendStatus === 'wipe_required'"
+          v-model="allowWipeSignatures"
+          :label="t('storage.fs.wizard.create_fs.confirm_wipe')"
+        />
         <UFormGroup :label="t('storage.fs.wizard.create_fs.fs_type')">
           <div class="flex flex-wrap gap-2" role="radiogroup">
             <label
@@ -136,7 +156,7 @@ import type { ClusterLvmNodeResult } from '~/types/lvm'
 import { validateMountPoint, validateFsLabel } from '~/utils/fs-preflight-validation'
 import { parseFsWizardExecuteFailure } from '~/utils/fs-wizard-execute'
 import { pickDefaultFsBackend } from '~/utils/fs-wizard-ui'
-import { backendsEligibleForCreateFs } from '~/utils/fs-wizard-filters'
+import { backendsEligibleForCreateFs, fsCreateWizardBackendStatus } from '~/utils/fs-wizard-filters'
 import StorageNativeSelect from '~/components/storage/StorageNativeSelect.vue'
 
 const props = defineProps<{
@@ -157,6 +177,7 @@ const fsType = ref<FsType>('xfs')
 const label = ref('fs01')
 const mountPoint = ref('/mnt/vdisks/fs01')
 const partitionStrategy = ref<PartitionStrategy>('none')
+const allowWipeSignatures = ref(false)
 const confirmation = ref('')
 const preflight = ref<Awaited<ReturnType<typeof fs.preflight>> | null>(null)
 const preflightLoading = ref(false)
@@ -180,6 +201,8 @@ const backendOptions = computed(() =>
     value: c.path,
   })),
 )
+const selectedBackend = computed(() => eligibleBackends.value.find(c => c.path === backendPath.value))
+const selectedBackendStatus = computed(() => fsCreateWizardBackendStatus(selectedBackend.value))
 const fsTypeOptions = [
   { label: 'XFS', value: 'xfs' },
   { label: 'ext4', value: 'ext4' },
@@ -192,6 +215,7 @@ const partitionOptions = [
 const step1Valid = computed(() =>
   !!backendPath.value
   && eligibleBackends.value.some(c => c.path === backendPath.value)
+  && (selectedBackendStatus.value !== 'wipe_required' || allowWipeSignatures.value)
   && !validateMountPoint(mountPoint.value)
   && !validateFsLabel(label.value),
 )
@@ -218,6 +242,10 @@ watch(label, (l) => {
   lastSuggestedMount.value = next
 })
 
+watch(backendPath, () => {
+  allowWipeSignatures.value = false
+})
+
 onMounted(() => {
   fs.setSanId(props.sanId)
   if (props.clusterId) fs.setClusterContext(props.clusterId, props.sanId)
@@ -240,6 +268,7 @@ async function loadPreflight() {
       label: label.value,
       mountPoint: mountPoint.value,
       partitionStrategy: partitionStrategy.value,
+      allowWipeSignatures: allowWipeSignatures.value,
     })
   } catch (e: unknown) {
     preflight.value = { ok: false, blockers: [(e as Error).message], commands: [], configPreview: [], warnings: [] }
@@ -276,6 +305,7 @@ async function execute() {
       label: label.value,
       mountPoint: mountPoint.value,
       partitionStrategy: partitionStrategy.value,
+      allowWipeSignatures: allowWipeSignatures.value,
       confirmation: confirmation.value.trim(),
     }, clusterExecution)
     toast.success(t('storage.fs.wizard.create_fs.success'))

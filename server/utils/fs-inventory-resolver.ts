@@ -3,6 +3,7 @@ import { hwLdUnmappedReasonKey } from './hw-raid-os-mapper'
 import {
   FS_BACKEND_REASON,
   mountedAtReason,
+  normalizeBackendReason,
 } from './fs-backend-reasons'
 import type { LvmOverview } from './lvm-types'
 import type {
@@ -110,6 +111,16 @@ function usedByFromBlockDev(dev: RaidBlockDevice | undefined): string[] {
   return reasons
 }
 
+function classifyBackendEligibility(
+  reasons: string[],
+): 'eligible_clean' | 'eligible_with_wipe_required' | 'blocked' {
+  if (!reasons.length) return 'eligible_clean'
+  const normalized = reasons.map(r => normalizeBackendReason(r))
+  const hasSignatureOnly = normalized.every(r => r === FS_BACKEND_REASON.FILESYSTEM_SIGNATURE)
+  if (hasSignatureOnly) return 'eligible_with_wipe_required'
+  return 'blocked'
+}
+
 export interface BuildFsInventoryInput {
   raid: RaidOverview
   lvm: LvmOverview
@@ -170,17 +181,25 @@ export function buildFsBackendsAndLinks(input: BuildFsInventoryInput): FsInvento
     path.startsWith('hw:') ? path : resolveCanonicalPath(path, index)
 
   const push = (b: FsBackendRef) => {
+    const eligibility = b.eligibility ?? classifyBackendEligibility(b.reasons)
+    const normalized: FsBackendRef = {
+      ...b,
+      eligibility,
+      eligible: eligibility !== 'blocked',
+    }
     const key = backendKey(b.path)
     if (seen.has(key)) {
       const existing = backends.find(x => backendKey(x.path) === key)
-      if (existing && !b.eligible && existing.eligible) {
-        existing.reasons = [...new Set([...existing.reasons, ...b.reasons])]
-        if (b.mountPoint) existing.mountPoint = b.mountPoint
+      if (existing) {
+        existing.reasons = [...new Set([...existing.reasons, ...normalized.reasons])]
+        if (normalized.mountPoint) existing.mountPoint = normalized.mountPoint
+        existing.eligibility = classifyBackendEligibility(existing.reasons)
+        existing.eligible = existing.eligibility !== 'blocked'
       }
       return
     }
     seen.add(key)
-    backends.push({ ...b, path: key })
+    backends.push({ ...normalized, path: key })
   }
 
   for (const lv of lvm.lvs) {

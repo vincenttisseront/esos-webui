@@ -103,7 +103,10 @@ async function preflightCreateFs(
     }
   }
   if (!cand) blockers.push('Backend introuvable')
-  else if (!cand.eligible) blockers.push(...cand.reasons)
+  else if (cand.eligibility === 'blocked' || !cand.eligible) blockers.push(...cand.reasons)
+  else if (cand.eligibility === 'eligible_with_wipe_required' && !payload.allowWipeSignatures) {
+    blockers.push('Signatures détectées — confirmez le nettoyage avant formatage')
+  }
 
   const mountExists = overview.mounts.some(m => m.mountPoint === payload.mountPoint)
   if (mountExists) blockers.push('Point de montage déjà utilisé')
@@ -126,6 +129,7 @@ async function preflightCreateFs(
     label: payload.label,
     mountPoint: payload.mountPoint,
     partitionStrategy,
+    wipeBeforeFormat: cand?.eligibility === 'eligible_with_wipe_required',
   })
   const mkfsTarget = mkfsDevicePath(payload.backendPath, partitionStrategy)
   const fstabPreview = `UUID=<uuid>  ${payload.mountPoint}  ${payload.fsType}  defaults  0  0`
@@ -134,7 +138,12 @@ async function preflightCreateFs(
     ok: blockers.length === 0,
     configPreview: [fstabPreview],
     commands: cmds,
-    warnings: partitionStrategy === 'gpt' ? ['Partition GPT sera créée'] : [],
+    warnings: [
+      ...(partitionStrategy === 'gpt' ? ['Partition GPT sera créée'] : []),
+      ...(cand?.eligibility === 'eligible_with_wipe_required'
+        ? ['Signatures détectées. La création du filesystem effacera les signatures existantes.']
+        : []),
+    ],
     blockers,
     requiredConfirmation: expectedFormatFsConfirmation(payload.backendPath),
   }

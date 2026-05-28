@@ -4333,6 +4333,8 @@
         },
         "status": {
           "available": "Disponible",
+          "needs_wipe": "Nettoyage requis",
+          "blocked": "Bloqué",
           "in_use": "Utilisé",
           "ineligible": "Non éligible"
         },
@@ -4472,6 +4474,13 @@
           "partition": "Partition",
           "partition_none": "Aucune (formater le device entier)",
           "partition_gpt": "Partition GPT unique",
+          "wipe_warning": "Signatures détectées. La création du filesystem effacera les signatures existantes.",
+          "confirm_wipe": "Je confirme l'effacement des signatures existantes (wipefs -a).",
+          "status": {
+            "available": "Disponible",
+            "wipe_required": "Nettoyage requis",
+            "blocked": "Bloqué"
+          },
           "confirm_phrase": "Saisir exactement pour confirmer :",
           "execute": "Formater et monter"
         },
