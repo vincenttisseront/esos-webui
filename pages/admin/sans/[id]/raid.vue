@@ -342,8 +342,10 @@
         :cluster-id="san?.clusterId ?? undefined"
         :is-clustered="isClusteredSan"
         :read-only="isReadOnly"
+        :startup-intent="lvmStartupIntent"
         @navigate-block-devices="activeTab = 'devices'"
         @navigate-filesystems="activeTab = 'fs'"
+        @intent-consumed="onIntentConsumed"
       />
     </div>
 
@@ -354,9 +356,11 @@
         :cluster-id="san?.clusterId ?? undefined"
         :is-clustered="isClusteredSan"
         :read-only="isReadOnly"
+        :startup-intent="fsStartupIntent"
         @navigate-block-devices="onFsNavigateBlockDevices"
         @navigate-lvm="activeTab = 'lvm'"
         @create-fileio-lv="onFsCreateFileioLv"
+        @intent-consumed="onIntentConsumed"
       />
     </div>
 
@@ -578,6 +582,13 @@ import {
 import { clusterStorageQuery, isClusterStorageScope } from '~/utils/cluster-storage-navigation'
 import MissingPerccliWizard from '~/components/raid/MissingPerccliWizard.vue'
 import { collectPendingHwRaidBackends } from '~/utils/hw-raid-pending-backend'
+import {
+  buildRaidNextStepQuery,
+  clearRaidNextStepQuery,
+  parseRaidNextStepIntent,
+  type RaidNextStepIntentKind,
+  type RaidNextStepTab,
+} from '~/utils/raid-next-step-intent'
 
 definePageMeta({ layout: 'default', ssr: false })
 
@@ -639,6 +650,8 @@ const tabs = computed(() => [
 const activeTab = ref('overview')
 const highlightedArrayPath = ref<string | null>(null)
 const highlightedDevicePath = ref<string | null>(null)
+const lvmStartupIntent = ref<null | { action: 'create-pv'; device?: string | null; token: string }>(null)
+const fsStartupIntent = ref<null | { action: 'create-filesystem'; device?: string | null; token: string }>(null)
 
 const showSoftwareEmpty = computed(() => !hasAnyMdStateVisible(raid.overview))
 const partitionedStopped = computed(() => partitionStoppedMdArrays(raid.stoppedMdArrays))
@@ -1601,20 +1614,17 @@ function logicalDriveOsPath(ld: HardwareRaidLogicalDrive): string | null {
 
 function useLogicalDriveWithLvm(ld: HardwareRaidLogicalDrive) {
   const path = logicalDriveOsPath(ld)
-  if (path) highlightedDevicePath.value = path
-  activeTab.value = 'lvm'
+  applyNextStepIntent('lvm', 'create-pv', path)
 }
 
 function useLogicalDriveWithFileio(ld: HardwareRaidLogicalDrive) {
   const path = logicalDriveOsPath(ld)
-  if (path) highlightedDevicePath.value = path
-  activeTab.value = 'fs'
+  applyNextStepIntent('filesystems', 'create-filesystem', path)
 }
 
 function useLogicalDriveWithBlockio(ld: HardwareRaidLogicalDrive) {
   const path = logicalDriveOsPath(ld)
-  if (path) highlightedDevicePath.value = path
-  activeTab.value = 'fs'
+  applyNextStepIntent('scst', 'create-blockio', path)
 }
 
 function useLogicalDriveWithDevices(ld: HardwareRaidLogicalDrive) {
@@ -1622,6 +1632,54 @@ function useLogicalDriveWithDevices(ld: HardwareRaidLogicalDrive) {
   if (path) goToDevicesForPath(path)
   else activeTab.value = 'devices'
 }
+
+function routeTabToUiTab(tab: RaidNextStepTab): string {
+  if (tab === 'filesystems' || tab === 'scst') return 'fs'
+  return 'lvm'
+}
+
+function applyNextStepIntent(tab: RaidNextStepTab, intent: RaidNextStepIntentKind, device: string | null) {
+  navigateTo({
+    path: route.path,
+    query: buildRaidNextStepQuery(route.query as Record<string, unknown>, { tab, intent, device }),
+  }, { replace: true })
+}
+
+function consumeRouteIntent() {
+  lvmStartupIntent.value = null
+  fsStartupIntent.value = null
+  const query = clearRaidNextStepQuery(route.query as Record<string, unknown>)
+  navigateTo({ path: route.path, query }, { replace: true })
+}
+
+function onIntentConsumed(_token: string) {
+  consumeRouteIntent()
+}
+
+watch(
+  () => route.query,
+  (q) => {
+    const parsed = parseRaidNextStepIntent(q as Record<string, unknown>)
+    if (!parsed) return
+    if (parsed.device) highlightedDevicePath.value = parsed.device
+    activeTab.value = routeTabToUiTab(parsed.tab)
+    const token = `${parsed.tab}:${parsed.intent}:${parsed.device ?? ''}:${Date.now()}`
+    if (parsed.intent === 'create-pv' && parsed.tab === 'lvm') {
+      lvmStartupIntent.value = { action: 'create-pv', device: parsed.device, token }
+      return
+    }
+    if (parsed.intent === 'create-filesystem' && parsed.tab === 'filesystems') {
+      fsStartupIntent.value = { action: 'create-filesystem', device: parsed.device, token }
+      return
+    }
+    // Direct raw-disk SCST BLOCKIO wizard is not implemented here yet.
+    if (parsed.intent === 'create-blockio' && parsed.tab === 'scst') {
+      activeTab.value = 'devices'
+      consumeRouteIntent()
+    }
+  },
+  { immediate: true, deep: true },
+)
 
 async function manualRefreshRaid() {
   await Promise.all([

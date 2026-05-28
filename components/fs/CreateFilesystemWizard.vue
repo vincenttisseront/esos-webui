@@ -144,6 +144,7 @@ const props = defineProps<{
   clusterId?: string
   isClustered?: boolean
   candidates: FsBackendCandidate[]
+  initialBackendPath?: string
 }>()
 const emit = defineEmits<{ cancel: []; close: [] }>()
 const { t } = useEsosI18n()
@@ -220,7 +221,12 @@ watch(label, (l) => {
 onMounted(() => {
   fs.setSanId(props.sanId)
   if (props.clusterId) fs.setClusterContext(props.clusterId, props.sanId)
-  backendPath.value = pickDefaultFsBackend(eligibleBackends.value)
+  const preferred = props.initialBackendPath?.trim() || ''
+  if (preferred && eligibleBackends.value.some(c => c.path === preferred)) {
+    backendPath.value = preferred
+  } else {
+    backendPath.value = pickDefaultFsBackend(eligibleBackends.value)
+  }
   lastSuggestedMount.value = mountFromLabel(label.value)
 })
 

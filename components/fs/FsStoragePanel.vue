@@ -481,12 +481,18 @@ const props = defineProps<{
   clusterId?: string
   isClustered?: boolean
   readOnly?: boolean
+  startupIntent?: {
+    action: 'create-filesystem'
+    device?: string | null
+    token: string
+  } | null
 }>()
 
 const emit = defineEmits<{
   'navigate-block-devices': [path?: string]
   'navigate-lvm': []
   'create-fileio-lv': [payload: { lvName: string; vgName?: string }]
+  'intent-consumed': [token: string]
 }>()
 
 const { t } = useEsosI18n()
@@ -786,12 +792,12 @@ async function refreshAll() {
   }
 }
 
-async function openCreateFsWizard() {
+async function openCreateFsWizard(initialBackendPath?: string) {
   const { default: Wizard } = await import('~/components/fs/CreateFilesystemWizard.vue')
   try {
     await openModal({
       component: Wizard,
-      props: wizardProps({ candidates: eligibleCandidates.value }),
+      props: wizardProps({ candidates: eligibleCandidates.value, initialBackendPath }),
     })
     await refreshAll()
   } catch { /* dismissed */ }
@@ -830,6 +836,29 @@ function openFileioWizardFor(row: VDiskFile) {
   if (!isVdiskEligibleForFileioBindRow(row)) return
   openFileioWizard([row], row.path)
 }
+
+const consumedIntentTokens = new Set<string>()
+
+watch(
+  () => props.startupIntent,
+  async (intent) => {
+    if (!intent || consumedIntentTokens.has(intent.token) || props.readOnly) return
+    consumedIntentTokens.add(intent.token)
+    if (intent.action === 'create-filesystem') {
+      const requested = intent.device?.trim()
+      if (requested) {
+        const hit = backends.value.find(b => b.path === requested)
+        if (hit && !hit.eligible) {
+          const reason = hit.reasons.join(' · ') || String(t('storage.fs.wizard.create_fs.no_backend'))
+          toast.warning(`${requested}: ${reason}`)
+        }
+      }
+      await openCreateFsWizard(requested ?? undefined)
+      emit('intent-consumed', intent.token)
+    }
+  },
+  { immediate: true, deep: true },
+)
 
 async function confirmDeleteVdisk(path: string) {
   const pre = await fs.preflight('delete_vdisk', { path })

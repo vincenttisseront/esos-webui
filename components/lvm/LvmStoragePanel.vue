@@ -592,9 +592,14 @@ const props = defineProps<{
   clusterId?: string
   isClustered?: boolean
   readOnly?: boolean
+  startupIntent?: {
+    action: 'create-pv'
+    device?: string | null
+    token: string
+  } | null
 }>()
 
-const emit = defineEmits<{ 'navigate-block-devices': []; 'navigate-filesystems': [] }>()
+const emit = defineEmits<{ 'navigate-block-devices': []; 'navigate-filesystems': []; 'intent-consumed': [token: string] }>()
 
 const { t, tLvmAlert } = useEsosI18n()
 const lvm = useLvmStore()
@@ -1025,4 +1030,29 @@ async function openRemoveLvWizard(lv: LogicalVolume) {
     await refreshAfterWizard()
   } catch { /* dismissed */ }
 }
+
+const consumedIntentTokens = new Set<string>()
+
+watch(
+  () => props.startupIntent,
+  async (intent) => {
+    if (!intent || consumedIntentTokens.has(intent.token) || props.readOnly) return
+    consumedIntentTokens.add(intent.token)
+    if (intent.action === 'create-pv') {
+      const requested = intent.device?.trim()
+      if (requested) {
+        const hit = lvm.candidates.find(c => c.path === requested)
+        if (hit && !hit.eligible) {
+          const reason = hit.reasons.length
+            ? hit.reasons.map(r => pvCandidateReason(r)).join(' · ')
+            : t('lvm.candidate.status_ineligible')
+          toast.warning(`${requested}: ${reason}`)
+        }
+      }
+      await openPvWizard(intent.device ?? undefined)
+      emit('intent-consumed', intent.token)
+    }
+  },
+  { immediate: true, deep: true },
+)
 </script>
