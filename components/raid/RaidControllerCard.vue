@@ -120,6 +120,10 @@
         :read-only="readOnly || controller.managementMode === 'read_only_limited'"
         @delete-ld="(ld) => $emit('delete-ld', controller, ld)"
         @rescan-ld="(ld) => $emit('rescan-ld', controller, ld)"
+        @use-ld-lvm="(ld) => $emit('use-ld-lvm', controller, ld)"
+        @use-ld-fileio="(ld) => $emit('use-ld-fileio', controller, ld)"
+        @use-ld-block-devices="(ld) => $emit('use-ld-block-devices', controller, ld)"
+        @use-ld-blockio="(ld) => $emit('use-ld-blockio', controller, ld)"
       />
     </div>
 
@@ -139,6 +143,10 @@ defineEmits<{
   'create-ld': [ctrl: HardwareRaidController]
   'delete-ld': [ctrl: HardwareRaidController, ld: HardwareRaidLogicalDrive]
   'rescan-ld': [ctrl: HardwareRaidController, ld: HardwareRaidLogicalDrive]
+  'use-ld-lvm': [ctrl: HardwareRaidController, ld: HardwareRaidLogicalDrive]
+  'use-ld-fileio': [ctrl: HardwareRaidController, ld: HardwareRaidLogicalDrive]
+  'use-ld-block-devices': [ctrl: HardwareRaidController, ld: HardwareRaidLogicalDrive]
+  'use-ld-blockio': [ctrl: HardwareRaidController, ld: HardwareRaidLogicalDrive]
   'diagnostic': [ctrl: HardwareRaidController]
   'install-perccli': []
 }>()

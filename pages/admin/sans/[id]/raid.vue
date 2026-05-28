@@ -280,6 +280,10 @@
           @create-ld="(c) => openHwWizard(c)"
           @delete-ld="(c, ld) => handleDeleteHwLd(c, ld)"
           @rescan-ld="(c, ld) => rescanScsi(c.id, ld.id)"
+          @use-ld-lvm="(_c, ld) => useLogicalDriveWithLvm(ld)"
+          @use-ld-fileio="(_c, ld) => useLogicalDriveWithFileio(ld)"
+          @use-ld-block-devices="(_c, ld) => useLogicalDriveWithDevices(ld)"
+          @use-ld-blockio="(_c, ld) => useLogicalDriveWithBlockio(ld)"
           @diagnostic="openDiagnostic"
         />
       </UCard>
@@ -1588,6 +1592,35 @@ const lvmSummaryBadgeColor = computed(() => {
 
 function openLvmFromRaidSummary() {
   activeTab.value = 'lvm'
+}
+
+function logicalDriveOsPath(ld: HardwareRaidLogicalDrive): string | null {
+  const raw = ld.osDevicePath?.trim() || ld.device?.trim() || ld.devicePath?.trim() || ld.scsiDevice?.trim()
+  return raw || null
+}
+
+function useLogicalDriveWithLvm(ld: HardwareRaidLogicalDrive) {
+  const path = logicalDriveOsPath(ld)
+  if (path) highlightedDevicePath.value = path
+  activeTab.value = 'lvm'
+}
+
+function useLogicalDriveWithFileio(ld: HardwareRaidLogicalDrive) {
+  const path = logicalDriveOsPath(ld)
+  if (path) highlightedDevicePath.value = path
+  activeTab.value = 'fs'
+}
+
+function useLogicalDriveWithBlockio(ld: HardwareRaidLogicalDrive) {
+  const path = logicalDriveOsPath(ld)
+  if (path) highlightedDevicePath.value = path
+  activeTab.value = 'fs'
+}
+
+function useLogicalDriveWithDevices(ld: HardwareRaidLogicalDrive) {
+  const path = logicalDriveOsPath(ld)
+  if (path) goToDevicesForPath(path)
+  else activeTab.value = 'devices'
 }
 
 async function manualRefreshRaid() {

@@ -17,7 +17,10 @@ export function formatFsBytes(n: number): string {
 }
 
 export function pickDefaultFsBackend(
-  candidates: Array<{ path: string; eligible: boolean }>,
+  candidates: Array<{ path: string; eligible: boolean; kind?: string }>,
 ): string {
-  return candidates.find(c => c.eligible)?.path ?? ''
+  const eligible = candidates.filter(c => c.eligible)
+  const preferred = eligible.find(c => c.kind === 'hw_raid_ld')
+  if (preferred) return preferred.path
+  return eligible[0]?.path ?? ''
 }

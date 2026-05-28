@@ -133,12 +133,14 @@ export interface HwBackendEligibility {
 function collectBlockDevReasons(dev: RaidBlockDevice | undefined): string[] {
   if (!dev) return []
   const reasons: string[] = []
+  const signatures = dev.diskSignatures ?? dev.wipefsSignatures ?? []
   if (dev.mountpoint) reasons.push(`Monté sur ${dev.mountpoint}`)
   if (dev.usedBy.includes('mounted')) reasons.push('Périphérique monté')
   if (dev.usedBy.includes('lvm')) reasons.push('Déjà volume physique LVM')
   if (dev.usedBy.includes('scst')) reasons.push('Utilisé par SCST')
   if (dev.usedBy.includes('md')) reasons.push('Membre ou signal MD')
-  if (dev.usedBy.includes('filesystem') || dev.usedBy.includes('unknown_signature')) {
+  // No/empty signature is acceptable for a fresh HW RAID backend.
+  if (dev.usedBy.includes('filesystem') || signatures.length > 0) {
     reasons.push('Signature ou système de fichiers détecté')
   }
   if (dev.esosSystemProtected) {

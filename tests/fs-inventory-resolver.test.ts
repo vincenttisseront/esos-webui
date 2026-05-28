@@ -127,4 +127,144 @@ describe('fs-inventory-resolver', () => {
     expect(hw?.path).toBe('/dev/sdb')
     expect(hw?.eligible).toBe(true)
   })
+
+  it('keeps hw RAID /dev/sdb eligible when no signature is detected', () => {
+    const raid: RaidOverview = {
+      blockDevices: [{
+        path: '/dev/sdb',
+        name: 'sdb',
+        type: 'disk',
+        sizeBytes: 223e9,
+        usedBy: ['hardware_raid', 'unknown_signature'],
+        diskSignatures: [],
+      }],
+      mdArrays: [],
+      hardwareControllers: [{
+        id: '0',
+        vendor: 'dell_perc',
+        model: 'PERC H710',
+        cliTool: 'perccli',
+        detectionSource: ['cli'],
+        managementMode: 'full',
+        health: 'ok',
+        supportsCreate: true,
+        supportsDelete: true,
+        supportsHotSpare: true,
+        physicalDrives: [],
+        logicalDrives: [{
+          controllerId: '0',
+          id: '1/vd1',
+          raidLevel: '1',
+          sizeBytes: 223e9,
+          state: 'optimal',
+          osDevicePath: '/dev/sdb',
+          osDeviceDetectionSource: 'lsscsi',
+          osDeviceConfidence: 'high',
+        }],
+        warnings: [],
+      }],
+    } as RaidOverview
+    const { backends } = buildFsBackendsAndLinks({
+      raid,
+      lvm: { pvs: [], vgs: [], lvs: [] } as any,
+      mounts: [],
+      pathToDevices: new Map(),
+    })
+    const hw = backends.find(b => b.path === '/dev/sdb')
+    expect(hw?.eligible).toBe(true)
+  })
+
+  it('marks hw RAID /dev/sda ineligible when ESOS system-protected', () => {
+    const raid: RaidOverview = {
+      blockDevices: [{
+        path: '/dev/sda',
+        name: 'sda',
+        type: 'disk',
+        sizeBytes: 223e9,
+        usedBy: ['hardware_raid'],
+        esosSystemProtected: true,
+        esosProtection: { protectedDevice: '/dev/sda', reasons: ['boot'] },
+      }],
+      mdArrays: [],
+      hardwareControllers: [{
+        id: '0',
+        vendor: 'dell_perc',
+        model: 'PERC H710',
+        cliTool: 'perccli',
+        detectionSource: ['cli'],
+        managementMode: 'full',
+        health: 'ok',
+        supportsCreate: true,
+        supportsDelete: true,
+        supportsHotSpare: true,
+        physicalDrives: [],
+        logicalDrives: [{
+          controllerId: '0',
+          id: '0/vd0',
+          raidLevel: '1',
+          sizeBytes: 223e9,
+          state: 'optimal',
+          osDevicePath: '/dev/sda',
+          osDeviceDetectionSource: 'cli',
+          osDeviceConfidence: 'high',
+        }],
+        warnings: [],
+      }],
+    } as RaidOverview
+    const { backends } = buildFsBackendsAndLinks({
+      raid,
+      lvm: { pvs: [], vgs: [], lvs: [] } as any,
+      mounts: [],
+      pathToDevices: new Map(),
+    })
+    const hw = backends.find(b => b.path === '/dev/sda')
+    expect(hw?.eligible).toBe(false)
+    expect(hw?.reasons.some(r => r.includes('ESOS'))).toBe(true)
+  })
+
+  it('marks hw RAID ineligible when used by SCST', () => {
+    const raid: RaidOverview = {
+      blockDevices: [{
+        path: '/dev/sdb',
+        name: 'sdb',
+        type: 'disk',
+        sizeBytes: 223e9,
+        usedBy: ['hardware_raid', 'scst'],
+      }],
+      mdArrays: [],
+      hardwareControllers: [{
+        id: '0',
+        vendor: 'dell_perc',
+        model: 'PERC H710',
+        cliTool: 'perccli',
+        detectionSource: ['cli'],
+        managementMode: 'full',
+        health: 'ok',
+        supportsCreate: true,
+        supportsDelete: true,
+        supportsHotSpare: true,
+        physicalDrives: [],
+        logicalDrives: [{
+          controllerId: '0',
+          id: '1/vd1',
+          raidLevel: '1',
+          sizeBytes: 223e9,
+          state: 'optimal',
+          osDevicePath: '/dev/sdb',
+          osDeviceDetectionSource: 'lsscsi',
+          osDeviceConfidence: 'high',
+        }],
+        warnings: [],
+      }],
+    } as RaidOverview
+    const { backends } = buildFsBackendsAndLinks({
+      raid,
+      lvm: { pvs: [], vgs: [], lvs: [] } as any,
+      mounts: [],
+      pathToDevices: new Map([['/dev/sdb', ['dev1']]]),
+    })
+    const hw = backends.find(b => b.path === '/dev/sdb')
+    expect(hw?.eligible).toBe(false)
+    expect(hw?.reasons.some(r => r.includes('scst'))).toBe(true)
+  })
 })

@@ -91,12 +91,19 @@ function mountForDevicePath(
 function usedByFromBlockDev(dev: RaidBlockDevice | undefined): string[] {
   if (!dev) return []
   const reasons: string[] = []
+  const signatures = dev.diskSignatures ?? dev.wipefsSignatures ?? []
   if (dev.usedBy.includes('mounted') || dev.mountpoint) {
     reasons.push(dev.mountpoint ? mountedAtReason(dev.mountpoint) : FS_BACKEND_REASON.MOUNTED)
   }
   if (dev.usedBy.includes('scst')) reasons.push(FS_BACKEND_REASON.SCST)
-  if (dev.usedBy.includes('filesystem') || dev.usedBy.includes('unknown_signature')) {
+  // Unknown/empty signature should not block brand-new hardware RAID disks.
+  if (dev.usedBy.includes('filesystem') || signatures.length > 0) {
     reasons.push(FS_BACKEND_REASON.FILESYSTEM_SIGNATURE)
+  }
+  if (dev.esosSystemProtected) {
+    reasons.push(dev.esosProtection?.protectedDevice
+      ? `Volume système ESOS protégé (${dev.esosProtection.protectedDevice})`
+      : 'Volume système ESOS protégé')
   }
   if (dev.usedBy.includes('lvm')) reasons.push(FS_BACKEND_REASON.LVM_PV)
   if (dev.usedBy.includes('md')) reasons.push(FS_BACKEND_REASON.MD_MEMBER)

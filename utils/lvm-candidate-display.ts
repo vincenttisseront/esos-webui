@@ -50,6 +50,7 @@ const REASON_KEY_PATTERNS: Array<{ test: RegExp | string; key: string }> = [
   { test: /Périphérique monté/i, key: 'lvm.candidate.reason.mounted' },
   { test: /volume physique LVM/i, key: 'lvm.candidate.reason.already_pv' },
   { test: /SCST/i, key: 'lvm.candidate.reason.scst' },
+  { test: /no[_ ]signature|aucune signature|no signature/i, key: 'lvm.candidate.reason.no_signature' },
   { test: /Signature|fichiers|wipefs/i, key: 'lvm.candidate.reason.signature' },
   { test: /Disque brut/i, key: 'lvm.candidate.reason.raw_disk' },
 ]

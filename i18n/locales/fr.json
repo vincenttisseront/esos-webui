@@ -489,7 +489,11 @@
         "used_by_hardware_raid": "hardware_raid",
         "esos_protected": "Protégé, volume système ESOS",
         "device_not_detected_os": "Non détecté côté OS",
-        "action_rescan_scsi": "Rescanner SCSI"
+        "action_rescan_scsi": "Rescanner SCSI",
+        "action_use_with_lvm": "Utiliser avec LVM",
+        "action_create_fileio_fs": "Créer filesystem FILEIO",
+        "action_view_block_devices": "Voir Block Devices",
+        "action_create_scst_blockio": "Créer SCST BLOCKIO direct"
       },
       "ctrl_mode": {
         "raid": "Mode RAID",
@@ -1648,6 +1652,7 @@
       "removed": "PV supprimé"
     },
     "candidate": {
+      "table_title": "Périphériques candidats pour pvcreate",
       "label": {
         "hw_raid": "{path}, Volume RAID matériel {vdId}, {size}",
         "md": "{path}, tableau MD, {size}"
@@ -1658,11 +1663,16 @@
         "mounted": "Périphérique monté",
         "already_pv": "Déjà volume physique",
         "signature": "Signature ou système de fichiers — wipefs requis avant pvcreate",
+        "no_signature": "Aucune signature détectée (prêt pour pvcreate)",
         "scst": "Utilisé par SCST",
         "raw_disk": "Disque brut — utiliser un volume MD ou RAID matériel"
       },
       "status_eligible": "Éligible",
-      "status_ineligible": "Non éligible"
+      "status_ineligible": "Non éligible",
+      "status": {
+        "eligible": "Éligible",
+        "ineligible": "Non éligible"
+      }
     },
     "vg": {
       "table_title": "Groupes de volumes (VG)",
@@ -1696,7 +1706,6 @@
         "cluster_no_pv_candidate": "Aucun candidat PV éligible sur tous les nœuds."
       }
     },
-    "candidate": { "table_title": "Périphériques candidats pour pvcreate" },
     "pending_hw_backend": {
       "title": "Backend RAID matériel en attente côté OS",
       "body": "Un volume virtuel RAID matériel existe côté contrôleur, mais aucun chemin bloc Linux n'est mappé.",

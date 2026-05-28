@@ -489,7 +489,11 @@
         "used_by_hardware_raid": "hardware_raid",
         "esos_protected": "Protected ESOS system volume",
         "device_not_detected_os": "Not detected by OS",
-        "action_rescan_scsi": "Rescan SCSI"
+        "action_rescan_scsi": "Rescan SCSI",
+        "action_use_with_lvm": "Use with LVM",
+        "action_create_fileio_fs": "Create FILEIO filesystem",
+        "action_view_block_devices": "View Block Devices",
+        "action_create_scst_blockio": "Create SCST direct BLOCKIO"
       },
       "ctrl_mode": {
         "raid": "RAID mode",
@@ -1648,6 +1652,7 @@
       "removed": "PV removed"
     },
     "candidate": {
+      "table_title": "Candidate devices for pvcreate",
       "label": {
         "hw_raid": "{path}, Hardware RAID VD {vdId}, {size}",
         "md": "{path}, MD array, {size}"
@@ -1658,11 +1663,16 @@
         "mounted": "Device is mounted",
         "already_pv": "Already a physical volume",
         "signature": "Filesystem or signature detected — wipefs required before pvcreate",
+        "no_signature": "No signature detected (ready for pvcreate)",
         "scst": "Used by SCST",
         "raw_disk": "Raw disk — use MD or hardware RAID volume"
       },
       "status_eligible": "Eligible",
-      "status_ineligible": "Not eligible"
+      "status_ineligible": "Not eligible",
+      "status": {
+        "eligible": "Eligible",
+        "ineligible": "Not eligible"
+      }
     },
     "vg": {
       "table_title": "Volume groups (VG)",
@@ -1696,7 +1706,6 @@
         "cluster_no_pv_candidate": "No PV candidate eligible on all nodes."
       }
     },
-    "candidate": { "table_title": "Candidate devices for pvcreate" },
     "pending_hw_backend": {
       "title": "Hardware RAID backend pending OS device",
       "body": "A hardware virtual drive exists on the controller but no Linux block device path is mapped yet.",

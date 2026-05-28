@@ -242,6 +242,51 @@ describe('buildLvmCandidatesFromInventory', () => {
     expect(vd?.eligible).toBe(true)
   })
 
+  it('keeps hw RAID /dev/sdb eligible when signature is empty/unknown', () => {
+    const candidates = buildLvmCandidatesFromInventory({
+      blockDevices: [{
+        name: 'sdb',
+        path: '/dev/sdb',
+        type: 'disk',
+        sizeBytes: 223 * 1024 ** 3,
+        usedBy: ['hardware_raid', 'unknown_signature'],
+        diskSignatures: [],
+        mdEligibilityReasons: [],
+        eligibleForMdPartitionPrep: false,
+        mdPartitionPrepReasons: [],
+        eligibleForMd: false,
+        eligibleForHardwareRaid: false,
+        warnings: [],
+      }],
+      hardwareControllers: [{
+        id: '0',
+        vendor: 'dell_perc',
+        model: 'PERC',
+        cliTool: 'perccli',
+        detectionSource: ['cli'],
+        managementMode: 'full',
+        health: 'ok',
+        supportsCreate: true,
+        supportsDelete: true,
+        supportsHotSpare: true,
+        physicalDrives: [],
+        logicalDrives: [{
+          controllerId: '0',
+          id: '1/vd1',
+          raidLevel: '1',
+          sizeBytes: 223 * 1024 ** 3,
+          state: 'optimal',
+          osDevicePath: '/dev/sdb',
+          detectionSource: 'lsscsi',
+        }],
+      }],
+      pvs: [],
+      lvPaths: new Set(),
+    })
+    const vd = candidates.find(c => c.path === '/dev/sdb')
+    expect(vd?.eligible).toBe(true)
+  })
+
   it('excludes protected system hardware RAID VD', () => {
     const candidates = buildLvmCandidatesFromInventory({
       blockDevices: [{
@@ -288,6 +333,97 @@ describe('buildLvmCandidatesFromInventory', () => {
     expect(vd?.kind).toBe('hw_raid_ld')
     expect(vd?.eligible).toBe(false)
     expect(vd?.reasons.some(r => r.includes('système ESOS') || r.includes('system'))).toBe(true)
+  })
+
+  it('excludes hw RAID volume already used by SCST', () => {
+    const candidates = buildLvmCandidatesFromInventory({
+      blockDevices: [{
+        name: 'sdb',
+        path: '/dev/sdb',
+        type: 'disk',
+        sizeBytes: 100 * 1024 ** 3,
+        usedBy: ['hardware_raid', 'scst'],
+        mdEligibilityReasons: [],
+        eligibleForMdPartitionPrep: false,
+        mdPartitionPrepReasons: [],
+        eligibleForMd: false,
+        eligibleForHardwareRaid: false,
+        warnings: [],
+      }],
+      hardwareControllers: [{
+        id: '0',
+        vendor: 'dell_perc',
+        model: 'PERC',
+        cliTool: 'perccli',
+        detectionSource: ['cli'],
+        managementMode: 'full',
+        health: 'ok',
+        supportsCreate: true,
+        supportsDelete: true,
+        supportsHotSpare: true,
+        physicalDrives: [],
+        logicalDrives: [{
+          controllerId: '0',
+          id: '0/vd1',
+          raidLevel: '1',
+          sizeBytes: 100 * 1024 ** 3,
+          state: 'optimal',
+          osDevicePath: '/dev/sdb',
+          detectionSource: 'cli',
+        }],
+      }],
+      pvs: [],
+      lvPaths: new Set(),
+    })
+    const vd = candidates.find(c => c.path === '/dev/sdb')
+    expect(vd?.eligible).toBe(false)
+    expect(vd?.reasons.some(r => r.includes('SCST'))).toBe(true)
+  })
+
+  it('excludes mounted hw RAID volume', () => {
+    const candidates = buildLvmCandidatesFromInventory({
+      blockDevices: [{
+        name: 'sdb',
+        path: '/dev/sdb',
+        type: 'disk',
+        sizeBytes: 100 * 1024 ** 3,
+        usedBy: ['hardware_raid', 'mounted'],
+        mountpoint: '/mnt/vdisks/fs01',
+        mdEligibilityReasons: [],
+        eligibleForMdPartitionPrep: false,
+        mdPartitionPrepReasons: [],
+        eligibleForMd: false,
+        eligibleForHardwareRaid: false,
+        warnings: [],
+      }],
+      hardwareControllers: [{
+        id: '0',
+        vendor: 'dell_perc',
+        model: 'PERC',
+        cliTool: 'perccli',
+        detectionSource: ['cli'],
+        managementMode: 'full',
+        health: 'ok',
+        supportsCreate: true,
+        supportsDelete: true,
+        supportsHotSpare: true,
+        physicalDrives: [],
+        logicalDrives: [{
+          controllerId: '0',
+          id: '0/vd1',
+          raidLevel: '1',
+          sizeBytes: 100 * 1024 ** 3,
+          state: 'optimal',
+          osDevicePath: '/dev/sdb',
+          detectionSource: 'cli',
+        }],
+      }],
+      pvs: [],
+      lvPaths: new Set(),
+    })
+    const vd = candidates.find(c => c.path === '/dev/sdb')
+    expect(vd?.eligible).toBe(false)
+    expect(vd?.reasons.some(r => r.includes('Monté') || r.includes('monté'))).toBe(true)
   })
 
   it('lists unmapped VD with diagnostic path', () => {

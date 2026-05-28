@@ -61,6 +61,44 @@
             <span v-else class="text-amber-700 dark:text-amber-300">{{ t('raid.page.devices.device_not_detected_os') }}</span>
           </td>
           <td class="py-1.5 text-right">
+            <template v-if="canUseVolume(drive) && !readOnly">
+              <UButton
+                size="xs"
+                color="primary"
+                variant="soft"
+                class="mr-1"
+                @click="$emit('use-ld-lvm', drive)"
+              >
+                {{ t('raid.page.devices.action_use_with_lvm') }}
+              </UButton>
+              <UButton
+                size="xs"
+                color="emerald"
+                variant="soft"
+                class="mr-1"
+                @click="$emit('use-ld-fileio', drive)"
+              >
+                {{ t('raid.page.devices.action_create_fileio_fs') }}
+              </UButton>
+              <UButton
+                size="xs"
+                color="gray"
+                variant="ghost"
+                class="mr-1"
+                @click="$emit('use-ld-block-devices', drive)"
+              >
+                {{ t('raid.page.devices.action_view_block_devices') }}
+              </UButton>
+              <UButton
+                size="xs"
+                color="indigo"
+                variant="ghost"
+                class="mr-1"
+                @click="$emit('use-ld-blockio', drive)"
+              >
+                {{ t('raid.page.devices.action_create_scst_blockio') }}
+              </UButton>
+            </template>
             <UButton
               v-if="vdNeedsOsRescan(drive) && !readOnly"
               size="xs"
@@ -115,6 +153,10 @@ defineProps<{
 defineEmits<{
   'delete-ld': [drive: HardwareRaidLogicalDrive]
   'rescan-ld': [drive: HardwareRaidLogicalDrive]
+  'use-ld-lvm': [drive: HardwareRaidLogicalDrive]
+  'use-ld-fileio': [drive: HardwareRaidLogicalDrive]
+  'use-ld-block-devices': [drive: HardwareRaidLogicalDrive]
+  'use-ld-blockio': [drive: HardwareRaidLogicalDrive]
 }>()
 
 const { t } = useI18n()
@@ -136,5 +178,11 @@ function formatSize(bytes: number): string {
   if (bytes >= 1e12) return `${(bytes / 1e12).toFixed(1)} TB`
   if (bytes >= 1e9)  return `${(bytes / 1e9).toFixed(1)} GB`
   return `${(bytes / 1e6).toFixed(0)} MB`
+}
+
+function canUseVolume(drive: HardwareRaidLogicalDrive): boolean {
+  return !vdNeedsOsRescan(drive)
+    && !drive.esosSystemProtected
+    && (drive.state === 'optimal' || drive.state === 'degraded')
 }
 </script>
