@@ -10,7 +10,7 @@
           <th class="text-left py-1.5 pr-3">Taille</th>
           <th class="text-left py-1.5 pr-3">Cache</th>
           <th class="text-left py-1.5 pr-3">Device</th>
-          <th v-if="supportsDelete && !readOnly" class="text-right py-1.5"></th>
+          <th class="text-right py-1.5"></th>
         </tr>
       </thead>
       <tbody>
@@ -56,10 +56,23 @@
           </td>
           <td class="py-1.5 pr-3 tabular-nums">{{ drive.sizeBytes ? formatSize(drive.sizeBytes) : '—' }}</td>
           <td class="py-1.5 pr-3 text-gray-500 dark:text-gray-400">{{ drive.cachePolicy ?? '—' }}</td>
-          <td class="py-1.5 pr-3 font-mono text-gray-500 dark:text-gray-400 text-[10px]">{{ drive.devicePath ?? '—' }}</td>
-          <td v-if="supportsDelete && !readOnly" class="py-1.5 text-right">
+          <td class="py-1.5 pr-3 font-mono text-gray-500 dark:text-gray-400 text-[10px]">
+            <span v-if="!vdNeedsOsRescan(drive)">{{ vdDeviceText(drive, t('raid.page.devices.device_not_detected_os')) }}</span>
+            <span v-else class="text-amber-700 dark:text-amber-300">{{ t('raid.page.devices.device_not_detected_os') }}</span>
+          </td>
+          <td class="py-1.5 text-right">
+            <UButton
+              v-if="vdNeedsOsRescan(drive) && !readOnly"
+              size="xs"
+              color="amber"
+              variant="soft"
+              class="mr-1"
+              @click="$emit('rescan-ld', drive)"
+            >
+              {{ t('raid.page.devices.action_rescan_scsi') }}
+            </UButton>
             <UTooltip
-              v-if="drive.esosSystemProtected"
+              v-if="supportsDelete && !readOnly && drive.esosSystemProtected"
               :text="t('raid.system_volume.delete_blocked_tooltip')"
             >
               <span class="inline-block">
@@ -73,7 +86,7 @@
               </span>
             </UTooltip>
             <UButton
-              v-else
+              v-else-if="supportsDelete && !readOnly"
               size="xs"
               color="red"
               variant="ghost"
@@ -92,13 +105,17 @@
 
 <script setup lang="ts">
 import type { HardwareRaidLogicalDrive } from '~/types/raid'
+import { vdDeviceText, vdNeedsOsRescan } from '~/utils/hw-raid-vd-ui'
 
 defineProps<{
   drives: HardwareRaidLogicalDrive[]
   supportsDelete?: boolean
   readOnly?: boolean
 }>()
-defineEmits<{ 'delete-ld': [drive: HardwareRaidLogicalDrive] }>()
+defineEmits<{
+  'delete-ld': [drive: HardwareRaidLogicalDrive]
+  'rescan-ld': [drive: HardwareRaidLogicalDrive]
+}>()
 
 const { t } = useI18n()
 

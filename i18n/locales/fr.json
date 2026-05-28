@@ -472,6 +472,10 @@
       "diagnostic_empty": "(vide)",
       "filter_placeholder": "Filtrer…",
       "eligible_only": "Éligibles seulement",
+      "action_rescan_scsi": "Rescanner les disques",
+      "rescan_found_device": "Nouveau périphérique détecté : {path}",
+      "rescan_no_device": "Toujours non détecté. Un redémarrage peut être nécessaire.",
+      "rescan_failed": "Échec du rescan SCSI",
       "pending_hw_backend": {
         "title": "Périphérique OS en attente pour volume virtuel matériel",
         "body": "Ces volumes virtuels sont créés côté contrôleur mais ne sont pas encore visibles comme périphériques bloc Linux."
@@ -483,7 +487,9 @@
         "col_fileio": "FILEIO",
         "badge_hw_vd": "VD matériel",
         "used_by_hardware_raid": "hardware_raid",
-        "esos_protected": "Protégé, volume système ESOS"
+        "esos_protected": "Protégé, volume système ESOS",
+        "device_not_detected_os": "Non détecté côté OS",
+        "action_rescan_scsi": "Rescanner SCSI"
       },
       "ctrl_mode": {
         "raid": "Mode RAID",

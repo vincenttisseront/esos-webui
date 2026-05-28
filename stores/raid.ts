@@ -464,7 +464,7 @@ export const useRaidStore = defineStore('raid', {
           lsblkAfter: string
           dmesgTail: string
         }
-      }>('/api/raid/hardware/rescan', {
+      }>('/api/raid/hardware/rescan-scsi', {
         method: 'POST',
         params: this.query(),
         body: { host: input?.host, controllerId: input?.controllerId, vdId: input?.vdId },

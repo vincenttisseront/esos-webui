@@ -119,6 +119,7 @@
         :supports-delete="controller.supportsDelete"
         :read-only="readOnly || controller.managementMode === 'read_only_limited'"
         @delete-ld="(ld) => $emit('delete-ld', controller, ld)"
+        @rescan-ld="(ld) => $emit('rescan-ld', controller, ld)"
       />
     </div>
 
@@ -137,6 +138,7 @@ const props = defineProps<{ controller: HardwareRaidController; readOnly?: boole
 defineEmits<{
   'create-ld': [ctrl: HardwareRaidController]
   'delete-ld': [ctrl: HardwareRaidController, ld: HardwareRaidLogicalDrive]
+  'rescan-ld': [ctrl: HardwareRaidController, ld: HardwareRaidLogicalDrive]
   'diagnostic': [ctrl: HardwareRaidController]
   'install-perccli': []
 }>()

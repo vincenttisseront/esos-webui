@@ -244,7 +244,18 @@
 
     <!-- Onglet RAID Matériel -->
     <div v-else-if="activeTab === 'hardware' && raid.overview" class="space-y-4">
-      <div class="flex justify-end">
+      <div class="flex justify-end gap-2">
+        <UButton
+          v-if="!isReadOnly"
+          color="amber"
+          variant="soft"
+          size="sm"
+          icon="i-heroicons-arrow-path"
+          :loading="rescanBusy"
+          @click="rescanScsi()"
+        >
+          {{ t('raid.page.action_rescan_scsi') }}
+        </UButton>
         <UButton
           v-if="canCreateHwRaid && !isReadOnly"
           color="purple"
@@ -268,6 +279,7 @@
           @install-perccli="openMissingPerccliWizard"
           @create-ld="(c) => openHwWizard(c)"
           @delete-ld="(c, ld) => handleDeleteHwLd(c, ld)"
+          @rescan-ld="(c, ld) => rescanScsi(c.id, ld.id)"
           @diagnostic="openDiagnostic"
         />
       </UCard>
@@ -907,6 +919,7 @@ async function openHwWizard(ctrl?: HardwareRaidController) {
 const deviceFilter = ref('')
 const showOnlyEligible = ref(false)
 const showMdMetadataOnly = ref(false)
+const rescanBusy = ref(false)
 
 // Diagnostic matériel
 const diagnosticData = ref<null | {
@@ -956,6 +969,26 @@ const filteredDevices = computed(() => {
 const hasHardwareRaidBlockDevices = computed(() =>
   raid.blockDevices.some(d => d.usedBy.includes('hardware_raid')),
 )
+async function rescanScsi(controllerId?: string, vdId?: string) {
+  if (rescanBusy.value || isReadOnly.value) return
+  rescanBusy.value = true
+  try {
+    const result = await raid.rescanHardwareScsi({ controllerId, vdId })
+    await Promise.all([
+      raid.fetchOverview(true),
+      lvm.fetchOverview(true),
+    ])
+    if (result.mappedPath) {
+      toast.success(t('raid.page.rescan_found_device', { path: result.mappedPath }) as string)
+    } else {
+      toast.warning(t('raid.page.rescan_no_device') as string)
+    }
+  } catch (err: any) {
+    toast.error(err?.data?.statusMessage ?? err?.message ?? String(t('raid.page.rescan_failed')))
+  } finally {
+    rescanBusy.value = false
+  }
+}
 const pendingHwBackends = computed(() =>
   collectPendingHwRaidBackends(raid.controllers, raid.tools),
 )
