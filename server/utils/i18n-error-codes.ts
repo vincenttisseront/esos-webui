@@ -27,6 +27,18 @@ export const KNOWN_API_ERROR_CODES = [
   'FILE_TOO_LARGE',
   'UPLOAD_FILE_REQUIRED',
   'UPLOAD_PARSE_FAILED',
+  'github.refresh_throttled',
+  'upgrade.invalid_package_format',
+  'upgrade.package_too_large',
+  'upgrade.checksum_mismatch',
+  'upgrade.insufficient_tmp',
+  'upgrade.extract_failed',
+  'upgrade.scope_required',
+  'admin.password_external_provider',
+  'ESOS_PROTECTION_DETECTION_FAILED',
+  'ESOS_SYSTEM_VOLUME_PROTECTED',
+  'ldap.identity_conflict',
+  'ldap.user_not_imported',
 ] as const
 
 export type KnownApiErrorCode = (typeof KNOWN_API_ERROR_CODES)[number]

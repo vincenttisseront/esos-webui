@@ -290,6 +290,26 @@
     "targets": {
       "missing_name": "Nom de target manquant."
     },
+    "github": {
+      "refresh_throttled": "Actualisation GitHub limitée — réessayez plus tard."
+    },
+    "upgrade": {
+      "invalid_package_format": "Format de paquet de mise à niveau invalide.",
+      "package_too_large": "Le paquet de mise à niveau dépasse la taille maximale.",
+      "checksum_mismatch": "Le checksum du paquet ne correspond pas.",
+      "insufficient_tmp": "Espace temporaire insuffisant pour extraire le paquet.",
+      "extract_failed": "Échec de l’extraction du paquet de mise à niveau.",
+      "scope_required": "Le périmètre de mise à niveau (SAN ou cluster) est requis."
+    },
+    "admin": {
+      "password_external_provider": "Le mot de passe est géré par le fournisseur d’identité externe."
+    },
+    "ldap": {
+      "identity_conflict": "Conflit d’identité LDAP — contactez un administrateur.",
+      "user_not_imported": "Compte LDAP non provisionné dans ESOS WebUI."
+    },
+    "ESOS_PROTECTION_DETECTION_FAILED": "Détection des volumes système ESOS indisponible — action destructive refusée.",
+    "ESOS_SYSTEM_VOLUME_PROTECTED": "Volume système ESOS protégé — modification interdite.",
     "INVALID_PATH": "Chemin de fichier invalide.",
     "INVALID_FILENAME": "Nom de fichier invalide.",
     "FILE_EXISTS": "Un fichier portant ce nom existe déjà dans le conteneur.",

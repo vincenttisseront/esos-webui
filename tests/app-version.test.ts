@@ -32,7 +32,7 @@ describe('resolveRuntimeAppVersion', () => {
     vi.stubEnv('NODE_ENV', 'production')
     vi.stubEnv('APP_VERSION', '0.0.0-dev')
     delete process.env.NUXT_PUBLIC_APP_VERSION
-    expect(resolveRuntimeAppVersion().version).toBe('1.0.1')
+    expect(resolveRuntimeAppVersion().version).toBe('1.0.2')
   })
 
   it('in production, keeps explicit APP_VERSION when not a sentinel', () => {
@@ -45,7 +45,7 @@ describe('resolveRuntimeAppVersion', () => {
     vi.stubEnv('NODE_ENV', 'production')
     vi.stubEnv('APP_VERSION', '   ')
     delete process.env.NUXT_PUBLIC_APP_VERSION
-    expect(resolveRuntimeAppVersion().version).toBe('1.0.1')
+    expect(resolveRuntimeAppVersion().version).toBe('1.0.2')
   })
 
   it('trims BUILD_ID and maps empty to undefined', () => {

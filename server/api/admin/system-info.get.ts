@@ -19,7 +19,7 @@ export default defineEventHandler(async () => {
 
   return {
     app: {
-      version:     process.env.npm_package_version ?? '1.0.1',
+      version:     process.env.npm_package_version ?? '1.0.2',
       nodeUptime:  Math.floor(process.uptime()),
       environment: process.env.NODE_ENV ?? 'production',
     },

@@ -93,8 +93,19 @@ function parseConFile(content: string): Record<string, string> {
 }
 
 export function maskDbUri(dburi: string): string {
-  // postgres://user:password@host/db → postgres://user:********@host/db
-  return dburi.replace(/(:\/\/[^:]+:)([^@]+)(@)/, '$1********$3')
+  // Credentials may contain '@' — split on the last '@' before host/path.
+  const schemeIdx = dburi.indexOf('://')
+  if (schemeIdx < 0) return dburi
+  const scheme = dburi.slice(0, schemeIdx + 3)
+  const rest = dburi.slice(schemeIdx + 3)
+  const atIdx = rest.lastIndexOf('@')
+  if (atIdx < 0) return dburi
+  const creds = rest.slice(0, atIdx)
+  const hostAndPath = rest.slice(atIdx + 1)
+  const colonIdx = creds.indexOf(':')
+  if (colonIdx < 0) return dburi
+  const user = creds.slice(0, colonIdx)
+  return `${scheme}${user}:********@${hostAndPath}`
 }
 
 export function detectDbType(dburi: string): 'postgres' | 'mysql' | 'unknown' {

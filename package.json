@@ -1,8 +1,8 @@
 {
   "name": "esos-webui",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
-  "description": "ESOS WebUI - Read-only SAN visualization interface",
+  "description": "ESOS WebUI — web administration console for ESOS SAN storage",
   "engines": {
     "node": ">=22"
   },

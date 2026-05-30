@@ -290,6 +290,26 @@
     "targets": {
       "missing_name": "Missing target name."
     },
+    "github": {
+      "refresh_throttled": "GitHub refresh throttled — wait before retrying."
+    },
+    "upgrade": {
+      "invalid_package_format": "Invalid upgrade package format.",
+      "package_too_large": "Upgrade package exceeds the size limit.",
+      "checksum_mismatch": "Upgrade package checksum does not match.",
+      "insufficient_tmp": "Not enough temporary disk space to extract the upgrade package.",
+      "extract_failed": "Failed to extract the upgrade package.",
+      "scope_required": "Upgrade scope (SAN or cluster) is required."
+    },
+    "admin": {
+      "password_external_provider": "Password is managed by an external identity provider; reset it there."
+    },
+    "ldap": {
+      "identity_conflict": "LDAP identity conflict — contact an administrator.",
+      "user_not_imported": "LDAP account is not provisioned in ESOS WebUI."
+    },
+    "ESOS_PROTECTION_DETECTION_FAILED": "ESOS system volume detection is unavailable — destructive action refused.",
+    "ESOS_SYSTEM_VOLUME_PROTECTED": "This ESOS system volume is protected and cannot be modified.",
     "INVALID_PATH": "Invalid file path.",
     "INVALID_FILENAME": "Invalid file name.",
     "FILE_EXISTS": "A file with this name already exists in the container.",
