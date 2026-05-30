@@ -20,7 +20,7 @@
           <span>© 2026 Vincent TISSERONT</span>
           <span>·</span>
           <a
-            href="https://github.com/vincenttisseront/Dev/tree/main/esos-webui"
+            href="https://github.com/vincenttisseront/esos-webui"
             target="_blank"
             rel="noopener noreferrer"
             class="hover:text-gray-600 dark:hover:text-gray-400 transition-colors flex items-center gap-1"
