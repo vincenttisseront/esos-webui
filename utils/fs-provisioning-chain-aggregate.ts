@@ -101,7 +101,25 @@ export function buildFileioStepDetail(
   agg: FileioChainAggregate,
   vdisks: VDiskFile[],
 ): ChainStepDetail {
-  if (agg.vdiskTotal === 0) return DASH
+  if (agg.vdiskTotal === 0) {
+    if (agg.fileioOnMount.length === 1) {
+      const name = agg.fileioOnMount[0]!.name
+      return {
+        detail: name,
+        detailKey: 'storage.fs.chain.detail.fileio_single',
+        detailParams: { name },
+      }
+    }
+    if (agg.fileioOnMount.length > 1) {
+      const count = agg.fileioOnMount.length
+      return {
+        detail: `${count} devices registered`,
+        detailKey: 'storage.fs.chain.detail.fileio_all_registered',
+        detailParams: { count: String(count) },
+      }
+    }
+    return DASH
+  }
 
   if (agg.vdiskTotal === 1) {
     const v = vdisks[0]
@@ -206,11 +224,11 @@ export function fileioStepStatus(
   blockioOnly: boolean,
 ): ProvisioningStepStatus {
   if (agg.vdiskTotal === 0) {
+    if (agg.fileioOnMount.length > 0) return 'created'
     return blockioOnly ? 'optional' : 'missing'
   }
   if (agg.vdiskRegistered === 0) return 'next'
   if (agg.vdiskRegistered < agg.vdiskTotal) return 'next'
-  if (agg.fileioMapped < agg.fileioOnMount.length) return 'created'
   return 'created'
 }
 
@@ -221,7 +239,7 @@ export function exposeStepStatus(
   const total = agg.fileioOnMount.length
   if (total === 0) {
     if (agg.vdiskTotal === 0) return blockioOnly ? 'optional' : 'missing'
-    if (agg.vdiskRegistered === 0) return 'missing'
+    if (agg.vdiskRegistered === 0) return 'next'
     return 'next'
   }
   if (agg.fileioMapped === 0) return 'next'
