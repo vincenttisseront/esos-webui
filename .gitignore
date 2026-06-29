@@ -19,3 +19,6 @@ dist
 
 # Local IDE (Cursor); do not commit
 cursor/
+
+# Projet indépendant (dépôt Git séparé)
+/gpo-manager/
