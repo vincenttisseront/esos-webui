@@ -1,0 +1,80 @@
+<Page
+    x:Class="GpoManager.App.Views.GpoDetailPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:models="using:GpoManager.Core.Models">
+
+    <ScrollViewer Padding="24">
+        <StackPanel Spacing="16">
+            <TextBlock Text="{x:Bind ViewModel.Detail.Summary.DisplayName, Mode=OneWay}"
+                       Style="{ThemeResource TitleLargeTextBlockStyle}"/>
+            <TextBlock Text="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}" Foreground="Red"/>
+
+            <Pivot>
+                <PivotItem Header="Général">
+                    <StackPanel Spacing="8" Padding="8">
+                        <TextBlock Text="{x:Bind ViewModel.Detail.Summary.Id, Mode=OneWay}"/>
+                        <TextBlock Text="{x:Bind ViewModel.Detail.Summary.Description, Mode=OneWay}"/>
+                        <TextBlock>
+                            <Run Text="Créé : "/>
+                            <Run Text="{x:Bind ViewModel.Detail.Summary.CreationTime, Mode=OneWay}"/>
+                        </TextBlock>
+                        <TextBlock>
+                            <Run Text="Modifié : "/>
+                            <Run Text="{x:Bind ViewModel.Detail.Summary.ModificationTime, Mode=OneWay}"/>
+                        </TextBlock>
+                        <TextBlock Text="{x:Bind ViewModel.Detail.Summary.Owner, Mode=OneWay}"/>
+                    </StackPanel>
+                </PivotItem>
+
+                <PivotItem Header="Liens">
+                    <StackPanel Spacing="8">
+                        <Button Content="Actualiser les liens" Command="{x:Bind ViewModel.RefreshLinksCommand}"/>
+                        <ListView ItemsSource="{x:Bind ViewModel.Detail.Links, Mode=OneWay}">
+                            <ListView.ItemTemplate>
+                                <DataTemplate x:DataType="models:GpoLink">
+                                    <StackPanel Padding="4">
+                                        <TextBlock Text="{x:Bind TargetName}" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{x:Bind TargetDn}" FontSize="12"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                    </StackPanel>
+                </PivotItem>
+
+                <PivotItem Header="Paramètres">
+                    <ListView ItemsSource="{x:Bind ViewModel.Detail.Settings, Mode=OneWay}" MaxHeight="500">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="models:GpoSetting">
+                                <Grid ColumnSpacing="8" Padding="4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{x:Bind Name}"/>
+                                    <TextBlock Grid.Column="1" Text="{x:Bind Path}"/>
+                                    <TextBlock Grid.Column="2" Text="{x:Bind Value}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </PivotItem>
+
+                <PivotItem Header="Permissions">
+                    <ListView ItemsSource="{x:Bind ViewModel.Detail.Permissions, Mode=OneWay}">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="models:GpoPermissionEntry">
+                                <StackPanel Padding="4">
+                                    <TextBlock Text="{x:Bind Trustee}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{x:Bind Permission}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </PivotItem>
+            </Pivot>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

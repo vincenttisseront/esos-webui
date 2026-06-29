@@ -1,0 +1,26 @@
+<Page
+    x:Class="GpoManager.App.Views.ConnectionPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <ScrollViewer Padding="24">
+        <StackPanel Spacing="16" MaxWidth="600">
+            <TextBlock Text="Connexion Active Directory" Style="{ThemeResource TitleLargeTextBlockStyle}"/>
+            <TextBlock Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"/>
+
+            <StackPanel Spacing="8">
+                <TextBlock Text="Domaine" FontWeight="SemiBold"/>
+                <TextBlock Text="{x:Bind ViewModel.ConnectionInfo.DomainName, Mode=OneWay}"/>
+                <TextBlock Text="Forêt" FontWeight="SemiBold"/>
+                <TextBlock Text="{x:Bind ViewModel.ConnectionInfo.ForestName, Mode=OneWay}"/>
+                <TextBlock Text="Utilisateur" FontWeight="SemiBold"/>
+                <TextBlock Text="{x:Bind ViewModel.ConnectionInfo.UserName, Mode=OneWay}"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="Tester la connexion" Command="{x:Bind ViewModel.TestConnectionCommand}"/>
+                <Button Content="Actualiser" Command="{x:Bind ViewModel.RefreshCommand}"/>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

@@ -1,0 +1,52 @@
+<Page
+    x:Class="GpoManager.App.Views.GpoListPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:models="using:GpoManager.Core.Models">
+
+    <Grid Padding="24" RowSpacing="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Liste des GPO" Style="{ThemeResource TitleLargeTextBlockStyle}"/>
+        <TextBlock Grid.Row="1" Text="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}" Foreground="Red"/>
+
+        <StackPanel Grid.Row="2" Spacing="8">
+            <TextBox PlaceholderText="Rechercher..." Text="{x:Bind ViewModel.SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBox PlaceholderText="Nom du nouveau GPO" Width="240" Text="{x:Bind ViewModel.NewGpoName, Mode=TwoWay}"/>
+                <TextBox PlaceholderText="Description" Width="300" Text="{x:Bind ViewModel.NewGpoDescription, Mode=TwoWay}"/>
+                <Button Content="Créer" Command="{x:Bind ViewModel.CreateGpoCommand}"/>
+                <Button Content="Actualiser" Command="{x:Bind ViewModel.LoadCommand}"/>
+            </StackPanel>
+        </StackPanel>
+
+        <ListView Grid.Row="3" ItemsSource="{x:Bind ViewModel.FilteredGpos, Mode=OneWay}" SelectionMode="Single"
+                  SelectedItem="{x:Bind ViewModel.SelectedGpo, Mode=TwoWay}">
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="models:GpoSummary">
+                    <Grid ColumnSpacing="12" Padding="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="3*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{x:Bind DisplayName}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="1" Text="{x:Bind Id}" FontSize="12" Opacity="0.7"/>
+                        <TextBlock Grid.Column="2" Text="{x:Bind ModificationTime}"/>
+                        <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4">
+                            <Button Content="Détails" Tag="{x:Bind}" Click="ViewDetails_Click"/>
+                            <Button Content="Copier" Tag="{x:Bind}" Click="CopyButton_Click"/>
+                            <Button Content="Supprimer" Tag="{x:Bind}" Click="DeleteButton_Click"/>
+                        </StackPanel>
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+    </Grid>
+</Page>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<GPO xmlns="http://www.microsoft.com/GroupPolicy/Settings">
+  <Computer>
+    <ExtensionData>
+      <Name>Registry</Name>
+      <Policy>
+        <Name>DisableTaskMgr</Name>
+        <Category>System</Category>
+        <KeyPath>Software\Microsoft\Windows\CurrentVersion\Policies\System</KeyPath>
+        <Value>0</Value>
+      </Policy>
+    </ExtensionData>
+  </Computer>
+</GPO>
