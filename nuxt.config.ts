@@ -51,18 +51,20 @@ export default defineNuxtConfig({
   nitro: {
     experimental: {
       websocket: true,
+      // Required so Rollup does not try to parse ssh2's native .node binary.
+      // Side effect: argon2/ssh2 may not be NFT-traced — see postbuild copy script.
       legacyExternals: true,
     },
     // Native bindings (.node) must stay external — bundling breaks require().
     externals: {
       external: ['better-sqlite3', 'argon2', 'ssh2', 'cpu-features'],
-      traceInclude: [
-        'node_modules/ssh2/**',
-        'node_modules/cpu-features/**',
-      ],
     },
-    rollupConfig: {
-      external: ['ssh2', 'cpu-features', 'better-sqlite3', 'argon2'],
+    hooks: {
+      compiled() {
+        // Ensure argon2/ssh2 land in .output/server/node_modules for Docker.
+        // Dynamic import keeps nuxt.config sync-friendly under Node ESM.
+        return import('./scripts/copy-native-server-deps.mjs')
+      },
     },
   },
   app: {

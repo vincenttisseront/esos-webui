@@ -1,6 +1,6 @@
 {
   "name": "esos-webui",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "private": true,
   "description": "ESOS WebUI — web administration console for ESOS SAN storage",
   "engines": {
@@ -11,7 +11,7 @@
   },
   "scripts": {
     "dev": "nuxt dev",
-    "build": "nuxt build",
+    "build": "nuxt build && node scripts/copy-native-server-deps.mjs",
     "preview": "nuxt preview",
     "start": "node .output/server/index.mjs",
     "test": "vitest run",
