@@ -1,9 +1,9 @@
 /**
  * Copy native Node addons into Nitro's server output.
  *
- * With legacyExternals (needed so Rollup does not parse ssh2's .node binary),
- * Nitro may leave bare imports for argon2/ssh2 without tracing the packages
- * into .output/server/node_modules — which breaks Docker (ERR_MODULE_NOT_FOUND).
+ * Native packages (argon2, ssh2, …) stay external so Rollup does not parse
+ * their .node binaries. NFT usually traces them; this script is a safety net
+ * for Docker images that only ship `.output/`.
  */
 import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -45,10 +45,35 @@ function copyPackage(name) {
   return true
 }
 
+/** Fail the build if Nitro baked absolute host paths into the server bundle. */
+function assertNoAbsoluteNodeModuleImports() {
+  const entry = join(outServer, 'chunks', 'virtual', 'entry.mjs')
+  const index = join(outServer, 'index.mjs')
+  const files = [entry, index].filter((p) => existsSync(p))
+  const bad = []
+  for (const file of files) {
+    const text = readFileSync(file, 'utf8')
+    // Absolute Windows or POSIX paths into node_modules break Docker runners.
+    if (/from ['"](?:[A-Za-z]:\\|\/)[^'"]*node_modules[/\\]/.test(text)
+      || /from ['"]C:\/Users[^'"]+/.test(text)
+      || /from ['"]\/app\/node_modules\//.test(text)) {
+      bad.push(file)
+    }
+  }
+  if (bad.length) {
+    console.error('[copy-native-server-deps] absolute node_modules imports detected in:')
+    for (const f of bad) console.error(`  - ${f}`)
+    console.error('Disable nitro.experimental.legacyExternals — it breaks Docker images.')
+    process.exit(1)
+  }
+}
+
 if (!existsSync(outServer)) {
   console.error('[copy-native-server-deps] .output/server missing — run nuxt build first')
   process.exit(1)
 }
+
+assertNoAbsoluteNodeModuleImports()
 
 mkdirSync(outNm, { recursive: true })
 
