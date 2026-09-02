@@ -1,62 +1,52 @@
 # ─── Stage 1 : Builder ───────────────────────────────────────────
-FROM node:22-alpine AS builder
+# Debian/glibc — better-sqlite3@13 N-API prebuilds target glibc; Alpine/musl
+# can load a mismatched binary and fail later with opaque "disk I/O error".
+FROM node:22-bookworm-slim AS builder
 
 WORKDIR /app
 
-# Build-time version metadata (injected by CI or docker build --build-arg).
-# Leave APP_VERSION empty for release images to use package.json at runtime.
 ARG APP_VERSION=
 ARG BUILD_ID=
 ARG GIT_COMMIT=
 ARG GIT_BRANCH=
 ARG BUILD_DATE=
 
-# System deps required by ssh2 (optional native bindings)
-RUN apk add --no-cache python3 make g++
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends python3 make g++ \
+ && rm -rf /var/lib/apt/lists/*
 
-# Manifests first for Docker layer caching
 COPY package.json package-lock.json* ./
 
-# Full install (dev deps included for the build)
-# Force native compile on Alpine/musl — better-sqlite3@13 ships glibc prebuilds
-# that can load incorrectly and fail later with opaque SQLite I/O errors.
-RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi \
- && npm rebuild better-sqlite3 argon2 --build-from-source
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
-# Copy the rest of the source
 COPY . .
 
-# Build Nuxt → .output/
 RUN npm run build
 
 # ─── Stage 2 : Runner ────────────────────────────────────────────
-FROM node:22-alpine AS runner
+FROM node:22-bookworm-slim AS runner
 
 WORKDIR /app
 
-# Non-root runtime user — UID/GID 1000 when available (Alpine may already use GID 1000 for "users")
 COPY docker/create-esos-user.sh /tmp/create-esos-user.sh
 RUN chmod +x /tmp/create-esos-user.sh && /tmp/create-esos-user.sh && rm /tmp/create-esos-user.sh
 
-# Copy only the Nuxt build output (--chown user only: primary group may be "users" on Alpine)
 COPY --from=builder --chown=esos /app/.output ./
 
-# Keep package metadata for Dependency Tracker in runtime container
 COPY --from=builder --chown=esos /app/package.json ./package.json
 
-# Copy DB migrations (read at runtime by drizzle migrate())
 COPY --from=builder --chown=esos /app/server/db/migrations ./server/db/migrations
 
-# Mount points (chown uses esos primary GID — not a group named "esos")
 RUN mkdir -p /app/keys /app/data /opt/esos-webui/binaries \
  && chown -R esos:"$(id -g esos)" /app/keys /app/data /opt/esos-webui/binaries
 
-RUN apk add --no-cache su-exec
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends gosu curl \
+ && rm -rf /var/lib/apt/lists/*
 
 COPY docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Entrypoint runs as root to chown volumes, then exec su-exec esos
 USER root
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
@@ -66,8 +56,9 @@ ENV NODE_ENV=production
 ENV NITRO_PORT=3000
 ENV NITRO_HOST=0.0.0.0
 ENV ESOS_RUNTIME_USER=esos
+# Prefer DELETE on first boot after upgrades; WAL can be re-enabled once stable.
+ENV DB_JOURNAL_MODE=DELETE
 
-# Re-declare per stage (ARG does not carry across FROM) — must match builder defaults
 ARG APP_VERSION=
 ARG BUILD_ID=
 ARG GIT_COMMIT=
@@ -78,7 +69,6 @@ LABEL org.opencontainers.image.title="ESOS WebUI"
 LABEL org.opencontainers.image.version="${APP_VERSION}"
 LABEL org.opencontainers.image.description="Read-only SAN visualization for ESOS"
 
-# Version metadata — baked in at build time, overridable at runtime
 ENV APP_VERSION=${APP_VERSION}
 ENV BUILD_ID=${BUILD_ID}
 ENV GIT_COMMIT=${GIT_COMMIT}
@@ -86,6 +76,6 @@ ENV GIT_BRANCH=${GIT_BRANCH}
 ENV BUILD_DATE=${BUILD_DATE}
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -qO- http://localhost:3000/api/health || exit 1
+  CMD curl -fsS http://localhost:3000/api/health || exit 1
 
 CMD ["node", "server/index.mjs"]
