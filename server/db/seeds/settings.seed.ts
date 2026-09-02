@@ -17,7 +17,7 @@ export const DEFAULT_SETTINGS: Array<{ key: string; value: string; type: string 
   { key: 'collector.retention_hours', value: '24',   type: 'number'  },
 
   // ── Application ──────────────────────────────────────────────────
-  { key: 'app.version',    value: '1.0.2', type: 'string'  },
+  { key: 'app.version',    value: '1.0.4', type: 'string'  },
   { key: 'app.setup_done', value: 'false', type: 'boolean' },
 
   // ── Alertes passives (seuils globaux) ────────────────────────────

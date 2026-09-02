@@ -51,11 +51,18 @@ export default defineNuxtConfig({
   nitro: {
     experimental: {
       websocket: true,
+      legacyExternals: true,
     },
-    // better-sqlite3 ships a native .node binding — must stay external
-    // (bundling would break the require() of the prebuilt binary).
+    // Native bindings (.node) must stay external — bundling breaks require().
     externals: {
-      external: ['better-sqlite3', 'argon2'],
+      external: ['better-sqlite3', 'argon2', 'ssh2', 'cpu-features'],
+      traceInclude: [
+        'node_modules/ssh2/**',
+        'node_modules/cpu-features/**',
+      ],
+    },
+    rollupConfig: {
+      external: ['ssh2', 'cpu-features', 'better-sqlite3', 'argon2'],
     },
   },
   app: {
