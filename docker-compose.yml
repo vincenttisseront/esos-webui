@@ -42,8 +42,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'
-          memory: 256M
+          cpus: '1.0'
+          memory: 512M
 
   proxy:
     image: nginx:alpine

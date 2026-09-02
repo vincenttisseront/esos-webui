@@ -18,7 +18,10 @@ RUN apk add --no-cache python3 make g++
 COPY package.json package-lock.json* ./
 
 # Full install (dev deps included for the build)
-RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+# Force native compile on Alpine/musl — better-sqlite3@13 ships glibc prebuilds
+# that can load incorrectly and fail later with opaque SQLite I/O errors.
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi \
+ && npm rebuild better-sqlite3 argon2 --build-from-source
 
 # Copy the rest of the source
 COPY . .
