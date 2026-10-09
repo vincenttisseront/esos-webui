@@ -7,6 +7,10 @@ import {
   truncateForSummary,
   type OidcTestClientState,
 } from '~/utils/auth-providers-admin-ui'
+import {
+  oidcDiscoveryHintI18nKey,
+  type OidcDiscoveryErrorCode,
+} from '~/utils/oidc-discovery-errors'
 
 const props = defineProps<{
   data: AdminAuthProvidersDto
@@ -39,6 +43,13 @@ const emit = defineEmits<{
 
 const { t } = useEsosI18n()
 const { success: toastOk } = useAppToast()
+
+function oidcFailHint(code: OidcDiscoveryErrorCode): string | null {
+  const key = oidcDiscoveryHintI18nKey(code)
+  if (!key) return null
+  const msg = t(key)
+  return msg && msg !== key ? msg : null
+}
 
 const oidcCallbackFullUrl = computed(() =>
   oidcCallbackPreview(props.publicOrigin, form.value.oidcRedirectPath),
@@ -245,13 +256,41 @@ async function copyCallback() {
             <li>jwks_uri: {{ lastOidcTest.jwksUri ? t('admin.authProviders.save.present') : t('admin.authProviders.save.absent') }}</li>
           </ul>
         </template>
-        <UAlert
-          v-else
-          color="red"
-          icon="i-heroicons-x-circle"
-          :title="t('admin.authProviders.save.oidcFailTitle')"
-          :description="lastOidcTest.error"
-        />
+        <div v-else class="space-y-3">
+          <UAlert
+            color="red"
+            icon="i-heroicons-x-circle"
+            :title="t('admin.authProviders.save.oidcFailTitle')"
+            :description="lastOidcTest.error"
+          />
+          <p
+            v-if="lastOidcTest.code && oidcFailHint(lastOidcTest.code)"
+            class="text-sm text-gray-600 dark:text-gray-400"
+          >
+            {{ oidcFailHint(lastOidcTest.code) }}
+          </p>
+          <dl
+            v-if="lastOidcTest.expectedIssuer || lastOidcTest.discoveredIssuer || lastOidcTest.discoveryUrl || lastOidcTest.httpStatus"
+            class="grid gap-2 font-mono text-xs text-gray-700 dark:text-gray-300"
+          >
+            <div v-if="lastOidcTest.expectedIssuer" class="grid gap-0.5 sm:grid-cols-[10rem_1fr]">
+              <dt class="text-gray-500 dark:text-gray-400 font-sans">{{ t('admin.authProviders.oidc.testErrors.expectedIssuer') }}</dt>
+              <dd class="break-all">{{ lastOidcTest.expectedIssuer }}</dd>
+            </div>
+            <div v-if="lastOidcTest.discoveredIssuer" class="grid gap-0.5 sm:grid-cols-[10rem_1fr]">
+              <dt class="text-gray-500 dark:text-gray-400 font-sans">{{ t('admin.authProviders.oidc.testErrors.discoveredIssuer') }}</dt>
+              <dd class="break-all">{{ lastOidcTest.discoveredIssuer }}</dd>
+            </div>
+            <div v-if="lastOidcTest.httpStatus" class="grid gap-0.5 sm:grid-cols-[10rem_1fr]">
+              <dt class="text-gray-500 dark:text-gray-400 font-sans">{{ t('admin.authProviders.oidc.testErrors.httpStatus') }}</dt>
+              <dd>{{ lastOidcTest.httpStatus }}</dd>
+            </div>
+            <div v-if="lastOidcTest.discoveryUrl" class="grid gap-0.5 sm:grid-cols-[10rem_1fr]">
+              <dt class="text-gray-500 dark:text-gray-400 font-sans">{{ t('admin.authProviders.oidc.testErrors.discoveryUrl') }}</dt>
+              <dd class="break-all">{{ lastOidcTest.discoveryUrl }}</dd>
+            </div>
+          </dl>
+        </div>
       </div>
     </section>
   </div>

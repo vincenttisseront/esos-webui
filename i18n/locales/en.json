@@ -3377,8 +3377,8 @@
         "enableHelp": "Shows the SSO sign-in button on the sign-in page.",
         "sectionConnection": "Connection settings",
         "issuerLabel": "Issuer URL",
-        "issuerDesc": "HTTPS provider URL without secret. Used for OpenID discovery (/.well-known/openid-configuration).",
-        "issuerPlaceholder": "https://login.microsoftonline.com/{tenant}/v2.0",
+        "issuerDesc": "HTTPS OpenID issuer URL (not the admin console). Keycloak: https://host/realms/REALM_NAME — discovery uses /.well-known/openid-configuration.",
+        "issuerPlaceholder": "https://keycloak.example.com/realms/MY_REALM",
         "clientIdLabel": "Client ID",
         "clientIdDesc": "Public application identifier registered with the IdP.",
         "clientIdPlaceholder": "Application (client) ID",
@@ -3423,7 +3423,25 @@
         "testSection": "Connectivity test",
         "testDesc": "Checks that issuer and client_id can fetch OpenID metadata (no secrets displayed).",
         "testButton": "Test OIDC discovery",
-        "testLoginButton": "Open SSO login (new tab)"
+        "testLoginButton": "Open SSO login (new tab)",
+        "testErrors": {
+          "issuer_mismatch": "The issuer in discovered metadata does not match the configured URL.",
+          "issuer_mismatch_hint": "Copy the exact « issuer » field from /.well-known/openid-configuration (no trailing slash, not the admin console URL). Keycloak: https://host/realms/REALM_NAME.",
+          "http_status": "The identity provider returned an unexpected HTTP response for OpenID discovery.",
+          "http_status_with_code": "The identity provider returned HTTP {status} for OpenID discovery.",
+          "http_status_hint": "Check the issuer URL. It must not be the Keycloak admin console (/admin/…). Open the discovery URL below in a browser — it must return JSON.",
+          "network": "Cannot reach the identity provider (network, DNS, or TLS).",
+          "network_hint": "Check connectivity from the ESOS server to the IdP, TLS certificates, and outbound proxy.",
+          "timeout": "Timed out while performing OpenID discovery.",
+          "timeout_hint": "The IdP took too long to respond. Check network path and IdP availability.",
+          "invalid_issuer": "The issuer value is not a valid HTTPS URL.",
+          "invalid_issuer_hint": "Enter a full URL, e.g. https://keycloak.example.com/realms/MY_REALM.",
+          "unknown": "OpenID discovery failed.",
+          "expectedIssuer": "Configured issuer",
+          "discoveredIssuer": "Discovered issuer",
+          "httpStatus": "HTTP status",
+          "discoveryUrl": "Discovery URL"
+        }
       },
       "header": {
         "statusTitle": "Bastion header SSO status",

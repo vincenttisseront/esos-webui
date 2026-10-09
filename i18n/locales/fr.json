@@ -3377,8 +3377,8 @@
         "enableHelp": "Affiche le bouton de connexion SSO sur la page de connexion.",
         "sectionConnection": "Paramètres de connexion",
         "issuerLabel": "URL de l’émetteur (issuer)",
-        "issuerDesc": "URL HTTPS du fournisseur, sans secret. Sert à la découverte OpenID (/.well-known/openid-configuration).",
-        "issuerPlaceholder": "https://login.microsoftonline.com/{tenant}/v2.0",
+        "issuerDesc": "URL HTTPS de l’émetteur OpenID (pas la console d’admin). Keycloak : https://host/realms/NOM_REALM — la découverte utilise /.well-known/openid-configuration.",
+        "issuerPlaceholder": "https://keycloak.example.com/realms/MON_REALM",
         "clientIdLabel": "Identifiant client (client_id)",
         "clientIdDesc": "Identifiant public de l’application enregistrée auprès de l’IdP.",
         "clientIdPlaceholder": "Application (client) ID",
@@ -3423,7 +3423,25 @@
         "testSection": "Test de connectivité",
         "testDesc": "Vérifie que l’issuer et le client_id permettent de récupérer les métadonnées OpenID (sans afficher de secrets).",
         "testButton": "Tester la découverte OIDC",
-        "testLoginButton": "Ouvrir la connexion SSO (nouvel onglet)"
+        "testLoginButton": "Ouvrir la connexion SSO (nouvel onglet)",
+        "testErrors": {
+          "issuer_mismatch": "L’issuer découvert dans les métadonnées ne correspond pas à l’URL configurée.",
+          "issuer_mismatch_hint": "Copiez exactement le champ « issuer » du document /.well-known/openid-configuration (sans slash final, sans URL de console d’admin). Keycloak : https://host/realms/NOM_REALM.",
+          "http_status": "Le serveur d’identité a renvoyé une réponse HTTP inattendue pour la découverte OpenID.",
+          "http_status_with_code": "Le serveur d’identité a renvoyé HTTP {status} pour la découverte OpenID.",
+          "http_status_hint": "Vérifiez l’URL d’issuer. Ce n’est pas l’URL de la console Keycloak (/admin/…). Ouvrez l’URL de découverte ci-dessous dans un navigateur : elle doit renvoyer du JSON.",
+          "network": "Impossible de joindre le serveur d’identité (réseau, DNS ou TLS).",
+          "network_hint": "Vérifiez la connectivité depuis le serveur ESOS vers l’IdP, le certificat TLS et le proxy sortant.",
+          "timeout": "Délai dépassé lors de la découverte OpenID.",
+          "timeout_hint": "L’IdP met trop de temps à répondre. Vérifiez le réseau et la disponibilité du serveur d’identité.",
+          "invalid_issuer": "L’URL d’issuer n’est pas une URL HTTPS valide.",
+          "invalid_issuer_hint": "Saisissez une URL complète, par ex. https://keycloak.example.com/realms/MON_REALM.",
+          "unknown": "Échec de la découverte OpenID.",
+          "expectedIssuer": "Issuer configuré",
+          "discoveredIssuer": "Issuer découvert",
+          "httpStatus": "Code HTTP",
+          "discoveryUrl": "URL de découverte"
+        }
       },
       "header": {
         "statusTitle": "État SSO par en-têtes Bastion",

@@ -25,6 +25,7 @@ import type { AdminAuthProvidersDto } from '../server/utils/auth-providers-confi
 import type { LdapTestDiagnostic, LdapTestConfigSummary } from '../server/utils/ldap-diagnostics'
 import type { LdapStructuredTestResponse } from '../server/utils/ldap-test-response'
 import { buildInitialStepResults } from '../server/utils/ldap-diagnostics'
+import type { OidcDiscoveryErrorCode } from './oidc-discovery-errors'
 
 export type { LdapTestDiagnostic }
 
@@ -86,7 +87,15 @@ export function ldapTestClientNetworkFailure(
 
 export type OidcTestClientState =
   | { ok: true; authorizationEndpoint?: boolean; tokenEndpoint?: boolean; jwksUri?: boolean }
-  | { ok: false; error: string }
+  | {
+      ok: false
+      error: string
+      code?: OidcDiscoveryErrorCode
+      expectedIssuer?: string
+      discoveredIssuer?: string
+      httpStatus?: number
+      discoveryUrl?: string
+    }
   | null
 
 export function defaultAuthProviderTab(dto: AdminAuthProvidersDto | null): AuthProviderTabId {

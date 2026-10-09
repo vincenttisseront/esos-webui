@@ -12,6 +12,7 @@ import {
   type LdapTestClientState,
   type OidcTestClientState,
 } from '~/utils/auth-providers-admin-ui'
+import type { OidcDiscoveryTestResult } from '~/utils/oidc-discovery-errors'
 import {
   applyHeaderSnapshotToFormInput,
   applyLdapSnapshotToFormInput,
@@ -390,18 +391,30 @@ async function testLdapSearchRoot() {
 const testingOidc = ref(false)
 const lastOidcTest = ref<OidcTestClientState>(null)
 
+function formatOidcTestFailureMessage(r: {
+  code?: string
+  error?: string
+  httpStatus?: number
+}): string {
+  if (r.code) {
+    const key = `admin.authProviders.oidc.testErrors.${r.code}`
+    const translated = t(key)
+    if (translated && translated !== key) {
+      if (r.code === 'http_status' && r.httpStatus) {
+        return t('admin.authProviders.oidc.testErrors.http_status_with_code', { status: r.httpStatus })
+      }
+      return translated
+    }
+  }
+  return r.error ?? t('admin.authProviders.toasts.failure')
+}
+
 async function testOidc() {
   if (!canEditAuthProviders.value) return
   testingOidc.value = true
   lastOidcTest.value = null
   try {
-    const r = await $fetch<{
-      ok: boolean
-      authorizationEndpoint?: boolean
-      tokenEndpoint?: boolean
-      jwksUri?: boolean
-      error?: string
-    }>('/api/admin/auth-providers/oidc/test', { method: 'POST' })
+    const r = await $fetch<OidcDiscoveryTestResult>('/api/admin/auth-providers/oidc/test', { method: 'POST' })
     if (r.ok) {
       lastOidcTest.value = {
         ok: true,
@@ -411,12 +424,21 @@ async function testOidc() {
       }
       toastOk(t('admin.authProviders.toasts.oidcTitle'), t('admin.authProviders.toasts.oidcDiscoveryOk'))
     } else {
-      lastOidcTest.value = { ok: false, error: r.error ?? t('admin.authProviders.toasts.failure') }
-      toastErr(t('admin.authProviders.toasts.oidcTitle'), r.error ?? t('admin.authProviders.toasts.failure'))
+      const msg = formatOidcTestFailureMessage(r)
+      lastOidcTest.value = {
+        ok:               false,
+        error:            msg,
+        code:             r.code,
+        expectedIssuer:   r.expectedIssuer,
+        discoveredIssuer: r.discoveredIssuer,
+        httpStatus:       r.httpStatus,
+        discoveryUrl:     r.discoveryUrl,
+      }
+      toastErr(t('admin.authProviders.toasts.oidcTitle'), msg)
     }
   } catch (e: unknown) {
     const msg = tError(e)
-    lastOidcTest.value = { ok: false, error: msg }
+    lastOidcTest.value = { ok: false, error: msg, code: 'unknown' }
     toastErr(t('admin.authProviders.toasts.oidcTitle'), msg)
   } finally {
     testingOidc.value = false
