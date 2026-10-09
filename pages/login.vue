@@ -91,12 +91,22 @@ function applyRouteError() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   applyRouteError()
   if (typeof route.query.error === 'string' && route.query.error) return
+  // Header SSO is primarily handled in auth.global middleware (no /login bounce).
+  // Client fallback if the user lands here with Bastion headers already present.
   const url = headerLoginUrl.value
-  if (url && import.meta.client) {
-    window.location.href = url
+  if (url && import.meta.client && !auth.isAuthenticated) {
+    try {
+      await $fetch(url)
+      await auth.fetchMe()
+      if (auth.isAuthenticated) {
+        await router.replace('/')
+      }
+    } catch {
+      /* stay on login form */
+    }
   }
 })
 

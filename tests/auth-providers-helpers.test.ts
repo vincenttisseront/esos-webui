@@ -242,7 +242,7 @@ describe('auth-providers-admin-ui', () => {
       },
       ldap: { enabled: false, url: '', startTls: false, tlsVerify: true, bindDn: '', bindPasswordSet: false, baseDn: '', userSearchFilter: '', usernameAttribute: 'sAMAccountName', displayNameAttribute: 'displayName', groupAttribute: 'memberOf', timeoutSec: 10 },
       oidc: { enabled: false, issuer: '', clientId: '', clientSecretSet: false, scopes: '', redirectPath: '/api/auth/oidc/callback', clockSkewSec: 60 },
-      header: { enabled: false, userHeader: 'X-Forwarded-User', emailHeader: '', groupsHeader: '', groupsDelimiter: ',', displayNameHeader: '', issuer: 'bastion-pro', tokenHeader: 'X-ESOS-Auth-Token', internalTokenSet: false },
+      header: { enabled: false, userHeader: 'X-Remote-User', emailHeader: '', groupsHeader: '', groupsDelimiter: ',', displayNameHeader: '', issuer: 'bastion-pro', tokenHeader: 'X-ESOS-Auth-Token', internalTokenSet: false, requireInternalToken: false },
       auth: { jitEnabled: false, jitDefaultRole: 'viewer', jitDefaultActive: true, mfaMode: 'off', mappingRulesJson: '[]', oidcMaxRole: null, ldapMaxRole: null, headerMaxRole: null },
     }
     expect(defaultAuthProviderTab(base)).toBe('local')

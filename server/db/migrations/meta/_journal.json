@@ -141,6 +141,20 @@
       "when": 1747785600000,
       "tag": "0020_deployment_binary_status",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1747872000000,
+      "tag": "0021_auth_header_source",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1747958400000,
+      "tag": "0022_header_remote_user",
+      "breakpoints": true
     }
   ]
 }

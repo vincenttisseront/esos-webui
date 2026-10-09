@@ -31,14 +31,15 @@ export type AuthProvidersOidcFormSnapshot = {
 }
 
 export type AuthProvidersHeaderFormSnapshot = {
-  enabled:           boolean
-  userHeader:        string
-  emailHeader:       string
-  groupsHeader:      string
-  groupsDelimiter:   string
-  displayNameHeader: string
-  issuer:            string
-  tokenHeader:       string
+  enabled:              boolean
+  userHeader:           string
+  emailHeader:          string
+  groupsHeader:         string
+  groupsDelimiter:      string
+  displayNameHeader:    string
+  issuer:               string
+  tokenHeader:          string
+  requireInternalToken: boolean
 }
 
 export type AuthProvidersAuthFormSnapshot = {
@@ -93,6 +94,7 @@ export type AuthProvidersFormInput = {
   headerDisplayNameHeader: string
   headerIssuer: string
   headerTokenHeader: string
+  headerRequireInternalToken: boolean
 
   jitEnabled: boolean
   jitDefaultRole: UserRole
@@ -149,14 +151,15 @@ export function snapshotFromDto(d: AdminAuthProvidersDto): AuthProvidersFormSnap
       clockSkewSec: d.oidc.clockSkewSec,
     },
     header: {
-      enabled:           d.header.enabled,
-      userHeader:        trim(d.header.userHeader),
-      emailHeader:       trim(d.header.emailHeader),
-      groupsHeader:      trim(d.header.groupsHeader),
-      groupsDelimiter:   trim(d.header.groupsDelimiter),
-      displayNameHeader: trim(d.header.displayNameHeader),
-      issuer:            trim(d.header.issuer),
-      tokenHeader:       trim(d.header.tokenHeader),
+      enabled:              d.header.enabled,
+      userHeader:           trim(d.header.userHeader),
+      emailHeader:          trim(d.header.emailHeader),
+      groupsHeader:         trim(d.header.groupsHeader),
+      groupsDelimiter:      trim(d.header.groupsDelimiter),
+      displayNameHeader:    trim(d.header.displayNameHeader),
+      issuer:               trim(d.header.issuer),
+      tokenHeader:          trim(d.header.tokenHeader),
+      requireInternalToken: d.header.requireInternalToken,
     },
     auth: {
       jitEnabled:       d.auth.jitEnabled,
@@ -201,14 +204,15 @@ export function snapshotFromFormInput(
       clockSkewSec: input.oidcClockSkewSec,
     },
     header: {
-      enabled:           input.headerEnabled,
-      userHeader:        trim(input.headerUserHeader),
-      emailHeader:       trim(input.headerEmailHeader),
-      groupsHeader:      trim(input.headerGroupsHeader),
-      groupsDelimiter:   trim(input.headerGroupsDelimiter),
-      displayNameHeader: trim(input.headerDisplayNameHeader),
-      issuer:            trim(input.headerIssuer),
-      tokenHeader:       trim(input.headerTokenHeader),
+      enabled:              input.headerEnabled,
+      userHeader:           trim(input.headerUserHeader),
+      emailHeader:          trim(input.headerEmailHeader),
+      groupsHeader:         trim(input.headerGroupsHeader),
+      groupsDelimiter:      trim(input.headerGroupsDelimiter),
+      displayNameHeader:    trim(input.headerDisplayNameHeader),
+      issuer:               trim(input.headerIssuer),
+      tokenHeader:          trim(input.headerTokenHeader),
+      requireInternalToken: input.headerRequireInternalToken,
     },
     auth: {
       jitEnabled:       input.jitEnabled,
@@ -342,15 +346,16 @@ export function applyHeaderSnapshotToFormInput(
   target: AuthProvidersFormInput,
   snap: AuthProvidersFormSnapshot,
 ): void {
-  target.headerEnabled           = snap.header.enabled
-  target.headerUserHeader        = snap.header.userHeader
-  target.headerEmailHeader       = snap.header.emailHeader
-  target.headerGroupsHeader      = snap.header.groupsHeader
-  target.headerGroupsDelimiter   = snap.header.groupsDelimiter
-  target.headerDisplayNameHeader = snap.header.displayNameHeader
-  target.headerIssuer            = snap.header.issuer
-  target.headerTokenHeader       = snap.header.tokenHeader
-  target.headerMaxRole           = snap.auth.headerMaxRole
+  target.headerEnabled               = snap.header.enabled
+  target.headerUserHeader            = snap.header.userHeader
+  target.headerEmailHeader           = snap.header.emailHeader
+  target.headerGroupsHeader          = snap.header.groupsHeader
+  target.headerGroupsDelimiter       = snap.header.groupsDelimiter
+  target.headerDisplayNameHeader     = snap.header.displayNameHeader
+  target.headerIssuer                = snap.header.issuer
+  target.headerTokenHeader           = snap.header.tokenHeader
+  target.headerRequireInternalToken  = snap.header.requireInternalToken
+  target.headerMaxRole               = snap.auth.headerMaxRole
 }
 
 export function applyMappingSnapshotToFormInput(

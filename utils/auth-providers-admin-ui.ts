@@ -156,17 +156,19 @@ export function headerConfigCompleteFromForm(p: {
   headerIssuer: string
   headerTokenHeader: string
   headerInternalTokenSet: boolean
+  headerRequireInternalToken?: boolean
 }): boolean {
   return isHeaderAuthConfigSufficient({
-    enabled:           true,
-    userHeader:        p.headerUserHeader,
-    emailHeader:       '',
-    groupsHeader:      '',
-    groupsDelimiter:   ',',
-    displayNameHeader: '',
-    issuer:            p.headerIssuer,
-    tokenHeader:       p.headerTokenHeader,
-    internalTokenSet:  p.headerInternalTokenSet,
+    enabled:              true,
+    userHeader:           p.headerUserHeader,
+    emailHeader:          '',
+    groupsHeader:         '',
+    groupsDelimiter:      ',',
+    displayNameHeader:    '',
+    issuer:               p.headerIssuer,
+    tokenHeader:          p.headerTokenHeader,
+    internalTokenSet:     p.headerInternalTokenSet,
+    requireInternalToken: p.headerRequireInternalToken ?? false,
   })
 }
 
@@ -186,6 +188,7 @@ export function loginSummaryFromForm(params: {
   headerIssuer?: string
   headerTokenHeader?: string
   headerInternalTokenSet?: boolean
+  headerRequireInternalToken?: boolean
   jitEnabled: boolean
   ldapUserCount: number
   oidcUserCount: number
@@ -220,15 +223,16 @@ export function loginSummaryFromForm(params: {
       clockSkewSec:     60,
     },
     header: {
-      enabled:           params.headerEnabled ?? false,
-      userHeader:        params.headerUserHeader ?? 'X-Forwarded-User',
-      emailHeader:       '',
-      groupsHeader:      '',
-      groupsDelimiter:   ',',
-      displayNameHeader: '',
-      issuer:            params.headerIssuer ?? 'bastion-pro',
-      tokenHeader:       params.headerTokenHeader ?? 'X-ESOS-Auth-Token',
-      internalTokenSet:  params.headerInternalTokenSet ?? false,
+      enabled:              params.headerEnabled ?? false,
+      userHeader:           params.headerUserHeader ?? 'X-Remote-User',
+      emailHeader:          '',
+      groupsHeader:         '',
+      groupsDelimiter:      ',',
+      displayNameHeader:    '',
+      issuer:               params.headerIssuer ?? 'bastion-pro',
+      tokenHeader:          params.headerTokenHeader ?? 'X-ESOS-Auth-Token',
+      internalTokenSet:     params.headerInternalTokenSet ?? false,
+      requireInternalToken: params.headerRequireInternalToken ?? false,
     },
     auth: {
       jitEnabled:       params.jitEnabled,

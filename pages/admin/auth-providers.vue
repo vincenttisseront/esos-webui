@@ -110,13 +110,14 @@ const form = reactive({
   oidcClockSkewSec: 60,
 
   headerEnabled: false,
-  headerUserHeader: 'X-Forwarded-User',
-  headerEmailHeader: 'X-Forwarded-Email',
-  headerGroupsHeader: 'X-Forwarded-Groups',
+  headerUserHeader: 'X-Remote-User',
+  headerEmailHeader: 'X-Remote-Email',
+  headerGroupsHeader: 'X-Remote-Groups',
   headerGroupsDelimiter: ',',
-  headerDisplayNameHeader: 'X-Forwarded-Preferred-Username',
+  headerDisplayNameHeader: 'X-Remote-Name',
   headerIssuer: 'bastion-pro',
   headerTokenHeader: 'X-ESOS-Auth-Token',
+  headerRequireInternalToken: false,
 
   jitEnabled: false,
   jitDefaultRole: 'viewer' as 'admin' | 'operator' | 'viewer',
@@ -249,6 +250,7 @@ async function save() {
         displayNameHeader: form.headerDisplayNameHeader,
         issuer: form.headerIssuer,
         tokenHeader: form.headerTokenHeader,
+        requireInternalToken: form.headerRequireInternalToken,
       },
       auth: {
         jitEnabled: form.jitEnabled,

@@ -53,14 +53,15 @@ export const AUTH_PROVIDER_DEFAULTS: Array<{ key: string; value: string; type: '
   { key: 'auth.header.max_role', value: '', type: 'string' },
 
   { key: 'header_auth.enabled', value: 'false', type: 'boolean' },
-  { key: 'header_auth.user_header', value: 'X-Forwarded-User', type: 'string' },
-  { key: 'header_auth.email_header', value: 'X-Forwarded-Email', type: 'string' },
-  { key: 'header_auth.groups_header', value: 'X-Forwarded-Groups', type: 'string' },
+  { key: 'header_auth.user_header', value: 'X-Remote-User', type: 'string' },
+  { key: 'header_auth.email_header', value: 'X-Remote-Email', type: 'string' },
+  { key: 'header_auth.groups_header', value: 'X-Remote-Groups', type: 'string' },
   { key: 'header_auth.groups_delimiter', value: ',', type: 'string' },
-  { key: 'header_auth.display_name_header', value: 'X-Forwarded-Preferred-Username', type: 'string' },
+  { key: 'header_auth.display_name_header', value: 'X-Remote-Name', type: 'string' },
   { key: 'header_auth.issuer', value: 'bastion-pro', type: 'string' },
   { key: 'header_auth.token_header', value: 'X-ESOS-Auth-Token', type: 'string' },
   { key: 'header_auth.internal_token', value: '', type: 'secret' },
+  { key: 'header_auth.require_internal_token', value: 'false', type: 'boolean' },
 ]
 
 export async function ensureAuthProviderDefaultSettings(): Promise<void> {
@@ -129,15 +130,17 @@ export interface AdminAuthProvidersDto {
     clockSkewSec:      number
   }
   header: {
-    enabled:            boolean
-    userHeader:         string
-    emailHeader:        string
-    groupsHeader:       string
-    groupsDelimiter:    string
-    displayNameHeader:  string
-    issuer:             string
-    tokenHeader:        string
-    internalTokenSet:   boolean
+    enabled:              boolean
+    userHeader:           string
+    emailHeader:          string
+    groupsHeader:         string
+    groupsDelimiter:      string
+    displayNameHeader:    string
+    issuer:               string
+    tokenHeader:          string
+    internalTokenSet:     boolean
+    /** When true, shared token is mandatory. When false, private-proxy peer + identity header is enough. */
+    requireInternalToken: boolean
   }
   auth: {
     jitEnabled:        boolean
@@ -188,15 +191,16 @@ export async function buildAdminAuthProvidersDto(): Promise<AdminAuthProvidersDt
     }
 
   const header = {
-      enabled:           bool(s['header_auth.enabled'], false),
-      userHeader:        s['header_auth.user_header'] ?? 'X-Forwarded-User',
-      emailHeader:       s['header_auth.email_header'] ?? 'X-Forwarded-Email',
-      groupsHeader:      s['header_auth.groups_header'] ?? 'X-Forwarded-Groups',
-      groupsDelimiter:   s['header_auth.groups_delimiter'] ?? ',',
-      displayNameHeader: s['header_auth.display_name_header'] ?? 'X-Forwarded-Preferred-Username',
-      issuer:            s['header_auth.issuer'] ?? 'bastion-pro',
-      tokenHeader:       s['header_auth.token_header'] ?? 'X-ESOS-Auth-Token',
-      internalTokenSet:  (s['header_auth.internal_token'] ?? '') === '***',
+      enabled:              bool(s['header_auth.enabled'], false),
+      userHeader:           s['header_auth.user_header'] ?? 'X-Remote-User',
+      emailHeader:          s['header_auth.email_header'] ?? 'X-Remote-Email',
+      groupsHeader:         s['header_auth.groups_header'] ?? 'X-Remote-Groups',
+      groupsDelimiter:      s['header_auth.groups_delimiter'] ?? ',',
+      displayNameHeader:    s['header_auth.display_name_header'] ?? 'X-Remote-Name',
+      issuer:               s['header_auth.issuer'] ?? 'bastion-pro',
+      tokenHeader:          s['header_auth.token_header'] ?? 'X-ESOS-Auth-Token',
+      internalTokenSet:     (s['header_auth.internal_token'] ?? '') === '***',
+      requireInternalToken: bool(s['header_auth.require_internal_token'], false),
     }
 
   const auth = {
@@ -286,6 +290,7 @@ export type AuthProvidersPatchBody = Partial<{
     issuer: string
     tokenHeader: string
     internalToken: string
+    requireInternalToken: boolean
   }>
   auth: Partial<{
     jitEnabled: boolean
@@ -391,6 +396,10 @@ export async function applyAuthProvidersPatch(body: AuthProvidersPatchBody): Pro
     if (H.internalToken !== undefined && H.internalToken !== '') {
       await setSetting('header_auth.internal_token', H.internalToken, 'secret')
       updated.push('header_auth.internal_token')
+    }
+    if (H.requireInternalToken !== undefined) {
+      await setSetting('header_auth.require_internal_token', String(H.requireInternalToken), 'boolean')
+      updated.push('header_auth.require_internal_token')
     }
   }
 

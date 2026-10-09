@@ -46,7 +46,8 @@ const baseDto = (): AdminAuthProvidersDto => ({
     displayNameHeader: '',
     issuer:            'bastion-pro',
     tokenHeader:       'X-ESOS-Auth-Token',
-    internalTokenSet:  false,
+    internalTokenSet:     false,
+    requireInternalToken: false,
   },
   auth: {
     jitEnabled:       false,

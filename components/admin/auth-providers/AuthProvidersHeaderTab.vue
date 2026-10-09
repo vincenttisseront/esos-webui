@@ -23,6 +23,7 @@ const form = defineModel<{
   headerDisplayNameHeader: string
   headerIssuer: string
   headerTokenHeader: string
+  headerRequireInternalToken: boolean
   headerMaxRole: 'none' | UserRole
 }>('form', { required: true })
 
@@ -48,10 +49,11 @@ const headerTokenSet = computed(
 
 const headerComplete = computed(() =>
   headerConfigCompleteFromForm({
-    headerUserHeader:        form.value.headerUserHeader,
-    headerIssuer:            form.value.headerIssuer,
-    headerTokenHeader:       form.value.headerTokenHeader,
-    headerInternalTokenSet:  headerTokenSet.value,
+    headerUserHeader:             form.value.headerUserHeader,
+    headerIssuer:                 form.value.headerIssuer,
+    headerTokenHeader:            form.value.headerTokenHeader,
+    headerInternalTokenSet:       headerTokenSet.value,
+    headerRequireInternalToken:   form.value.headerRequireInternalToken,
   }),
 )
 
@@ -72,6 +74,7 @@ const loginHeader = computed(() =>
     headerIssuer:         form.value.headerIssuer,
     headerTokenHeader:    form.value.headerTokenHeader,
     headerInternalTokenSet: headerTokenSet.value,
+    headerRequireInternalToken: form.value.headerRequireInternalToken,
     jitEnabled:           props.data.auth.jitEnabled,
     ldapUserCount:        0,
     oidcUserCount:        0,
@@ -133,13 +136,19 @@ const loginHeader = computed(() =>
       <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
         {{ t('admin.authProviders.header.sectionTrust') }}
       </h3>
+      <UCheckbox
+        v-model="form.headerRequireInternalToken"
+        :disabled="readOnly"
+        :label="t('admin.authProviders.header.requireTokenLabel')"
+        :help="t('admin.authProviders.header.requireTokenDesc')"
+      />
       <AppFormField :label="t('admin.authProviders.header.tokenHeaderLabel')" :help="t('admin.authProviders.header.tokenHeaderDesc')">
-        <AppTextInput v-model="form.headerTokenHeader" :disabled="readOnly" class="font-mono" />
+        <AppTextInput v-model="form.headerTokenHeader" :disabled="readOnly || !form.headerRequireInternalToken" class="font-mono" />
       </AppFormField>
       <AppFormField :label="t('admin.authProviders.header.internalTokenLabel')" :help="t('admin.authProviders.header.internalTokenDesc')">
         <AppTextInput
           v-model="headerInternalToken"
-          :disabled="readOnly"
+          :disabled="readOnly || !form.headerRequireInternalToken"
           type="password"
           autocomplete="off"
           class="font-mono"

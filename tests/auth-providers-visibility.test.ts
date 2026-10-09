@@ -50,15 +50,16 @@ function baseDto(overrides?: Partial<AdminAuthProvidersDto>): AdminAuthProviders
       clockSkewSec:     60,
     },
     header: {
-      enabled:           false,
-      userHeader:        'X-Forwarded-User',
-      emailHeader:       'X-Forwarded-Email',
-      groupsHeader:      'X-Forwarded-Groups',
-      groupsDelimiter:   ',',
-      displayNameHeader: 'X-Forwarded-Preferred-Username',
-      issuer:            'bastion-pro',
-      tokenHeader:       'X-ESOS-Auth-Token',
-      internalTokenSet:  false,
+      enabled:              false,
+      userHeader:           'X-Remote-User',
+      emailHeader:          'X-Remote-Email',
+      groupsHeader:         'X-Remote-Groups',
+      groupsDelimiter:      ',',
+      displayNameHeader:    'X-Remote-Name',
+      issuer:               'bastion-pro',
+      tokenHeader:          'X-ESOS-Auth-Token',
+      internalTokenSet:     false,
+      requireInternalToken: false,
     },
     auth: {
       jitEnabled:       false,
@@ -100,9 +101,27 @@ describe('auth-providers-public', () => {
     expect(res.defaultProvider).toBe('header')
   })
 
-  it('header unavailable without internal token', () => {
+  it('header available without token when requireInternalToken is false', () => {
     const dto = baseDto({
-      header: { ...baseDto().header, enabled: true, internalTokenSet: false },
+      header: {
+        ...baseDto().header,
+        enabled:              true,
+        internalTokenSet:     false,
+        requireInternalToken: false,
+      },
+      auth: { ...baseDto().auth, jitEnabled: true },
+    })
+    expect(isHeaderLoginAvailable(dto, zeroCounts)).toBe(true)
+  })
+
+  it('header unavailable without internal token when required', () => {
+    const dto = baseDto({
+      header: {
+        ...baseDto().header,
+        enabled:              true,
+        internalTokenSet:     false,
+        requireInternalToken: true,
+      },
       auth: { ...baseDto().auth, jitEnabled: true },
     })
     expect(isHeaderLoginAvailable(dto, zeroCounts)).toBe(false)
