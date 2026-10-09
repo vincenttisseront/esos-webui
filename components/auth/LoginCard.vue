@@ -24,13 +24,14 @@
           :key="mode.id"
           type="button"
           role="tab"
-          class="min-h-11 rounded-full px-2 text-center text-xs font-semibold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 sm:text-sm"
+          class="flex min-h-11 items-center justify-center gap-1.5 rounded-full px-2 text-center text-xs font-semibold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 sm:text-sm"
           :class="tabClass(mode)"
           :aria-selected="activeMode === mode.id"
           :tabindex="activeMode === mode.id ? 0 : -1"
           :aria-controls="panelId(mode.id)"
           @click="selectMode(mode.id)"
         >
+          <UIcon :name="modeIcon(mode.id)" class="hidden h-3.5 w-3.5 sm:inline-block" aria-hidden="true" />
           {{ mode.label }}
         </button>
       </div>
@@ -38,10 +39,17 @@
 
     <div v-if="availableModes.length > 0" class="mb-7 flex justify-center">
       <div
-        class="flex h-16 w-16 items-center justify-center rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-inner"
+        class="flex h-16 w-16 items-center justify-center rounded-2xl border shadow-inner"
+        :class="activeMode === 'oidc'
+          ? 'border-indigo-200 dark:border-indigo-800 bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-950/50 dark:to-blue-950/40'
+          : 'border-blue-100 dark:border-blue-900/40 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/30'"
         aria-hidden="true"
       >
-        <UIcon :name="activeIcon" class="h-8 w-8 text-blue-700" />
+        <UIcon
+          :name="activeIcon"
+          class="h-8 w-8"
+          :class="activeMode === 'oidc' ? 'text-indigo-700 dark:text-indigo-300' : 'text-blue-700 dark:text-blue-300'"
+        />
       </div>
     </div>
 
@@ -65,14 +73,14 @@
 
     <div
       v-if="availableModes.length === 0"
-      class="space-y-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-5 text-center"
+      class="space-y-4 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-4 py-5 text-center"
       role="alert"
     >
-      <UIcon name="i-heroicons-exclamation-triangle" class="mx-auto h-8 w-8 text-amber-600" />
-      <h2 class="text-lg font-semibold text-amber-950">
+      <UIcon name="i-heroicons-exclamation-triangle" class="mx-auto h-8 w-8 text-amber-600 dark:text-amber-400" />
+      <h2 class="text-lg font-semibold text-amber-950 dark:text-amber-100">
         {{ t('auth.login.no_methods_title') }}
       </h2>
-      <p class="text-sm leading-6 text-amber-800">
+      <p class="text-sm leading-6 text-amber-800 dark:text-amber-200">
         {{ t('auth.login.no_methods_help') }}
       </p>
     </div>
@@ -98,10 +106,10 @@
           @submit.prevent="emit('submit-local')"
         >
           <div class="space-y-1.5">
-            <h2 class="text-xl font-semibold tracking-tight text-slate-950">
+            <h2 class="text-xl font-semibold tracking-tight text-slate-950 dark:text-gray-100">
               {{ t('auth.login.local_title') }}
             </h2>
-            <p class="text-sm leading-6 text-slate-500">
+            <p class="text-sm leading-6 text-slate-500 dark:text-gray-400">
               {{ t('auth.login.local_help') }}
             </p>
           </div>
@@ -132,7 +140,7 @@
           <div class="flex justify-end pt-0.5">
             <button
               type="button"
-              class="rounded text-sm font-medium text-blue-700 underline-offset-2 hover:text-blue-800 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 disabled:opacity-50"
+              class="rounded text-sm font-medium text-blue-700 dark:text-blue-400 underline-offset-2 hover:text-blue-800 dark:hover:text-blue-300 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 disabled:opacity-50"
               :disabled="submitting"
               @click="emit('forgot-password')"
             >
@@ -150,6 +158,15 @@
           >
             {{ t('auth.login.local_submit') }}
           </UButton>
+
+          <button
+            v-if="hasOidc"
+            type="button"
+            class="w-full text-center text-sm font-medium text-indigo-700 dark:text-indigo-300 hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
+            @click="selectMode('oidc')"
+          >
+            {{ t('auth.login.switch_to_sso') }}
+          </button>
         </form>
 
         <form
@@ -163,10 +180,10 @@
           @submit.prevent="emit('ldap-submit')"
         >
           <div class="space-y-1.5">
-            <h2 class="text-xl font-semibold tracking-tight text-slate-950">
+            <h2 class="text-xl font-semibold tracking-tight text-slate-950 dark:text-gray-100">
               {{ t('auth.login.ldap_title') }}
             </h2>
-            <p class="text-sm leading-6 text-slate-500">
+            <p class="text-sm leading-6 text-slate-500 dark:text-gray-400">
               {{ t('auth.login.ldap_help') }}
             </p>
           </div>
@@ -204,30 +221,46 @@
           >
             {{ t('auth.login.ldap_submit') }}
           </UButton>
+
+          <button
+            v-if="hasOidc"
+            type="button"
+            class="w-full text-center text-sm font-medium text-indigo-700 dark:text-indigo-300 hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
+            @click="selectMode('oidc')"
+          >
+            {{ t('auth.login.switch_to_sso') }}
+          </button>
         </form>
 
         <div
           v-else-if="activeMode === 'oidc'"
           :id="panelId('oidc')"
           key="oidc"
-          class="space-y-6 text-center"
+          class="space-y-6"
           role="tabpanel"
           :aria-labelledby="availableModes.length > 1 ? tabId('oidc') : undefined"
         >
           <div class="space-y-1.5 text-center">
-            <h2 class="text-xl font-semibold tracking-tight text-slate-950">
+            <h2 class="text-xl font-semibold tracking-tight text-slate-950 dark:text-gray-100">
               {{ t('auth.login.sso_title') }}
             </h2>
-            <p class="text-sm leading-6 text-slate-500">
+            <p class="text-sm leading-6 text-slate-500 dark:text-gray-400">
               {{ t('auth.login.sso_help') }}
             </p>
           </div>
 
-          <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
-            <div class="mb-2 flex justify-center">
-              <UIcon name="i-heroicons-building-office-2" class="h-5 w-5 text-slate-500" aria-hidden="true" />
+          <div class="rounded-2xl border border-indigo-100 dark:border-indigo-900/50 bg-gradient-to-br from-indigo-50/80 to-slate-50 dark:from-indigo-950/40 dark:to-gray-900/60 px-5 py-5 text-center">
+            <div class="mb-3 flex justify-center">
+              <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-white dark:bg-gray-900 border border-indigo-100 dark:border-indigo-800 shadow-sm">
+                <UIcon name="i-heroicons-building-office-2" class="h-5 w-5 text-indigo-600 dark:text-indigo-300" aria-hidden="true" />
+              </div>
             </div>
-            {{ t('auth.login.sso_provider_generic') }}
+            <p class="text-sm font-medium text-slate-800 dark:text-gray-100">
+              {{ t('auth.login.sso_provider_generic') }}
+            </p>
+            <p class="mt-1.5 text-xs leading-5 text-slate-500 dark:text-gray-400">
+              {{ t('auth.login.sso_redirect_note') }}
+            </p>
           </div>
 
           <UButton
@@ -236,11 +269,15 @@
             size="lg"
             icon="i-heroicons-arrow-right-on-rectangle"
             :loading="ssoRedirecting"
-            class="h-12 justify-center bg-gradient-to-r from-blue-600 to-indigo-600 font-semibold shadow-lg shadow-blue-900/20 hover:from-blue-700 hover:to-indigo-700"
+            class="h-12 justify-center bg-gradient-to-r from-indigo-600 to-blue-600 font-semibold shadow-lg shadow-indigo-900/25 hover:from-indigo-700 hover:to-blue-700"
             @click="onSsoClick"
           >
             {{ t('auth.login.sso_submit') }}
           </UButton>
+
+          <p class="text-center text-xs text-slate-400 dark:text-gray-500">
+            {{ t('auth.login.sso_secure_note') }}
+          </p>
         </div>
       </Transition>
     </div>
@@ -300,13 +337,16 @@ const tabLabelKeys: Record<ModeId, string> = {
 
 const availableModes = computed(() =>
   props.providers.map((p) => ({
-    id:    p.key,
-    label: t(tabLabelKeys[p.key]) as string,
+    id:       p.key,
+    label:    t(tabLabelKeys[p.key]) as string,
     loginUrl: p.loginUrl,
   })),
 )
 
+const hasOidc = computed(() => availableModes.value.some((m) => m.id === 'oidc'))
+
 const activeMode = ref<ModeId>('local')
+const userPickedMode = ref(false)
 
 watch(
   () => [props.providers, props.defaultProvider] as const,
@@ -316,7 +356,7 @@ watch(
     const preferred = props.defaultProvider && ids.includes(props.defaultProvider)
       ? props.defaultProvider
       : ids[0]!
-    if (!ids.includes(activeMode.value)) {
+    if (!userPickedMode.value || !ids.includes(activeMode.value)) {
       activeMode.value = preferred
     }
   },
@@ -337,8 +377,8 @@ const pillStyle = computed(() => {
   }
 })
 
-const activeIcon = computed(() => {
-  switch (activeMode.value) {
+function modeIcon(id: ModeId) {
+  switch (id) {
     case 'ldap':
       return 'i-heroicons-server-stack'
     case 'oidc':
@@ -346,7 +386,9 @@ const activeIcon = computed(() => {
     default:
       return 'i-heroicons-key'
   }
-})
+}
+
+const activeIcon = computed(() => modeIcon(activeMode.value))
 
 const oidcLoginUrl = computed(() =>
   props.providers.find((p) => p.key === 'oidc')?.loginUrl ?? '/api/auth/oidc/login',
@@ -363,12 +405,13 @@ function panelId(id: ModeId) {
 function tabClass(mode: { id: ModeId }) {
   return activeMode.value === mode.id
     ? 'text-white'
-    : 'text-slate-600 hover:text-slate-950'
+    : 'text-slate-600 dark:text-gray-300 hover:text-slate-950 dark:hover:text-white'
 }
 
 function selectMode(id: ModeId) {
   if (availableModes.value.some((m) => m.id === id)) {
     if (activeMode.value !== id) {
+      userPickedMode.value = true
       activeMode.value = id
       emit('clear-error')
     }
@@ -390,6 +433,7 @@ function onTablistKeydown(e: KeyboardEvent) {
   if (e.key === 'End') next = ids.length - 1
 
   if (ids[next] !== activeMode.value) {
+    userPickedMode.value = true
     activeMode.value = ids[next]!
     emit('clear-error')
   }

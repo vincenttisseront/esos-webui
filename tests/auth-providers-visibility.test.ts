@@ -208,8 +208,15 @@ describe('auth-providers-public', () => {
       .toBe('config_incomplete')
   })
 
-  it('defaultProvider prefers local then ldap then oidc', () => {
-    const dto = baseDto({
+  it('defaultProvider prefers oidc over local when SSO is available', () => {
+    const withOidc = baseDto({
+      oidc: {
+        ...baseDto().oidc,
+        enabled:         true,
+        issuer:          'https://idp.example.com',
+        clientId:        'esos',
+        clientSecretSet: true,
+      },
       ldap: {
         ...baseDto().ldap,
         enabled:         true,
@@ -220,7 +227,8 @@ describe('auth-providers-public', () => {
       },
       auth: { ...baseDto().auth, jitEnabled: true },
     })
-    expect(buildPublicAuthProviders(dto, zeroCounts).defaultProvider).toBe('local')
+    expect(buildPublicAuthProviders(withOidc, zeroCounts).defaultProvider).toBe('oidc')
+
     const ldapOnly = baseDto({
       ldap: {
         ...baseDto().ldap,
@@ -232,9 +240,7 @@ describe('auth-providers-public', () => {
       },
       auth: { ...baseDto().auth, jitEnabled: true },
     })
-    // Simulate hypothetical future without local — counts with ldap users
-    const res = buildPublicAuthProviders(ldapOnly, { ldap: 1, oidc: 0, header: 0 })
-    expect(res.defaultProvider).toBe('local')
+    expect(buildPublicAuthProviders(ldapOnly, { ldap: 1, oidc: 0, header: 0 }).defaultProvider).toBe('local')
   })
 
   it('response shape never includes secret fields', () => {

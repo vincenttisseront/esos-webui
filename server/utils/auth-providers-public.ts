@@ -158,7 +158,8 @@ export function buildPublicAuthProviders(
     },
   ]
 
-  const priority: AuthProviderKey[] = ['header', 'local', 'ldap', 'oidc']
+  // Transparent Bastion header first; then interactive SSO (OIDC), then local/LDAP.
+  const priority: AuthProviderKey[] = ['header', 'oidc', 'local', 'ldap']
   const defaultProvider = priority.find((key) =>
     providers.find((p) => p.key === key)?.available,
   )

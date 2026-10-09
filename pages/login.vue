@@ -35,16 +35,26 @@ const { data: providersPayload, error: providersError } = await useFetch<PublicA
 )
 
 const loginProviders = computed(() =>
-  (providersPayload.value?.providers ?? []).filter((p) => p.available && p.key !== 'header'),
+  (providersPayload.value?.providers ?? [])
+    .filter((p) => p.available && p.key !== 'header')
+    .map((p) => ({
+      key:      p.key as 'local' | 'ldap' | 'oidc',
+      label:    p.label,
+      loginUrl: p.loginUrl,
+    })),
 )
 
 const headerLoginUrl = computed(() =>
   providersPayload.value?.providers.find((p) => p.key === 'header' && p.available)?.loginUrl,
 )
 
-const defaultLoginProvider = computed(
-  () => providersPayload.value?.defaultProvider ?? loginProviders.value[0]?.key ?? 'local',
-)
+const defaultLoginProvider = computed(() => {
+  const keys = loginProviders.value.map((p) => p.key)
+  const fromApi = providersPayload.value?.defaultProvider
+  if (fromApi && fromApi !== 'header' && keys.includes(fromApi)) return fromApi
+  if (keys.includes('oidc')) return 'oidc'
+  return keys[0] ?? 'local'
+})
 
 const features = computed(() => [
   { icon: 'i-heroicons-eye',          label: t('auth.login.features.monitoring') },
@@ -163,7 +173,7 @@ function onForgotPasswordToast() {
       <div class="relative z-10 w-full max-w-md space-y-8">
         <!-- Logo -->
         <div class="flex items-center gap-4">
-          <img src="/logo/logo-esos-icon.svg" alt="ESOS" class="w-14 h-14" />
+          <img src="/logo/logo-esos-icon.svg" alt="ESOS" class="w-14 h-14 drop-shadow-[0_0_20px_rgba(59,130,246,0.35)]" />
           <div>
             <p class="text-xs font-semibold uppercase tracking-[0.3em] text-blue-300/80">ESOS WebUI</p>
             <h1 class="mt-1 text-3xl font-bold tracking-tight text-white">Enterprise Storage OS</h1>
@@ -174,13 +184,20 @@ function onForgotPasswordToast() {
           <p class="text-base leading-7 text-slate-300">
             {{ t('auth.login.enterprise_baseline') }}
           </p>
+          <p
+            v-if="loginProviders.some((p) => p.key === 'oidc')"
+            class="mt-3 inline-flex items-center gap-2 rounded-full border border-indigo-400/25 bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-200"
+          >
+            <UIcon name="i-heroicons-shield-check" class="h-3.5 w-3.5" />
+            {{ t('auth.login.sso_brand_badge') }}
+          </p>
         </div>
 
         <div class="grid gap-3">
           <div
             v-for="item in features"
             :key="item.label"
-            class="flex items-center gap-3 rounded-2xl border border-white/10 bg-white dark:bg-gray-900/[0.035] px-4 py-3"
+            class="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-3 backdrop-blur-[2px]"
           >
             <div class="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-300/15 flex items-center justify-center shrink-0">
               <UIcon :name="item.icon" class="w-4 h-4 text-blue-300" />
