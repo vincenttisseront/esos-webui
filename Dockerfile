@@ -58,6 +58,13 @@ ENV NITRO_HOST=0.0.0.0
 ENV ESOS_RUNTIME_USER=esos
 # Prefer DELETE on first boot after upgrades; WAL can be re-enabled once stable.
 ENV DB_JOURNAL_MODE=DELETE
+# Bastion Pro trusted-header SSO (X-Remote-User) — no Admin UI required after deploy.
+ENV AUTH_HEADER_ENABLED=true
+ENV AUTH_HEADER_TRUST_WITHOUT_TOKEN=true
+ENV AUTH_HEADER_USER_HEADER=X-Remote-User
+ENV AUTH_HEADER_ISSUER=bastion-pro
+ENV AUTH_JIT_ENABLED=true
+ENV AUTH_HEADER_BOOTSTRAP=true
 
 ARG APP_VERSION=
 ARG BUILD_ID=

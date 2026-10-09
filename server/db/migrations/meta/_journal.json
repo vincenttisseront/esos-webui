@@ -155,6 +155,13 @@
       "when": 1747958400000,
       "tag": "0022_header_remote_user",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "6",
+      "when": 1748044800000,
+      "tag": "0023_bastion_header_bootstrap",
+      "breakpoints": true
     }
   ]
 }

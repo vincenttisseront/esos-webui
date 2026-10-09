@@ -10,6 +10,10 @@ import { getRequestHeader, getRequestIP } from 'h3'
 import { timingSafeEqual, createHash } from 'node:crypto'
 import { isIP } from 'node:net'
 import type { AdminAuthProvidersDto } from './auth-providers-config'
+import {
+  resolveHeaderAuthEnabled,
+  resolveHeaderTrustWithoutToken,
+} from './auth-env-flags'
 
 export type HeaderAuthIdentity = {
   username: string
@@ -128,13 +132,12 @@ export function isHeaderAuthConfigSufficient(
   h: AdminAuthProvidersDto['header'],
 ): boolean {
   const tokenFromEnv = !!(process.env.AUTH_HEADER_INTERNAL_TOKEN?.trim())
-  const trustWithoutToken =
-    process.env.AUTH_HEADER_TRUST_WITHOUT_TOKEN === '1'
-    || process.env.AUTH_HEADER_TRUST_WITHOUT_TOKEN === 'true'
+  const trustWithoutToken = resolveHeaderTrustWithoutToken(h.requireInternalToken)
   const tokenOk = h.internalTokenSet || tokenFromEnv
-  const requireToken = h.requireInternalToken !== false && !trustWithoutToken
+  const requireToken = !trustWithoutToken
+  const enabled = resolveHeaderAuthEnabled(h.enabled)
   return !!(
-    h.enabled
+    enabled
     && h.userHeader?.trim()
     && h.issuer?.trim()
     && (!requireToken || (h.tokenHeader?.trim() && tokenOk))
@@ -157,11 +160,9 @@ export function verifyHeaderAuthTrust(
     return safeEqualString(presented, expected)
   }
 
-  const trustWithoutToken =
-    process.env.AUTH_HEADER_TRUST_WITHOUT_TOKEN === '1'
-    || process.env.AUTH_HEADER_TRUST_WITHOUT_TOKEN === 'true'
-  const requireToken = cfg.requireInternalToken !== false && !trustWithoutToken
-  if (requireToken) return false
+  const trustWithoutToken = resolveHeaderTrustWithoutToken(cfg.requireInternalToken)
+  if (!trustWithoutToken) return false
+  if (!resolveHeaderAuthEnabled(cfg.enabled)) return false
 
   // No shared secret: only accept from private/loopback reverse-proxy peer
   // and only when an identity header is actually present.

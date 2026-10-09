@@ -43,7 +43,7 @@ export const AUTH_PROVIDER_DEFAULTS: Array<{ key: string; value: string; type: '
   { key: 'oidc.redirect_path', value: '/api/auth/oidc/callback', type: 'string' },
   { key: 'oidc.clock_skew_sec', value: '60', type: 'number' },
 
-  { key: 'auth.jit.enabled', value: 'false', type: 'boolean' },
+  { key: 'auth.jit.enabled', value: 'true', type: 'boolean' },
   { key: 'auth.jit.default_role', value: 'viewer', type: 'string' },
   { key: 'auth.jit.default_active', value: 'true', type: 'boolean' },
   { key: 'auth.mfa.mode', value: 'off', type: 'string' },
@@ -52,7 +52,7 @@ export const AUTH_PROVIDER_DEFAULTS: Array<{ key: string; value: string; type: '
   { key: 'auth.ldap.max_role', value: '', type: 'string' },
   { key: 'auth.header.max_role', value: '', type: 'string' },
 
-  { key: 'header_auth.enabled', value: 'false', type: 'boolean' },
+  { key: 'header_auth.enabled', value: 'true', type: 'boolean' },
   { key: 'header_auth.user_header', value: 'X-Remote-User', type: 'string' },
   { key: 'header_auth.email_header', value: 'X-Remote-Email', type: 'string' },
   { key: 'header_auth.groups_header', value: 'X-Remote-Groups', type: 'string' },
@@ -71,6 +71,25 @@ export async function ensureAuthProviderDefaultSettings(): Promise<void> {
     if (row) continue
     await setSetting(def.key, def.value, def.type)
   }
+}
+
+/**
+ * Force Bastion header SSO + JIT on existing DBs (image upgrade path).
+ * Idempotent — safe on every boot when AUTH_HEADER_BOOTSTRAP is not false.
+ */
+export async function bootstrapBastionHeaderAuthSettings(): Promise<void> {
+  const { envFlagTrue } = await import('./auth-env-flags')
+  // Opt-in: Dockerfile sets AUTH_HEADER_BOOTSTRAP=true for Bastion deployments.
+  if (!envFlagTrue('AUTH_HEADER_BOOTSTRAP')) return
+  await ensureAuthProviderDefaultSettings()
+  await setSetting('header_auth.enabled', 'true', 'boolean')
+  await setSetting('header_auth.require_internal_token', 'false', 'boolean')
+  await setSetting('header_auth.user_header', 'X-Remote-User', 'string')
+  await setSetting('header_auth.email_header', 'X-Remote-Email', 'string')
+  await setSetting('header_auth.groups_header', 'X-Remote-Groups', 'string')
+  await setSetting('header_auth.display_name_header', 'X-Remote-Name', 'string')
+  await setSetting('header_auth.issuer', 'bastion-pro', 'string')
+  await setSetting('auth.jit.enabled', 'true', 'boolean')
 }
 
 function bool(s: string | undefined, d: boolean): boolean {
@@ -190,21 +209,31 @@ export async function buildAdminAuthProvidersDto(): Promise<AdminAuthProvidersDt
       clockSkewSec:     int(s['oidc.clock_skew_sec'], 60),
     }
 
+  const {
+    resolveHeaderAuthEnabled,
+    resolveHeaderIssuer,
+    resolveHeaderTrustWithoutToken,
+    resolveHeaderUserHeader,
+    resolveJitEnabled,
+  } = await import('./auth-env-flags')
+
+  const headerRequireTokenDb = bool(s['header_auth.require_internal_token'], false)
   const header = {
-      enabled:              bool(s['header_auth.enabled'], false),
-      userHeader:           s['header_auth.user_header'] ?? 'X-Remote-User',
+      enabled:              resolveHeaderAuthEnabled(bool(s['header_auth.enabled'], false)),
+      userHeader:           resolveHeaderUserHeader(s['header_auth.user_header']),
       emailHeader:          s['header_auth.email_header'] ?? 'X-Remote-Email',
       groupsHeader:         s['header_auth.groups_header'] ?? 'X-Remote-Groups',
       groupsDelimiter:      s['header_auth.groups_delimiter'] ?? ',',
       displayNameHeader:    s['header_auth.display_name_header'] ?? 'X-Remote-Name',
-      issuer:               s['header_auth.issuer'] ?? 'bastion-pro',
+      issuer:               resolveHeaderIssuer(s['header_auth.issuer']),
       tokenHeader:          s['header_auth.token_header'] ?? 'X-ESOS-Auth-Token',
       internalTokenSet:     (s['header_auth.internal_token'] ?? '') === '***',
-      requireInternalToken: bool(s['header_auth.require_internal_token'], false),
+      // Stored as "require"; DTO exposes requireInternalToken. Env can force trust-without-token.
+      requireInternalToken: !resolveHeaderTrustWithoutToken(headerRequireTokenDb),
     }
 
   const auth = {
-      jitEnabled:       bool(s['auth.jit.enabled'], false),
+      jitEnabled:       resolveJitEnabled(bool(s['auth.jit.enabled'], false)),
       jitDefaultRole:   parseUserRole(s['auth.jit.default_role'], 'viewer'),
       jitDefaultActive: bool(s['auth.jit.default_active'], true),
       mfaMode,
