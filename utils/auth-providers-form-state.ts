@@ -30,6 +30,17 @@ export type AuthProvidersOidcFormSnapshot = {
   clockSkewSec: number
 }
 
+export type AuthProvidersHeaderFormSnapshot = {
+  enabled:           boolean
+  userHeader:        string
+  emailHeader:       string
+  groupsHeader:      string
+  groupsDelimiter:   string
+  displayNameHeader: string
+  issuer:            string
+  tokenHeader:       string
+}
+
 export type AuthProvidersAuthFormSnapshot = {
   jitEnabled:       boolean
   jitDefaultRole:   UserRole
@@ -38,16 +49,20 @@ export type AuthProvidersAuthFormSnapshot = {
   mappingRulesJson: string
   oidcMaxRole:      AuthProvidersMaxRoleField
   ldapMaxRole:      AuthProvidersMaxRoleField
+  headerMaxRole:    AuthProvidersMaxRoleField
 }
 
 export type AuthProvidersFormSnapshot = {
   ldap: AuthProvidersLdapFormSnapshot
   oidc: AuthProvidersOidcFormSnapshot
+  header: AuthProvidersHeaderFormSnapshot
   auth: AuthProvidersAuthFormSnapshot
   /** True when user typed a new LDAP bind password (blank = keep, not dirty). */
   ldapBindPasswordEntered: boolean
   /** True when user typed a new OIDC client secret. */
   oidcClientSecretEntered: boolean
+  /** True when user typed a new header internal token. */
+  headerInternalTokenEntered: boolean
 }
 
 export type AuthProvidersFormInput = {
@@ -70,6 +85,15 @@ export type AuthProvidersFormInput = {
   oidcRedirectPath: string
   oidcClockSkewSec: number
 
+  headerEnabled: boolean
+  headerUserHeader: string
+  headerEmailHeader: string
+  headerGroupsHeader: string
+  headerGroupsDelimiter: string
+  headerDisplayNameHeader: string
+  headerIssuer: string
+  headerTokenHeader: string
+
   jitEnabled: boolean
   jitDefaultRole: UserRole
   jitDefaultActive: boolean
@@ -77,6 +101,7 @@ export type AuthProvidersFormInput = {
   mappingRulesJson: string
   oidcMaxRole: AuthProvidersMaxRoleField
   ldapMaxRole: AuthProvidersMaxRoleField
+  headerMaxRole: AuthProvidersMaxRoleField
 }
 
 function trim(s: string): string {
@@ -123,6 +148,16 @@ export function snapshotFromDto(d: AdminAuthProvidersDto): AuthProvidersFormSnap
       redirectPath: trim(d.oidc.redirectPath),
       clockSkewSec: d.oidc.clockSkewSec,
     },
+    header: {
+      enabled:           d.header.enabled,
+      userHeader:        trim(d.header.userHeader),
+      emailHeader:       trim(d.header.emailHeader),
+      groupsHeader:      trim(d.header.groupsHeader),
+      groupsDelimiter:   trim(d.header.groupsDelimiter),
+      displayNameHeader: trim(d.header.displayNameHeader),
+      issuer:            trim(d.header.issuer),
+      tokenHeader:       trim(d.header.tokenHeader),
+    },
     auth: {
       jitEnabled:       d.auth.jitEnabled,
       jitDefaultRole:   d.auth.jitDefaultRole,
@@ -131,15 +166,17 @@ export function snapshotFromDto(d: AdminAuthProvidersDto): AuthProvidersFormSnap
       mappingRulesJson: normalizeMappingRulesJson(d.auth.mappingRulesJson),
       oidcMaxRole:      maxRoleFromDto(d.auth.oidcMaxRole),
       ldapMaxRole:      maxRoleFromDto(d.auth.ldapMaxRole),
+      headerMaxRole:    maxRoleFromDto(d.auth.headerMaxRole),
     },
     ldapBindPasswordEntered: false,
     oidcClientSecretEntered: false,
+    headerInternalTokenEntered: false,
   }
 }
 
 export function snapshotFromFormInput(
   input: AuthProvidersFormInput,
-  secrets?: { ldapBindPassword?: string; oidcClientSecret?: string },
+  secrets?: { ldapBindPassword?: string; oidcClientSecret?: string; headerInternalToken?: string },
 ): AuthProvidersFormSnapshot {
   return {
     ldap: {
@@ -163,6 +200,16 @@ export function snapshotFromFormInput(
       redirectPath: trim(input.oidcRedirectPath),
       clockSkewSec: input.oidcClockSkewSec,
     },
+    header: {
+      enabled:           input.headerEnabled,
+      userHeader:        trim(input.headerUserHeader),
+      emailHeader:       trim(input.headerEmailHeader),
+      groupsHeader:      trim(input.headerGroupsHeader),
+      groupsDelimiter:   trim(input.headerGroupsDelimiter),
+      displayNameHeader: trim(input.headerDisplayNameHeader),
+      issuer:            trim(input.headerIssuer),
+      tokenHeader:       trim(input.headerTokenHeader),
+    },
     auth: {
       jitEnabled:       input.jitEnabled,
       jitDefaultRole:   input.jitDefaultRole,
@@ -171,9 +218,11 @@ export function snapshotFromFormInput(
       mappingRulesJson: normalizeMappingRulesJson(input.mappingRulesJson),
       oidcMaxRole:      input.oidcMaxRole,
       ldapMaxRole:      input.ldapMaxRole,
+      headerMaxRole:    input.headerMaxRole,
     },
     ldapBindPasswordEntered: (secrets?.ldapBindPassword ?? '').length > 0,
     oidcClientSecretEntered: (secrets?.oidcClientSecret ?? '').length > 0,
+    headerInternalTokenEntered: (secrets?.headerInternalToken ?? '').length > 0,
   }
 }
 
@@ -211,6 +260,19 @@ export function authProvidersOidcDirty(
   )
 }
 
+export function authProvidersHeaderDirty(
+  baseline: AuthProvidersFormSnapshot | null,
+  current: AuthProvidersFormSnapshot | null,
+): boolean {
+  if (!baseline || !current) return false
+  return (
+    JSON.stringify(baseline.header) !== JSON.stringify(current.header)
+    || JSON.stringify({ headerMaxRole: baseline.auth.headerMaxRole })
+      !== JSON.stringify({ headerMaxRole: current.auth.headerMaxRole })
+    || baseline.headerInternalTokenEntered !== current.headerInternalTokenEntered
+  )
+}
+
 export function authProvidersMappingDirty(
   baseline: AuthProvidersFormSnapshot | null,
   current: AuthProvidersFormSnapshot | null,
@@ -243,6 +305,7 @@ function mappingAuthSubset(auth: AuthProvidersAuthFormSnapshot): string {
     mappingRulesJson: auth.mappingRulesJson,
     oidcMaxRole:      auth.oidcMaxRole,
     ldapMaxRole:      auth.ldapMaxRole,
+    headerMaxRole:    auth.headerMaxRole,
   })
 }
 
@@ -275,6 +338,21 @@ export function applyOidcSnapshotToFormInput(
   target.oidcClockSkewSec  = snap.oidc.clockSkewSec
 }
 
+export function applyHeaderSnapshotToFormInput(
+  target: AuthProvidersFormInput,
+  snap: AuthProvidersFormSnapshot,
+): void {
+  target.headerEnabled           = snap.header.enabled
+  target.headerUserHeader        = snap.header.userHeader
+  target.headerEmailHeader       = snap.header.emailHeader
+  target.headerGroupsHeader      = snap.header.groupsHeader
+  target.headerGroupsDelimiter   = snap.header.groupsDelimiter
+  target.headerDisplayNameHeader = snap.header.displayNameHeader
+  target.headerIssuer            = snap.header.issuer
+  target.headerTokenHeader       = snap.header.tokenHeader
+  target.headerMaxRole           = snap.auth.headerMaxRole
+}
+
 export function applyMappingSnapshotToFormInput(
   target: AuthProvidersFormInput,
   snap: AuthProvidersFormSnapshot,
@@ -285,6 +363,7 @@ export function applyMappingSnapshotToFormInput(
   target.mappingRulesJson = snap.auth.mappingRulesJson
   target.oidcMaxRole      = snap.auth.oidcMaxRole
   target.ldapMaxRole      = snap.auth.ldapMaxRole
+  target.headerMaxRole    = snap.auth.headerMaxRole
 }
 
 export function applySecuritySnapshotToFormInput(
@@ -300,6 +379,7 @@ export function applySnapshotToFormInput(
 ): void {
   applyLdapSnapshotToFormInput(target, snap)
   applyOidcSnapshotToFormInput(target, snap)
+  applyHeaderSnapshotToFormInput(target, snap)
   applyMappingSnapshotToFormInput(target, snap)
   applySecuritySnapshotToFormInput(target, snap)
 }

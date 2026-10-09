@@ -1,13 +1,13 @@
 import type { UserPublic } from './types'
 
-export type UserAuthSource = 'local' | 'ldap' | 'oidc' | 'unknown'
+export type UserAuthSource = 'local' | 'ldap' | 'oidc' | 'header' | 'unknown'
 
 export type AuthSourceFilter = 'all' | UserAuthSource
 
 export function normalizeUserAuthSource(
   source: string | null | undefined,
 ): UserAuthSource {
-  if (source === 'local' || source === 'ldap' || source === 'oidc') return source
+  if (source === 'local' || source === 'ldap' || source === 'oidc' || source === 'header') return source
   return 'unknown'
 }
 
@@ -63,5 +63,6 @@ export const AUTH_SOURCE_BADGE: Record<
   local:   { icon: 'i-heroicons-key', classes: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
   ldap:    { icon: 'i-heroicons-building-office-2', classes: 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300' },
   oidc:    { icon: 'i-heroicons-globe-alt', classes: 'bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300' },
+  header:  { icon: 'i-heroicons-shield-check', classes: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' },
   unknown: { icon: 'i-heroicons-question-mark-circle', classes: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' },
 }

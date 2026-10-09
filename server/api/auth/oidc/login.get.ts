@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
     countActiveUsersByAuthSource('ldap'),
     countActiveUsersByAuthSource('oidc'),
   ])
-  if (!isOidcLoginAvailable(dto, { ldap: ldapCount, oidc: oidcCount })) {
+  if (!isOidcLoginAvailable(dto, { ldap: ldapCount, oidc: oidcCount, header: 0 })) {
     throw createError({ statusCode: 404, message: 'Connexion OIDC non disponible' })
   }
 

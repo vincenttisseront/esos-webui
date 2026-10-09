@@ -2,11 +2,16 @@
  * Public auth provider visibility (login page). No secrets in output.
  */
 import type { AdminAuthProvidersDto } from './auth-providers-config'
+import {
+  isHeaderAuthConfigSufficient as isHeaderAuthConfigSufficientCore,
+} from './header-auth'
+
+export { isHeaderAuthConfigSufficientCore as isHeaderAuthConfigSufficient }
 
 /** Settings slice used for login availability (no summary / counts). */
-export type AuthProvidersEvalDto = Pick<AdminAuthProvidersDto, 'ldap' | 'oidc' | 'auth'>
+export type AuthProvidersEvalDto = Pick<AdminAuthProvidersDto, 'ldap' | 'oidc' | 'header' | 'auth'>
 
-export type AuthProviderKey = 'local' | 'ldap' | 'oidc'
+export type AuthProviderKey = 'local' | 'ldap' | 'oidc' | 'header'
 
 export type PublicProviderReasonCode =
   | 'disabled'
@@ -30,6 +35,7 @@ export type AuthProviderUserCounts = {
   local?: number
   ldap: number
   oidc: number
+  header: number
 }
 
 export type ProviderLoginSummary = {
@@ -38,12 +44,14 @@ export type ProviderLoginSummary = {
 }
 
 const PROVIDER_LABELS: Record<AuthProviderKey, string> = {
-  local: 'Local',
-  ldap:  'LDAP / AD',
-  oidc:  'SSO',
+  local:  'Local',
+  ldap:   'LDAP / AD',
+  oidc:   'SSO',
+  header: 'Bastion SSO',
 }
 
 const OIDC_LOGIN_PATH = '/api/auth/oidc/login'
+const HEADER_LOGIN_PATH = '/api/auth/header/session'
 
 export function isLdapConfigSufficientForLogin(ldap: AdminAuthProvidersDto['ldap']): boolean {
   return !!(
@@ -61,6 +69,22 @@ export function isOidcConfigSufficientForLogin(oidc: AdminAuthProvidersDto['oidc
     && oidc.clientId?.trim()
     && oidc.clientSecretSet
   )
+}
+
+export function evaluateHeaderAvailability(
+  dto: AuthProvidersEvalDto,
+  counts: AuthProviderUserCounts,
+): ProviderLoginSummary {
+  if (!dto.header.enabled) {
+    return { available: false, reason: 'disabled' }
+  }
+  if (!isHeaderAuthConfigSufficientCore(dto.header)) {
+    return { available: false, reason: 'config_incomplete' }
+  }
+  if (!dto.auth.jitEnabled && counts.header <= 0) {
+    return { available: false, reason: 'no_provisioned_users' }
+  }
+  return { available: true }
 }
 
 export function evaluateLdapAvailability(
@@ -102,10 +126,18 @@ export function buildPublicAuthProviders(
   dto: AuthProvidersEvalDto,
   counts: AuthProviderUserCounts,
 ): PublicAuthProvidersResponse {
+  const headerEval = evaluateHeaderAvailability(dto, counts)
   const ldapEval = evaluateLdapAvailability(dto, counts)
   const oidcEval = evaluateOidcAvailability(dto, counts)
 
   const providers: PublicAuthProvider[] = [
+    {
+      key:       'header',
+      label:     PROVIDER_LABELS.header,
+      available: headerEval.available,
+      loginUrl:  headerEval.available ? HEADER_LOGIN_PATH : undefined,
+      ...(headerEval.reason ? { reason: headerEval.reason } : {}),
+    },
     {
       key:       'local',
       label:     PROVIDER_LABELS.local,
@@ -126,7 +158,7 @@ export function buildPublicAuthProviders(
     },
   ]
 
-  const priority: AuthProviderKey[] = ['local', 'ldap', 'oidc']
+  const priority: AuthProviderKey[] = ['header', 'local', 'ldap', 'oidc']
   const defaultProvider = priority.find((key) =>
     providers.find((p) => p.key === key)?.available,
   )
@@ -151,4 +183,12 @@ export function isOidcLoginAvailable(
   counts: AuthProviderUserCounts,
 ): boolean {
   return evaluateOidcAvailability(dto, counts).available
+}
+
+/** Whether Bastion trusted-header SSO should be attempted. */
+export function isHeaderLoginAvailable(
+  dto: AuthProvidersEvalDto,
+  counts: AuthProviderUserCounts,
+): boolean {
+  return evaluateHeaderAvailability(dto, counts).available
 }

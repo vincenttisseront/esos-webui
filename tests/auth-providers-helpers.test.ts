@@ -233,18 +233,20 @@ describe('auth-providers-admin-ui', () => {
     expect(secretsIncomplete.some((b) => b.id === 'secrets_incomplete')).toBe(true)
   })
 
-  it('defaultAuthProviderTab prefers ldap then oidc then local', () => {
+  it('defaultAuthProviderTab prefers header then ldap then oidc then local', () => {
     const base: AdminAuthProvidersDto = {
       summary: {
-        counts: { local: 0, ldap: 0, oidc: 0 },
-        config: { ldapComplete: false, oidcComplete: false },
-        login: { ldap: { available: false }, oidc: { available: false } },
+        counts: { local: 0, ldap: 0, oidc: 0, header: 0 },
+        config: { ldapComplete: false, oidcComplete: false, headerComplete: false },
+        login: { ldap: { available: false }, oidc: { available: false }, header: { available: false } },
       },
       ldap: { enabled: false, url: '', startTls: false, tlsVerify: true, bindDn: '', bindPasswordSet: false, baseDn: '', userSearchFilter: '', usernameAttribute: 'sAMAccountName', displayNameAttribute: 'displayName', groupAttribute: 'memberOf', timeoutSec: 10 },
       oidc: { enabled: false, issuer: '', clientId: '', clientSecretSet: false, scopes: '', redirectPath: '/api/auth/oidc/callback', clockSkewSec: 60 },
-      auth: { jitEnabled: false, jitDefaultRole: 'viewer', jitDefaultActive: true, mfaMode: 'off', mappingRulesJson: '[]', oidcMaxRole: null, ldapMaxRole: null },
+      header: { enabled: false, userHeader: 'X-Forwarded-User', emailHeader: '', groupsHeader: '', groupsDelimiter: ',', displayNameHeader: '', issuer: 'bastion-pro', tokenHeader: 'X-ESOS-Auth-Token', internalTokenSet: false },
+      auth: { jitEnabled: false, jitDefaultRole: 'viewer', jitDefaultActive: true, mfaMode: 'off', mappingRulesJson: '[]', oidcMaxRole: null, ldapMaxRole: null, headerMaxRole: null },
     }
     expect(defaultAuthProviderTab(base)).toBe('local')
+    expect(defaultAuthProviderTab({ ...base, header: { ...base.header, enabled: true } })).toBe('header')
     expect(defaultAuthProviderTab({ ...base, ldap: { ...base.ldap, enabled: true } })).toBe('ldap')
     expect(defaultAuthProviderTab({ ...base, oidc: { ...base.oidc, enabled: true } })).toBe('oidc')
   })

@@ -128,6 +128,7 @@ const authSourceFilterOptions = computed(() => [
   { value: 'local' as const, label: t('admin.users.authSource.local') },
   { value: 'ldap' as const, label: t('admin.users.authSource.ldap') },
   { value: 'oidc' as const, label: t('admin.users.authSource.oidc') },
+  { value: 'header' as const, label: t('admin.users.authSource.header') },
 ])
 
 const filteredUsers = computed(() =>

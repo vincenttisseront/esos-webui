@@ -13,8 +13,10 @@ import {
 } from '../server/utils/auth-providers-role-map'
 import type { UserRole } from '../server/utils/types'
 import {
+  evaluateHeaderAvailability,
   evaluateLdapAvailability,
   evaluateOidcAvailability,
+  isHeaderAuthConfigSufficient,
   isLdapConfigSufficientForLogin,
   isOidcConfigSufficientForLogin,
   type PublicProviderReasonCode,
@@ -26,7 +28,7 @@ import { buildInitialStepResults } from '../server/utils/ldap-diagnostics'
 
 export type { LdapTestDiagnostic }
 
-export type AuthProviderTabId = 'local' | 'ldap' | 'oidc' | 'roles' | 'security'
+export type AuthProviderTabId = 'local' | 'ldap' | 'oidc' | 'header' | 'roles' | 'security'
 
 export const AUTH_PROVIDERS_TAB_STORAGE_KEY = 'auth-providers-active-tab'
 
@@ -89,6 +91,7 @@ export type OidcTestClientState =
 
 export function defaultAuthProviderTab(dto: AdminAuthProvidersDto | null): AuthProviderTabId {
   if (!dto) return 'local'
+  if (dto.header.enabled) return 'header'
   if (dto.ldap.enabled) return 'ldap'
   if (dto.oidc.enabled) return 'oidc'
   return 'local'
@@ -139,6 +142,25 @@ export function oidcConfigCompleteFromForm(p: {
   })
 }
 
+export function headerConfigCompleteFromForm(p: {
+  headerUserHeader: string
+  headerIssuer: string
+  headerTokenHeader: string
+  headerInternalTokenSet: boolean
+}): boolean {
+  return isHeaderAuthConfigSufficient({
+    enabled:           true,
+    userHeader:        p.headerUserHeader,
+    emailHeader:       '',
+    groupsHeader:      '',
+    groupsDelimiter:   ',',
+    displayNameHeader: '',
+    issuer:            p.headerIssuer,
+    tokenHeader:       p.headerTokenHeader,
+    internalTokenSet:  p.headerInternalTokenSet,
+  })
+}
+
 export function loginSummaryFromForm(params: {
   ldapEnabled: boolean
   ldapUrl: string
@@ -150,12 +172,19 @@ export function loginSummaryFromForm(params: {
   oidcIssuer: string
   oidcClientId: string
   oidcClientSecretSet: boolean
+  headerEnabled?: boolean
+  headerUserHeader?: string
+  headerIssuer?: string
+  headerTokenHeader?: string
+  headerInternalTokenSet?: boolean
   jitEnabled: boolean
   ldapUserCount: number
   oidcUserCount: number
+  headerUserCount?: number
 }): {
   ldap: { available: boolean; reason?: PublicProviderReasonCode }
   oidc: { available: boolean; reason?: PublicProviderReasonCode }
+  header: { available: boolean; reason?: PublicProviderReasonCode }
 } {
   const dto = {
     ldap: {
@@ -181,6 +210,17 @@ export function loginSummaryFromForm(params: {
       redirectPath:     '/api/auth/oidc/callback',
       clockSkewSec:     60,
     },
+    header: {
+      enabled:           params.headerEnabled ?? false,
+      userHeader:        params.headerUserHeader ?? 'X-Forwarded-User',
+      emailHeader:       '',
+      groupsHeader:      '',
+      groupsDelimiter:   ',',
+      displayNameHeader: '',
+      issuer:            params.headerIssuer ?? 'bastion-pro',
+      tokenHeader:       params.headerTokenHeader ?? 'X-ESOS-Auth-Token',
+      internalTokenSet:  params.headerInternalTokenSet ?? false,
+    },
     auth: {
       jitEnabled:       params.jitEnabled,
       jitDefaultRole:   'viewer' as UserRole,
@@ -189,12 +229,18 @@ export function loginSummaryFromForm(params: {
       mappingRulesJson: '[]',
       oidcMaxRole:      null,
       ldapMaxRole:      null,
+      headerMaxRole:    null,
     },
   }
-  const counts = { ldap: params.ldapUserCount, oidc: params.oidcUserCount }
+  const counts = {
+    ldap:   params.ldapUserCount,
+    oidc:   params.oidcUserCount,
+    header: params.headerUserCount ?? 0,
+  }
   return {
-    ldap: evaluateLdapAvailability(dto, counts),
-    oidc: evaluateOidcAvailability(dto, counts),
+    ldap:   evaluateLdapAvailability(dto, counts),
+    oidc:   evaluateOidcAvailability(dto, counts),
+    header: evaluateHeaderAvailability(dto, counts),
   }
 }
 

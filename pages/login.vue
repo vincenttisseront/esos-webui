@@ -21,13 +21,13 @@ const ldapSubmitting = ref(false)
 
 type PublicAuthProvidersResponse = {
   providers: Array<{
-    key: 'local' | 'ldap' | 'oidc'
+    key: 'local' | 'ldap' | 'oidc' | 'header'
     label: string
     available: boolean
     loginUrl?: string
     reason?: string
   }>
-  defaultProvider?: 'local' | 'ldap' | 'oidc'
+  defaultProvider?: 'local' | 'ldap' | 'oidc' | 'header'
 }
 
 const { data: providersPayload, error: providersError } = await useFetch<PublicAuthProvidersResponse>(
@@ -35,7 +35,11 @@ const { data: providersPayload, error: providersError } = await useFetch<PublicA
 )
 
 const loginProviders = computed(() =>
-  (providersPayload.value?.providers ?? []).filter((p) => p.available),
+  (providersPayload.value?.providers ?? []).filter((p) => p.available && p.key !== 'header'),
+)
+
+const headerLoginUrl = computed(() =>
+  providersPayload.value?.providers.find((p) => p.key === 'header' && p.available)?.loginUrl,
 )
 
 const defaultLoginProvider = computed(
@@ -65,16 +69,25 @@ const OIDC_ERROR_KEYS: Record<string, string> = {
   inactive:       'errors.oidc.inactive',
 }
 
+const HEADER_ERROR_KEYS: Record<string, string> = {
+  header_denied: 'errors.header.denied',
+}
+
 function applyRouteError() {
   const q = route.query.error
   if (typeof q === 'string' && q) {
-    const key = OIDC_ERROR_KEYS[q]
+    const key = HEADER_ERROR_KEYS[q] ?? OIDC_ERROR_KEYS[q]
     error.value = key ? (t(key) as string) : (t('errors.oidc.external_generic') as string)
   }
 }
 
 onMounted(() => {
   applyRouteError()
+  if (typeof route.query.error === 'string' && route.query.error) return
+  const url = headerLoginUrl.value
+  if (url && import.meta.client) {
+    window.location.href = url
+  }
 })
 
 watch(

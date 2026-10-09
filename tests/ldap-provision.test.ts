@@ -6,11 +6,12 @@ import type { SearchRow } from '../server/utils/ldap-service'
 
 const baseDto = (): AdminAuthProvidersDto => ({
   summary: {
-    counts: { local: 0, ldap: 0, oidc: 0 },
-    config: { ldapComplete: true, oidcComplete: false },
+    counts: { local: 0, ldap: 0, oidc: 0, header: 0 },
+    config: { ldapComplete: true, oidcComplete: false, headerComplete: false },
     login: {
       ldap: { available: false },
       oidc: { available: false },
+      header: { available: false },
     },
   },
   ldap: {
@@ -36,6 +37,17 @@ const baseDto = (): AdminAuthProvidersDto => ({
     redirectPath:    '/api/auth/oidc/callback',
     clockSkewSec:    60,
   },
+  header: {
+    enabled:           false,
+    userHeader:        'X-Forwarded-User',
+    emailHeader:       '',
+    groupsHeader:      '',
+    groupsDelimiter:   ',',
+    displayNameHeader: '',
+    issuer:            'bastion-pro',
+    tokenHeader:       'X-ESOS-Auth-Token',
+    internalTokenSet:  false,
+  },
   auth: {
     jitEnabled:       false,
     jitDefaultRole:   'viewer',
@@ -46,6 +58,7 @@ const baseDto = (): AdminAuthProvidersDto => ({
     ]),
     oidcMaxRole: null,
     ldapMaxRole:   null,
+    headerMaxRole: null,
   },
 })
 

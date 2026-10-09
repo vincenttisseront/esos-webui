@@ -14,9 +14,9 @@ import {
 function baseDto(): AdminAuthProvidersDto {
   return {
     summary: {
-      counts: { local: 1, ldap: 0, oidc: 0 },
-      config: { ldapComplete: false, oidcComplete: false },
-      login: { ldap: { available: false }, oidc: { available: false } },
+      counts: { local: 1, ldap: 0, oidc: 0, header: 0 },
+      config: { ldapComplete: false, oidcComplete: false, headerComplete: false },
+      login: { ldap: { available: false }, oidc: { available: false }, header: { available: false } },
     },
     ldap: {
       enabled:            false,
@@ -41,6 +41,17 @@ function baseDto(): AdminAuthProvidersDto {
       redirectPath:     '/api/auth/oidc/callback',
       clockSkewSec:     60,
     },
+    header: {
+      enabled:           false,
+      userHeader:        'X-Forwarded-User',
+      emailHeader:       'X-Forwarded-Email',
+      groupsHeader:      'X-Forwarded-Groups',
+      groupsDelimiter:   ',',
+      displayNameHeader: 'X-Forwarded-Preferred-Username',
+      issuer:            'bastion-pro',
+      tokenHeader:       'X-ESOS-Auth-Token',
+      internalTokenSet:  false,
+    },
     auth: {
       jitEnabled:       false,
       jitDefaultRole:   'viewer',
@@ -49,6 +60,7 @@ function baseDto(): AdminAuthProvidersDto {
       mappingRulesJson: '[]',
       oidcMaxRole:      null,
       ldapMaxRole:      null,
+      headerMaxRole:    null,
     },
   }
 }
@@ -72,6 +84,14 @@ function formFromDto(d: AdminAuthProvidersDto) {
     oidcScopes:        d.oidc.scopes,
     oidcRedirectPath:  d.oidc.redirectPath,
     oidcClockSkewSec:  d.oidc.clockSkewSec,
+    headerEnabled:           d.header.enabled,
+    headerUserHeader:        d.header.userHeader,
+    headerEmailHeader:       d.header.emailHeader,
+    headerGroupsHeader:      d.header.groupsHeader,
+    headerGroupsDelimiter:   d.header.groupsDelimiter,
+    headerDisplayNameHeader: d.header.displayNameHeader,
+    headerIssuer:            d.header.issuer,
+    headerTokenHeader:       d.header.tokenHeader,
     jitEnabled:        d.auth.jitEnabled,
     jitDefaultRole:    d.auth.jitDefaultRole,
     jitDefaultActive:  d.auth.jitDefaultActive,
@@ -79,6 +99,7 @@ function formFromDto(d: AdminAuthProvidersDto) {
     mappingRulesJson:  d.auth.mappingRulesJson,
     oidcMaxRole:       'none' as const,
     ldapMaxRole:       'none' as const,
+    headerMaxRole:     'none' as const,
   }
 }
 

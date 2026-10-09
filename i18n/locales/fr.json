@@ -323,6 +323,9 @@
     "FILE_TOO_LARGE": "Fichier trop volumineux pour la limite configurée.",
     "UPLOAD_FILE_REQUIRED": "Aucun fichier n’a été envoyé.",
     "UPLOAD_PARSE_FAILED": "Échec de lecture du formulaire d’upload.",
+    "header": {
+      "denied": "Échec de la connexion SSO Bastion. Vérifiez les en-têtes proxy et votre compte, ou connectez-vous manuellement."
+    },
     "oidc": {
       "denied": "Connexion SSO refusée ou annulée.",
       "missing": "Réponse SSO incomplète.",
@@ -3222,6 +3225,7 @@
           "local": "Local",
           "ldap": "LDAP / AD",
           "oidc": "SSO / OIDC",
+          "header": "En-têtes Bastion",
           "roles": "Provisionnement",
           "security": "Sécurité"
         }
@@ -3231,6 +3235,7 @@
           "local": "Local",
           "ldap": "LDAP / AD",
           "oidc": "SSO / OIDC",
+          "header": "SSO Bastion",
           "roles": "Rôles"
         },
         "enabled": "Activé",
@@ -3419,6 +3424,35 @@
         "testDesc": "Vérifie que l’issuer et le client_id permettent de récupérer les métadonnées OpenID (sans afficher de secrets).",
         "testButton": "Tester la découverte OIDC",
         "testLoginButton": "Ouvrir la connexion SSO (nouvel onglet)"
+      },
+      "header": {
+        "statusTitle": "État SSO par en-têtes Bastion",
+        "enableLabel": "Activer le SSO par en-têtes de confiance",
+        "enableHelp": "Lorsque Bastion Pro injecte les en-têtes d’identité et le jeton interne, la connexion est transparente (sans bouton sur la page de connexion).",
+        "loginTransparent": "Connexion automatique transparente (via reverse proxy)",
+        "sectionTrust": "Confiance et jeton interne",
+        "tokenHeaderLabel": "Nom de l’en-tête du jeton interne",
+        "tokenHeaderDesc": "En-tête contenant le secret partagé (doit correspondre à la config Bastion / nginx).",
+        "internalTokenLabel": "Jeton interne (secret)",
+        "internalTokenDesc": "Partagé avec Bastion Pro. Saisie Admin ou AUTH_HEADER_INTERNAL_TOKEN en Docker. Jamais renvoyé en clair après enregistrement.",
+        "internalTokenPlaceholder": "Nouveau jeton (optionnel)",
+        "internalTokenConfigured": "Jeton interne configuré",
+        "internalTokenMissing": "Aucun jeton interne enregistré",
+        "trustTitle": "Ne jamais faire confiance aux en-têtes depuis Internet",
+        "trustBody": "Seules les requêtes présentant le bon jeton interne sont acceptées. Utilisez la même valeur sur Bastion Pro et ESOS.",
+        "sectionIdentity": "En-têtes d’identité",
+        "userHeaderLabel": "En-tête identifiant",
+        "userHeaderDesc": "Obligatoire. En général X-Forwarded-User injecté par Bastion après auth IdP.",
+        "emailHeaderLabel": "En-tête e-mail",
+        "emailHeaderDesc": "Optionnel. Affichage et provisionnement JIT.",
+        "groupsHeaderLabel": "En-tête groupes",
+        "groupsHeaderDesc": "Optionnel. Liste délimitée pour les règles de rôles (type OIDC).",
+        "groupsDelimiterLabel": "Séparateur de groupes",
+        "groupsDelimiterDesc": "Caractère séparant les groupes dans l’en-tête groupes.",
+        "displayNameHeaderLabel": "En-tête nom d’affichage",
+        "displayNameHeaderDesc": "Nom convivial optionnel pour les comptes JIT.",
+        "issuerLabel": "Identifiant émetteur externe",
+        "issuerDesc": "Stocké avec l’identité fédérée (ex. bastion-pro). Doit rester stable pour lier les comptes."
       },
       "ldap": {
         "cardTitle": "LDAP / Active Directory",
@@ -3723,6 +3757,8 @@
         "oidcMaxRoleDesc": "Limite supérieure du rôle issu des règles OIDC (après cartographie).",
         "ldapMaxRoleLabel": "Plafond de rôle LDAP",
         "ldapMaxRoleDesc": "Limite supérieure du rôle issu des groupes LDAP (après cartographie).",
+        "headerMaxRoleLabel": "Plafond de rôle SSO en-têtes",
+        "headerMaxRoleDesc": "Limite supérieure du rôle issu des groupes Bastion (après cartographie).",
         "rulesJsonLabel": "Règles de cartographie (JSON)",
         "rulesJsonDesc": "Tableau d'objets avec les champs match et role. Les règles OIDC utilisent type « oidc_claim » ; LDAP utilise « ldap_group_dn ».",
         "exampleLabel": "Afficher un exemple de structure",
@@ -3776,6 +3812,7 @@
         "local": "Local",
         "ldap": "LDAP / AD",
         "oidc": "SSO / OIDC",
+        "header": "SSO Bastion",
         "unknown": "Inconnu"
       },
       "filters": {

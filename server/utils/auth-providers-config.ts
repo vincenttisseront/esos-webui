@@ -10,8 +10,10 @@ import type { UserRole } from './types'
 import type { AuthMfaMode } from './auth-providers-role-map'
 import { parseUserRole } from './auth-providers-role-map'
 import {
+  evaluateHeaderAvailability,
   evaluateLdapAvailability,
   evaluateOidcAvailability,
+  isHeaderAuthConfigSufficient,
   isLdapConfigSufficientForLogin,
   isOidcConfigSufficientForLogin,
   type ProviderLoginSummary,
@@ -48,6 +50,17 @@ export const AUTH_PROVIDER_DEFAULTS: Array<{ key: string; value: string; type: '
   { key: 'auth.mapping_rules_json', value: '[]', type: 'string' },
   { key: 'auth.oidc.max_role', value: '', type: 'string' },
   { key: 'auth.ldap.max_role', value: '', type: 'string' },
+  { key: 'auth.header.max_role', value: '', type: 'string' },
+
+  { key: 'header_auth.enabled', value: 'false', type: 'boolean' },
+  { key: 'header_auth.user_header', value: 'X-Forwarded-User', type: 'string' },
+  { key: 'header_auth.email_header', value: 'X-Forwarded-Email', type: 'string' },
+  { key: 'header_auth.groups_header', value: 'X-Forwarded-Groups', type: 'string' },
+  { key: 'header_auth.groups_delimiter', value: ',', type: 'string' },
+  { key: 'header_auth.display_name_header', value: 'X-Forwarded-Preferred-Username', type: 'string' },
+  { key: 'header_auth.issuer', value: 'bastion-pro', type: 'string' },
+  { key: 'header_auth.token_header', value: 'X-ESOS-Auth-Token', type: 'string' },
+  { key: 'header_auth.internal_token', value: '', type: 'secret' },
 ]
 
 export async function ensureAuthProviderDefaultSettings(): Promise<void> {
@@ -74,14 +87,17 @@ export interface AdminAuthProvidersSummary {
     local: number
     ldap:  number
     oidc:  number
+    header: number
   }
   config: {
     ldapComplete: boolean
     oidcComplete: boolean
+    headerComplete: boolean
   }
   login: {
     ldap: ProviderLoginSummary
     oidc: ProviderLoginSummary
+    header: ProviderLoginSummary
   }
 }
 
@@ -112,6 +128,17 @@ export interface AdminAuthProvidersDto {
     redirectPath:      string
     clockSkewSec:      number
   }
+  header: {
+    enabled:            boolean
+    userHeader:         string
+    emailHeader:        string
+    groupsHeader:       string
+    groupsDelimiter:    string
+    displayNameHeader:  string
+    issuer:             string
+    tokenHeader:        string
+    internalTokenSet:   boolean
+  }
   auth: {
     jitEnabled:        boolean
     jitDefaultRole:    UserRole
@@ -120,6 +147,7 @@ export interface AdminAuthProvidersDto {
     mappingRulesJson:  string
     oidcMaxRole:       UserRole | null
     ldapMaxRole:       UserRole | null
+    headerMaxRole:     UserRole | null
   }
 }
 
@@ -132,6 +160,7 @@ export async function buildAdminAuthProvidersDto(): Promise<AdminAuthProvidersDt
 
   const oidcMaxRaw = (s['auth.oidc.max_role'] ?? '').trim()
   const ldapMaxRaw = (s['auth.ldap.max_role'] ?? '').trim()
+  const headerMaxRaw = (s['auth.header.max_role'] ?? '').trim()
 
   const ldap = {
       enabled:            bool(s['ldap.enabled'], false),
@@ -158,6 +187,18 @@ export async function buildAdminAuthProvidersDto(): Promise<AdminAuthProvidersDt
       clockSkewSec:     int(s['oidc.clock_skew_sec'], 60),
     }
 
+  const header = {
+      enabled:           bool(s['header_auth.enabled'], false),
+      userHeader:        s['header_auth.user_header'] ?? 'X-Forwarded-User',
+      emailHeader:       s['header_auth.email_header'] ?? 'X-Forwarded-Email',
+      groupsHeader:      s['header_auth.groups_header'] ?? 'X-Forwarded-Groups',
+      groupsDelimiter:   s['header_auth.groups_delimiter'] ?? ',',
+      displayNameHeader: s['header_auth.display_name_header'] ?? 'X-Forwarded-Preferred-Username',
+      issuer:            s['header_auth.issuer'] ?? 'bastion-pro',
+      tokenHeader:       s['header_auth.token_header'] ?? 'X-ESOS-Auth-Token',
+      internalTokenSet:  (s['header_auth.internal_token'] ?? '') === '***',
+    }
+
   const auth = {
       jitEnabled:       bool(s['auth.jit.enabled'], false),
       jitDefaultRole:   parseUserRole(s['auth.jit.default_role'], 'viewer'),
@@ -166,16 +207,18 @@ export async function buildAdminAuthProvidersDto(): Promise<AdminAuthProvidersDt
       mappingRulesJson: s['auth.mapping_rules_json'] ?? '[]',
       oidcMaxRole:      oidcMaxRaw === '' ? null : parseUserRole(oidcMaxRaw, 'viewer'),
       ldapMaxRole:      ldapMaxRaw === '' ? null : parseUserRole(ldapMaxRaw, 'viewer'),
+      headerMaxRole:    headerMaxRaw === '' ? null : parseUserRole(headerMaxRaw, 'viewer'),
     }
 
-  const [localCount, ldapCount, oidcCount] = await Promise.all([
+  const [localCount, ldapCount, oidcCount, headerCount] = await Promise.all([
     countActiveUsersByAuthSource('local'),
     countActiveUsersByAuthSource('ldap'),
     countActiveUsersByAuthSource('oidc'),
+    countActiveUsersByAuthSource('header'),
   ])
 
-  const counts = { local: localCount, ldap: ldapCount, oidc: oidcCount }
-  const dtoBody = { ldap, oidc, auth }
+  const counts = { local: localCount, ldap: ldapCount, oidc: oidcCount, header: headerCount }
+  const dtoBody = { ldap, oidc, header, auth }
 
   return {
     summary: {
@@ -183,10 +226,12 @@ export async function buildAdminAuthProvidersDto(): Promise<AdminAuthProvidersDt
       config: {
         ldapComplete: isLdapConfigSufficientForLogin(ldap),
         oidcComplete: isOidcConfigSufficientForLogin(oidc),
+        headerComplete: isHeaderAuthConfigSufficient(header),
       },
       login: {
         ldap: evaluateLdapAvailability(dtoBody, counts),
         oidc: evaluateOidcAvailability(dtoBody, counts),
+        header: evaluateHeaderAvailability(dtoBody, counts),
       },
     },
     ...dtoBody,
@@ -197,12 +242,14 @@ export async function buildAdminAuthProvidersDto(): Promise<AdminAuthProvidersDt
 export async function loadAuthProviderSecretsForServer(): Promise<{
   ldapBindPassword: string | null
   oidcClientSecret: string | null
+  headerInternalToken: string | null
 }> {
-  const [ldapBindPassword, oidcClientSecret] = await Promise.all([
+  const [ldapBindPassword, oidcClientSecret, headerInternalToken] = await Promise.all([
     getSetting('ldap.bind_password'),
     getSetting('oidc.client_secret'),
+    getSetting('header_auth.internal_token'),
   ])
-  return { ldapBindPassword, oidcClientSecret }
+  return { ldapBindPassword, oidcClientSecret, headerInternalToken }
 }
 
 export type AuthProvidersPatchBody = Partial<{
@@ -229,6 +276,17 @@ export type AuthProvidersPatchBody = Partial<{
     redirectPath: string
     clockSkewSec: number
   }>
+  header: Partial<{
+    enabled: boolean
+    userHeader: string
+    emailHeader: string
+    groupsHeader: string
+    groupsDelimiter: string
+    displayNameHeader: string
+    issuer: string
+    tokenHeader: string
+    internalToken: string
+  }>
   auth: Partial<{
     jitEnabled: boolean
     jitDefaultRole: UserRole
@@ -237,6 +295,7 @@ export type AuthProvidersPatchBody = Partial<{
     mappingRulesJson: string
     oidcMaxRole: UserRole | '' | null
     ldapMaxRole: UserRole | '' | null
+    headerMaxRole: UserRole | '' | null
   }>
 }>
 
@@ -292,6 +351,46 @@ export async function applyAuthProvidersPatch(body: AuthProvidersPatchBody): Pro
     if (L.timeoutSec !== undefined) {
       await setSetting('ldap.timeout_sec', String(L.timeoutSec), 'number')
       updated.push('ldap.timeout_sec')
+    }
+  }
+
+  if (body.header) {
+    const H = body.header
+    if (H.enabled !== undefined) {
+      await setSetting('header_auth.enabled', String(H.enabled), 'boolean')
+      updated.push('header_auth.enabled')
+    }
+    if (H.userHeader !== undefined) {
+      await setSetting('header_auth.user_header', H.userHeader.trim(), 'string')
+      updated.push('header_auth.user_header')
+    }
+    if (H.emailHeader !== undefined) {
+      await setSetting('header_auth.email_header', H.emailHeader.trim(), 'string')
+      updated.push('header_auth.email_header')
+    }
+    if (H.groupsHeader !== undefined) {
+      await setSetting('header_auth.groups_header', H.groupsHeader.trim(), 'string')
+      updated.push('header_auth.groups_header')
+    }
+    if (H.groupsDelimiter !== undefined) {
+      await setSetting('header_auth.groups_delimiter', H.groupsDelimiter, 'string')
+      updated.push('header_auth.groups_delimiter')
+    }
+    if (H.displayNameHeader !== undefined) {
+      await setSetting('header_auth.display_name_header', H.displayNameHeader.trim(), 'string')
+      updated.push('header_auth.display_name_header')
+    }
+    if (H.issuer !== undefined) {
+      await setSetting('header_auth.issuer', H.issuer.trim(), 'string')
+      updated.push('header_auth.issuer')
+    }
+    if (H.tokenHeader !== undefined) {
+      await setSetting('header_auth.token_header', H.tokenHeader.trim(), 'string')
+      updated.push('header_auth.token_header')
+    }
+    if (H.internalToken !== undefined && H.internalToken !== '') {
+      await setSetting('header_auth.internal_token', H.internalToken, 'secret')
+      updated.push('header_auth.internal_token')
     }
   }
 
@@ -372,6 +471,14 @@ export async function applyAuthProvidersPatch(body: AuthProvidersPatchBody): Pro
       }
       await setSetting('auth.ldap.max_role', v, 'string')
       updated.push('auth.ldap.max_role')
+    }
+    if (A.headerMaxRole !== undefined) {
+      const v = A.headerMaxRole === '' || A.headerMaxRole == null ? '' : A.headerMaxRole
+      if (v && v !== 'admin' && v !== 'operator' && v !== 'viewer') {
+        throw createError({ statusCode: 400, message: 'auth.header.max_role invalide' })
+      }
+      await setSetting('auth.header.max_role', v, 'string')
+      updated.push('auth.header.max_role')
     }
   }
 

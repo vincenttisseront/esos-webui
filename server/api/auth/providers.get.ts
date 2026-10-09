@@ -4,9 +4,10 @@ import { countActiveUsersByAuthSource } from '../../db/repositories/user.reposit
 
 export default defineEventHandler(async () => {
   const dto = await buildAdminAuthProvidersDto()
-  const [ldapCount, oidcCount] = await Promise.all([
+  const [ldapCount, oidcCount, headerCount] = await Promise.all([
     countActiveUsersByAuthSource('ldap'),
     countActiveUsersByAuthSource('oidc'),
+    countActiveUsersByAuthSource('header'),
   ])
-  return buildPublicAuthProviders(dto, { ldap: ldapCount, oidc: oidcCount })
+  return buildPublicAuthProviders(dto, { ldap: ldapCount, oidc: oidcCount, header: headerCount })
 })

@@ -10,6 +10,7 @@ const PUBLIC_API_PREFIXES = [
   '/api/auth/ldap/login',
   '/api/auth/oidc/login',
   '/api/auth/oidc/callback',
+  '/api/auth/header/session',
   '/api/health',
   '/api/app/version',
   '/api/_nuxt_icon',

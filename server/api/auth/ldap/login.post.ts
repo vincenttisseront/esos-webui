@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
 
   const dto = await buildAdminAuthProvidersDto()
   const ldapCount = await countActiveUsersByAuthSource('ldap')
-  if (!isLdapLoginAvailable(dto, { ldap: ldapCount, oidc: 0 })) {
+  if (!isLdapLoginAvailable(dto, { ldap: ldapCount, oidc: 0, header: 0 })) {
     throw createError({ statusCode: 404, message: 'Connexion LDAP non disponible' })
   }
 

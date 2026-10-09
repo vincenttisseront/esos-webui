@@ -5,6 +5,7 @@ import {
 } from '../utils/session-auth'
 import type { UserRole } from '../utils/types'
 import { enforceApiRbac } from '../utils/api-rbac'
+import { tryEstablishHeaderSession } from '../utils/header-session'
 
 /**
  * Middleware Nitro de protection + RBAC (cf. SDD v3.7).
@@ -26,6 +27,7 @@ const PUBLIC_API_PREFIXES = [
   '/api/auth/oidc/login',
   '/api/auth/oidc/callback',
   '/api/auth/ldap/login',
+  '/api/auth/header/session',
   '/api/health',
   '/api/app/version',
   '/api/_nuxt_icon',
@@ -38,8 +40,15 @@ export default defineEventHandler(async (event) => {
   if (!path.startsWith('/api/')) return
   if (PUBLIC_API_PREFIXES.some((p) => path.startsWith(p))) return
 
-  const token = getCookie(event, SESSION_COOKIE.name)
-  const auth  = await authenticateSessionFromToken(token)
+  let token = getCookie(event, SESSION_COOKIE.name)
+  let auth  = await authenticateSessionFromToken(token)
+  if (!auth.ok) {
+    const headerSession = await tryEstablishHeaderSession(event)
+    if (headerSession.ok) {
+      token = getCookie(event, SESSION_COOKIE.name)
+      auth = await authenticateSessionFromToken(token)
+    }
+  }
   if (!auth.ok) {
     const { statusCode, message } = mapSessionAuthFailureToHttp(auth.failure)
     throw createError({ statusCode, message })

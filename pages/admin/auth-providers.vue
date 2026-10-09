@@ -13,12 +13,14 @@ import {
   type OidcTestClientState,
 } from '~/utils/auth-providers-admin-ui'
 import {
+  applyHeaderSnapshotToFormInput,
   applyLdapSnapshotToFormInput,
   applyMappingSnapshotToFormInput,
   applyOidcSnapshotToFormInput,
   applySecuritySnapshotToFormInput,
   applySnapshotToFormInput,
   authProvidersFormValidationOk,
+  authProvidersHeaderDirty,
   authProvidersLdapDirty,
   authProvidersMappingDirty,
   authProvidersOidcDirty,
@@ -57,7 +59,7 @@ onMounted(() => {
   if (import.meta.client) {
     publicOrigin.value = `${window.location.protocol}//${window.location.host}`
     const stored = sessionStorage.getItem(AUTH_PROVIDERS_TAB_STORAGE_KEY) as AuthProviderTabId | null
-    if (stored === 'local' || stored === 'ldap' || stored === 'oidc' || stored === 'roles' || stored === 'security') {
+    if (stored === 'local' || stored === 'ldap' || stored === 'oidc' || stored === 'header' || stored === 'roles' || stored === 'security') {
       activeTab.value = stored
     }
   }
@@ -83,6 +85,7 @@ watch(data, (d) => {
 const saving = ref(false)
 const ldapBindPw = ref('')
 const oidcSecret = ref('')
+const headerInternalToken = ref('')
 const ldapLookupUsername = ref('')
 
 const form = reactive({
@@ -105,6 +108,15 @@ const form = reactive({
   oidcRedirectPath: '',
   oidcClockSkewSec: 60,
 
+  headerEnabled: false,
+  headerUserHeader: 'X-Forwarded-User',
+  headerEmailHeader: 'X-Forwarded-Email',
+  headerGroupsHeader: 'X-Forwarded-Groups',
+  headerGroupsDelimiter: ',',
+  headerDisplayNameHeader: 'X-Forwarded-Preferred-Username',
+  headerIssuer: 'bastion-pro',
+  headerTokenHeader: 'X-ESOS-Auth-Token',
+
   jitEnabled: false,
   jitDefaultRole: 'viewer' as 'admin' | 'operator' | 'viewer',
   jitDefaultActive: true,
@@ -112,6 +124,7 @@ const form = reactive({
   mappingRulesJson: '[]',
   oidcMaxRole: 'none' as 'none' | 'admin' | 'operator' | 'viewer',
   ldapMaxRole: 'none' as 'none' | 'admin' | 'operator' | 'viewer',
+  headerMaxRole: 'none' as 'none' | 'admin' | 'operator' | 'viewer',
 })
 
 const baseline = ref<AuthProvidersFormSnapshot | null>(null)
@@ -122,6 +135,7 @@ function loadFromDto(d: AdminAuthProvidersDto) {
   applySnapshotToFormInput(form, snap)
   ldapBindPw.value = ''
   oidcSecret.value = ''
+  headerInternalToken.value = ''
 }
 
 watch(data, (d) => {
@@ -132,6 +146,7 @@ const currentSnapshot = computed(() =>
   snapshotFromFormInput(form, {
     ldapBindPassword: ldapBindPw.value,
     oidcClientSecret: oidcSecret.value,
+    headerInternalToken: headerInternalToken.value,
   }),
 )
 
@@ -140,6 +155,9 @@ const ldapDirty = computed(() =>
 )
 const oidcDirty = computed(() =>
   authProvidersOidcDirty(baseline.value, currentSnapshot.value),
+)
+const headerDirty = computed(() =>
+  authProvidersHeaderDirty(baseline.value, currentSnapshot.value),
 )
 const mappingDirty = computed(() =>
   authProvidersMappingDirty(baseline.value, currentSnapshot.value),
@@ -160,6 +178,12 @@ function cancelOidcEdits() {
   if (!baseline.value) return
   applyOidcSnapshotToFormInput(form, baseline.value)
   oidcSecret.value = ''
+}
+
+function cancelHeaderEdits() {
+  if (!baseline.value) return
+  applyHeaderSnapshotToFormInput(form, baseline.value)
+  headerInternalToken.value = ''
 }
 
 function cancelMappingEdits() {
@@ -215,6 +239,16 @@ async function save() {
         redirectPath: form.oidcRedirectPath,
         clockSkewSec: form.oidcClockSkewSec,
       },
+      header: {
+        enabled: form.headerEnabled,
+        userHeader: form.headerUserHeader,
+        emailHeader: form.headerEmailHeader,
+        groupsHeader: form.headerGroupsHeader,
+        groupsDelimiter: form.headerGroupsDelimiter,
+        displayNameHeader: form.headerDisplayNameHeader,
+        issuer: form.headerIssuer,
+        tokenHeader: form.headerTokenHeader,
+      },
       auth: {
         jitEnabled: form.jitEnabled,
         jitDefaultRole: form.jitDefaultRole,
@@ -223,6 +257,7 @@ async function save() {
         mappingRulesJson: form.mappingRulesJson,
         oidcMaxRole: form.oidcMaxRole === 'none' ? null : form.oidcMaxRole,
         ldapMaxRole: form.ldapMaxRole === 'none' ? null : form.ldapMaxRole,
+        headerMaxRole: form.headerMaxRole === 'none' ? null : form.headerMaxRole,
       },
     }
     if (ldapBindPw.value) {
@@ -231,9 +266,13 @@ async function save() {
     if (oidcSecret.value) {
       (patch.oidc as Record<string, unknown>).clientSecret = oidcSecret.value
     }
+    if (headerInternalToken.value) {
+      (patch.header as Record<string, unknown>).internalToken = headerInternalToken.value
+    }
     await $fetch('/api/admin/auth-providers', { method: 'PATCH', body: patch })
     ldapBindPw.value = ''
     oidcSecret.value = ''
+    headerInternalToken.value = ''
     toastOk(t('admin.authProviders.toasts.saveTitle'), t('admin.authProviders.toasts.saveBody'))
     await refresh()
   } catch (e: unknown) {
@@ -470,6 +509,17 @@ async function testOidc() {
             @go-roles-tab="selectTab('roles')"
             @save="save"
             @cancel="cancelOidcEdits"
+          />
+          <AuthProvidersHeaderTab
+            v-show="activeTab === 'header'"
+            v-model:form="form"
+            v-model:header-internal-token="headerInternalToken"
+            :data="data"
+            :read-only="authProvidersReadOnly"
+            :dirty="headerDirty"
+            :saving="saving"
+            @save="save"
+            @cancel="cancelHeaderEdits"
           />
           <AuthProvidersProvisioningTab
             v-show="activeTab === 'roles'"

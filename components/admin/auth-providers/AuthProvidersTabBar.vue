@@ -16,6 +16,7 @@ const tabs: { id: AuthProviderTabId; labelKey: string }[] = [
   { id: 'local', labelKey: 'admin.authProviders.page.tabs.local' },
   { id: 'ldap', labelKey: 'admin.authProviders.page.tabs.ldap' },
   { id: 'oidc', labelKey: 'admin.authProviders.page.tabs.oidc' },
+  { id: 'header', labelKey: 'admin.authProviders.page.tabs.header' },
   { id: 'roles', labelKey: 'admin.authProviders.page.tabs.roles' },
   { id: 'security', labelKey: 'admin.authProviders.page.tabs.security' },
 ]

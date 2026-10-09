@@ -11,9 +11,26 @@ export default defineNuxtRouteMiddleware(async (to) => {
   if (to.path === '/login') return
 
   const auth = useAuthStore()
+  const requestFetch = useRequestFetch()
+
   if (!auth.fetched) {
     // useRequestFetch() forwarde les cookies de la requête entrante côté SSR
-    await auth.fetchMe(useRequestFetch())
+    await auth.fetchMe(requestFetch)
+  }
+
+  if (!auth.isAuthenticated && to.path !== '/login') {
+    try {
+      const providers = await requestFetch<{
+        providers: Array<{ key: string; available: boolean; loginUrl?: string }>
+      }>('/api/auth/providers')
+      const header = providers.providers.find((p) => p.key === 'header' && p.available)
+      if (header?.loginUrl) {
+        await requestFetch(header.loginUrl)
+        await auth.fetchMe(requestFetch)
+      }
+    } catch {
+      /* transparent SSO not available */
+    }
   }
 
   if (!auth.isAuthenticated) {

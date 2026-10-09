@@ -323,6 +323,9 @@
     "FILE_TOO_LARGE": "File exceeds the configured upload size limit.",
     "UPLOAD_FILE_REQUIRED": "No file was uploaded.",
     "UPLOAD_PARSE_FAILED": "Failed to parse the upload form.",
+    "header": {
+      "denied": "Bastion SSO sign-in failed. Check proxy headers and your account, or sign in manually."
+    },
     "oidc": {
       "denied": "SSO sign-in denied or cancelled.",
       "missing": "Incomplete SSO response.",
@@ -3222,6 +3225,7 @@
           "local": "Local",
           "ldap": "LDAP / AD",
           "oidc": "SSO / OIDC",
+          "header": "Bastion headers",
           "roles": "Provisioning",
           "security": "Security"
         }
@@ -3231,6 +3235,7 @@
           "local": "Local",
           "ldap": "LDAP / AD",
           "oidc": "SSO / OIDC",
+          "header": "Bastion SSO",
           "roles": "Roles"
         },
         "enabled": "Enabled",
@@ -3419,6 +3424,35 @@
         "testDesc": "Checks that issuer and client_id can fetch OpenID metadata (no secrets displayed).",
         "testButton": "Test OIDC discovery",
         "testLoginButton": "Open SSO login (new tab)"
+      },
+      "header": {
+        "statusTitle": "Bastion header SSO status",
+        "enableLabel": "Enable trusted header SSO",
+        "enableHelp": "When Bastion Pro injects identity headers and the internal token, users are signed in transparently (no extra button on the sign-in page).",
+        "loginTransparent": "Transparent auto sign-in (via reverse proxy)",
+        "sectionTrust": "Trust and internal token",
+        "tokenHeaderLabel": "Internal token header name",
+        "tokenHeaderDesc": "Header carrying the shared secret (must match Bastion / nginx configuration).",
+        "internalTokenLabel": "Internal token (secret)",
+        "internalTokenDesc": "Shared with Bastion Pro. Set via Admin or AUTH_HEADER_INTERNAL_TOKEN in Docker. Never shown after save.",
+        "internalTokenPlaceholder": "New token (optional)",
+        "internalTokenConfigured": "Internal token configured",
+        "internalTokenMissing": "No internal token stored",
+        "trustTitle": "Never trust headers from the public internet",
+        "trustBody": "Only requests presenting the correct internal token are accepted. Configure the same value on Bastion Pro and ESOS.",
+        "sectionIdentity": "Identity headers",
+        "userHeaderLabel": "Username header",
+        "userHeaderDesc": "Required. Typically X-Forwarded-User from Bastion after IdP authentication.",
+        "emailHeaderLabel": "Email header",
+        "emailHeaderDesc": "Optional. Used for display and JIT provisioning.",
+        "groupsHeaderLabel": "Groups header",
+        "groupsHeaderDesc": "Optional. Delimited list for OIDC-style role mapping rules.",
+        "groupsDelimiterLabel": "Groups delimiter",
+        "groupsDelimiterDesc": "Character separating group values in the groups header.",
+        "displayNameHeaderLabel": "Display name header",
+        "displayNameHeaderDesc": "Optional friendly name for JIT accounts.",
+        "issuerLabel": "External issuer id",
+        "issuerDesc": "Stored with the federated identity (e.g. bastion-pro). Must stay stable when linking accounts."
       },
       "ldap": {
         "cardTitle": "LDAP / Active Directory",
@@ -3723,6 +3757,8 @@
         "oidcMaxRoleDesc": "Upper bound for the role from OIDC rules (after mapping).",
         "ldapMaxRoleLabel": "LDAP role cap",
         "ldapMaxRoleDesc": "Upper bound for the role from LDAP groups (after mapping).",
+        "headerMaxRoleLabel": "Header SSO role cap",
+        "headerMaxRoleDesc": "Upper bound for the role from Bastion header groups (after mapping).",
         "rulesJsonLabel": "Mapping rules (JSON)",
         "rulesJsonDesc": "Array of objects with match and role fields. OIDC rules use type oidc_claim; LDAP uses ldap_group_dn.",
         "exampleLabel": "Show example structure",
@@ -3776,6 +3812,7 @@
         "local": "Local",
         "ldap": "LDAP / AD",
         "oidc": "SSO / OIDC",
+        "header": "Bastion SSO",
         "unknown": "Unknown"
       },
       "filters": {
