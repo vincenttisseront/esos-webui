@@ -2,10 +2,14 @@ node_modules
 .nuxt
 .output
 
-# Environment files
+# Environment files / local secrets
 .env
 .env.*
 !.env.example
+.secrets/
+
+# Sonar scanner workdir
+.scannerwork/
 
 # SSH keys
 keys/

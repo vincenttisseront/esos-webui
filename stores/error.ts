@@ -25,7 +25,14 @@ function newId(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
     return crypto.randomUUID()
   }
-  return `err-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const bytes = new Uint8Array(6)
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    crypto.getRandomValues(bytes)
+  } else {
+    const t = Date.now()
+    for (let i = 0; i < bytes.length; i++) bytes[i] = (t + i * 17) & 0xff
+  }
+  return `err-${Date.now()}-${Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')}`
 }
 
 export const useErrorStore = defineStore('error', {

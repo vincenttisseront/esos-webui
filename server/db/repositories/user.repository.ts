@@ -333,7 +333,7 @@ export function linkUserToFederatedIdentity(
   authSource: AuthSource,
   issuer: string,
   subject: string,
-): Promise<void> {
+): void {
   const db  = getDB()
   const now = new Date().toISOString()
   if (authSource !== 'oidc' && authSource !== 'ldap' && authSource !== 'header') {

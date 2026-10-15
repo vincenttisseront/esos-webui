@@ -5,7 +5,7 @@ const inFlight = new Map<string, Promise<unknown>>()
  */
 export function singleFlight<T>(key: string, fn: () => Promise<T>): Promise<T> {
   const existing = inFlight.get(key) as Promise<T> | undefined
-  if (existing) return existing
+  if (existing !== undefined) return existing
 
   const promise = fn().finally(() => {
     inFlight.delete(key)
@@ -15,7 +15,9 @@ export function singleFlight<T>(key: string, fn: () => Promise<T>): Promise<T> {
 }
 
 export function singleFlightKey(url: string, query?: Record<string, unknown>): string {
-  const q = query ? JSON.stringify(query, Object.keys(query).sort()) : ''
+  const q = query
+    ? JSON.stringify(query, Object.keys(query).sort((a, b) => a.localeCompare(b)))
+    : ''
   return `${url}?${q}`
 }
 

@@ -17,7 +17,7 @@ export class SSHPool {
     if (existing) return existing
 
     const inflight = this.creating.get(sanId)
-    if (inflight) return inflight
+    if (inflight !== undefined) return inflight
 
     const promise = this.create(sanId).finally(() => {
       this.creating.delete(sanId)

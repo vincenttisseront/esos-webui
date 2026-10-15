@@ -315,7 +315,7 @@ function buildClusterSymmetryItems(
     nodeLabel: p.nodeLabel,
     activeMdArrays: p.activeMdArrays,
   }))
-  const localSnapshots = mdArrays.map(mdArrayToActiveSnapshot)
+  const localSnapshots = mdArrays.map(arr => mdArrayToActiveSnapshot(arr))
   const items: RaidActionableItem[] = []
 
   if (mode === 'shared_identity') {
@@ -426,7 +426,7 @@ function findLocalSymmetricStructuralIssuesOnlyUuid(
   const results = assessClusterArraySymmetry({
     currentSanId,
     currentLabel,
-    localArrays: mdArrays.map(mdArrayToActiveSnapshot),
+    localArrays: mdArrays.map(arr => mdArrayToActiveSnapshot(arr)),
     peerSnapshots: clusterPeers.map(p => ({
       nodeSanId: p.nodeSanId,
       nodeLabel: p.nodeLabel,

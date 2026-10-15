@@ -25,7 +25,7 @@ export function parseMultipathLl(raw: string): MultipathMap[] {
     maps.push({
       wwid,
       alias,
-      dmDevice: alias.startsWith('dm-') ? `/dev/mapper/${alias}` : `/dev/mapper/${alias}`,
+      dmDevice: `/dev/mapper/${alias}`,
       pathCount: paths.length,
       paths,
     })

@@ -54,7 +54,7 @@ export function computeAddMdMemberPlanToken(input: {
     intent: input.intent,
     primarySanId: input.primarySanId,
     device: input.device,
-    nodes: input.nodeSanIds.sort(),
+    nodes: input.nodeSanIds.sort((a, b) => a.localeCompare(b)),
   })
   return createHash('sha256').update(payload).digest('hex').slice(0, 16)
 }

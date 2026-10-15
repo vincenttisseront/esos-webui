@@ -17,7 +17,6 @@ const props = defineProps<{
   readOnly: boolean
   dirty: boolean
   saving: boolean
-  oidcSecret: string
   publicOrigin: string
   lastOidcTest: OidcTestClientState
   testingOidc: boolean

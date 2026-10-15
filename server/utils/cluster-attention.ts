@@ -302,7 +302,7 @@ export async function appendMdAttentionPoints(
               summary: issue.message,
               affectedNodeIds: mdLvmStates.map(s => s.sanId),
               affectedNodeLabels: mdLvmStates.map(s => s.label),
-              recommendedAction: issue.severity === 'critical' ? 'open_raid' : 'open_raid',
+              recommendedAction: 'open_raid',
               actionRoute: `/admin/sans/${primary}/raid`,
               actionPayload: { arrayName: name, tab: 'lvm' },
               dismissible: false,

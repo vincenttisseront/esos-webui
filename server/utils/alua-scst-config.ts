@@ -7,7 +7,7 @@ export function listScstDeviceNames(config: ScstConfig): string[] {
   for (const h of config.handlers) {
     for (const d of h.devices) names.add(d.name)
   }
-  return [...names].sort()
+  return [...names].sort((a, b) => a.localeCompare(b))
 }
 
 export function listScstTargetNames(config: ScstConfig): string[] {
@@ -16,7 +16,7 @@ export function listScstTargetNames(config: ScstConfig): string[] {
     if (isSystemDriver(d.name)) continue
     for (const t of d.targets) names.add(t.name)
   }
-  return [...names].sort()
+  return [...names].sort((a, b) => a.localeCompare(b))
 }
 
 export function targetExistsOnConfig(config: ScstConfig, targetName: string): boolean {

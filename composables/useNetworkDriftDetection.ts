@@ -32,8 +32,8 @@ export function useNetworkDriftDetection() {
 
   function start(intervalMs = 60_000) {
     if (!canAccessAdminDriftRead()) return
-    check() // immediate first check
-    timer = setInterval(check, intervalMs)
+    void check() // immediate first check
+    timer = setInterval(() => { void check() }, intervalMs)
   }
 
   function stop() {

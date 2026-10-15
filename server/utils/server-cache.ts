@@ -82,7 +82,7 @@ export async function cachedFetch<T>(
   }
 
   const pending = inFlight.get(key) as Promise<CachedResult<T>> | undefined
-  if (pending) {
+  if (pending !== undefined) {
     debugLog(`in-flight key=${key}`)
     return pending
   }

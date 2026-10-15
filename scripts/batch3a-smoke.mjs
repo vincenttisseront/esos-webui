@@ -3,15 +3,16 @@
  * Run after `npm run build`. Uses NITRO_PORT on 127.0.0.1 only.
  */
 import { spawn } from 'node:child_process'
+import { randomInt } from 'node:crypto'
 import { setTimeout as delay } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, '..')
-const port = String(30990 + Math.floor(Math.random() * 80))
+const port = String(30990 + randomInt(80))
 
-const child = spawn('node', ['.output/server/index.mjs'], {
+const child = spawn(process.execPath, ['.output/server/index.mjs'], {
   cwd: root,
   env: {
     ...process.env,

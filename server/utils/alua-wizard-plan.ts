@@ -56,7 +56,7 @@ export function buildDeviceGroupForNode(
     .filter(a => a.nodeId === peerId && a.role === 'local')
     .map(a => a.targetName)
 
-  const uniq = (arr: string[]) => [...new Set(arr)].sort()
+  const uniq = (arr: string[]) => [...new Set(arr)].sort((a, b) => a.localeCompare(b))
 
   let localId = req.groupIdsOnPrimary.local
   let remoteId = req.groupIdsOnPrimary.remote
@@ -72,7 +72,7 @@ export function buildDeviceGroupForNode(
 
   return {
     name:         req.deviceGroupName,
-    devices:      [...req.deviceNames].sort(),
+    devices:      [...req.deviceNames].sort((a, b) => a.localeCompare(b)),
     targetGroups,
   }
 }

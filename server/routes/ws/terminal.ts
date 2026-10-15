@@ -337,7 +337,7 @@ export default defineWebSocketHandler({
         } catch { /* fall through to defaults */ }
       }
       pending.initialized = true
-      openAndAttach(peer, pending.manager, cols, rows, pending.queue)
+      void openAndAttach(peer, pending.manager, cols, rows, pending.queue)
       return
     }
 

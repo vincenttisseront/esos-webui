@@ -153,7 +153,7 @@ export class SSHSessionManager extends EventEmitter {
   private flushQueue(): void {
     const pending = this.queue.splice(0)
     for (const item of pending) {
-      this.runExec(item.cmd, item.timeoutMs, item.resolve, item.reject)
+      void this.runExec(item.cmd, item.timeoutMs, item.resolve, item.reject)
     }
   }
 
@@ -253,7 +253,7 @@ export class SSHSessionManager extends EventEmitter {
         return
       }
       if (this.status === 'connected' && this.client) {
-        this.runExec(cmd, timeoutMs, resolve, reject)
+        void this.runExec(cmd, timeoutMs, resolve, reject)
       } else {
         this.queue.push({ cmd, timeoutMs, resolve, reject })
       }

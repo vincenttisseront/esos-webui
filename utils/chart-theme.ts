@@ -20,7 +20,7 @@ export function getChartTheme(mode: ChartThemeMode) {
     readFill: isDark ? 'rgba(96, 165, 250, 0.12)' : 'rgba(59, 130, 246, 0.08)',
     writeBorder: isDark ? '#fb923c' : '#f97316',
     writeFill: isDark ? 'rgba(251, 146, 60, 0.12)' : 'rgba(249, 115, 22, 0.08)',
-    neutralBorder: isDark ? '#9ca3af' : '#9ca3af',
+    neutralBorder: '#9ca3af',
     neutralFill: isDark ? 'rgba(156, 163, 175, 0.1)' : 'rgba(156, 163, 175, 0.08)',
   }
 }

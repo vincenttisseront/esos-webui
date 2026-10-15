@@ -44,6 +44,6 @@ export function flattenAluaGroupsForApi(deviceGroups: AluaDeviceGroup[]): ALUAGr
 export function aluaFingerprintFromDeviceGroups(deviceGroups: AluaDeviceGroup[]): string {
   return flattenAluaGroups(deviceGroups)
     .map(g => `${g.deviceGroup}/${g.targetGroup}:${g.state}`)
-    .sort()
+    .sort((a, b) => a.localeCompare(b))
     .join('|')
 }

@@ -77,7 +77,7 @@ export function findCrossNodeVgNameMismatch(
   nodes: Array<{ nodeLabel: string; vgs: VolumeGroup[] }>,
 ): LvmStructuralIssue[] {
   const issues: LvmStructuralIssue[] = []
-  const connected = nodes.filter(n => n.vgs.length >= 0)
+  const connected = nodes.filter(n => Array.isArray(n.vgs))
   if (connected.length < 2) return issues
 
   const sets = connected.map(n => ({

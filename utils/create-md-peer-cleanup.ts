@@ -33,7 +33,7 @@ export function resolvePeerCleanupMembers(input: {
     .filter((path): path is string => Boolean(path))
 
   if (fromRefs.length > 0) {
-    return [...new Set(fromRefs)].sort()
+    return [...new Set(fromRefs)].sort((a, b) => a.localeCompare(b))
   }
 
   const paths: string[] = []
@@ -43,7 +43,7 @@ export function resolvePeerCleanupMembers(input: {
     )
     if (mapping?.targetPath) paths.push(mapping.targetPath)
   }
-  return [...new Set(paths)].sort()
+  return [...new Set(paths)].sort((a, b) => a.localeCompare(b))
 }
 
 export function groupPeerSuperblockBlockers(

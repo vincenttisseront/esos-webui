@@ -15,9 +15,11 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends python3 make g++ \
  && rm -rf /var/lib/apt/lists/*
 
-COPY package.json package-lock.json* ./
+COPY package.json package-lock.json ./
 
-RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+# Lockfile required. Ignore arbitrary lifecycle scripts, then rebuild only native deps we need.
+RUN npm ci --ignore-scripts \
+ && npm rebuild argon2 better-sqlite3 cpu-features ssh2
 
 COPY . .
 
@@ -47,6 +49,7 @@ RUN apt-get update \
 COPY docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
+# Entrypoint runs as root only to chown volumes, then drops to ESOS_RUNTIME_USER via gosu.
 USER root
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 

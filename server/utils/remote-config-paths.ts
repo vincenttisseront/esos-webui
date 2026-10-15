@@ -65,7 +65,7 @@ export function validateSafeSmtpAuthUser(value: string): string | null {
 export function validateSmtpAuthPass(value: string): string | null {
   if (!value) return null
   if (value.length > 512) return 'Mot de passe SMTP trop long'
-  if (/[\r\n\x00]/.test(value)) return 'Mot de passe SMTP invalide'
+  if (/[\r\n\u0000]/.test(value)) return 'Mot de passe SMTP invalide'
   return null
 }
 

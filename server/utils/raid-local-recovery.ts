@@ -82,8 +82,8 @@ export function assertMembersMatchLocalPayload(
   localMembers: string[],
   requestMembers: string[],
 ): void {
-  const a = [...localMembers].map(String).sort()
-  const b = [...requestMembers].map(String).sort()
+  const a = [...localMembers].map(String).sort((a, b) => a.localeCompare(b))
+  const b = [...requestMembers].map(String).sort((a, b) => a.localeCompare(b))
   if (a.length !== b.length || a.some((m, i) => m !== b[i])) {
     throw createError({
       statusCode: 400,

@@ -87,7 +87,7 @@ if (existsSync(pkgPath)) {
   const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'))
   const bundled = new Set(pkg.bundledDependencies || [])
   for (const name of copied) bundled.add(name)
-  pkg.bundledDependencies = [...bundled].sort()
+  pkg.bundledDependencies = [...bundled].sort((a, b) => a.localeCompare(b))
   writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`)
 }
 

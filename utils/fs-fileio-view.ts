@@ -68,7 +68,7 @@ export function chainDetailInInventory(
     const count = step.count ?? 0
     if (stepId === 'vdisk') return count === 0 || view.vdiskFiles.length >= count
     if (stepId === 'fileio') return count === 0 || view.fileioDevices.length >= count
-    if (stepId === 'expose') return view.lunMappings.length >= 0
+    if (stepId === 'expose') return view.lunMappings.length > 0
   }
 
   switch (stepId) {

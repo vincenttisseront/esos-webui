@@ -33,7 +33,9 @@ export type OidcDiscoveryTestResult = OidcDiscoverySuccess | OidcDiscoveryFailur
 
 /** Strip trailing slashes so Keycloak issuer matches discovery metadata. */
 export function normalizeOidcIssuer(issuer: string): string {
-  return issuer.trim().replace(/\/+$/, '')
+  let s = issuer.trim()
+  while (s.endsWith('/')) s = s.slice(0, -1)
+  return s
 }
 
 export function oidcDiscoveryUrl(issuer: string): string {
@@ -67,8 +69,9 @@ function httpStatusFrom(err: unknown, cause: Record<string, unknown> | null): nu
     if (!candidate) continue
     if (typeof candidate.status === 'number') return candidate.status
     if (typeof candidate.statusCode === 'number') return candidate.statusCode
-    const response = asRecord(candidate.response) ?? (candidate instanceof Response ? null : null)
+    const response = asRecord(candidate.response)
     if (response && typeof response.status === 'number') return response.status
+    if (typeof Response !== 'undefined' && candidate instanceof Response) return candidate.status
   }
   // oauth4webapi may attach the Response as cause directly
   if (err && typeof err === 'object' && 'cause' in err) {

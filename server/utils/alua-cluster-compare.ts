@@ -150,12 +150,12 @@ function unionDeviceGroupNames(nodes: AluaNodeSnapshot[]): string[] {
   for (const n of nodes) {
     for (const dg of n.deviceGroups) names.add(dg.name)
   }
-  return [...names].sort()
+  return [...names].sort((a, b) => a.localeCompare(b))
 }
 
 function deviceGroupSetsMatch(nodes: AluaNodeSnapshot[], expected: string[]): boolean {
   for (const n of nodes) {
-    const names = n.deviceGroups.map(d => d.name).sort()
+    const names = n.deviceGroups.map(d => d.name).sort((a, b) => a.localeCompare(b))
     if (names.join('|') !== expected.join('|')) return false
   }
   return true
@@ -167,13 +167,13 @@ function unionTargetGroupNames(nodes: AluaNodeSnapshot[], dgName: string): strin
     const dg = n.deviceGroups.find(d => d.name === dgName)
     for (const tg of dg?.targetGroups ?? []) names.add(tg.name)
   }
-  return [...names].sort()
+  return [...names].sort((a, b) => a.localeCompare(b))
 }
 
 function targetGroupSetsMatch(nodes: AluaNodeSnapshot[], dgName: string, expected: string[]): boolean {
   for (const n of nodes) {
     const dg = n.deviceGroups.find(d => d.name === dgName)
-    const names = (dg?.targetGroups ?? []).map(t => t.name).sort()
+    const names = (dg?.targetGroups ?? []).map(t => t.name).sort((a, b) => a.localeCompare(b))
     if (names.join('|') !== expected.join('|')) return false
   }
   return true
@@ -267,7 +267,7 @@ function checkReversedGroupIds(
 }
 
 function targetNamesForRole(tgRole: AluaTargetGroupRole, targets: { targetName: string }[]): string[] {
-  return targets.map(t => t.targetName).sort()
+  return targets.map(t => t.targetName).sort((a, b) => a.localeCompare(b))
 }
 
 function checkTargetAssignment(

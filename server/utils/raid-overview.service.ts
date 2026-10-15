@@ -461,7 +461,7 @@ function parseDiskById(output: string): Map<string, string[]> {
     const target = match[2]
     const existing = map.get(target) ?? []
     existing.push(link)
-    map.set(target, [...new Set(existing)].sort())
+    map.set(target, [...new Set(existing)].sort((a, b) => a.localeCompare(b)))
   }
   return map
 }
@@ -627,7 +627,7 @@ function buildAlerts(
   for (const arr of mdArrays) {
     if (arr.state === 'degraded' || arr.state === 'failed') {
       alerts.push({
-        severity: arr.state === 'failed' ? 'critical' : 'critical',
+        severity: 'critical',
         code: 'md_array_bad_state',
         params: { path: arr.path, state: arr.state },
         message: `Array ${arr.path} est en état ${arr.state}`,

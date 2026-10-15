@@ -256,7 +256,7 @@ function orderedFallback(
   if (unmappedLds.length !== available.length || available.length === 0) return null
 
   const sortedLds = [...unmappedLds].sort((a, b) => parseVdIndex(a.id) - parseVdIndex(b.id))
-  const sortedPaths = [...available].sort()
+  const sortedPaths = [...available].sort((a, b) => a.localeCompare(b))
   const idx = sortedLds.findIndex(l => l.id === ld.id)
   if (idx < 0 || idx >= sortedPaths.length) return null
   return { path: sortedPaths[idx], method: 'order' }
