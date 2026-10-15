@@ -76,8 +76,9 @@ export function parseRamAvailableMb(freeOutput: string): number | null {
       if (!Number.isNaN(avail)) return avail
     }
     if (line.toLowerCase().includes('mem') && line.includes('available')) {
-      const m = line.match(/(\d+)\s*$/)
-      if (m) return Number.parseInt(m[1], 10)
+      const cols = line.trim().split(/\s+/)
+      const last = cols[cols.length - 1] ?? ''
+      if (/^\d+$/.test(last)) return Number.parseInt(last, 10)
     }
   }
   const memLine = lines.find(l => /^Mem:/i.test(l))

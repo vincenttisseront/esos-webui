@@ -77,7 +77,10 @@ export function parseMemoryModules(output: string): MemoryModule[] {
 
 function parseMemSize(sizeStr: string | undefined): number {
   if (!sizeStr || sizeStr === 'No Module Installed') return 0
-  const m = sizeStr.match(/(\d+)\s*(MB|GB)/)
-  if (!m) return 0
-  return m[2] === 'GB' ? parseInt(m[1], 10) * 1024 : parseInt(m[1], 10)
+  const unitIdx = sizeStr.search(/\s*(MB|GB)\b/i)
+  if (unitIdx < 0) return 0
+  const num = Number.parseInt(sizeStr.slice(0, unitIdx).trim(), 10)
+  if (Number.isNaN(num)) return 0
+  const unit = sizeStr.slice(unitIdx).trim().toUpperCase().startsWith('GB') ? 'GB' : 'MB'
+  return unit === 'GB' ? num * 1024 : num
 }

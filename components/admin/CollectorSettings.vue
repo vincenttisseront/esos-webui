@@ -17,10 +17,12 @@
         :description="`${pointsPerHour} points / heure · ${pointsPerDay} points / jour`"
       >
         <input
+          id="collector-interval-sec"
           type="range"
           v-model.number="form.intervalSec"
           :min="10" :max="300" :step="10"
           class="w-full accent-blue-500"
+          :aria-label="`Intervalle de collecte — ${form.intervalSec}s`"
           @change="autoSave"
         />
         <div class="flex justify-between text-xs text-gray-400 mt-1">
@@ -35,10 +37,12 @@
         :description="`Estimation : ${estimatedSamples.toLocaleString('fr-FR')} samples stockés`"
       >
         <input
+          id="collector-retention-hours"
           type="range"
           v-model.number="form.retentionHours"
           :min="1" :max="168" :step="1"
           class="w-full accent-purple-500"
+          :aria-label="`Rétention — ${retentionLabel}`"
           @change="autoSave"
         />
         <div class="flex justify-between text-xs text-gray-400 mt-1">

@@ -98,7 +98,20 @@ export function parseProcDRBD(raw: string): DRBDResource[] {
   if (!raw || raw.trim() === '' || raw.includes('DRBD_UNAVAILABLE')) return []
 
   const resources: DRBDResource[] = []
-  const blocks = raw.split(/\n(?=\s*\d+:)/)
+  const blocks: string[] = []
+  {
+    const lines = raw.split('\n')
+    let cur: string[] = []
+    for (const line of lines) {
+      if (/^\s*\d+:/.test(line) && cur.length) {
+        blocks.push(cur.join('\n'))
+        cur = [line]
+      } else {
+        cur.push(line)
+      }
+    }
+    if (cur.length) blocks.push(cur.join('\n'))
+  }
 
   for (const block of blocks) {
     const firstLine = block.split('\n').find(l => /^\s*\d+:/.test(l))

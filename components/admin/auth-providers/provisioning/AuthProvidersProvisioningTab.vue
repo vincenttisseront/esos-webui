@@ -420,6 +420,7 @@ function esosStatusLabel(s: LdapDirectoryUser['esosStatus']): string {
                 <th class="p-3 w-10">
                   <input
                     type="checkbox"
+                    aria-label="Select all users"
                     :checked="selectedDns.size === searchResults.length && searchResults.length > 0"
                     @change="toggleSelectAll(($event.target as HTMLInputElement).checked)"
                   >
@@ -436,6 +437,7 @@ function esosStatusLabel(s: LdapDirectoryUser['esosStatus']): string {
                 <td class="p-3">
                   <input
                     type="checkbox"
+                    :aria-label="`Select ${u.login}`"
                     :checked="selectedDns.has(u.dn)"
                     @change="toggleSelect(u.dn, ($event.target as HTMLInputElement).checked)"
                   >

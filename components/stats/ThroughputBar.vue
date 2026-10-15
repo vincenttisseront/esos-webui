@@ -12,9 +12,11 @@ const { isAll, activeSans } = useSelectedSan()
 // ─── Bande passante max cumulée ───────────────────────────────────────────────
 // 1 Gbps FC = 125 000 KB/s (1 Gbps = 125 MB/s)
 function parseSpeedKbps(speed: string): number {
-  const m = speed.match(/([\d.]+)\s*Gbit/i)
-  if (!m) return 0
-  return parseFloat(m[1]) * 125_000 // Gbps → KB/s
+  const gbitIdx = speed.toLowerCase().indexOf('gbit')
+  if (gbitIdx < 0) return 0
+  const num = Number.parseFloat(speed.slice(0, gbitIdx).trim())
+  if (Number.isNaN(num)) return 0
+  return num * 125_000 // Gbps → KB/s
 }
 
 const onlinePorts = computed(() =>

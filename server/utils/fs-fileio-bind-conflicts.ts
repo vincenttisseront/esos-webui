@@ -11,7 +11,9 @@ import type {
 import type { SSHSessionManager } from './ssh-session-manager'
 
 function normalizePath(p: string): string {
-  return p.trim().replace(/\/+$/, '')
+  let s = p.trim()
+  while (s.endsWith('/')) s = s.slice(0, -1)
+  return s
 }
 
 function pathsEqual(a: string, b: string): boolean {

@@ -191,8 +191,15 @@ export function parseFstabLines(content: string): Map<string, string> {
 export function parseBlkidUuid(stdout: string): Map<string, string> {
   const map = new Map<string, string>()
   for (const line of stdout.split('\n')) {
-    const m = line.match(/^(\S+):\s+.*\s+UUID="([^"]+)"/)
-    if (m) map.set(m[1], m[2])
+    const colon = line.indexOf(':')
+    if (colon < 0) continue
+    const uuidKey = 'UUID="'
+    const uuidStart = line.indexOf(uuidKey)
+    if (uuidStart < 0) continue
+    const uuidValStart = uuidStart + uuidKey.length
+    const uuidEnd = line.indexOf('"', uuidValStart)
+    if (uuidEnd < 0) continue
+    map.set(line.slice(0, colon).trim(), line.slice(uuidValStart, uuidEnd))
   }
   return map
 }

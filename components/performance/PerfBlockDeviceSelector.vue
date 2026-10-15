@@ -35,6 +35,7 @@
               <input
                 type="checkbox"
                 :checked="selected.has(d.name)"
+                :aria-label="`/dev/${d.name}`"
                 class="rounded border-gray-300 text-primary-600 cursor-pointer"
                 @click.stop="toggle(d.name)"
               />

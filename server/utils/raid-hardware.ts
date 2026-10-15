@@ -334,7 +334,9 @@ export function parseStorCliLogicalDriveId(
   if (dgMatch) return `${dgMatch[1]}/vd${dgMatch[2]}`
 
   const vdField = String(vd['VD'] ?? vd['VD ID'] ?? vd['VDID'] ?? '').trim()
-  const vdNum = vdField.match(/(\d+)\s*$/)?.[1]
+  const vdTrim = vdField.trimEnd()
+  const vdDigits = vdTrim.match(/(\d+)$/)?.[1]
+  const vdNum = vdDigits
   if (vdNum) return `${ctrlIndex}/vd${vdNum}`
 
   return `${ctrlIndex}/vd${fallbackIdx}`

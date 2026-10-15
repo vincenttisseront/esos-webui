@@ -96,7 +96,9 @@
           required
         >
           <select
+            id="create-md-raid-level"
             v-model="form.level"
+            :aria-label="String(t('raid.create_md.form.raid_level_label'))"
             class="w-full rounded-md border border-gray-300 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option v-for="option in levelOptions" :key="option.value" :value="option.value">
@@ -110,7 +112,9 @@
           :hint="t('raid.create_md.form.chunk_help')"
         >
           <select
+            id="create-md-chunk-kb"
             v-model.number="form.chunkKb"
+            :aria-label="String(t('raid.create_md.form.chunk_label'))"
             class="w-full rounded-md border border-gray-300 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option v-for="option in chunkOptions" :key="option.value" :value="option.value">
@@ -206,7 +210,9 @@
               <div>
                 <p class="font-semibold text-gray-700 dark:text-gray-300">{{ t('raid.create_md.mapping.peer_partition') }} — {{ nodeLabel(mapping.targetSanId) }}</p>
                 <select
+                  :id="`create-md-map-${mappingKey(mapping)}`"
                   v-model="manualPartitionMappingSelection[mappingKey(mapping)]"
+                  :aria-label="String(t('raid.create_md.mapping.select_placeholder'))"
                   class="mt-1 w-full rounded-md border border-gray-300 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">{{ t('raid.create_md.mapping.select_placeholder') }}</option>

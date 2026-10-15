@@ -17,9 +17,14 @@ export interface RescanStep {
 export function parseScsiHostProcNames(raw: string): Array<{ host: string; procName: string }> {
   const out: Array<{ host: string; procName: string }> = []
   for (const line of raw.split('\n')) {
-    const m = line.trim().match(/^host(\d+)\s+(.+)$/)
-    if (!m) continue
-    out.push({ host: m[1]!, procName: m[2]!.trim() })
+    const trimmed = line.trim()
+    if (!trimmed.startsWith('host')) continue
+    const sp = trimmed.indexOf(' ')
+    if (sp < 0) continue
+    const hostPart = trimmed.slice(0, sp)
+    const digits = hostPart.slice(4)
+    if (!/^\d+$/.test(digits)) continue
+    out.push({ host: digits, procName: trimmed.slice(sp + 1).trim() })
   }
   return out
 }

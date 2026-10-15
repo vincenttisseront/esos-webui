@@ -81,9 +81,15 @@ export function chainDetailInInventory(
         || detail.toLowerCase().includes('device')
         || detail.toLowerCase().includes('enregistr')
     case 'expose': {
-      const lunMatch = detail.match(/LUN\s+(\d+)/i)
-      const lunId = lunMatch ? Number(lunMatch[1]) : undefined
-      const targetPrefix = detail.split(/\s+LUN\s/i)[0]?.trim()
+      const lunToken = /\bLUN\s+/i.exec(detail)
+      let lunId: number | undefined
+      let targetPrefix: string | undefined
+      if (lunToken && lunToken.index !== undefined) {
+        targetPrefix = detail.slice(0, lunToken.index).trim()
+        const after = detail.slice(lunToken.index + lunToken[0].length)
+        const digits = /^\d+/.exec(after)
+        if (digits) lunId = Number(digits[0])
+      }
       return view.lunMappings.some(l =>
         (lunId === undefined || l.lunId === lunId)
         && (!targetPrefix || l.targetName === targetPrefix || detail.startsWith(l.targetName)),

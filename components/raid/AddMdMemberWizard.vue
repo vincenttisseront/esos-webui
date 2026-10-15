@@ -85,7 +85,9 @@
           >
             <p class="text-sm font-mono">{{ mapping.sourcePath }} → {{ peerLabel(mapping.targetSanId) }}</p>
             <select
+              :id="`add-md-map-${mappingKey(mapping)}`"
               class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm font-mono"
+              :aria-label="String(t('raid.add_member.wizard.select_partition'))"
               :value="manualMappingSelection[mappingKey(mapping)] ?? ''"
               @change="(e) => manualMappingSelection[mappingKey(mapping)] = (e.target as HTMLSelectElement).value"
             >

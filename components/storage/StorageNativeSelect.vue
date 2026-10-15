@@ -1,7 +1,9 @@
 <template>
   <select
+    :id="inputId"
     :value="modelValue"
     :disabled="disabled"
+    :aria-label="ariaLabel || placeholder || 'Select'"
     :class="STORAGE_NATIVE_SELECT_CLASS"
     @change="onChange"
   >
@@ -26,10 +28,14 @@ const props = withDefaults(
     options: StorageSelectOption[]
     placeholder?: string
     disabled?: boolean
+    inputId?: string
+    ariaLabel?: string
   }>(),
   {
     modelValue: '',
     disabled: false,
+    inputId: undefined,
+    ariaLabel: undefined,
   },
 )
 

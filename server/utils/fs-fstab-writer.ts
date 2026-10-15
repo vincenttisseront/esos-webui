@@ -18,7 +18,9 @@ export function buildFstabAppendScript(existingContent: string, newLine: string)
     return parts[1] !== mountMatch
   })
   lines.push(trimmed)
-  const next = lines.join('\n').replace(/\n*$/, '\n')
+  let next = lines.join('\n')
+  while (next.endsWith('\n')) next = next.slice(0, -1)
+  next += '\n'
   return buildAtomicBase64FileWriteScript(FSTAB_PATH, next)
 }
 

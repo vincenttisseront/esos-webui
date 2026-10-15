@@ -52,10 +52,9 @@ export function parseMdadmExamineBulk(output: string): Map<string, MdExamineInfo
   }
 
   for (const line of output.split('\n')) {
-    const marker = line.match(/^---DEVICE\s+(.+)---$/)
-    if (marker) {
+    if (line.startsWith('---DEVICE ') && line.endsWith('---')) {
       flush()
-      current = marker[1].trim()
+      current = line.slice('---DEVICE '.length, -3).trim()
       buffer = []
       continue
     }

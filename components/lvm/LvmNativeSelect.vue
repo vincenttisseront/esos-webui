@@ -1,7 +1,9 @@
 <template>
   <select
+    :id="inputId"
     :value="modelValue"
     :disabled="disabled"
+    :aria-label="ariaLabel || placeholder || 'Select'"
     :class="LVM_NATIVE_SELECT_CLASS"
     @change="onChange"
   >
@@ -26,10 +28,14 @@ const props = withDefaults(
     options: LvmSelectOption[]
     placeholder?: string
     disabled?: boolean
+    inputId?: string
+    ariaLabel?: string
   }>(),
   {
     modelValue: '',
     disabled: false,
+    inputId: undefined,
+    ariaLabel: undefined,
   },
 )
 

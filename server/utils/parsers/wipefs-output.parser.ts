@@ -12,9 +12,8 @@ export function parseWipefsProbeOutput(output: string): string[] {
     let current: string | undefined
     let typeIndex = 2
     for (const line of trimmed.split('\n')) {
-      const marker = line.match(/^---DEVICE\s+(.+)---$/)
-      if (marker) {
-        current = marker[1].trim()
+      if (line.startsWith('---DEVICE ') && line.endsWith('---')) {
+        current = line.slice('---DEVICE '.length, -3).trim()
         typeIndex = 2
         continue
       }

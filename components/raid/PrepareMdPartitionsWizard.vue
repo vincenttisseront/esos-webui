@@ -76,7 +76,9 @@
       <div v-else-if="step === 1" class="space-y-4">
         <UFormGroup :label="t('raid.prepare_partitions.partition_table.label')">
           <select
+            id="prepare-md-partition-table"
             v-model="form.partitionTable"
+            :aria-label="String(t('raid.prepare_partitions.partition_table.label'))"
             class="w-full rounded-md border border-gray-300 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
           >
             <option v-for="option in partitionTableOptions" :key="option.value" :value="option.value">
@@ -146,7 +148,9 @@
               <div>
                 <p class="font-semibold text-gray-700 dark:text-gray-300">{{ t('raid.prepare_partitions.mapping.peer_disk') }} — {{ nodeLabel(mapping.targetSanId) }}</p>
                 <select
+                  :id="`prepare-md-map-${mappingKey(mapping)}`"
                   v-model="manualDiskMappingSelection[mappingKey(mapping)]"
+                  :aria-label="String(t('raid.prepare_partitions.mapping.select_placeholder'))"
                   class="mt-1 w-full rounded-md border border-gray-300 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
                 >
                   <option value="">{{ t('raid.prepare_partitions.mapping.select_placeholder') }}</option>

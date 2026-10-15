@@ -65,12 +65,14 @@ export function parseRcKeymap(content: string): { id: string } | null {
   for (const line of lines) {
     const trimmed = line.trim()
     if (!trimmed || trimmed.startsWith('#')) continue
-    const m = trimmed.match(/\bloadkeys\b\s+(.+?)\s*(?:#.*)?$/)
-    if (!m) continue
-    const argRaw = m[1].trim()
+    const loadIdx = trimmed.search(/\bloadkeys\b/)
+    if (loadIdx < 0) continue
+    let argRaw = trimmed.slice(loadIdx).replace(/^\s*loadkeys\s+/i, '')
+    const hashIdx = argRaw.indexOf('#')
+    if (hashIdx >= 0) argRaw = argRaw.slice(0, hashIdx)
+    argRaw = argRaw.trim()
     if (!argRaw) continue
-    const arg = stripOuterQuotes(argRaw)
-    lastArg = arg
+    lastArg = stripOuterQuotes(argRaw)
   }
   const id = lastArg ? normalizeKeymapId(lastArg) : null
   return id ? { id } : null

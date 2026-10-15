@@ -96,8 +96,16 @@ export function resolveParentDiskPath(path: string, blockDevices: RaidBlockDevic
   if (dev?.parent) {
     return dev.parent.startsWith('/dev/') ? dev.parent : `/dev/${dev.parent}`
   }
-  const m = norm.match(/^(\/dev\/(?:nvme\d+n\d+|mmcblk\d+|sd[a-z]+))(?:p\d+|\d+)?$/i)
-  if (m) return m[1]
+  if (norm.startsWith('/dev/nvme')) {
+    const base = norm.match(/^(\/dev\/nvme\d+n\d+)/i)
+    if (base) return base[1]
+  } else if (norm.startsWith('/dev/mmcblk')) {
+    const base = norm.match(/^(\/dev\/mmcblk\d+)/i)
+    if (base) return base[1]
+  } else if (/^\/dev\/sd[a-z]/i.test(norm)) {
+    const base = norm.match(/^(\/dev\/sd[a-z]+)/i)
+    if (base) return base[1]
+  }
   return norm
 }
 

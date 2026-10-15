@@ -7,8 +7,9 @@
       {{ t('admin.deployment.upload.help') }}
     </p>
     <div class="space-y-3">
-      <AppFormField :label="t('admin.deployment.upload.file_label') as string">
+      <AppFormField :label="t('admin.deployment.upload.file_label') as string" v-slot="{ inputId }">
         <input
+          :id="inputId"
           ref="fileInput"
           type="file"
           accept=".rpm,.tar.gz,.tgz,.tar,.gz"

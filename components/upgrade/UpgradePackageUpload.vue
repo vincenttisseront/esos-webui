@@ -23,10 +23,12 @@
       <div class="space-y-3 max-w-lg">
         <UFormField :label="t('admin.upgrade.package.choose_file')">
           <input
+            id="upgrade-package-file"
             ref="fileInput"
             type="file"
             accept=".zip,.tar.gz,.tgz,.tar"
             class="block w-full text-sm text-gray-600 dark:text-gray-300"
+            :aria-label="String(t('admin.upgrade.package.choose_file'))"
             @change="onFileChange"
           >
         </UFormField>

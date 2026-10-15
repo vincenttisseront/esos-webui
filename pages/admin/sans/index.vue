@@ -48,7 +48,7 @@
           <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">{{ t('admin.sans.page.section_ssh') }}</p>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="space-y-1.5">
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label for="san-create-host" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 {{ t('admin.sans.page.host') }} <span class="text-red-500">*</span>
               </label>
               <div class="flex rounded-md shadow-sm ring-1 ring-inset ring-gray-300 focus-within:ring-2 focus-within:ring-primary-500 bg-white dark:bg-gray-900 overflow-hidden h-9">
@@ -56,6 +56,7 @@
                   <UIcon name="i-heroicons-server" class="w-4 h-4" />
                 </span>
                 <input
+                  id="san-create-host"
                   v-model="form.host"
                   type="text"
                   placeholder="192.168.1.10"
@@ -63,9 +64,11 @@
                 />
                 <span class="flex items-center px-2 text-xs text-gray-400 bg-gray-50 dark:bg-gray-950 border-l border-gray-200 dark:border-gray-700 font-mono select-none shrink-0">:</span>
                 <input
+                  id="san-create-port"
                   v-model.number="form.port"
                   type="number"
                   placeholder="22"
+                  aria-label="Port SSH"
                   class="w-16 px-2 text-sm bg-gray-50 dark:bg-gray-950 outline-none text-gray-700 dark:text-gray-300 font-mono text-center border-l border-gray-100 dark:border-gray-800"
                 />
               </div>

@@ -126,16 +126,20 @@
               <div class="flex items-center gap-2">
                 <div class="flex rounded-md shadow-sm ring-1 ring-gray-300 overflow-hidden flex-1">
                   <input
+                    id="sysconfig-edit-host"
                     v-model="editHostForm.host"
                     type="text"
                     placeholder="192.168.1.10"
+                    :aria-label="String(t('admin.sysconfig.page.update_ip_hint'))"
                     class="flex-1 min-w-0 px-3 py-1.5 text-sm bg-white dark:bg-gray-900 outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400"
                   />
                   <span class="flex items-center px-2 text-xs text-gray-400 bg-gray-50 dark:bg-gray-950 border-l border-gray-200 dark:border-gray-700 font-mono select-none">:</span>
                   <input
+                    id="sysconfig-edit-port"
                     v-model.number="editHostForm.port"
                     type="number"
                     placeholder="22"
+                    aria-label="Port SSH"
                     class="w-16 px-2 py-1.5 text-sm bg-gray-50 dark:bg-gray-950 outline-none text-gray-700 dark:text-gray-300 font-mono text-center"
                   />
                 </div>

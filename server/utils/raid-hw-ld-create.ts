@@ -124,7 +124,15 @@ export function isStorCliExecFailure(raw: string): boolean {
   if (/Status\s*=\s*Failure/i.test(text)) return true
   if (/Command Status\s*=\s*Failed/i.test(text)) return true
   if (/Overall Status\s*:\s*Failed/i.test(text)) return true
-  if (/\bDescription\s*=\s*.*\b(error|fail)/i.test(text)) return true
+  {
+    const descIdx = text.search(/\bDescription\s*=/i)
+    if (descIdx >= 0) {
+      const after = text.slice(descIdx)
+      const end = after.search(/[\r\n]/)
+      const line = end >= 0 ? after.slice(0, end) : after
+      if (/\b(error|fail)/i.test(line)) return true
+    }
+  }
   try {
     const payload = extractStorCliJsonPayload(text)
     if (!payload) return false

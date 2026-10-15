@@ -80,9 +80,11 @@ export function findFileioRegistrationForPath(
   filePath: string,
 ) {
   if (!overview) return null
-  const target = filePath.trim().replace(/\/+$/, '')
+  let target = filePath.trim()
+  while (target.endsWith('/')) target = target.slice(0, -1)
   const dev = overview.fileioDevices.find(d => {
-    const f = d.filename.trim().replace(/\/+$/, '')
+    let f = d.filename.trim()
+    while (f.endsWith('/')) f = f.slice(0, -1)
     return f === target || f.endsWith(target) || target.endsWith(f)
   })
   if (!dev) return null
