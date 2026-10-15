@@ -50,7 +50,8 @@ COPY docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Entrypoint runs as root only to chown volumes, then drops to ESOS_RUNTIME_USER via gosu.
-USER root # NOSONAR — entrypoint chowns mounts then gosu to esos
+# NOSONAR (docker:S6471) — intentional: entrypoint chowns mounts then gosu to esos
+USER root
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 EXPOSE 3000
