@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
       const p = line.split('|')
       return {
         username:           p[0] ?? '',
-        uid:                parseInt(p[1] ?? '0') || 0,
+        uid:                Number.parseInt(p[1] ?? '0') || 0,
         home:               p[2] ?? '/tmp',
         shell:              p[3] ?? '/bin/bash',
         lastPasswordChange: p[4] || null,

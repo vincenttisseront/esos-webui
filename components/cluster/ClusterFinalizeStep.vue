@@ -6,8 +6,9 @@
     </div>
 
     <div class="space-y-1.5">
-      <label class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ t('cluster.finalize.name_label') }}</label>
+      <label for="cluster-finalize-name" class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ t('cluster.finalize.name_label') }}</label>
       <UInput
+        id="cluster-finalize-name"
         v-model="clusterName"
         :placeholder="t('cluster.finalize.name_placeholder')"
         icon="i-heroicons-tag"

@@ -9,7 +9,7 @@ const SYNC_CONF    = '/usr/local/sbin/conf_sync.sh'
 
 function isValidIP(ip: string): boolean {
   return /^(\d{1,3}\.){3}\d{1,3}$/.test(ip) &&
-    ip.split('.').every(o => parseInt(o, 10) <= 255)
+    ip.split('.').every(o => Number.parseInt(o, 10) <= 255)
 }
 
 const interfaceSchema = z.object({

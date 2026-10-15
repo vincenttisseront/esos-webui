@@ -35,7 +35,7 @@ export async function readPerfAgentService(manager: SSHSessionManager): Promise<
   if (pidLine) {
     const m = pidLine.match(/(\d+)\s+(.+)/)
     if (m) {
-      pid = parseInt(m[1], 10) || undefined
+      pid = Number.parseInt(m[1], 10) || undefined
       uptimeSec = parseEtime(m[2].trim())
     }
   }
@@ -103,12 +103,12 @@ function parseEtime(etime: string): number | undefined {
   // Format: [[DD-]HH:]MM:SS
   const parts = etime.split(':').reverse()
   let secs = 0
-  if (parts[0]) secs += parseInt(parts[0], 10)
-  if (parts[1]) secs += parseInt(parts[1], 10) * 60
+  if (parts[0]) secs += Number.parseInt(parts[0], 10)
+  if (parts[1]) secs += Number.parseInt(parts[1], 10) * 60
   if (parts[2]) {
     const hourPart = parts[2].split('-')
-    secs += parseInt(hourPart[hourPart.length - 1], 10) * 3600
-    if (hourPart.length > 1) secs += parseInt(hourPart[0], 10) * 86400
+    secs += Number.parseInt(hourPart[hourPart.length - 1], 10) * 3600
+    if (hourPart.length > 1) secs += Number.parseInt(hourPart[0], 10) * 86400
   }
   return isNaN(secs) ? undefined : secs
 }

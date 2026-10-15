@@ -74,7 +74,7 @@ export function validateSmtpAuthPass(value: string): string | null {
 // ── NTP server hostnames / IPs (datetime.patch) ──────────────────────────────
 
 function isValidIPv4(ip: string): boolean {
-  return /^(\d{1,3}\.){3}\d{1,3}$/.test(ip) && ip.split('.').every(o => parseInt(o, 10) <= 255)
+  return /^(\d{1,3}\.){3}\d{1,3}$/.test(ip) && ip.split('.').every(o => Number.parseInt(o, 10) <= 255)
 }
 
 export function validateNtpServerHost(value: string): string | null {

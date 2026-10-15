@@ -16,8 +16,9 @@ export class SSHPool {
     const existing = this.pool.get(sanId)
     if (existing) return existing
 
-    const inflight = this.creating.get(sanId)
-    if (inflight !== undefined) return inflight
+    if (this.creating.has(sanId)) {
+      return this.creating.get(sanId)!
+    }
 
     const promise = this.create(sanId).finally(() => {
       this.creating.delete(sanId)

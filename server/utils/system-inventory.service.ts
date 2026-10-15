@@ -84,7 +84,7 @@ async function _collect(sanId: string): Promise<SystemInventory> {
   const hostname  = sections.HOSTNAME?.trim()    ?? 'unknown'
   const kernel    = sections.KERNEL?.trim()      ?? 'unknown'
   const osVersion = sections.ESOS_VERSION?.trim() ?? 'unknown'
-  const uptime    = parseFloat(sections.UPTIME?.split(' ')[0] ?? '0')
+  const uptime    = Number.parseFloat(sections.UPTIME?.split(' ')[0] ?? '0')
   const loadAvg   = (sections.LOADAVG ?? '').split(' ').slice(0, 3).map(parseFloat) as [number, number, number]
 
   const system    = DmiParser.parseSystemDMI(sections.DMIDECODE_SYSTEM ?? '')
@@ -191,7 +191,7 @@ function parseMemInfo(output: string): MemoryOverview {
   const kv = new Map<string, number>()
   for (const line of output.split('\n')) {
     const m = line.match(/^(\w+):\s+(\d+)/)
-    if (m) kv.set(m[1], parseInt(m[2], 10))
+    if (m) kv.set(m[1], Number.parseInt(m[2], 10))
   }
   const total     = kv.get('MemTotal')     ?? 0
   const free      = kv.get('MemFree')      ?? 0
@@ -278,7 +278,7 @@ function parseMDStat(output: string): SoftRAID[] {
 
     // Size from "NNNN blocks" line
     const sizeMatch = /(\d+) blocks/.exec(output)
-    const size = sizeMatch ? parseInt(sizeMatch[1], 10) : 0
+    const size = sizeMatch ? Number.parseInt(sizeMatch[1], 10) : 0
 
     // Resync progress
     let resync: SoftRAID['resync']
@@ -286,7 +286,7 @@ function parseMDStat(output: string): SoftRAID[] {
     if (resyncMatch) {
       resync = {
         action: resyncMatch[1],
-        pct:    parseFloat(resyncMatch[2]),
+        pct:    Number.parseFloat(resyncMatch[2]),
         speed:  resyncMatch[3],
       }
     }

@@ -63,27 +63,27 @@
       <div>
         <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">{{ t('admin.sysconfig.smtp.section_tls') }}</p>
         <div class="rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-800">
-          <label class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50" :class="{ 'opacity-50 pointer-events-none': isDisabled }">
-            <div>
+          <div class="flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50" :class="{ 'opacity-50 pointer-events-none': isDisabled }">
+            <div id="smtp-tls-label">
               <p class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ t('admin.sysconfig.smtp.tls') }}</p>
               <p class="text-xs text-gray-400">{{ t('admin.sysconfig.smtp.tls_hint') }}</p>
             </div>
-            <UToggle v-model="form.useTLS" :disabled="isDisabled" />
-          </label>
-          <label class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50" :class="{ 'opacity-50 pointer-events-none': isDisabled }">
-            <div>
+            <UToggle v-model="form.useTLS" :disabled="isDisabled" aria-labelledby="smtp-tls-label" />
+          </div>
+          <div class="flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50" :class="{ 'opacity-50 pointer-events-none': isDisabled }">
+            <div id="smtp-starttls-label">
               <p class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ t('admin.sysconfig.smtp.starttls') }}</p>
               <p class="text-xs text-gray-400">{{ t('admin.sysconfig.smtp.starttls_hint') }}</p>
             </div>
-            <UToggle v-model="form.useSTARTTLS" :disabled="isDisabled" />
-          </label>
-          <label class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50" :class="{ 'opacity-50 pointer-events-none': isDisabled }">
-            <div>
+            <UToggle v-model="form.useSTARTTLS" :disabled="isDisabled" aria-labelledby="smtp-starttls-label" />
+          </div>
+          <div class="flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50" :class="{ 'opacity-50 pointer-events-none': isDisabled }">
+            <div id="smtp-from-override-label">
               <p class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ t('admin.sysconfig.smtp.from_override') }}</p>
               <p class="text-xs text-gray-400">{{ t('admin.sysconfig.smtp.from_override_hint') }}</p>
             </div>
-            <UToggle v-model="form.fromOverride" :disabled="isDisabled" />
-          </label>
+            <UToggle v-model="form.fromOverride" :disabled="isDisabled" aria-labelledby="smtp-from-override-label" />
+          </div>
         </div>
       </div>
 

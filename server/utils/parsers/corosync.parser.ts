@@ -27,8 +27,8 @@ export function parseCorosyncQuorumtool(raw: string): CorosyncQuorumStatus {
   const lines = raw.split('\n').map(l => l.trim())
 
   const quorate    = lines.find(l => l.startsWith('Quorate:'))?.includes('Yes') ?? false
-  const quorum     = parseInt(lines.find(l => l.startsWith('Quorum:'))?.split(/\s+/)[1] ?? '0')
-  const nodeCount  = parseInt(lines.find(l => l.startsWith('Nodes:'))?.split(/\s+/)[1]  ?? '0')
+  const quorum     = Number.parseInt(lines.find(l => l.startsWith('Quorum:'))?.split(/\s+/)[1] ?? '0')
+  const nodeCount  = Number.parseInt(lines.find(l => l.startsWith('Nodes:'))?.split(/\s+/)[1]  ?? '0')
 
   // Section membership : ligne "Nodeid  Votes  Name"
   const headerIdx = lines.findIndex(
@@ -40,8 +40,8 @@ export function parseCorosyncQuorumtool(raw: string): CorosyncQuorumStatus {
     for (let i = headerIdx + 1; i < lines.length; i++) {
       const parts = lines[i].split(/\s+/).filter(Boolean)
       if (parts.length < 3) continue
-      const id    = parseInt(parts[0])
-      const votes = parseInt(parts[1])
+      const id    = Number.parseInt(parts[0])
+      const votes = Number.parseInt(parts[1])
       const rest  = parts.slice(2).join(' ')
       const local = rest.includes('(local)')
       const name  = rest.replace('(local)', '').trim()

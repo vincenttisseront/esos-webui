@@ -345,7 +345,7 @@ export function parseStorCliLogicalDriveId(
 function parseStorCliSize(s: string): number {
   const m = s.match(/([\d.]+)\s*(TB|GB|MB)/i)
   if (!m) return 0
-  const n = parseFloat(m[1])
+  const n = Number.parseFloat(m[1])
   const unit = m[2].toUpperCase()
   if (unit === 'TB') return Math.round(n * 1e12)
   if (unit === 'GB') return Math.round(n * 1e9)
@@ -504,7 +504,7 @@ function inferMegaCliControllerMode(output: string): RaidControllerModeDetection
 function parseMegaCliSize(s: string): number {
   const m = s.match(/([\d.]+)\s*(TB|GB|MB)/i)
   if (!m) return 0
-  const n = parseFloat(m[1])
+  const n = Number.parseFloat(m[1])
   const unit = m[2].toUpperCase()
   if (unit === 'TB') return Math.round(n * 1e12)
   if (unit === 'GB') return Math.round(n * 1e9)
@@ -556,7 +556,7 @@ function parseArcconfControllerList(output: string): number[] {
   const nums: number[] = []
   for (const line of output.split('\n')) {
     const m = line.match(/Controller\s+(\d+)/i)
-    if (m) nums.push(parseInt(m[1], 10))
+    if (m) nums.push(Number.parseInt(m[1], 10))
   }
   if (nums.length === 0) nums.push(1) // défaut arcconf : controller 1
   return nums
@@ -609,7 +609,7 @@ function parseArcconfConfig(output: string, ctrlId: string): HardwareRaidControl
     const raidLevel = s.match(/RAID level\s*:\s*(\d+)/)?.[1] ?? 'unknown'
     const sizeStr = s.match(/Size\s*:\s*(\d+\s*MB)/)?.[1] ?? s.match(/Size\s*:\s*(.+)/)?.[1]?.trim() ?? ''
     const stateStr = s.match(/Status of Logical Device\s*:\s*(\w+)/)?.[1]?.toLowerCase() ?? 'unknown'
-    const sizeBytes = parseMegaCliSize(sizeStr) || parseInt(sizeStr, 10) * 1024 * 1024
+    const sizeBytes = parseMegaCliSize(sizeStr) || Number.parseInt(sizeStr, 10) * 1024 * 1024
 
     logicalDrives.push({
       controllerId: ctrlId,

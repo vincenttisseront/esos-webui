@@ -26,7 +26,7 @@ export default defineEventHandler(async () => {
     ssh: {
       status: manager?.getStatus() ?? 'unconfigured',
       host:   sshHost,
-      port:   parseInt(sshPort, 10),
+      port:   Number.parseInt(sshPort, 10),
       user:   sshUser,
     },
     metrics: {

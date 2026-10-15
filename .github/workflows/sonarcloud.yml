@@ -1,9 +1,9 @@
-# SonarQube Cloud scan on every push and pull request.
-# Requires repo secret SONAR_TOKEN (https://sonarcloud.io/account/security/).
-# Project config: sonar-project.properties (org vincenttisseront / key vincenttisseront_esos-webui).
+# SonarQube Cloud — same org binding as bastion-app (GitHub ALM).
+# Project: vincenttisseront_esos-webui / sonar-project.properties
 #
-# Prefer CI analysis over SonarCloud Automatic Analysis for this repo so
-# sonar.exclusions / tsconfig.sonar.json are honored.
+# Preferred (like bastion-app): enable Automatic Analysis in SonarCloud UI
+#   Administration → Analysis Method → Automatic Analysis = ON
+# Optional CI token scan: set repo secret SONAR_TOKEN (sonarcloud.io/account/security).
 
 name: SonarCloud
 

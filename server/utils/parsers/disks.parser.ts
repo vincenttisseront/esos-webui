@@ -9,7 +9,7 @@ export function parseLSBLK(output: string): Omit<DiskDevice, 'smart'>[] {
     const fields = parseKeyValueLine(line)
     if (!fields.NAME || fields.TYPE !== 'disk') continue
 
-    const sizeBytes  = parseInt(fields.SIZE ?? '0', 10)
+    const sizeBytes  = Number.parseInt(fields.SIZE ?? '0', 10)
     const rotational = fields.ROTA === '1'
     const transport  = (fields.TRAN ?? '').toLowerCase()
 

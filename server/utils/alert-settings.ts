@@ -44,7 +44,7 @@ function parseBool(s: string | undefined, fallback: boolean): boolean {
 
 function parseIntSafe(s: string | undefined, fallback: number): number {
   if (s == null || s === '') return fallback
-  const n = parseInt(s, 10)
+  const n = Number.parseInt(s, 10)
   return Number.isFinite(n) ? n : fallback
 }
 
@@ -76,7 +76,7 @@ export function parseAlertSettingsFromMap(map: Record<string, string>): AlertSet
 export function assertValidAlertSettingsPatch(body: Record<string, string>): void {
   const warn = body['alerts.volume_warn_pct']
   if (warn !== undefined && warn !== '') {
-    const v = parseInt(warn, 10)
+    const v = Number.parseInt(warn, 10)
     if (Number.isNaN(v) || v < 0 || v > 100) {
       throw createError({ statusCode: 400, message: 'alerts.volume_warn_pct doit être entre 0 et 100' })
     }
@@ -84,7 +84,7 @@ export function assertValidAlertSettingsPatch(body: Record<string, string>): voi
 
   const crit = body['alerts.volume_critical_pct']
   if (crit !== undefined && crit !== '') {
-    const v = parseInt(crit, 10)
+    const v = Number.parseInt(crit, 10)
     if (Number.isNaN(v) || v < 0 || v > 100) {
       throw createError({ statusCode: 400, message: 'alerts.volume_critical_pct doit être entre 0 et 100' })
     }
@@ -94,8 +94,8 @@ export function assertValidAlertSettingsPatch(body: Record<string, string>): voi
     warn !== undefined && warn !== '' &&
     crit !== undefined && crit !== ''
   ) {
-    const w = parseInt(warn, 10)
-    const c = parseInt(crit, 10)
+    const w = Number.parseInt(warn, 10)
+    const c = Number.parseInt(crit, 10)
     if (!Number.isNaN(w) && !Number.isNaN(c) && w >= c) {
       throw createError({
         statusCode: 400,
@@ -106,7 +106,7 @@ export function assertValidAlertSettingsPatch(body: Record<string, string>): voi
 
   const grace = body['alerts.session_grace_sec']
   if (grace !== undefined && grace !== '') {
-    const v = parseInt(grace, 10)
+    const v = Number.parseInt(grace, 10)
     if (Number.isNaN(v) || v < 0 || v > 3600) {
       throw createError({ statusCode: 400, message: 'alerts.session_grace_sec doit être entre 0 et 3600' })
     }
@@ -114,7 +114,7 @@ export function assertValidAlertSettingsPatch(body: Record<string, string>): voi
 
   const minA = body['alerts.session_min_active']
   if (minA !== undefined && minA !== '') {
-    const v = parseInt(minA, 10)
+    const v = Number.parseInt(minA, 10)
     if (Number.isNaN(v) || v < 0 || v > 4096) {
       throw createError({ statusCode: 400, message: 'alerts.session_min_active doit être entre 0 et 4096' })
     }

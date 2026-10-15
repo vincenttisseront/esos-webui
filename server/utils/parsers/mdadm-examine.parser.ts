@@ -32,8 +32,8 @@ export function parseMdadmExamineOutput(raw: string): MdExamineInfo | undefined 
     uuid: parseExamineValue(trimmed, 'Array UUID') ?? parseExamineValue(trimmed, 'UUID'),
     name: parseExamineValue(trimmed, 'Name'),
     raidLevel: parseExamineValue(trimmed, 'Raid Level')?.replace(/^raid/i, ''),
-    raidDevices: parseInt(parseExamineValue(trimmed, 'Raid Devices') ?? '', 10) || undefined,
-    events: parseInt(parseExamineValue(trimmed, 'Events') ?? '', 10) || undefined,
+    raidDevices: Number.parseInt(parseExamineValue(trimmed, 'Raid Devices') ?? '', 10) || undefined,
+    events: Number.parseInt(parseExamineValue(trimmed, 'Events') ?? '', 10) || undefined,
     state: parseExamineValue(trimmed, 'State')?.toLowerCase(),
     raw: trimmed.slice(0, 2000),
   }

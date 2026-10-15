@@ -65,12 +65,12 @@ export function parseMemoryModules(output: string): MemoryModule[] {
       bankLocator:     b['Bank Locator']     ?? '',
       size:            parseMemSize(b['Size']),
       type:            b['Type']             ?? 'Unknown',
-      speed:           parseInt(b['Speed']   ?? '0', 10),
+      speed:           Number.parseInt(b['Speed']   ?? '0', 10),
       manufacturer:    b['Manufacturer']     ?? 'Unknown',
       serialNumber:    b['Serial Number']    ?? '',
       partNumber:      (b['Part Number'] ?? '').trim(),
       formFactor:      b['Form Factor']      ?? '',
-      configuredSpeed: parseInt(b['Configured Memory Speed'] ?? b['Speed'] ?? '0', 10),
+      configuredSpeed: Number.parseInt(b['Configured Memory Speed'] ?? b['Speed'] ?? '0', 10),
       empty:           b['Size'] === 'No Module Installed' || b['Size'] === '0 MB',
     }))
 }

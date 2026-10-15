@@ -36,37 +36,42 @@ export function parseMdadmDetail(output: string): MdDetail {
   result.metadataVersion = kv('Version')
   result.state = kv('State')?.toLowerCase()
   result.raidLevel = kv('Raid Level')?.replace('raid', '')
-  result.raidDevices = parseInt(kv('Raid Devices') ?? '', 10) || undefined
-  result.totalDevices = parseInt(kv('Total Devices') ?? '', 10) || undefined
-  result.activeDevices = parseInt(kv('Active Devices') ?? '', 10) || undefined
-  result.workingDevices = parseInt(kv('Working Devices') ?? '', 10) || undefined
-  result.failedDevices = parseInt(kv('Failed Devices') ?? '', 10) || undefined
-  result.spareDevices = parseInt(kv('Spare Devices') ?? '', 10) || undefined
+  result.raidDevices = Number.parseInt(kv('Raid Devices') ?? '', 10) || undefined
+  result.totalDevices = Number.parseInt(kv('Total Devices') ?? '', 10) || undefined
+  result.activeDevices = Number.parseInt(kv('Active Devices') ?? '', 10) || undefined
+  result.workingDevices = Number.parseInt(kv('Working Devices') ?? '', 10) || undefined
+  result.failedDevices = Number.parseInt(kv('Failed Devices') ?? '', 10) || undefined
+  result.spareDevices = Number.parseInt(kv('Spare Devices') ?? '', 10) || undefined
 
   const chunkStr = kv('Chunk Size')
   if (chunkStr) {
-    const m = chunkStr.match(/(\d+)\s*K/i)
-    if (m) result.chunkKb = parseInt(m[1], 10)
+    const kIdx = chunkStr.toUpperCase().indexOf('K')
+    const numPart = (kIdx >= 0 ? chunkStr.slice(0, kIdx) : chunkStr).trim()
+    const n = Number.parseInt(numPart, 10)
+    if (!Number.isNaN(n)) result.chunkKb = n
   }
 
   const sizeStr = kv('Array Size')
   if (sizeStr) {
-    const m = sizeStr.match(/(\d+)\s*\(/i) ?? sizeStr.match(/(\d+)/)
-    if (m) result.sizeBytes = parseInt(m[1], 10) * 1024
+    const paren = sizeStr.indexOf('(')
+    const numPart = (paren >= 0 ? sizeStr.slice(0, paren) : sizeStr).trim().split(/\s+/)[0] ?? ''
+    const n = Number.parseInt(numPart, 10)
+    if (!Number.isNaN(n)) result.sizeBytes = n * 1024
   }
 
   // Parse member device rows. Removed slots may not include a path.
-  const rowPattern = /^\s+(-|\d+)\s+(\d+)\s+(\d+)\s+(-|\d+)\s+(.+?)\s*$/gm
-  let m: RegExpExecArray | null
-  while ((m = rowPattern.exec(output)) !== null) {
-    const slot = m[1] === '-' ? undefined : parseInt(m[1], 10)
-    const major = parseInt(m[2], 10)
-    const minor = parseInt(m[3], 10)
-    const raidDevice = m[4] === '-' ? undefined : parseInt(m[4], 10)
-    const tail = m[5].trim()
-    const pathMatch = tail.match(/\s(\/dev\/\S+)$/)
-    const path = pathMatch?.[1]?.trim()
-    const stateStr = (path ? tail.slice(0, -path.length) : tail).trim().toLowerCase()
+  for (const line of output.split('\n')) {
+    const trimmed = line.trimEnd()
+    if (!/^\s+(-|\d+)\s+\d+\s+\d+\s+(-|\d+)\s+/.test(trimmed)) continue
+    const parts = trimmed.trim().split(/\s+/)
+    if (parts.length < 5) continue
+    const slot = parts[0] === '-' ? undefined : Number.parseInt(parts[0]!, 10)
+    const major = Number.parseInt(parts[1]!, 10)
+    const minor = Number.parseInt(parts[2]!, 10)
+    const raidDevice = parts[3] === '-' ? undefined : Number.parseInt(parts[3]!, 10)
+    const pathIdx = parts.findIndex(p => p.startsWith('/dev/'))
+    const path = pathIdx >= 0 ? parts[pathIdx] : undefined
+    const stateStr = (pathIdx >= 0 ? parts.slice(4, pathIdx) : parts.slice(4)).join(' ').trim().toLowerCase()
 
     const state: MdMemberDevice['state'] = []
     if (stateStr.includes('active')) state.push('active')

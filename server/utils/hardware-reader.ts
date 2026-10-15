@@ -64,14 +64,14 @@ async function readSystemInfo(): Promise<SystemInfo> {
     .filter(Boolean)
 
   const hostname = lines[0] ?? 'unknown'
-  const uptime = parseFloat(lines[1]?.split(' ')[0] ?? '0')
+  const uptime = Number.parseFloat(lines[1]?.split(' ')[0] ?? '0')
   const cpuModel = lines[2]?.trim() ?? 'Unknown CPU'
-  const cpuCores = parseInt(lines[3] ?? '1', 10)
+  const cpuCores = Number.parseInt(lines[3] ?? '1', 10)
   const loadParts = (lines[4] ?? '0 0 0').split(' ')
   const loadAvg: [number, number, number] = [
-    parseFloat(loadParts[0] ?? '0'),
-    parseFloat(loadParts[1] ?? '0'),
-    parseFloat(loadParts[2] ?? '0'),
+    Number.parseFloat(loadParts[0] ?? '0'),
+    Number.parseFloat(loadParts[1] ?? '0'),
+    Number.parseFloat(loadParts[2] ?? '0'),
   ]
   const cpuUsagePct = parseCpuUsage(lines[5] ?? '')
 
@@ -114,7 +114,7 @@ async function readMemoryInfo(): Promise<MemoryInfo> {
   const map: Record<string, number> = {}
   for (const line of result.stdout.split('\n')) {
     const m = line.match(/^(\w+):\s+(\d+)/)
-    if (m) map[m[1]] = parseInt(m[2], 10)
+    if (m) map[m[1]] = Number.parseInt(m[2], 10)
   }
 
   const totalKb = map.MemTotal ?? 0
@@ -253,8 +253,8 @@ async function readBlockDevices(): Promise<BlockDevice[]> {
 export function parseBlockDevice(raw: any): BlockDevice {
   return {
     name: raw.name as string,
-    size: formatBytes(parseInt(raw.size ?? '0', 10)),
-    sizeBytes: parseInt(raw.size ?? '0', 10),
+    size: formatBytes(Number.parseInt(raw.size ?? '0', 10)),
+    sizeBytes: Number.parseInt(raw.size ?? '0', 10),
     type: raw.type as 'disk' | 'part' | 'rom',
     mountpoint: (raw.mountpoint as string | null) || null,
     readOnly: raw.ro === '1' || raw.ro === true,
@@ -287,9 +287,9 @@ async function readVolumeUsage(): Promise<VolumeUsage[]> {
     const parts = line.trim().split('|')
     if (parts.length < 4) continue
     const [mountpoint, total, used, avail] = parts
-    const totalKb = parseInt(total, 10) || 0
-    const usedKb = parseInt(used, 10) || 0
-    const availableKb = parseInt(avail, 10) || 0
+    const totalKb = Number.parseInt(total, 10) || 0
+    const usedKb = Number.parseInt(used, 10) || 0
+    const availableKb = Number.parseInt(avail, 10) || 0
     volumes.push({
       mountpoint,
       totalKb,

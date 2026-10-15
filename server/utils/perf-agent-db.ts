@@ -78,7 +78,7 @@ class PostgresPerfAgentAdapter implements PerfAgentDbAdapter {
         const statsRes = await client.query<{ cnt: string; oldest: string | null; newest: string | null }>(
           `SELECT COUNT(*)::text as cnt, MIN(${schema.timestampCol}) as oldest, MAX(${schema.timestampCol}) as newest FROM "${schema.tableName}"`,
         )
-        sampleCount = parseInt(statsRes.rows[0]?.cnt ?? '0', 10)
+        sampleCount = Number.parseInt(statsRes.rows[0]?.cnt ?? '0', 10)
         const oldestRaw = statsRes.rows[0]?.oldest
         const newestRaw = statsRes.rows[0]?.newest
         if (oldestRaw) oldestSampleAt = new Date(oldestRaw).getTime()
@@ -235,7 +235,7 @@ class MysqlPerfAgentAdapter implements PerfAgentDbAdapter {
         const [statsRows] = await conn.query<any[]>(
           `SELECT COUNT(*) as cnt, MIN(\`${schema.timestampCol}\`) as oldest, MAX(\`${schema.timestampCol}\`) as newest FROM \`${schema.tableName}\``,
         )
-        sampleCount = parseInt(statsRows[0]?.cnt ?? '0', 10)
+        sampleCount = Number.parseInt(statsRows[0]?.cnt ?? '0', 10)
         if (statsRows[0]?.oldest) oldestSampleAt = new Date(statsRows[0].oldest).getTime()
         if (statsRows[0]?.newest) newestSampleAt = new Date(statsRows[0].newest).getTime()
       } catch { /* table not yet created */ }

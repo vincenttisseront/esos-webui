@@ -52,9 +52,9 @@ export async function readSessionSnapshots(
       target,
       initiator,
       driver,
-      lunsCount: parseInt(luns, 10) || 0,
-      readKb: parseInt(rkb, 10) || 0,
-      writeKb: parseInt(wkb, 10) || 0,
+      lunsCount: Number.parseInt(luns, 10) || 0,
+      readKb: Number.parseInt(rkb, 10) || 0,
+      writeKb: Number.parseInt(wkb, 10) || 0,
     })
   }
 
@@ -92,10 +92,10 @@ export async function readDeviceSnapshots(): Promise<DeviceSnapshot[]> {
       capturedAt: now,
       device,
       handler,
-      readKb: parseInt(rkb, 10) || 0,
-      writeKb: parseInt(wkb, 10) || 0,
-      readOps: parseInt(rops, 10) || 0,
-      writeOps: parseInt(wops, 10) || 0,
+      readKb: Number.parseInt(rkb, 10) || 0,
+      writeKb: Number.parseInt(wkb, 10) || 0,
+      readOps: Number.parseInt(rops, 10) || 0,
+      writeOps: Number.parseInt(wops, 10) || 0,
     })
   }
 
@@ -129,11 +129,11 @@ export async function readDiskStatSnapshots(): Promise<DiskStatSnapshot[]> {
     snapshots.push({
       capturedAt:      now,
       device:          device ?? '',
-      readsCompleted:  parseInt(rc  ?? '0', 10) || 0,
-      sectorsRead:     parseInt(sr  ?? '0', 10) || 0,
-      writesCompleted: parseInt(wc  ?? '0', 10) || 0,
-      sectorsWritten:  parseInt(sw  ?? '0', 10) || 0,
-      iosInProgress:   parseInt(ios ?? '0', 10) || 0,
+      readsCompleted:  Number.parseInt(rc  ?? '0', 10) || 0,
+      sectorsRead:     Number.parseInt(sr  ?? '0', 10) || 0,
+      writesCompleted: Number.parseInt(wc  ?? '0', 10) || 0,
+      sectorsWritten:  Number.parseInt(sw  ?? '0', 10) || 0,
+      iosInProgress:   Number.parseInt(ios ?? '0', 10) || 0,
     })
   }
 

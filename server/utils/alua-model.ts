@@ -5,6 +5,7 @@ import type {
   ALUAGroupFlat,
 } from '../../types/alua'
 import type { ALUAGroup } from './types'
+import { compareByLocale } from '~/utils/locale-sort'
 
 export type { AluaDeviceGroup, AluaTargetRef, AluaTargetGroup } from '../../types/alua'
 
@@ -44,6 +45,6 @@ export function flattenAluaGroupsForApi(deviceGroups: AluaDeviceGroup[]): ALUAGr
 export function aluaFingerprintFromDeviceGroups(deviceGroups: AluaDeviceGroup[]): string {
   return flattenAluaGroups(deviceGroups)
     .map(g => `${g.deviceGroup}/${g.targetGroup}:${g.state}`)
-    .sort((a, b) => a.localeCompare(b))
+    .sort(compareByLocale)
     .join('|')
 }

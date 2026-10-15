@@ -98,7 +98,7 @@ function bool(s: string | undefined, d: boolean): boolean {
 }
 
 function int(s: string | undefined, d: number): number {
-  const n = parseInt(s ?? '', 10)
+  const n = Number.parseInt(s ?? '', 10)
   return Number.isFinite(n) ? n : d
 }
 

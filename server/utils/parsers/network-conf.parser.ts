@@ -77,7 +77,7 @@ export function parseNetworkConf(content: string): NetworkGeneralConfig {
       ipAddress:   fields.get('ipaddr')    ?? '',
       netmask:     fields.get('netmask')   ?? '',
       broadcast:   fields.get('broadcast') ?? '',
-      mtu:         mtuRaw ? parseInt(mtuRaw, 10) : 1500,
+      mtu:         mtuRaw ? Number.parseInt(mtuRaw, 10) : 1500,
       dhcpTimeout: 15, // not used by rc.network, kept for type compat
     })
   }

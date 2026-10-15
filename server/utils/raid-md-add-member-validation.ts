@@ -10,6 +10,7 @@ import {
   arraySupportsSpareAdd,
   isHealthyFullArray,
 } from '../../utils/md-array-add-member-ui'
+import { compareByLocale } from '~/utils/locale-sort'
 
 export type MdAddMemberIntent = 'spare' | 'replacement'
 
@@ -54,7 +55,7 @@ export function computeAddMdMemberPlanToken(input: {
     intent: input.intent,
     primarySanId: input.primarySanId,
     device: input.device,
-    nodes: input.nodeSanIds.sort((a, b) => a.localeCompare(b)),
+    nodes: input.nodeSanIds.sort(compareByLocale),
   })
   return createHash('sha256').update(payload).digest('hex').slice(0, 16)
 }

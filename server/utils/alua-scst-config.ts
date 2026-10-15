@@ -1,13 +1,14 @@
 import type { AluaDeviceGroupConfig, ScstConfig } from '~/types/esos'
 import { isSystemDriver } from '~/types/esos'
 import { serializeScstConfig } from './scst-config-writer'
+import { compareByLocale } from '~/utils/locale-sort'
 
 export function listScstDeviceNames(config: ScstConfig): string[] {
   const names = new Set<string>()
   for (const h of config.handlers) {
     for (const d of h.devices) names.add(d.name)
   }
-  return [...names].sort((a, b) => a.localeCompare(b))
+  return [...names].sort(compareByLocale)
 }
 
 export function listScstTargetNames(config: ScstConfig): string[] {
@@ -16,7 +17,7 @@ export function listScstTargetNames(config: ScstConfig): string[] {
     if (isSystemDriver(d.name)) continue
     for (const t of d.targets) names.add(t.name)
   }
-  return [...names].sort((a, b) => a.localeCompare(b))
+  return [...names].sort(compareByLocale)
 }
 
 export function targetExistsOnConfig(config: ScstConfig, targetName: string): boolean {
@@ -49,7 +50,7 @@ export function upsertDeviceGroup(
     return
   }
   if (mode !== 'replace') {
-    throw new Error(`DEVICE_GROUP "${dg.name}" existe déjà`)
+    throw new Error(`DEVICE_GROUP "${dg.name}" existe dÃƒÂ©jÃƒÂ `)
   }
   config.deviceGroups[idx] = structuredClone(dg)
 }

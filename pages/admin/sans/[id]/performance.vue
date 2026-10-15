@@ -60,10 +60,11 @@
       </div>
 
       <div class="flex items-center gap-3">
-        <label class="text-sm text-gray-600 dark:text-gray-400">{{ t('admin.sans.performance.autostart') }}</label>
+        <span class="text-sm text-gray-600 dark:text-gray-400" id="perf-autostart-label">{{ t('admin.sans.performance.autostart') }}</span>
         <UToggle
           :model-value="perf.service?.enabledOnBoot ?? false"
           :disabled="perf.serviceLoading"
+          aria-labelledby="perf-autostart-label"
           @update:model-value="toggleBoot"
         />
       </div>

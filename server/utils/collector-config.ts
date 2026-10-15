@@ -14,8 +14,8 @@ export async function getCollectorConfig(): Promise<CollectorConfig> {
     getSetting('collector.interval_sec'),
     getSetting('collector.retention_hours'),
   ])
-  const sec = parseInt(intervalSec ?? '30', 10)
-  const hours = parseInt(retentionHours ?? '24', 10)
+  const sec = Number.parseInt(intervalSec ?? '30', 10)
+  const hours = Number.parseInt(retentionHours ?? '24', 10)
   return {
     enabled: (enabled ?? 'true') === 'true',
     intervalMs: sec * 1000,

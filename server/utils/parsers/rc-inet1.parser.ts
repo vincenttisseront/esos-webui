@@ -12,7 +12,7 @@ export function parseRcInet1(content: string): NetworkGeneralConfig {
   const ifaceIndexes = new Set<number>()
   for (const key of values.keys()) {
     const m = key.match(/\[(\d+)\]$/)
-    if (m) ifaceIndexes.add(parseInt(m[1], 10))
+    if (m) ifaceIndexes.add(Number.parseInt(m[1], 10))
   }
 
   const interfaces: NetworkInterfaceConfig[] = [...ifaceIndexes].sort((a, b) => a - b).map(i => ({
@@ -22,8 +22,8 @@ export function parseRcInet1(content: string): NetworkGeneralConfig {
     ipAddress:   values.get(`IPADDR[${i}]`)          ?? '',
     netmask:     values.get(`NETMASK[${i}]`)         ?? '',
     broadcast:   values.get(`BROADCAST[${i}]`)       ?? '',
-    mtu:         values.get(`MTU[${i}]`)             ? parseInt(values.get(`MTU[${i}]`)!, 10) : null,
-    dhcpTimeout: parseInt(values.get(`DHCP_TIMEOUT[${i}]`) ?? '15', 10),
+    mtu:         values.get(`MTU[${i}]`)             ? Number.parseInt(values.get(`MTU[${i}]`)!, 10) : null,
+    dhcpTimeout: Number.parseInt(values.get(`DHCP_TIMEOUT[${i}]`) ?? '15', 10),
   }))
 
   return {

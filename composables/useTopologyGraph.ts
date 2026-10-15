@@ -44,7 +44,7 @@ export function buildTopologyGraph(
     })
 
     // Lier le port FC via rel_tgt_id (1-indexé)
-    const relTgtId  = parseInt(target.attrs?.rel_tgt_id ?? '1', 10)
+    const relTgtId  = Number.parseInt(target.attrs?.rel_tgt_id ?? '1', 10)
     const matchPort = fcPorts.find((_, i) => i + 1 === relTgtId)
     if (matchPort) {
       newEdges.push({

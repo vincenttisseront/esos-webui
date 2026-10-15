@@ -68,7 +68,7 @@ export async function resolveHeaderLoginUser(params: {
     }
     if (!byUsername.externalSubject) {
       // Email from Bastion is considered verified (proxy-injected after IdP auth).
-      linkUserToFederatedIdentity(byUsername.id, 'header', issuer, subject)
+      void linkUserToFederatedIdentity(byUsername.id, 'header', issuer, subject)
       const linked = await getUserById(byUsername.id)
       if (!linked) throw createError({ statusCode: 500, message: 'Erreur liaison compte' })
       await touchExternalLogin(linked.id)

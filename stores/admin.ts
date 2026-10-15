@@ -20,12 +20,12 @@ import type { AlertThresholdForm } from '~/utils/alert-thresholds-validation'
 
 function mapAlertThresholdsFromSettings(settings: Record<string, string>): AlertThresholdForm {
   return {
-    volumeWarnPct:     parseInt(settings['alerts.volume_warn_pct'] ?? '75', 10),
-    volumeCriticalPct: parseInt(settings['alerts.volume_critical_pct'] ?? '90', 10),
+    volumeWarnPct:     Number.parseInt(settings['alerts.volume_warn_pct'] ?? '75', 10),
+    volumeCriticalPct: Number.parseInt(settings['alerts.volume_critical_pct'] ?? '90', 10),
     sessionEnabled:    settings['alerts.session_enabled'] !== 'false',
     sessionPolicy:     settings['alerts.session_policy'] === 'multipath' ? 'multipath' : 'strict',
-    sessionGraceSec:   parseInt(settings['alerts.session_grace_sec'] ?? '120', 10),
-    sessionMinActive:  parseInt(settings['alerts.session_min_active'] ?? '1', 10),
+    sessionGraceSec:   Number.parseInt(settings['alerts.session_grace_sec'] ?? '120', 10),
+    sessionMinActive:  Number.parseInt(settings['alerts.session_min_active'] ?? '1', 10),
     fcPortEnabled:     settings['alerts.fc_port_enabled'] !== 'false',
   }
 }
@@ -55,7 +55,7 @@ export const useAdminStore = defineStore('admin', {
         // Hydrater le formulaire SSH
         this.sshForm = {
           host:       settings['ssh.host']      ?? '',
-          port:       parseInt(settings['ssh.port'] ?? '22', 10),
+          port:       Number.parseInt(settings['ssh.port'] ?? '22', 10),
           username:   settings['ssh.username']  ?? 'root',
           authType:   (settings['ssh.auth_type'] ?? 'key') as 'key' | 'password',
           privateKey: '', // Jamais pré-rempli (secret)
@@ -65,8 +65,8 @@ export const useAdminStore = defineStore('admin', {
         // Hydrater les paramètres collecteur
         this.collector = {
           enabled:        settings['collector.enabled'] === 'true',
-          intervalSec:    parseInt(settings['collector.interval_sec']    ?? '30', 10),
-          retentionHours: parseInt(settings['collector.retention_hours'] ?? '24', 10),
+          intervalSec:    Number.parseInt(settings['collector.interval_sec']    ?? '30', 10),
+          retentionHours: Number.parseInt(settings['collector.retention_hours'] ?? '24', 10),
         }
         this.alertThresholds = mapAlertThresholdsFromSettings(settings)
       } finally {

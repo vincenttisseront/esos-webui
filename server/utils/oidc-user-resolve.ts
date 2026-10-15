@@ -69,7 +69,7 @@ export async function resolveOidcLoginUser(params: {
       throw createError({ statusCode: 403, message: 'Émetteur OIDC incompatible pour ce compte.' })
     }
     if (!byUsername.externalSubject && oidcClaimsAllowAutoLinkToExistingAccount(claims)) {
-      linkUserToFederatedIdentity(byUsername.id, 'oidc', issuer, subject)
+      void linkUserToFederatedIdentity(byUsername.id, 'oidc', issuer, subject)
       const linked = await getUserById(byUsername.id)
       if (!linked) throw createError({ statusCode: 500, message: 'Erreur liaison compte' })
       await touchExternalLogin(linked.id)

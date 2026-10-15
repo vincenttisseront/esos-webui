@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
 
   const eventType = (q.type as string | undefined)?.trim() as LdapAuthEventType | 'all' | undefined
   const result    = (q.result as string | undefined)?.trim() as LdapAuthEventResult | 'all' | undefined
-  const limitRaw  = parseInt(String(q.limit ?? '50'), 10)
+  const limitRaw  = Number.parseInt(String(q.limit ?? '50'), 10)
   const limit     = Number.isFinite(limitRaw) ? limitRaw : 50
 
   const events = await listLdapAuthEvents({

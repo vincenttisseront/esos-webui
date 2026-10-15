@@ -107,7 +107,7 @@ function ingestFile(path: string, value: string, dgMap: Map<string, MutableDg>):
         ? targetParts.slice(0, -1).join('/')
         : ''
       if (!targetName) return
-      const id = parseInt(value, 10)
+      const id = Number.parseInt(value, 10)
       if (!Number.isNaN(id)) getOrCreateTarget(tg, targetName).relTargetId = id
       return
     }
@@ -120,7 +120,7 @@ function ingestFile(path: string, value: string, dgMap: Map<string, MutableDg>):
     return
   }
   if (leaf === 'group_id' || leaf === 'tg_id') {
-    const id = parseInt(value, 10)
+    const id = Number.parseInt(value, 10)
     if (!Number.isNaN(id)) tg.groupId = id
   }
 }

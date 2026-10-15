@@ -57,7 +57,7 @@ export async function resolveLdapLoginUser(params: {
       })
     }
     if (!byExternalLogin.externalSubject) {
-      linkUserToFederatedIdentity(byExternalLogin.id, 'ldap', issuer, subject)
+      void linkUserToFederatedIdentity(byExternalLogin.id, 'ldap', issuer, subject)
       const linked = await getUserById(byExternalLogin.id)
       if (!linked) throw createError({ statusCode: 500, message: 'Erreur liaison compte' })
       await touchExternalLogin(linked.id)
@@ -79,7 +79,7 @@ export async function resolveLdapLoginUser(params: {
       throw createError({ statusCode: 403, message: 'Serveur LDAP incompatible pour ce compte.' })
     }
     if (!byUsername.externalSubject) {
-      linkUserToFederatedIdentity(byUsername.id, 'ldap', issuer, subject)
+      void linkUserToFederatedIdentity(byUsername.id, 'ldap', issuer, subject)
       const linked = await getUserById(byUsername.id)
       if (!linked) throw createError({ statusCode: 500, message: 'Erreur liaison compte' })
       await touchExternalLogin(linked.id)

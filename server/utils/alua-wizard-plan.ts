@@ -15,6 +15,7 @@ import {
   upsertDeviceGroup,
 } from './alua-scst-config'
 import { diffLines } from '../../utils/diff-lines'
+import { compareByLocale } from '~/utils/locale-sort'
 
 export interface NodePlanInput {
   nodeId:   string
@@ -56,7 +57,7 @@ export function buildDeviceGroupForNode(
     .filter(a => a.nodeId === peerId && a.role === 'local')
     .map(a => a.targetName)
 
-  const uniq = (arr: string[]) => [...new Set(arr)].sort((a, b) => a.localeCompare(b))
+  const uniq = (arr: string[]) => [...new Set(arr)].sort(compareByLocale)
 
   let localId = req.groupIdsOnPrimary.local
   let remoteId = req.groupIdsOnPrimary.remote
@@ -72,7 +73,7 @@ export function buildDeviceGroupForNode(
 
   return {
     name:         req.deviceGroupName,
-    devices:      [...req.deviceNames].sort((a, b) => a.localeCompare(b)),
+    devices:      [...req.deviceNames].sort(compareByLocale),
     targetGroups,
   }
 }

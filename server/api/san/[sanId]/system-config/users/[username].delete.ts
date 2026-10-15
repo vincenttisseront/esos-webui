@@ -37,7 +37,7 @@ export default defineEventHandler(async (event) => {
     15_000,
   )
   const delExitMatch = delResult.stdout.match(/EXITCODE:(\d+)/)
-  const delCode = delExitMatch ? parseInt(delExitMatch[1]) : 1
+  const delCode = delExitMatch ? Number.parseInt(delExitMatch[1]) : 1
   if (delCode !== 0) {
     const errOut = delResult.stdout.replace(/EXITCODE:\d+/, '').trim()
     throw createError({ statusCode: 500, message: `Échec suppression : ${errOut || 'erreur inconnue'}` })

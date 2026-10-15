@@ -17,7 +17,7 @@ export async function loadSSHConfig(): Promise<ConnectConfig> {
 
   return {
     host,
-    port:       parseInt(port, 10),
+    port:       Number.parseInt(port, 10),
     username,
     privateKey: authType === 'key' && privKey ? Buffer.from(privKey, 'base64') : undefined,
     password:   authType === 'password' ? password : undefined,

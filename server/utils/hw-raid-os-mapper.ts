@@ -9,6 +9,7 @@ import type {
   RaidToolsInfo,
 } from './raid-types'
 import type { KernelExposedLogicalDrive } from './raid-pci-detection'
+import { compareByLocale } from '~/utils/locale-sort'
 
 export type HwLdOsMatchMethod =
   | 'os_drive_name'
@@ -256,7 +257,7 @@ function orderedFallback(
   if (unmappedLds.length !== available.length || available.length === 0) return null
 
   const sortedLds = [...unmappedLds].sort((a, b) => parseVdIndex(a.id) - parseVdIndex(b.id))
-  const sortedPaths = [...available].sort((a, b) => a.localeCompare(b))
+  const sortedPaths = [...available].sort(compareByLocale)
   const idx = sortedLds.findIndex(l => l.id === ld.id)
   if (idx < 0 || idx >= sortedPaths.length) return null
   return { path: sortedPaths[idx], method: 'order' }

@@ -4,6 +4,7 @@ import type {
   PreflightBlockerRef,
 } from '~/types/raid'
 import { expectedLocalCleanupConfirmation } from '~/utils/raid-local-recovery-confirm'
+import { compareByLocale } from '~/utils/locale-sort'
 
 export interface PeerSuperblockCleanupGroup {
   sanId: string
@@ -33,7 +34,7 @@ export function resolvePeerCleanupMembers(input: {
     .filter((path): path is string => Boolean(path))
 
   if (fromRefs.length > 0) {
-    return [...new Set(fromRefs)].sort((a, b) => a.localeCompare(b))
+    return [...new Set(fromRefs)].sort(compareByLocale)
   }
 
   const paths: string[] = []
@@ -43,7 +44,7 @@ export function resolvePeerCleanupMembers(input: {
     )
     if (mapping?.targetPath) paths.push(mapping.targetPath)
   }
-  return [...new Set(paths)].sort((a, b) => a.localeCompare(b))
+  return [...new Set(paths)].sort(compareByLocale)
 }
 
 export function groupPeerSuperblockBlockers(
@@ -81,7 +82,7 @@ export function groupPeerSuperblockBlockers(
     })
   }
 
-  return groups.sort((a, b) => a.label.localeCompare(b.label))
+  return groups.sort((a, b) => compareByLocale(a.label, b.label))
 }
 
 export function buildPeerLocalRecoveryPayload(input: {

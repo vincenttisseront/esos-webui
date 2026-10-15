@@ -30,7 +30,7 @@ export async function readPerfAgentConfig(manager: SSHSessionManager): Promise<P
     dbName: extractDbName(dburi),
     system: raw.System ?? '',
     hostAddress: raw.HostAddress ?? '',
-    pollingIntervalSec: parseInt(raw.PollingInterval ?? '5', 10) || 5,
+    pollingIntervalSec: Number.parseInt(raw.PollingInterval ?? '5', 10) || 5,
     blockDevices: (raw.BlockDevices ?? '').split(/\s+/).filter(Boolean),
     rawExists,
     updatedAt: Date.now(),

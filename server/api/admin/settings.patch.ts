@@ -34,11 +34,11 @@ export default defineEventHandler(async (event) => {
 
   if (body['alerts.volume_warn_pct'] !== undefined || body['alerts.volume_critical_pct'] !== undefined) {
     const current = await getAllSettings()
-    const w = parseInt(
+    const w = Number.parseInt(
       body['alerts.volume_warn_pct'] ?? current['alerts.volume_warn_pct'] ?? '75',
       10,
     )
-    const c = parseInt(
+    const c = Number.parseInt(
       body['alerts.volume_critical_pct'] ?? current['alerts.volume_critical_pct'] ?? '90',
       10,
     )
@@ -51,7 +51,7 @@ export default defineEventHandler(async (event) => {
   }
 
   if (body['collector.interval_sec']) {
-    const v = parseInt(body['collector.interval_sec'], 10)
+    const v = Number.parseInt(body['collector.interval_sec'], 10)
     if (isNaN(v) || v < 10 || v > 300) {
       throw createError({
         statusCode: 400,
@@ -61,7 +61,7 @@ export default defineEventHandler(async (event) => {
   }
 
   if (body['collector.retention_hours']) {
-    const v = parseInt(body['collector.retention_hours'], 10)
+    const v = Number.parseInt(body['collector.retention_hours'], 10)
     if (isNaN(v) || v < 1 || v > 168) {
       throw createError({
         statusCode: 400,

@@ -537,7 +537,7 @@ function toReadOnlyLogicalDrive(
   index: number,
 ): HardwareRaidLogicalDrive {
   const idx = ld.scsiAddress.split(':')
-  const diskNum = parseInt(idx[2] ?? '0', 10)
+  const diskNum = Number.parseInt(idx[2] ?? '0', 10)
   return {
     controllerId,
     id: ld.id,

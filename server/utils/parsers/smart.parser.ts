@@ -20,23 +20,23 @@ export function parseSmartOutput(output: string): SmartInfo {
   while ((m = attrPattern.exec(output)) !== null) {
     const [, id, name, , worst, threshold, rawValue] = m
     attrs.push({
-      id:         parseInt(id, 10),
+      id:         Number.parseInt(id, 10),
       name,
       rawValue:   rawValue.split(' ')[0],
-      worstValue: parseInt(worst, 10),
-      threshold:  parseInt(threshold, 10),
-      failing:    parseInt(worst, 10) <= parseInt(threshold, 10),
+      worstValue: Number.parseInt(worst, 10),
+      threshold:  Number.parseInt(threshold, 10),
+      failing:    Number.parseInt(worst, 10) <= Number.parseInt(threshold, 10),
     })
   }
 
   const findAttr = (id: number) => attrs.find(a => a.id === id)
 
   const tempAttr    = findAttr(194) ?? findAttr(190)
-  const temperature = tempAttr ? parseInt(tempAttr.rawValue, 10) : parseNvmeTemp(output)
+  const temperature = tempAttr ? Number.parseInt(tempAttr.rawValue, 10) : parseNvmeTemp(output)
 
   const pohAttr     = findAttr(9)
   const powerOnHours = pohAttr
-    ? parseInt(pohAttr.rawValue.replace(/[^\d]/g, ''), 10)
+    ? Number.parseInt(pohAttr.rawValue.replace(/[^\d]/g, ''), 10)
     : parseNvmePOH(output)
 
   return {
@@ -45,9 +45,9 @@ export function parseSmartOutput(output: string): SmartInfo {
     health:              health === 'PASSED' ? 'PASSED' : health === 'FAILED' ? 'FAILED' : 'UNKNOWN',
     temperature,
     powerOnHours,
-    reallocatedSectors:  parseInt(findAttr(5)?.rawValue   ?? '0', 10) || null,
-    pendingSectors:      parseInt(findAttr(197)?.rawValue  ?? '0', 10) || null,
-    uncorrectableErrors: parseInt(findAttr(198)?.rawValue  ?? '0', 10) || null,
+    reallocatedSectors:  Number.parseInt(findAttr(5)?.rawValue   ?? '0', 10) || null,
+    pendingSectors:      Number.parseInt(findAttr(197)?.rawValue  ?? '0', 10) || null,
+    uncorrectableErrors: Number.parseInt(findAttr(198)?.rawValue  ?? '0', 10) || null,
     smartAttributes:     attrs,
   }
 }
@@ -55,13 +55,13 @@ export function parseSmartOutput(output: string): SmartInfo {
 /** Parse NVMe temperature from smartctl -A output ("Temperature:  35 Celsius") */
 function parseNvmeTemp(output: string): number | null {
   const m = /Temperature(?:\s+Sensor\s+1)?:\s+(\d+)\s+Celsius/.exec(output)
-  return m ? parseInt(m[1], 10) : null
+  return m ? Number.parseInt(m[1], 10) : null
 }
 
 /** Parse NVMe Power On Hours from smartctl -A output */
 function parseNvmePOH(output: string): number | null {
   const m = /Power On Hours:\s+([\d,]+)/.exec(output)
-  return m ? parseInt(m[1].replace(/,/g, ''), 10) : null
+  return m ? Number.parseInt(m[1].replace(/,/g, ''), 10) : null
 }
 
 /** Parse a bulk SMART output containing multiple ===SMART_sdX=== sections. */

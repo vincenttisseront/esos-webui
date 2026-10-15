@@ -47,7 +47,7 @@ export default defineEventHandler(async (event) => {
       10_000,
     )
     const addGrpMatch = addGrpResult.stdout.match(/EXITCODE:(\d+)/)
-    if (!addGrpMatch || parseInt(addGrpMatch[1]) !== 0) {
+    if (!addGrpMatch || Number.parseInt(addGrpMatch[1]) !== 0) {
       const errOut = addGrpResult.stdout.replace(/EXITCODE:\d+/, '').trim()
       throw createError({ statusCode: 500, message: `Échec récupération utilisateur orphelin : ${errOut || 'erreur inconnue'}` })
     }
@@ -60,7 +60,7 @@ export default defineEventHandler(async (event) => {
       15_000,
     )
     const addExitMatch = addResult.stdout.match(/EXITCODE:(\d+)/)
-    const addCode = addExitMatch ? parseInt(addExitMatch[1]) : 1
+    const addCode = addExitMatch ? Number.parseInt(addExitMatch[1]) : 1
     if (addCode !== 0) {
       const errOut = addResult.stdout.replace(/EXITCODE:\d+/, '').trim()
       throw createError({ statusCode: 500, message: `Échec création utilisateur : ${errOut || 'erreur inconnue'}` })
@@ -75,7 +75,7 @@ export default defineEventHandler(async (event) => {
     10_000,
   )
   const passExitMatch = passResult.stdout.match(/EXITCODE:(\d+)/)
-  const passCode = passExitMatch ? parseInt(passExitMatch[1]) : 1
+  const passCode = passExitMatch ? Number.parseInt(passExitMatch[1]) : 1
   if (passCode !== 0) {
     const errOut = passResult.stdout.replace(/EXITCODE:\d+/, '').trim()
     throw createError({ statusCode: 500, message: `Utilisateur créé mais erreur mot de passe : ${errOut || 'erreur inconnue'}` })

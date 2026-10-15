@@ -42,7 +42,7 @@ export function parseIPMIAll(output: string): IPMIInfo {
     else if (unit.toLowerCase() === 'degrees f') unit = '°F'
 
     // Format numeric value: trim trailing zeros (24.000 → 24, 4800.000 → 4800)
-    const num = parseFloat(rawValue)
+    const num = Number.parseFloat(rawValue)
     const value = !isNaN(num)
       ? (num % 1 === 0 ? num.toFixed(0) : num.toFixed(1))
       : rawValue
@@ -91,7 +91,7 @@ export function parseEthtoolOutput(output: string): { speed: number | null; dupl
   const driverMatch = /driver:\s+(\S+)/.exec(output)
 
   return {
-    speed:  speedMatch  ? parseInt(speedMatch[1], 10)      : null,
+    speed:  speedMatch  ? Number.parseInt(speedMatch[1], 10)      : null,
     duplex: duplexMatch ? duplexMatch[1].toLowerCase()     : null,
     driver: driverMatch ? driverMatch[1]                   : null,
   }

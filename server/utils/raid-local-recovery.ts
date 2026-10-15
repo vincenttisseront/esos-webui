@@ -9,6 +9,7 @@ import type {
   MdLocalRecoveryOffered,
   MdLocalRecoveryRequest,
 } from './raid-types'
+import { compareByLocale } from '~/utils/locale-sort'
 
 const MAPPING_BLOCKER_RE = /mapping ambigu|mapping incomplet|mapping manquant|mapping invalide|aucun équivalent/i
 const SYNC_LIMITATION_RE = /Sync config/i
@@ -82,8 +83,8 @@ export function assertMembersMatchLocalPayload(
   localMembers: string[],
   requestMembers: string[],
 ): void {
-  const a = [...localMembers].map(String).sort((a, b) => a.localeCompare(b))
-  const b = [...requestMembers].map(String).sort((a, b) => a.localeCompare(b))
+  const a = [...localMembers].map(String).sort(compareByLocale)
+  const b = [...requestMembers].map(String).sort(compareByLocale)
   if (a.length !== b.length || a.some((m, i) => m !== b[i])) {
     throw createError({
       statusCode: 400,

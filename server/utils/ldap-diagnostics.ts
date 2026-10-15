@@ -254,7 +254,7 @@ function ldapPortFromUrl(urlStr: string, startTls: boolean): number {
   const normalized = trimmed.includes('://') ? trimmed : `ldap://${trimmed}`
   try {
     const u = new URL(normalized)
-    if (u.port) return parseInt(u.port, 10)
+    if (u.port) return Number.parseInt(u.port, 10)
     return u.protocol === 'ldaps:' ? 636 : 389
   } catch {
     return 389

@@ -45,20 +45,20 @@ export function parseMdstat(output: string): MdArray[] {
       // Exemple : 2930135552 blocks super 1.2 [2/2] [UU]
       const sizeMatch = sizeLine.match(/(\d+)\s+blocks/)
       if (sizeMatch) {
-        sizeBytes = parseInt(sizeMatch[1], 10) * 1024
+        sizeBytes = Number.parseInt(sizeMatch[1], 10) * 1024
         i++
       }
 
       const chunkMatch = sizeLine.match(/chunk\s+(\d+)k/i) ?? sizeLine.match(/(\d+)k\s+chunks?/i)
       if (chunkMatch) {
-        chunkKb = parseInt(chunkMatch[1], 10)
+        chunkKb = Number.parseInt(chunkMatch[1], 10)
       }
 
       // Parse [N/M] [UU_]
       const countMatch = sizeLine.match(/\[(\d+)\/(\d+)\]/)
       if (countMatch) {
-        raidDevices = parseInt(countMatch[1], 10)
-        workingDevices = parseInt(countMatch[2], 10)
+        raidDevices = Number.parseInt(countMatch[1], 10)
+        workingDevices = Number.parseInt(countMatch[2], 10)
       }
 
       const statusMatch = sizeLine.match(/\[([U_]+)\]/)
@@ -77,7 +77,7 @@ export function parseMdstat(output: string): MdArray[] {
         // barre de progression ASCII
         const progMatch = lines[i].match(/(\d+)%/)
         if (progMatch && progress) {
-          progress.percent = parseInt(progMatch[1], 10)
+          progress.percent = Number.parseInt(progMatch[1], 10)
         }
         i++
       }
@@ -126,7 +126,7 @@ function parseMembersFromLine(memberStr: string): MdMemberDevice[] {
   let m: RegExpExecArray | null
   while ((m = pattern.exec(memberStr)) !== null) {
     const devName = m[1]
-    const role = parseInt(m[2], 10)
+    const role = Number.parseInt(m[2], 10)
     const flagPart = m[3] ?? ''
     const state: MdMemberDevice['state'] = []
 
@@ -151,7 +151,7 @@ function parseProgressLine(line: string): MdProgress | undefined {
 
   const action = actionMatch[1] as MdProgress['action']
   const percentMatch = line.match(/(\d+(?:\.\d+)?)%/)
-  const percent = percentMatch ? parseFloat(percentMatch[1]) : 0
+  const percent = percentMatch ? Number.parseFloat(percentMatch[1]) : 0
 
   const etaMatch = line.match(/finish=(\S+)/)
   const speedMatch = line.match(/speed=(\d+)K/)
@@ -160,7 +160,7 @@ function parseProgressLine(line: string): MdProgress | undefined {
     action,
     percent,
     finishEta: etaMatch?.[1],
-    speedKbps: speedMatch ? parseInt(speedMatch[1], 10) : undefined,
+    speedKbps: speedMatch ? Number.parseInt(speedMatch[1], 10) : undefined,
   }
 }
 

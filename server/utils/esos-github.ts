@@ -378,7 +378,7 @@ export function githubMetaFromSources(
 }
 
 function buildDownloadUrl(tag: string): string {
-  const major = parseInt(tag.split('.')[0], 10)
+  const major = Number.parseInt(tag.split('.')[0], 10)
   const branch = `${major}.x.x`
   return `https://download.esos-project.com/${branch}/esos-${tag}.zip`
 }
