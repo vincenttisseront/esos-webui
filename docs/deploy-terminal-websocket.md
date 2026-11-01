@@ -1,5 +1,7 @@
 # Terminal WebSocket deployment
 
+The shipped Compose stack publishes **127.0.0.1:80** only. Node listens on **127.0.0.1:3000**. A public hostname (Traefik or otherwise) is not part of this build: it would put the UI back on the network. Reach the UI from the machine itself, or through an SSH tunnel.
+
 The admin terminal uses **WebSocket** at `/ws/terminal` (not SSE). Flow:
 
 1. `GET /api/san/{sanId}/terminal/ws-ticket` — session cookie + RBAC (admin/operator)

@@ -47,7 +47,8 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 COPY docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+COPY scripts/serve-local.mjs /usr/local/bin/serve-local.mjs
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/serve-local.mjs
 
 # Entrypoint runs as root only to chown volumes, then drops to ESOS_RUNTIME_USER via gosu.
 # NOSONAR (docker:S6471) — intentional: entrypoint chowns mounts then gosu to esos
@@ -58,7 +59,9 @@ EXPOSE 3000
 
 ENV NODE_ENV=production
 ENV NITRO_PORT=3000
-ENV NITRO_HOST=0.0.0.0
+# Loopback only. docker-entrypoint.sh sets this again so an env file cannot reopen 0.0.0.0.
+ENV NITRO_HOST=127.0.0.1
+ENV HOST=127.0.0.1
 ENV ESOS_RUNTIME_USER=esos
 # Prefer DELETE on first boot after upgrades; WAL can be re-enabled once stable.
 ENV DB_JOURNAL_MODE=DELETE
@@ -89,4 +92,4 @@ ENV BUILD_DATE=${BUILD_DATE}
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD curl -fsS http://localhost:3000/api/health || exit 1
 
-CMD ["node", "server/index.mjs"]
+CMD ["node", "/usr/local/bin/serve-local.mjs"]
