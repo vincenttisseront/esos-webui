@@ -57,7 +57,7 @@ docker compose build app
 docker compose up -d
 ```
 
-The stack exposes the UI on **port 80** via the bundled nginx reverse proxy (`http://localhost/`). The app container listens on port 3000 internally.
+The stack listens on the host **loopback only**: nginx is published as `127.0.0.1:80`, and Node binds `127.0.0.1:3000` in the same network namespace. Open `http://127.0.0.1/`. Nothing is bound on the LAN. From another machine, use an SSH tunnel to that port.
 
 Check health:
 
@@ -168,7 +168,7 @@ The UI supports **French** (default) and **English**. Switch language from the u
 
 ### Terminal access
 
-The web terminal requires a working reverse proxy WebSocket setup. With the bundled nginx config this works out of the box on port 80. For external proxies (Traefik, etc.), see **[docs/deploy-terminal-websocket.md](docs/deploy-terminal-websocket.md)**.
+The web terminal requires a working reverse proxy WebSocket setup. The bundled nginx config does this on `127.0.0.1:80`. See **[docs/deploy-terminal-websocket.md](docs/deploy-terminal-websocket.md)**.
 
 ## Development scripts
 
