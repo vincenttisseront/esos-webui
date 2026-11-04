@@ -1,6 +1,6 @@
 import { getDB } from '../index'
 import { metricSamples } from '../schema'
-import { and, count, eq, gte, lte, max, min } from 'drizzle-orm'
+import { and, count, eq, gte, inArray, lte, max, min } from 'drizzle-orm'
 
 export interface MetricPoint {
   timestamp: number
@@ -157,15 +157,28 @@ export async function getVolumeSubjects(
 
 // ─── Purge (rétention 24h) ───────────────────────────────────────────────────
 
+// Supprime par lots en rendant la main entre chaque : un seul DELETE sur un gros
+// arriéré bloque l'event loop au-delà du timeout de la liveness probe, le pod est
+// tué, la transaction annulée, et l'arriéré ne fait que grossir.
 export async function purgeOldSamples(
   retentionMs: number = 24 * 60 * 60 * 1000,
+  batchSize: number = 5000,
 ): Promise<number> {
   const db        = getDB()
   const threshold = Date.now() - retentionMs
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const result    = await db
-    .delete(metricSamples)
-    .where(lte(metricSamples.timestamp, threshold))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (result as any).changes ?? 0
+  let total = 0
+  for (;;) {
+    const expired = db
+      .select({ id: metricSamples.id })
+      .from(metricSamples)
+      .where(lte(metricSamples.timestamp, threshold))
+      .limit(batchSize)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result  = await db.delete(metricSamples).where(inArray(metricSamples.id, expired))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const changes = (result as any).changes ?? 0
+    total += changes
+    if (changes < batchSize) return total
+    await new Promise(resolve => setImmediate(resolve))
+  }
 }
