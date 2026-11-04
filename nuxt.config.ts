@@ -22,9 +22,15 @@ export default defineNuxtConfig({
     ],
     lazy: true,
     bundle: { optimizeTranslationDirective: false },
-    // Cookie-only detection: avoids client-only navigator.language switching
-    // after SSR (fr default), which causes hydration text mismatches.
-    detectBrowserLanguage: false,
+    // Reads the `esos_locale` cookie (written on login + preference change)
+    // on SSR and client so the chosen locale survives reloads. i18n reads it
+    // server-side too, so SSR/client agree — no hydration mismatch.
+    detectBrowserLanguage: {
+      useCookie: true,
+      cookieKey: 'esos_locale',
+      alwaysRedirect: true,
+      fallbackLocale: 'fr',
+    },
     vueI18n: '~/i18n/i18n.config.ts',
   },
   css: ['~/assets/css/main.css'],
