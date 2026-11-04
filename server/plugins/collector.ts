@@ -147,14 +147,17 @@ export default defineNitroPlugin(async (nitroApp) => {
     startCollecting(30_000, 24 * 3_600_000)
   }
 
-  purgeTimer = setInterval(async () => {
+  const purge = async () => {
     try {
       const deleted = await purgeOldSamples(currentRetentionMs)
       if (deleted > 0) console.info(`[Collector] Purge : ${deleted} samples supprimés`)
     } catch (err) {
       console.warn('[Collector] Erreur purge:', (err as Error).message)
     }
-  }, 3_600_000)
+  }
+  // Aussi au démarrage : un pod qui redémarre avant 1 h n'atteindrait jamais le timer.
+  void purge()
+  purgeTimer = setInterval(purge, 3_600_000)
 
   nitroApp.hooks.hook('close', () => {
     if (collectTimer) clearInterval(collectTimer)
