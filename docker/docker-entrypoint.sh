@@ -1,6 +1,10 @@
 #!/bin/sh
 # Fix ownership on mounted volumes before dropping to the esos runtime user.
+# The HTTP server listens on loopback only. This wins over env_file / NITRO_HOST.
 set -e
+
+export NITRO_HOST=127.0.0.1
+export HOST=127.0.0.1
 
 if id esos >/dev/null 2>&1; then
   ESOS_UID=$(id -u esos)

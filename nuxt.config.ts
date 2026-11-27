@@ -29,6 +29,12 @@ export default defineNuxtConfig({
   },
   css: ['~/assets/css/main.css'],
   ssr: true,
+  // Dev server stays on loopback. Production listen is forced to 127.0.0.1
+  // by scripts/serve-local.mjs and docker/docker-entrypoint.sh.
+  devServer: {
+    host: '127.0.0.1',
+    port: Number(process.env.NUXT_PORT) || 3000,
+  },
   components: [
     { path: '~/components', pathPrefix: false },
   ],
